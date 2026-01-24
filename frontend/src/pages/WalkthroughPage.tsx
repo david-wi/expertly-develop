@@ -154,7 +154,7 @@ Capture "After navigation"`}
             />
 
             {/* Persona */}
-            {formData.project_id && personas?.items?.length > 0 && (
+            {formData.project_id && (personas?.items?.length ?? 0) > 0 && (
               <Select
                 label="Run as Persona"
                 value={formData.persona_id}

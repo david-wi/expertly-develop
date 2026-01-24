@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ExternalLink, Play, FileBox, Settings } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Play, FileBox } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Badge, getStatusBadgeVariant } from '../components/common/Badge'

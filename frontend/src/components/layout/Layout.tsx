@@ -5,7 +5,6 @@ import {
   ListTodo,
   FileBox,
   Play,
-  Settings,
 } from 'lucide-react'
 
 const navigation = [

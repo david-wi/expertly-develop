@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Download, Trash2, FileText, FileBox } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../components/common/Card'
-import { Button } from '../components/common/Button'
 import { Badge } from '../components/common/Badge'
 import { artifactsApi, projectsApi } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
