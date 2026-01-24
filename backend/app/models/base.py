@@ -59,7 +59,17 @@ class MongoModel(BaseModel):
 
     def to_mongo(self) -> dict:
         """Convert model to MongoDB document format."""
-        data = self.model_dump(by_alias=True, exclude_none=True)
+        data = self.model_dump(by_alias=True, exclude_none=True, mode="python")
+        # Convert string ObjectIds back to ObjectId instances
+        def convert_objectids(obj):
+            if isinstance(obj, dict):
+                return {k: convert_objectids(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_objectids(v) for v in obj]
+            elif isinstance(obj, str) and ObjectId.is_valid(obj) and len(obj) == 24:
+                return ObjectId(obj)
+            return obj
+        data = convert_objectids(data)
         if "_id" in data and data["_id"] is None:
             del data["_id"]
         return data
