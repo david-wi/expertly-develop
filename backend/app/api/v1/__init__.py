@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from app.api.v1 import health, projects, personas, documents, jobs, walkthroughs, artifacts, requirements, scenarios
+from app.api.v1 import health, projects, personas, documents, jobs, walkthroughs, artifacts, requirements, scenarios, organizations, users
 
 router = APIRouter()
 
@@ -15,3 +15,5 @@ router.include_router(walkthroughs.router, prefix="/walkthroughs", tags=["Walkth
 router.include_router(artifacts.router, prefix="/artifacts", tags=["Artifacts"])
 router.include_router(requirements.router, prefix="/requirements", tags=["Requirements"])
 router.include_router(scenarios.router, prefix="/scenarios", tags=["Scenarios"])
+router.include_router(organizations.router, prefix="/organizations", tags=["Organizations"])
+router.include_router(users.router, prefix="/users", tags=["Users"])

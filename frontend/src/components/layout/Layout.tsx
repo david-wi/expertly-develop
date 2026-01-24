@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -6,6 +7,8 @@ import {
   FileBox,
   Play,
 } from 'lucide-react'
+import OrganizationSwitcher from './OrganizationSwitcher'
+import { usersApi, CurrentUser, TENANT_STORAGE_KEY } from '../../api/client'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -17,6 +20,29 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const user = await usersApi.me()
+      setCurrentUser(user)
+    } catch (error) {
+      console.error('Failed to fetch current user:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchCurrentUser()
+  }, [fetchCurrentUser, refreshKey])
+
+  const handleOrgSwitch = () => {
+    setRefreshKey((k) => k + 1)
+    // Force reload the page to refresh all data
+    window.location.reload()
+  }
+
+  const currentTenantId = localStorage.getItem(TENANT_STORAGE_KEY) || currentUser?.tenant.id || null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,8 +56,16 @@ export default function Layout() {
           <span className="font-semibold text-gray-900">Expertly Develop</span>
         </div>
 
+        {/* Organization Switcher */}
+        <div className="mt-4 relative">
+          <OrganizationSwitcher
+            currentTenantId={currentTenantId}
+            onSwitch={handleOrgSwitch}
+          />
+        </div>
+
         {/* Navigation */}
-        <nav className="mt-6 px-3">
+        <nav className="mt-2 px-3">
           <ul className="space-y-1">
             {navigation.map((item) => {
               const isActive = location.pathname === item.href ||
@@ -63,11 +97,13 @@ export default function Layout() {
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-              <span className="text-primary-700 font-medium text-sm">D</span>
+              <span className="text-primary-700 font-medium text-sm">
+                {currentUser?.name?.charAt(0) || 'U'}
+              </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">David</p>
-              <p className="text-xs text-gray-500">Admin</p>
+              <p className="text-sm font-medium text-gray-900">{currentUser?.name || 'Loading...'}</p>
+              <p className="text-xs text-gray-500 capitalize">{currentUser?.role || ''}</p>
             </div>
           </div>
         </div>

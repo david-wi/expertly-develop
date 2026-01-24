@@ -30,12 +30,15 @@ async def get_default_user() -> Optional[dict]:
 
 async def get_current_user(
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-Id"),
 ) -> UserContext:
     """
     Get the current user context.
 
     For now, returns the default user (David).
     Later can be extended to support API key or JWT authentication.
+
+    Supports tenant switching via X-Tenant-Id header for admin users.
     """
     db = get_database()
 
@@ -56,9 +59,33 @@ async def get_current_user(
                 detail="No default user configured. Please seed the database.",
             )
 
+    # Determine tenant_id (possibly overridden)
+    tenant_id = user["tenant_id"]
+
+    # Allow admin users to switch tenants via X-Tenant-Id header
+    if x_tenant_id and user["role"] == "admin":
+        try:
+            override_tenant_id = ObjectId(x_tenant_id)
+            # Validate tenant exists
+            tenant = await db.tenants.find_one({"_id": override_tenant_id})
+            if tenant:
+                tenant_id = override_tenant_id
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid tenant ID",
+                )
+        except Exception as e:
+            if isinstance(e, HTTPException):
+                raise
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid tenant ID format",
+            )
+
     return UserContext(
         user_id=user["_id"],
-        tenant_id=user["tenant_id"],
+        tenant_id=tenant_id,
         email=user["email"],
         name=user["name"],
         role=user["role"],

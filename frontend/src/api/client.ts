@@ -2,11 +2,22 @@ import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
 
+export const TENANT_STORAGE_KEY = 'expertly-tenant-id'
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+// Add interceptor to include X-Tenant-Id header from localStorage
+api.interceptors.request.use((config) => {
+  const tenantId = localStorage.getItem(TENANT_STORAGE_KEY)
+  if (tenantId) {
+    config.headers['X-Tenant-Id'] = tenantId
+  }
+  return config
 })
 
 // Types
@@ -160,6 +171,41 @@ export const walkthroughsApi = {
     preconfigured_scenario?: string
   }) => {
     const { data } = await api.post<{ job_id: string; status: string; message: string }>('/walkthroughs', params)
+    return data
+  },
+}
+
+// Organization types
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+}
+
+export interface TenantInfo {
+  id: string
+  name: string
+  slug: string
+}
+
+export interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  role: string
+  tenant: TenantInfo
+}
+
+export const organizationsApi = {
+  list: async () => {
+    const { data } = await api.get<{ items: Organization[]; total: number }>('/organizations')
+    return data
+  },
+}
+
+export const usersApi = {
+  me: async () => {
+    const { data } = await api.get<CurrentUser>('/users/me')
     return data
   },
 }

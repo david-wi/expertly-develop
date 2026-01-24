@@ -22,9 +22,10 @@ async def lifespan(app: FastAPI):
 
 async def seed_initial_data():
     """Seed initial data if not exists."""
+    import uuid
     db = get_database()
 
-    # Check if tenant exists
+    # Check if default tenant exists
     tenant = await db.tenants.find_one({"slug": "default"})
     if not tenant:
         # Create default tenant
@@ -36,7 +37,6 @@ async def seed_initial_data():
         tenant_id = result.inserted_id
 
         # Create default user (David)
-        import uuid
         await db.users.insert_one({
             "tenant_id": tenant_id,
             "email": "david@example.com",
@@ -95,6 +95,29 @@ Capture "Profile Page"
         ])
 
         print("Initial data seeded successfully")
+
+    # Check if test tenant exists
+    test_tenant = await db.tenants.find_one({"slug": "test"})
+    if not test_tenant:
+        # Create test tenant
+        result = await db.tenants.insert_one({
+            "name": "Test Organization",
+            "slug": "test",
+            "settings": {"default_visibility": "team"},
+        })
+        test_tenant_id = result.inserted_id
+
+        # Create test user
+        await db.users.insert_one({
+            "tenant_id": test_tenant_id,
+            "email": "test@example.com",
+            "name": "Test User",
+            "role": "admin",
+            "is_default": False,
+            "api_key": str(uuid.uuid4()),
+        })
+
+        print("Test organization seeded successfully")
 
 
 settings = get_settings()
