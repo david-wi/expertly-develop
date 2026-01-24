@@ -174,7 +174,7 @@ Capture "After navigation"`}
                 className="flex-1"
               >
                 <Play className="w-4 h-4 mr-2" />
-                {createMutation.isPending ? 'Creating...' : 'Start Walkthrough'}
+                {createMutation.isPending ? 'Creating...' : 'Save and Start'}
               </Button>
             </div>
 

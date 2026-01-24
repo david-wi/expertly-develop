@@ -33,6 +33,7 @@ def artifact_to_response(artifact: Artifact) -> ArtifactResponse:
 async def list_artifacts(
     project_id: Optional[str] = None,
     artifact_type: Optional[str] = None,
+    job_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
     user: UserContext = Depends(get_current_user),
@@ -45,6 +46,8 @@ async def list_artifacts(
         query["project_id"] = ObjectId(project_id)
     if artifact_type:
         query["artifact_type_code"] = artifact_type
+    if job_id:
+        query["job_id"] = ObjectId(job_id)
 
     cursor = (
         db.artifacts.find(query)

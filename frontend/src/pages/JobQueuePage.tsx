@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, XCircle, Clock, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../components/common/Card'
@@ -10,6 +11,7 @@ import { formatDistanceToNow, formatDuration, intervalToDuration } from 'date-fn
 export default function JobQueuePage() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['jobs', { status: statusFilter }],
@@ -109,6 +111,7 @@ export default function JobQueuePage() {
                       key={job.id}
                       job={job}
                       onCancel={() => cancelMutation.mutate(job.id)}
+                      onClick={() => navigate(`/jobs/${job.id}`)}
                     />
                   ))}
                 </tbody>
@@ -121,7 +124,7 @@ export default function JobQueuePage() {
   )
 }
 
-function JobRow({ job, onCancel }: { job: Job; onCancel: () => void }) {
+function JobRow({ job, onCancel, onClick }: { job: Job; onCancel: () => void; onClick: () => void }) {
   const formatElapsed = (ms: number | null) => {
     if (!ms) return '-'
     const duration = intervalToDuration({ start: 0, end: ms })
@@ -131,7 +134,7 @@ function JobRow({ job, onCancel }: { job: Job; onCancel: () => void }) {
   const canCancel = job.status === 'pending' || job.status === 'running'
 
   return (
-    <tr className="hover:bg-gray-50">
+    <tr className="hover:bg-gray-50 cursor-pointer" onClick={onClick}>
       <td className="px-6 py-4">
         <div>
           <p className="text-sm font-medium text-gray-900 capitalize">
@@ -170,7 +173,7 @@ function JobRow({ job, onCancel }: { job: Job; onCancel: () => void }) {
       </td>
       <td className="px-6 py-4">
         {canCancel && (
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); onCancel(); }}>
             <XCircle className="w-4 h-4 text-red-500" />
           </Button>
         )}

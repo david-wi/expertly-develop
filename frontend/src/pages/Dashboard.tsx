@@ -106,30 +106,32 @@ export default function Dashboard() {
             ) : (
               <ul className="divide-y divide-gray-200">
                 {recentJobs.map((job) => (
-                  <li key={job.id} className="px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {job.job_type.replace('_', ' ')}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
-                        </p>
+                  <li key={job.id}>
+                    <Link to={`/jobs/${job.id}`} className="block px-6 py-4 hover:bg-gray-50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {job.job_type.replace('_', ' ')}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          {job.status === 'running' && (
+                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                              <div
+                                className="bg-primary-600 h-2 rounded-full transition-all"
+                                style={{ width: `${job.progress}%` }}
+                              />
+                            </div>
+                          )}
+                          <Badge variant={getStatusBadgeVariant(job.status)}>
+                            {job.status}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        {job.status === 'running' && (
-                          <div className="w-16 bg-gray-200 rounded-full h-2">
-                            <div
-                              className="bg-primary-600 h-2 rounded-full transition-all"
-                              style={{ width: `${job.progress}%` }}
-                            />
-                          </div>
-                        )}
-                        <Badge variant={getStatusBadgeVariant(job.status)}>
-                          {job.status}
-                        </Badge>
-                      </div>
-                    </div>
+                    </Link>
                   </li>
                 ))}
               </ul>

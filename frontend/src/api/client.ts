@@ -126,7 +126,7 @@ export const jobsApi = {
 }
 
 export const artifactsApi = {
-  list: async (params?: { project_id?: string; artifact_type?: string }) => {
+  list: async (params?: { project_id?: string; artifact_type?: string; job_id?: string }) => {
     const { data } = await api.get<{ items: Artifact[]; total: number }>('/artifacts', { params })
     return data
   },

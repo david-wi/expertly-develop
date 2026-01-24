@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard'
 import ProjectsPage from './pages/ProjectsPage'
 import ProjectDetailPage from './pages/ProjectDetailPage'
 import JobQueuePage from './pages/JobQueuePage'
+import JobDetailPage from './pages/JobDetailPage'
 import ArtifactsPage from './pages/ArtifactsPage'
 import WalkthroughPage from './pages/WalkthroughPage'
 
@@ -15,6 +16,7 @@ function App() {
         <Route path="projects" element={<ProjectsPage />} />
         <Route path="projects/:id" element={<ProjectDetailPage />} />
         <Route path="jobs" element={<JobQueuePage />} />
+        <Route path="jobs/:id" element={<JobDetailPage />} />
         <Route path="artifacts" element={<ArtifactsPage />} />
         <Route path="walkthroughs/new" element={<WalkthroughPage />} />
       </Route>

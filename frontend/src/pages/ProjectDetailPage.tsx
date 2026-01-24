@@ -117,20 +117,22 @@ export default function ProjectDetailPage() {
               ) : (
                 <ul className="divide-y divide-gray-200">
                   {jobs.items.slice(0, 5).map((job) => (
-                    <li key={job.id} className="px-6 py-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">
-                            {job.job_type.replace('_', ' ')}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
-                          </p>
+                    <li key={job.id}>
+                      <Link to={`/jobs/${job.id}`} className="block px-6 py-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">
+                              {job.job_type.replace('_', ' ')}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
+                            </p>
+                          </div>
+                          <Badge variant={getStatusBadgeVariant(job.status)}>
+                            {job.status}
+                          </Badge>
                         </div>
-                        <Badge variant={getStatusBadgeVariant(job.status)}>
-                          {job.status}
-                        </Badge>
-                      </div>
+                      </Link>
                     </li>
                   ))}
                 </ul>
