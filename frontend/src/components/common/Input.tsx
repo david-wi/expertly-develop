@@ -72,10 +72,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
 Textarea.displayName = 'Textarea'
 
-interface SelectProps extends InputHTMLAttributes<HTMLSelectElement> {
+interface SelectProps extends Omit<InputHTMLAttributes<HTMLSelectElement>, 'onChange'> {
   label?: string
   error?: string
   options: { value: string; label: string }[]
+  onChange?: (e: React.ChangeEvent<HTMLSelectElement>) => void
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
