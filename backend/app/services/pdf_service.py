@@ -160,18 +160,22 @@ class PDFService:
                 img_buffer = BytesIO(screenshot.image_data)
                 img = Image(img_buffer)
 
-                # Scale image to fit page width while maintaining aspect ratio
-                max_width = 6.5 * inch
-                max_height = 4.5 * inch
+                # Scale image to fit page while maintaining aspect ratio
+                max_width = 6.0 * inch
+                max_height = 4.0 * inch
 
-                aspect = img.imageWidth / img.imageHeight
-                if img.imageWidth > max_width:
-                    img._width = max_width
-                    img._height = max_width / aspect
+                # Get original dimensions
+                orig_width = img.drawWidth
+                orig_height = img.drawHeight
 
-                if img._height > max_height:
-                    img._height = max_height
-                    img._width = max_height * aspect
+                # Calculate scaling factor
+                width_ratio = max_width / orig_width
+                height_ratio = max_height / orig_height
+                scale = min(width_ratio, height_ratio, 1.0)  # Don't scale up
+
+                # Apply scaled dimensions
+                img.drawWidth = orig_width * scale
+                img.drawHeight = orig_height * scale
 
                 story.append(img)
                 story.append(Paragraph(f"Screenshot {idx}", self.styles["Caption"]))

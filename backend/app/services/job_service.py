@@ -130,7 +130,10 @@ class JobService:
         job = await self.get_job(job_id)
         elapsed_ms = None
         if job and job.started_at:
-            elapsed_ms = int((now - job.started_at).total_seconds() * 1000)
+            started = job.started_at
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            elapsed_ms = int((now - started).total_seconds() * 1000)
 
         update = {
             "$set": {
@@ -153,7 +156,10 @@ class JobService:
         job = await self.get_job(job_id)
         elapsed_ms = None
         if job and job.started_at:
-            elapsed_ms = int((now - job.started_at).total_seconds() * 1000)
+            started = job.started_at
+            if started.tzinfo is None:
+                started = started.replace(tzinfo=timezone.utc)
+            elapsed_ms = int((now - started).total_seconds() * 1000)
 
         update = {
             "$set": {
