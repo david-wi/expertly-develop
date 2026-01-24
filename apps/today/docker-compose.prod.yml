@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    expose:
+      - "8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      ENVIRONMENT: production
+      DEBUG: "false"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - coolify
+      - default
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.expertly-frontend.rule=Host(`zg8cwo8osssc4oww48s4804s.152.42.152.243.sslip.io`) && PathPrefix(`/`)"
+      - "traefik.http.routers.expertly-frontend.entrypoints=http"
+      - "traefik.http.services.expertly-frontend.loadbalancer.server.port=80"
+
+networks:
+  coolify:
+    external: true
+  default:
+    driver: bridge

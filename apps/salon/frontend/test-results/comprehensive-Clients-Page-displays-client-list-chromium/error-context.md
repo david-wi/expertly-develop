@@ -1,0 +1,88 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - heading "Test Salon & Spa" [level=1] [ref=e6]
+    - navigation [ref=e7]:
+      - link "Calendar" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+        - generic [ref=e11]: Calendar
+      - link "Clients" [active] [ref=e12] [cursor=pointer]:
+        - /url: /clients
+        - img [ref=e13]
+        - generic [ref=e18]: Clients
+      - link "Staff" [ref=e19] [cursor=pointer]:
+        - /url: /staff
+        - img [ref=e20]
+        - generic [ref=e24]: Staff
+      - link "Services" [ref=e25] [cursor=pointer]:
+        - /url: /services
+        - img [ref=e26]
+        - generic [ref=e32]: Services
+      - link "Waitlist" [ref=e33] [cursor=pointer]:
+        - /url: /waitlist
+        - img [ref=e34]
+        - generic [ref=e37]: Waitlist
+      - link "Promotions" [ref=e38] [cursor=pointer]:
+        - /url: /promotions
+        - img [ref=e39]
+        - generic [ref=e43]: Promotions
+      - link "Website" [ref=e44] [cursor=pointer]:
+        - /url: /website
+        - img [ref=e45]
+        - generic [ref=e48]: Website
+      - link "Reports" [ref=e49] [cursor=pointer]:
+        - /url: /reports
+        - img [ref=e50]
+        - generic [ref=e52]: Reports
+      - link "Settings" [ref=e53] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e54]
+        - generic [ref=e57]: Settings
+    - button "Logout" [ref=e59]:
+      - img [ref=e60]
+      - generic [ref=e63]: Logout
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e66]:
+        - heading "Clients" [level=1] [ref=e67]
+        - button "Add Client" [ref=e68]:
+          - img [ref=e69]
+          - text: Add Client
+      - generic [ref=e71]:
+        - img [ref=e72]
+        - textbox "Search clients..." [ref=e75]
+      - generic [ref=e76]:
+        - generic [ref=e77] [cursor=pointer]:
+          - generic [ref=e78]:
+            - generic [ref=e79]:
+              - heading [level=3]
+              - generic [ref=e80]:
+                - img [ref=e81]
+                - text: 555-987-6543
+              - generic [ref=e83]:
+                - img [ref=e84]
+                - text: emily.davis@email.com
+            - generic [ref=e88]:
+              - img [ref=e89]
+              - text: visits
+          - generic [ref=e91]:
+            - generic [ref=e92]: VIP
+            - generic [ref=e93]: Regular
+        - generic [ref=e94] [cursor=pointer]:
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - heading [level=3]
+              - generic [ref=e97]:
+                - img [ref=e98]
+                - text: 555-456-7890
+              - generic [ref=e100]:
+                - img [ref=e101]
+                - text: james.w@email.com
+            - generic [ref=e105]:
+              - img [ref=e106]
+              - text: visits
+          - generic [ref=e109]: New
+```

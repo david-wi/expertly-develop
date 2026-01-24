@@ -1,0 +1,170 @@
+from datetime import datetime
+from enum import Enum
+from typing import Optional, Any
+from pydantic import BaseModel, Field
+
+from app.models.base import MongoModel, PyObjectId
+
+
+class TaskStatus(str, Enum):
+    QUEUED = "queued"
+    CHECKED_OUT = "checked_out"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class Task(MongoModel):
+    """Task model - work items in queues."""
+    organization_id: PyObjectId
+    queue_id: PyObjectId
+    title: str
+    description: Optional[str] = None
+    status: TaskStatus = TaskStatus.QUEUED
+    priority: int = 5  # 1-10, lower is higher priority
+
+    # Assignment
+    assigned_to_id: Optional[PyObjectId] = None
+    checked_out_at: Optional[datetime] = None
+    checked_out_by_id: Optional[PyObjectId] = None
+
+    # Hierarchy
+    parent_task_id: Optional[PyObjectId] = None
+    project_id: Optional[PyObjectId] = None
+
+    # SOP reference
+    sop_id: Optional[PyObjectId] = None
+    current_step: Optional[int] = None
+
+    # Input/Output
+    input_data: Optional[dict[str, Any]] = None
+    output_data: Optional[dict[str, Any]] = None
+
+    # Timing
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+    failed_at: Optional[datetime] = None
+    failure_reason: Optional[str] = None
+
+    # Retry
+    retry_count: int = 0
+    max_retries: int = 3
+
+
+class TaskCreate(BaseModel):
+    """Schema for creating a task."""
+    queue_id: str
+    title: str
+    description: Optional[str] = None
+    priority: int = 5
+    parent_task_id: Optional[str] = None
+    project_id: Optional[str] = None
+    sop_id: Optional[str] = None
+    input_data: Optional[dict[str, Any]] = None
+    max_retries: int = 3
+
+
+class TaskUpdate(BaseModel):
+    """Schema for updating a task."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[int] = None
+    queue_id: Optional[str] = None
+    assigned_to_id: Optional[str] = None
+    project_id: Optional[str] = None
+
+
+class TaskCheckout(BaseModel):
+    """Schema for checking out a task."""
+    task_id: str
+
+
+class TaskStart(BaseModel):
+    """Schema for starting a task."""
+    pass
+
+
+class TaskComplete(BaseModel):
+    """Schema for completing a task."""
+    output_data: Optional[dict[str, Any]] = None
+
+
+class TaskFail(BaseModel):
+    """Schema for failing a task."""
+    reason: str
+    retry: bool = True
+
+
+class RecurrenceType(str, Enum):
+    """Types of recurrence patterns."""
+    DAILY = "daily"
+    WEEKLY = "weekly"
+    MONTHLY = "monthly"
+    CUSTOM = "custom"  # Uses cron expression
+
+
+class RecurringTask(MongoModel):
+    """Recurring task template - creates tasks on a schedule."""
+    organization_id: PyObjectId
+    queue_id: PyObjectId
+    title: str
+    description: Optional[str] = None
+    priority: int = 5
+
+    # Recurrence settings
+    recurrence_type: RecurrenceType = RecurrenceType.DAILY
+    cron_expression: Optional[str] = None  # For custom schedules, e.g., "0 9 * * 1-5"
+    interval: int = 1  # Every N days/weeks/months
+    days_of_week: list[int] = Field(default_factory=list)  # 0=Monday, 6=Sunday
+    day_of_month: Optional[int] = None  # For monthly recurrence
+
+    # Scheduling
+    start_date: datetime
+    end_date: Optional[datetime] = None  # None = no end
+    next_run: Optional[datetime] = None
+    last_run: Optional[datetime] = None
+    timezone: str = "UTC"
+
+    # Status
+    is_active: bool = True
+    created_tasks_count: int = 0
+
+    # Task template data
+    input_data: Optional[dict[str, Any]] = None
+    max_retries: int = 3
+
+
+class RecurringTaskCreate(BaseModel):
+    """Schema for creating a recurring task."""
+    queue_id: str
+    title: str
+    description: Optional[str] = None
+    priority: int = 5
+    recurrence_type: RecurrenceType = RecurrenceType.DAILY
+    cron_expression: Optional[str] = None
+    interval: int = 1
+    days_of_week: list[int] = Field(default_factory=list)
+    day_of_month: Optional[int] = None
+    start_date: Optional[datetime] = None  # Defaults to now
+    end_date: Optional[datetime] = None
+    timezone: str = "UTC"
+    input_data: Optional[dict[str, Any]] = None
+    max_retries: int = 3
+
+
+class RecurringTaskUpdate(BaseModel):
+    """Schema for updating a recurring task."""
+    title: Optional[str] = None
+    description: Optional[str] = None
+    priority: Optional[int] = None
+    queue_id: Optional[str] = None
+    recurrence_type: Optional[RecurrenceType] = None
+    cron_expression: Optional[str] = None
+    interval: Optional[int] = None
+    days_of_week: Optional[list[int]] = None
+    day_of_month: Optional[int] = None
+    end_date: Optional[datetime] = None
+    timezone: Optional[str] = None
+    is_active: Optional[bool] = None
+    input_data: Optional[dict[str, Any]] = None
+    max_retries: Optional[int] = None

@@ -1,0 +1,124 @@
+import { create } from 'zustand'
+import { api, Queue, Task, User } from '../services/api'
+
+interface AppState {
+  // Data
+  user: User | null
+  queues: Queue[]
+  tasks: Task[]
+  selectedQueueId: string | null
+
+  // Loading states
+  loading: {
+    user: boolean
+    queues: boolean
+    tasks: boolean
+  }
+
+  // WebSocket
+  wsConnected: boolean
+
+  // Actions
+  setUser: (user: User | null) => void
+  setQueues: (queues: Queue[]) => void
+  setTasks: (tasks: Task[]) => void
+  setSelectedQueueId: (queueId: string | null) => void
+  setWsConnected: (connected: boolean) => void
+
+  // Async actions
+  fetchUser: () => Promise<void>
+  fetchQueues: () => Promise<void>
+  fetchTasks: (queueId?: string) => Promise<void>
+  createTask: (data: { queue_id: string; title: string; description?: string }) => Promise<Task>
+
+  // WebSocket event handlers
+  handleTaskEvent: (event: { type: string; data: Task }) => void
+}
+
+export const useAppStore = create<AppState>((set, _get) => ({
+  user: null,
+  queues: [],
+  tasks: [],
+  selectedQueueId: null,
+  loading: {
+    user: false,
+    queues: false,
+    tasks: false,
+  },
+  wsConnected: false,
+
+  setUser: (user) => set({ user }),
+  setQueues: (queues) => set({ queues }),
+  setTasks: (tasks) => set({ tasks }),
+  setSelectedQueueId: (queueId) => set({ selectedQueueId: queueId }),
+  setWsConnected: (connected) => set({ wsConnected: connected }),
+
+  fetchUser: async () => {
+    set((state) => ({ loading: { ...state.loading, user: true } }))
+    try {
+      const user = await api.getCurrentUser()
+      set({ user })
+    } catch (error) {
+      console.error('Failed to fetch user:', error)
+    } finally {
+      set((state) => ({ loading: { ...state.loading, user: false } }))
+    }
+  },
+
+  fetchQueues: async () => {
+    set((state) => ({ loading: { ...state.loading, queues: true } }))
+    try {
+      const queues = await api.getQueues()
+      set({ queues })
+    } catch (error) {
+      console.error('Failed to fetch queues:', error)
+    } finally {
+      set((state) => ({ loading: { ...state.loading, queues: false } }))
+    }
+  },
+
+  fetchTasks: async (queueId?: string) => {
+    set((state) => ({ loading: { ...state.loading, tasks: true } }))
+    try {
+      const tasks = await api.getTasks({ queue_id: queueId })
+      set({ tasks })
+    } catch (error) {
+      console.error('Failed to fetch tasks:', error)
+    } finally {
+      set((state) => ({ loading: { ...state.loading, tasks: false } }))
+    }
+  },
+
+  createTask: async (data) => {
+    const task = await api.createTask(data)
+    set((state) => ({ tasks: [task, ...state.tasks] }))
+    return task
+  },
+
+  handleTaskEvent: (event) => {
+    const { type, data: task } = event
+
+    set((state) => {
+      let tasks = [...state.tasks]
+
+      switch (type) {
+        case 'task.created':
+          // Add if not already present
+          if (!tasks.find((t) => t.id === task.id)) {
+            tasks = [task, ...tasks]
+          }
+          break
+
+        case 'task.updated':
+        case 'task.progress':
+        case 'task.completed':
+        case 'task.failed':
+          // Update existing task
+          tasks = tasks.map((t) => (t.id === task.id ? task : t))
+          break
+      }
+
+      return { tasks }
+    })
+  },
+}))

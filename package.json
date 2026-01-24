@@ -1,0 +1,18 @@
+{
+  "name": "expertly",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "apps/*/frontend",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:develop": "cd apps/develop && docker-compose up",
+    "dev:define": "cd apps/define && npm run dev",
+    "dev:manage": "cd apps/manage && docker-compose up",
+    "dev:qa": "cd apps/qa && docker-compose up",
+    "dev:salon": "cd apps/salon && docker-compose up",
+    "dev:today": "cd apps/today && docker-compose up"
+  }
+}

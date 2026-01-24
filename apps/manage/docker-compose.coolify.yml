@@ -1,0 +1,67 @@
+services:
+  mongodb:
+    image: mongo:7
+    container_name: expertly-manage-mongo
+    restart: unless-stopped
+    volumes:
+      - expertly_manage_mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: expertly_manage
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/expertly_manage --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - expertly-manage-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: expertly-manage-backend
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=expertly_manage
+      - SKIP_AUTH=true
+      - LOG_LEVEL=INFO
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.expertly-manage-api.rule=Host(`expertly-manage-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.expertly-manage-api.entrypoints=http"
+      - "traefik.http.services.expertly-manage-api.loadbalancer.server.port=8000"
+    networks:
+      - expertly-manage-network
+      - coolify
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: expertly-manage-frontend
+    restart: unless-stopped
+    environment:
+      - VITE_API_URL=http://expertly-manage-api.152.42.152.243.sslip.io
+    depends_on:
+      - backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.expertly-manage.rule=Host(`expertly-manage.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.expertly-manage.entrypoints=http"
+      - "traefik.http.services.expertly-manage.loadbalancer.server.port=80"
+    networks:
+      - expertly-manage-network
+      - coolify
+
+volumes:
+  expertly_manage_mongodb_data:
+
+networks:
+  expertly-manage-network:
+    driver: bridge
+  coolify:
+    external: true

@@ -1,0 +1,82 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - heading "Test Salon & Spa" [level=1] [ref=e6]
+    - navigation [ref=e7]:
+      - link "Calendar" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+        - generic [ref=e11]: Calendar
+      - link "Clients" [ref=e12] [cursor=pointer]:
+        - /url: /clients
+        - img [ref=e13]
+        - generic [ref=e18]: Clients
+      - link "Staff" [ref=e19] [cursor=pointer]:
+        - /url: /staff
+        - img [ref=e20]
+        - generic [ref=e24]: Staff
+      - link "Services" [ref=e25] [cursor=pointer]:
+        - /url: /services
+        - img [ref=e26]
+        - generic [ref=e32]: Services
+      - link "Waitlist" [ref=e33] [cursor=pointer]:
+        - /url: /waitlist
+        - img [ref=e34]
+        - generic [ref=e37]: Waitlist
+      - link "Promotions" [ref=e38] [cursor=pointer]:
+        - /url: /promotions
+        - img [ref=e39]
+        - generic [ref=e43]: Promotions
+      - link "Website" [ref=e44] [cursor=pointer]:
+        - /url: /website
+        - img [ref=e45]
+        - generic [ref=e48]: Website
+      - link "Reports" [ref=e49] [cursor=pointer]:
+        - /url: /reports
+        - img [ref=e50]
+        - generic [ref=e52]: Reports
+      - link "Settings" [active] [ref=e53] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e54]
+        - generic [ref=e57]: Settings
+    - button "Logout" [ref=e59]:
+      - img [ref=e60]
+      - generic [ref=e63]: Logout
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - heading "Settings" [level=1] [ref=e66]
+      - generic [ref=e67]:
+        - button "General" [ref=e68]
+        - button "Booking" [ref=e69]
+        - button "Payments" [ref=e70]
+        - button "Notifications" [ref=e71]
+      - generic [ref=e72]:
+        - heading "Business Information" [level=3] [ref=e75]
+        - generic [ref=e76]:
+          - generic [ref=e77]:
+            - generic [ref=e78]: Business Name
+            - textbox "Business Name" [ref=e79]: Test Salon & Spa
+          - generic [ref=e80]:
+            - generic [ref=e81]:
+              - generic [ref=e82]: Email
+              - textbox "Email" [ref=e83]: info@testsalon.com
+            - generic [ref=e84]:
+              - generic [ref=e85]: Phone
+              - textbox "Phone" [ref=e86]: 555-123-4567
+          - generic [ref=e87]:
+            - generic [ref=e88]: Address
+            - textbox "Address" [ref=e89]: 123 Main Street
+          - generic [ref=e90]:
+            - generic [ref=e91]:
+              - generic [ref=e92]: City
+              - textbox "City" [ref=e93]: New York
+            - generic [ref=e94]:
+              - generic [ref=e95]: State
+              - textbox "State" [ref=e96]: NY
+            - generic [ref=e97]:
+              - generic [ref=e98]: ZIP Code
+              - textbox "ZIP Code" [ref=e99]
+          - button "Save Changes" [ref=e101]
+```

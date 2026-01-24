@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:7
+    container_name: salon_mongodb
+    restart: unless-stopped
+    volumes:
+      - salon_mongodb_data:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: salon_booking
+    networks:
+      - salon_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: salon_backend
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - MONGODB_DATABASE=salon_booking
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+      - CORS_ORIGINS=["http://salon.174.138.81.31.sslip.io","https://salon.174.138.81.31.sslip.io","http://localhost:5173"]
+    depends_on:
+      - mongodb
+    networks:
+      - salon_network
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.salon-api.rule=Host(`salon-api.174.138.81.31.sslip.io`)"
+      - "traefik.http.routers.salon-api.entrypoints=http"
+      - "traefik.http.services.salon-api.loadbalancer.server.port=8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=http://salon-api.174.138.81.31.sslip.io/api/v1
+    container_name: salon_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - salon_network
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.salon.rule=Host(`salon.174.138.81.31.sslip.io`)"
+      - "traefik.http.routers.salon.entrypoints=http"
+      - "traefik.http.services.salon.loadbalancer.server.port=80"
+
+networks:
+  salon_network:
+    driver: bridge
+  coolify:
+    external: true
+
+volumes:
+  salon_mongodb_data:

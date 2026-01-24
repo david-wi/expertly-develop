@@ -1,0 +1,131 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - heading "Test Salon & Spa" [level=1] [ref=e6]
+    - navigation [ref=e7]:
+      - link "Calendar" [ref=e8] [cursor=pointer]:
+        - /url: /
+        - img [ref=e9]
+        - generic [ref=e11]: Calendar
+      - link "Clients" [ref=e12] [cursor=pointer]:
+        - /url: /clients
+        - img [ref=e13]
+        - generic [ref=e18]: Clients
+      - link "Staff" [ref=e19] [cursor=pointer]:
+        - /url: /staff
+        - img [ref=e20]
+        - generic [ref=e24]: Staff
+      - link "Services" [ref=e25] [cursor=pointer]:
+        - /url: /services
+        - img [ref=e26]
+        - generic [ref=e32]: Services
+      - link "Waitlist" [ref=e33] [cursor=pointer]:
+        - /url: /waitlist
+        - img [ref=e34]
+        - generic [ref=e37]: Waitlist
+      - link "Promotions" [ref=e38] [cursor=pointer]:
+        - /url: /promotions
+        - img [ref=e39]
+        - generic [ref=e43]: Promotions
+      - link "Website" [active] [ref=e44] [cursor=pointer]:
+        - /url: /website
+        - img [ref=e45]
+        - generic [ref=e48]: Website
+      - link "Reports" [ref=e49] [cursor=pointer]:
+        - /url: /reports
+        - img [ref=e50]
+        - generic [ref=e52]: Reports
+      - link "Settings" [ref=e53] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e54]
+        - generic [ref=e57]: Settings
+    - button "Logout" [ref=e59]:
+      - img [ref=e60]
+      - generic [ref=e63]: Logout
+  - main [ref=e64]:
+    - generic [ref=e65]:
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - heading "Website Builder" [level=1] [ref=e68]
+          - paragraph [ref=e69]: Create your public booking page
+        - generic [ref=e70]:
+          - button "Publish Website" [disabled] [ref=e71]
+          - button "Save Changes" [ref=e72]
+      - generic [ref=e73]:
+        - button "Design" [ref=e74]
+        - button "Content" [ref=e75]
+        - button "Settings" [ref=e76]
+      - generic [ref=e77]:
+        - generic [ref=e78]:
+          - generic [ref=e79]:
+            - heading "Website Address" [level=3] [ref=e80]
+            - generic [ref=e81]:
+              - textbox "your-salon" [ref=e82]
+              - generic [ref=e83]: .yourdomain.com
+          - generic [ref=e84]:
+            - heading "Theme" [level=3] [ref=e85]
+            - generic [ref=e86]:
+              - button "Elegant Classic salon look" [ref=e87]:
+                - generic [ref=e88]: Elegant
+                - generic [ref=e89]: Classic salon look
+              - button "Modern Clean and minimalist" [ref=e90]:
+                - generic [ref=e91]: Modern
+                - generic [ref=e92]: Clean and minimalist
+              - button "Warm Cozy and inviting" [ref=e93]:
+                - generic [ref=e94]: Warm
+                - generic [ref=e95]: Cozy and inviting
+              - button "Bold High contrast, vibrant" [ref=e96]:
+                - generic [ref=e97]: Bold
+                - generic [ref=e98]: High contrast, vibrant
+              - button "Natural Earth tones, organic" [ref=e99]:
+                - generic [ref=e100]: Natural
+                - generic [ref=e101]: Earth tones, organic
+          - generic [ref=e102]:
+            - heading "Brand Colors" [level=3] [ref=e103]
+            - generic [ref=e104]:
+              - generic [ref=e105]:
+                - generic [ref=e106]: Primary Color
+                - generic [ref=e107]:
+                  - textbox [ref=e108] [cursor=pointer]: "#d4a5a5"
+                  - textbox [ref=e109]: "#D4A5A5"
+              - generic [ref=e110]:
+                - generic [ref=e111]: Secondary Color
+                - generic [ref=e112]:
+                  - textbox [ref=e113] [cursor=pointer]: "#c9a86c"
+                  - textbox [ref=e114]: "#C9A86C"
+        - generic [ref=e115]:
+          - generic [ref=e117]: Preview
+          - generic [ref=e123]:
+            - generic [ref=e126]:
+              - heading "Welcome to Test Salon" [level=1] [ref=e127]
+              - paragraph [ref=e128]: Experience luxury beauty services
+              - button "Book Now" [ref=e129]
+            - generic [ref=e130]:
+              - heading "Our Services" [level=2] [ref=e131]
+              - generic [ref=e132]:
+                - generic [ref=e133]:
+                  - generic [ref=e134]: Haircut
+                  - generic [ref=e135]: From $50
+                - generic [ref=e136]:
+                  - generic [ref=e137]: Color
+                  - generic [ref=e138]: From $50
+                - generic [ref=e139]:
+                  - generic [ref=e140]: Styling
+                  - generic [ref=e141]: From $50
+                - generic [ref=e142]:
+                  - generic [ref=e143]: Treatment
+                  - generic [ref=e144]: From $50
+            - generic [ref=e145]:
+              - heading "Meet Our Team" [level=2] [ref=e146]
+              - generic [ref=e147]:
+                - generic [ref=e150]: Sarah
+                - generic [ref=e153]: Mike
+                - generic [ref=e156]: Lisa
+            - generic [ref=e157]:
+              - generic [ref=e158]: Contact us today
+              - generic [ref=e159]:
+                - generic [ref=e160]: IG
+                - generic [ref=e161]: FB
+```
