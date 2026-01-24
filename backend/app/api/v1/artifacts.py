@@ -106,7 +106,7 @@ async def download_artifact(
     artifact = Artifact.from_mongo(doc)
 
     # Get the document content
-    document = await document_service.get_current(str(artifact.document_id))
+    document = await document_service.get_by_id(artifact.document_id)
     if not document:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

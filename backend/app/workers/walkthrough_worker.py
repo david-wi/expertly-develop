@@ -157,7 +157,7 @@ class WalkthroughWorker(BaseWorker):
             description=params.get("description"),
             artifact_type_code="visual_walkthrough",
             format="pdf",
-            document_id=ObjectId(doc.document_key),
+            document_id=doc.id,
             generation_params=params,
             status="complete",
         )

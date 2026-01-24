@@ -132,6 +132,11 @@ class DocumentService:
         )
         return Document.from_mongo(data) if data else None
 
+    async def get_by_id(self, document_id: ObjectId) -> Optional[Document]:
+        """Get a document by its ObjectId."""
+        data = await self.collection.find_one({"_id": document_id, "deleted_at": None})
+        return Document.from_mongo(data) if data else None
+
     async def get_version(self, document_key: str, version: int) -> Optional[Document]:
         """Get a specific version of a document."""
         data = await self.collection.find_one(
