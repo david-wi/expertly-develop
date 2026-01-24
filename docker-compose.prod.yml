@@ -34,7 +34,10 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://expertly-develop-api.152.42.152.243.sslip.io/api/v1
     depends_on:
       - backend
     networks:
