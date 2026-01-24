@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_DATABASE=expertly_develop
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DEBUG=false
+    depends_on:
+      - mongo
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ed-backend.rule=Host(`expertly-develop-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_DATABASE=expertly_develop
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    volumes:
+      - artifacts_data:/app/data/artifacts
+    depends_on:
+      - mongo
+    networks:
+      - default
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ed-frontend.rule=Host(`expertly-develop.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.ed-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - default
+    restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
+  default:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  artifacts_data:
