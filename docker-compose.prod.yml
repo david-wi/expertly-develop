@@ -39,8 +39,7 @@ services:
 
   develop-frontend:
     build:
-      context: .
-      dockerfile: ./apps/develop/frontend/Dockerfile
+      context: ./apps/develop/frontend
       args:
         VITE_API_URL: http://expertly-develop-api.152.42.152.243.sslip.io/api/v1
     depends_on:
