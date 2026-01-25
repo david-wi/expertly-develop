@@ -16,6 +16,7 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.ed-backend.entrypoints=http"
       - "traefik.http.routers.ed-backend.rule=Host(`expertly-develop-api.152.42.152.243.sslip.io`)"
       - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
@@ -49,6 +50,7 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.ed-frontend.entrypoints=http"
       - "traefik.http.routers.ed-frontend.rule=Host(`expertly-develop.152.42.152.243.sslip.io`)"
       - "traefik.http.services.ed-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
