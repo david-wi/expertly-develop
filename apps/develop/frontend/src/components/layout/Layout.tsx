@@ -20,12 +20,12 @@ const navigation = [
 ]
 
 const EXPERTLY_PRODUCTS = [
-  { name: 'Develop', code: 'develop', href: '/develop', color: 'bg-blue-600', description: 'Visual walkthroughs', icon: '🛠️' },
-  { name: 'Define', code: 'define', href: '/define', color: 'bg-purple-600', description: 'Requirements management', icon: '📋' },
-  { name: 'Manage', code: 'manage', href: '/manage', color: 'bg-green-600', description: 'Task management', icon: '📊' },
-  { name: 'QA', code: 'qa', href: '/qa', color: 'bg-orange-600', description: 'Quality assurance', icon: '🧪' },
-  { name: 'Salon', code: 'salon', href: '/salon', color: 'bg-pink-600', description: 'Booking platform', icon: '💇' },
-  { name: 'Today', code: 'today', href: '/today', color: 'bg-teal-600', description: 'Daily workflow', icon: '📅' },
+  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', color: 'bg-blue-600', description: 'Visual walkthroughs', icon: '🛠️' },
+  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', color: 'bg-purple-600', description: 'Requirements management', icon: '📋' },
+  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', color: 'bg-green-600', description: 'Task management', icon: '📊' },
+  { name: 'QA', code: 'qa', href: 'http://vibe-qa.152.42.152.243.sslip.io', color: 'bg-orange-600', description: 'Quality assurance', icon: '🧪' },
+  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', color: 'bg-pink-600', description: 'Booking platform', icon: '💇' },
+  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', color: 'bg-teal-600', description: 'Daily workflow', icon: '📅' },
 ]
 
 export default function Layout() {
