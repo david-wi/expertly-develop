@@ -11,60 +11,18 @@ export interface ExpertlyProduct {
   name: string
   code: string
   href: string
-  icon: string
-  color: string
+  initials: string
   description: string
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
-  {
-    name: 'Develop',
-    code: 'develop',
-    href: 'http://expertly-develop.152.42.152.243.sslip.io',
-    icon: '🛠️',
-    color: 'bg-violet-600',
-    description: 'Visual walkthroughs',
-  },
-  {
-    name: 'Define',
-    code: 'define',
-    href: 'http://expertly-define.152.42.152.243.sslip.io',
-    icon: '📋',
-    color: 'bg-violet-600',
-    description: 'Requirements management',
-  },
-  {
-    name: 'Manage',
-    code: 'manage',
-    href: 'http://expertly-manage.152.42.152.243.sslip.io',
-    icon: '📊',
-    color: 'bg-violet-600',
-    description: 'Task management',
-  },
-  {
-    name: 'QA',
-    code: 'qa',
-    href: 'http://vibe-qa.152.42.152.243.sslip.io',
-    icon: '🧪',
-    color: 'bg-violet-600',
-    description: 'Quality assurance',
-  },
-  {
-    name: 'Salon',
-    code: 'salon',
-    href: 'http://expertly-salon.152.42.152.243.sslip.io',
-    icon: '💇',
-    color: 'bg-violet-600',
-    description: 'Booking platform',
-  },
-  {
-    name: 'Today',
-    code: 'today',
-    href: 'http://expertly-today.152.42.152.243.sslip.io',
-    icon: '📅',
-    color: 'bg-violet-600',
-    description: 'Daily workflow',
-  },
+  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', initials: 'De', description: 'Requirements management' },
+  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', initials: 'Dv', description: 'Visual walkthroughs' },
+  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', initials: 'Ma', description: 'Task management' },
+  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', initials: 'Sa', description: 'Booking platform' },
+  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', initials: 'To', description: 'Daily workflow' },
+  { name: 'VibeCode', code: 'vibecode', href: 'http://expertly-vibecode.152.42.152.243.sslip.io', initials: 'VC', description: 'Multi-agent dashboard' },
+  { name: 'VibeTest', code: 'vibetest', href: 'http://vibe-qa.152.42.152.243.sslip.io', initials: 'VT', description: 'Quality assurance' },
 ]
 
 // Expertly Logo SVG component
@@ -152,8 +110,11 @@ export function Sidebar({
                     }`}
                     onClick={() => setShowProductSwitcher(false)}
                   >
-                    <div className={`w-8 h-8 ${product.color} rounded-lg flex items-center justify-center`}>
-                      <span className="text-white">{product.icon}</span>
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
+                      style={{ background: 'linear-gradient(135deg, #9648FF 0%, #2C62F9 100%)' }}
+                    >
+                      {product.initials}
                     </div>
                     <div>
                       <p className="font-medium">{product.name}</p>
