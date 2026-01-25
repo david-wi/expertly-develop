@@ -1,5 +1,8 @@
 services:
-  backend:
+  # ===================
+  # EXPERTLY DEVELOP
+  # ===================
+  develop-backend:
     build: ./apps/develop/backend
     environment:
       - MONGODB_URL=mongodb://mongo:27017
@@ -17,7 +20,7 @@ services:
       - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
-  worker:
+  develop-worker:
     build:
       context: ./apps/develop/backend
       dockerfile: Dockerfile.worker
@@ -33,13 +36,13 @@ services:
       - default
     restart: unless-stopped
 
-  frontend:
+  develop-frontend:
     build:
       context: ./apps/develop/frontend
       args:
         VITE_API_URL: http://expertly-develop-api.152.42.152.243.sslip.io/api/v1
     depends_on:
-      - backend
+      - develop-backend
     networks:
       - coolify
       - default
@@ -49,6 +52,184 @@ services:
       - "traefik.http.services.ed-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
+  # ===================
+  # EXPERTLY DEFINE
+  # ===================
+  define:
+    build: ./apps/define
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.define.rule=Host(`expertly-define.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.define.loadbalancer.server.port=3000"
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY MANAGE
+  # ===================
+  manage-backend:
+    build: ./apps/manage/backend
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_DATABASE=expertly_manage
+    depends_on:
+      - mongo
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.manage-backend.rule=Host(`expertly-manage-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.manage-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  manage-frontend:
+    build:
+      context: ./apps/manage/frontend
+      args:
+        VITE_API_URL: http://expertly-manage-api.152.42.152.243.sslip.io/api
+    depends_on:
+      - manage-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.manage-frontend.rule=Host(`expertly-manage.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.manage-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY QA
+  # ===================
+  qa-backend:
+    build: ./apps/qa/backend
+    environment:
+      - DATABASE_URL=postgresql://vibeqa:vibeqa@qa-db:5432/vibeqa
+      - SECRET_KEY=${QA_SECRET_KEY:-super-secret-key-change-in-production}
+    depends_on:
+      - qa-db
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qa-backend.rule=Host(`vibe-qa.152.42.152.243.sslip.io`) && PathPrefix(`/api`)"
+      - "traefik.http.services.qa-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  qa-frontend:
+    build: ./apps/qa/frontend
+    depends_on:
+      - qa-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.qa-frontend.rule=Host(`vibe-qa.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.qa-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  qa-db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=vibeqa
+      - POSTGRES_PASSWORD=vibeqa
+      - POSTGRES_DB=vibeqa
+    volumes:
+      - qa_postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY SALON
+  # ===================
+  salon-backend:
+    build: ./apps/salon/backend
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_DATABASE=expertly_salon
+      - JWT_SECRET=${SALON_JWT_SECRET:-super-secret-jwt-key}
+    depends_on:
+      - mongo
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.salon-backend.rule=Host(`expertly-salon-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.salon-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  salon-frontend:
+    build:
+      context: ./apps/salon/frontend
+      args:
+        VITE_API_URL: http://expertly-salon-api.152.42.152.243.sslip.io/api/v1
+    depends_on:
+      - salon-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.salon-frontend.rule=Host(`expertly-salon.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.salon-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY TODAY
+  # ===================
+  today-backend:
+    build: ./apps/today/backend
+    environment:
+      - DATABASE_URL=postgresql://today:today@today-db:5432/expertly_today
+    depends_on:
+      - today-db
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.today-backend.rule=Host(`expertly-today-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.today-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  today-frontend:
+    build:
+      context: ./apps/today/frontend
+      args:
+        VITE_API_URL: http://expertly-today-api.152.42.152.243.sslip.io/api
+    depends_on:
+      - today-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.today-frontend.rule=Host(`expertly-today.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.today-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  today-db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=today
+      - POSTGRES_PASSWORD=today
+      - POSTGRES_DB=expertly_today
+    volumes:
+      - today_postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+    restart: unless-stopped
+
+  # ===================
+  # SHARED DATABASES
+  # ===================
   mongo:
     image: mongo:7
     volumes:
@@ -66,3 +247,5 @@ networks:
 volumes:
   mongo_data:
   artifacts_data:
+  qa_postgres_data:
+  today_postgres_data:

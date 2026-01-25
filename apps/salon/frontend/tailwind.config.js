@@ -3,22 +3,24 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    "../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        // Warm salon palette
+        // Violet primary palette for unified Expertly branding
         primary: {
-          50: '#FDF8F6',
-          100: '#F9EEEB',
-          200: '#F2D9D3',
-          300: '#E8C4C4',
-          400: '#D4A5A5',
-          500: '#C08888',
-          600: '#A66B6B',
-          700: '#8B5252',
-          800: '#6B3D3D',
-          900: '#4A2B2B',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+          950: '#2e1065',
         },
         accent: {
           50: '#FDFCFA',

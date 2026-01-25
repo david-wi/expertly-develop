@@ -1,14 +1,13 @@
+// Shared Tailwind preset for all Expertly apps
+// Use this preset in your tailwind.config.js:
+// presets: [require('@expertly/ui/styles/tailwind-preset')]
+
 /** @type {import('tailwindcss').Config} */
-export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-    "../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
-  ],
+module.exports = {
   theme: {
     extend: {
       colors: {
-        // Violet primary palette for unified Expertly branding
+        // Primary color - Tailwind violet palette for unified purple branding
         primary: {
           50: '#f5f3ff',
           100: '#ede9fe',
@@ -23,7 +22,9 @@ export default {
           950: '#2e1065',
         },
       },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
     },
   },
-  plugins: [],
 }

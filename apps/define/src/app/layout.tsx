@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/layout/header";
+import { Sidebar } from "@/components/layout/sidebar";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -21,9 +21,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} font-sans antialiased bg-gray-50`}>
-        <Header />
-        <main className="min-h-[calc(100vh-4rem)]">
-          {children}
+        <Sidebar />
+        <main className="pl-64 min-h-screen">
+          <div className="p-8">
+            {children}
+          </div>
         </main>
       </body>
     </html>

@@ -10,19 +10,10 @@ import {
   LogOut,
   User,
   Building2,
-  ChevronDown,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-
-const EXPERTLY_PRODUCTS = [
-  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', color: 'bg-blue-600', description: 'Visual walkthroughs', icon: '🛠️' },
-  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', color: 'bg-purple-600', description: 'Requirements management', icon: '📋' },
-  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', color: 'bg-green-600', description: 'Task management', icon: '📊' },
-  { name: 'QA', code: 'qa', href: 'http://vibe-qa.152.42.152.243.sslip.io', color: 'bg-orange-600', description: 'Quality assurance', icon: '🧪' },
-  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', color: 'bg-pink-600', description: 'Booking platform', icon: '💇' },
-  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', color: 'bg-teal-600', description: 'Daily workflow', icon: '📅' },
-]
+import { Sidebar as SharedSidebar, MainContent } from '@expertly/ui'
 
 interface LayoutProps {
   children: ReactNode
@@ -35,18 +26,12 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const [showProductSwitcher, setShowProductSwitcher] = useState(false)
 
   const navItems = [
-    { path: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
-    { path: '/projects', icon: FolderKanban, label: t('nav.projects') },
-    { path: '/quick-start', icon: Zap, label: t('nav.quickStart') },
+    { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
+    { name: t('nav.projects'), href: '/projects', icon: FolderKanban },
+    { name: t('nav.quickStart'), href: '/quick-start', icon: Zap },
   ]
-
-  const isActive = (path: string) => {
-    if (path === '/') return location.pathname === '/'
-    return location.pathname.startsWith(path)
-  }
 
   const toggleLanguage = () => {
     const newLang = i18n.language === 'en' ? 'es' : 'en'
@@ -68,158 +53,72 @@ export default function Layout({ children }: LayoutProps) {
         />
       )}
 
-      {/* Sidebar */}
-      <aside
-        className={clsx(
-          'fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 lg:translate-x-0',
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        )}
-      >
-        <div className="relative">
-          <button
-            onClick={() => setShowProductSwitcher(!showProductSwitcher)}
-            className="w-full flex items-center justify-between h-16 px-4 border-b border-gray-200 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">E</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Expertly QA</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProductSwitcher ? 'rotate-180' : ''}`} />
+      {/* Sidebar - Desktop: always visible, Mobile: togglable */}
+      <div className={clsx(
+        'fixed top-0 left-0 z-50 h-full transform transition-transform duration-200 lg:translate-x-0',
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      )}>
+        <SharedSidebar
+          productCode="qa"
+          productName="QA"
+          navigation={navItems}
+          currentPath={location.pathname}
+          user={user ? { name: user.full_name, role: user.role } : undefined}
+          bottomSection={
+            <div className="p-4 space-y-2">
+              {user && (
+                <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
+                  <Building2 className="w-4 h-4" />
+                  <span className="truncate">{user.organization.name}</span>
+                </div>
+              )}
               <button
-                className="lg:hidden p-2 text-gray-500 hover:text-gray-700"
-                onClick={(e) => { e.stopPropagation(); setSidebarOpen(false); }}
+                onClick={toggleLanguage}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
               >
-                <X className="w-5 h-5" />
+                {i18n.language === 'en' ? 'ES' : 'EN'}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
+              >
+                <LogOut className="w-4 h-4" />
+                {t('auth.logout', 'Sign out')}
               </button>
             </div>
-          </button>
-
-          {showProductSwitcher && (
-            <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50 max-h-80 overflow-y-auto">
-              <div className="p-2">
-                <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Switch Product</p>
-                {EXPERTLY_PRODUCTS.map((product) => (
-                  <a
-                    key={product.code}
-                    href={product.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      product.code === 'qa'
-                        ? 'bg-gray-100 text-gray-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                  >
-                    <div className={`w-8 h-8 ${product.color} rounded-lg flex items-center justify-center`}>
-                      <span>{product.icon}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.description}</p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <nav className="p-4 space-y-1">
-          {navItems.map((item) => (
+          }
+          renderLink={({ href, className, children }) => (
             <Link
-              key={item.path}
-              to={item.path}
+              to={href}
               onClick={() => setSidebarOpen(false)}
-              className={clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
-                isActive(item.path)
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'text-gray-700 hover:bg-gray-100'
-              )}
+              className={className}
             >
-              <item.icon className="w-5 h-5" />
-              {item.label}
+              {children}
             </Link>
-          ))}
-        </nav>
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 space-y-2">
-          {/* Organization info */}
-          {user && (
-            <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
-              <Building2 className="w-4 h-4" />
-              <span className="truncate">{user.organization.name}</span>
-            </div>
           )}
-          <button
-            onClick={toggleLanguage}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-          >
-            {i18n.language === 'en' ? 'ES' : 'EN'}
-          </button>
-        </div>
-      </aside>
+        />
+        {/* Mobile close button */}
+        <button
+          className="lg:hidden absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700"
+          onClick={() => setSidebarOpen(false)}
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white border-b border-gray-200">
+        {/* Top bar - mobile only */}
+        <header className="sticky top-0 z-30 bg-white border-b border-gray-200 lg:hidden">
           <div className="flex items-center justify-between h-16 px-4">
             <button
-              className="lg:hidden p-2 text-gray-500 hover:text-gray-700"
+              className="p-2 text-gray-500 hover:text-gray-700"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="w-5 h-5" />
             </button>
-
-            {/* User menu */}
-            <div className="ml-auto relative">
-              <button
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-100"
-              >
-                <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-primary-600" />
-                </div>
-                {user && (
-                  <span className="hidden sm:block text-sm font-medium text-gray-700">
-                    {user.full_name}
-                  </span>
-                )}
-              </button>
-
-              {userMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-10"
-                    onClick={() => setUserMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                    {user && (
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.full_name}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {user.email}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1 capitalize">
-                          {user.role}
-                        </p>
-                      </div>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      {t('auth.logout', 'Sign out')}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <span className="font-semibold text-gray-900">Expertly QA</span>
+            <div className="w-9" /> {/* Spacer for centering */}
           </div>
         </header>
 
