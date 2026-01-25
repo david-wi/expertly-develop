@@ -6,14 +6,19 @@ WORKDIR /app
 # Accept API URL as build arg
 ARG VITE_API_URL=/api/v1
 
-# Copy package files
+# Copy package files from root and packages
 COPY package.json package-lock.json* ./
+COPY packages/ ./packages/
 
-# Install dependencies
+# Copy frontend package files
+COPY apps/develop/frontend/package.json ./apps/develop/frontend/
+
+# Install dependencies (npm workspaces will handle the local package)
+WORKDIR /app/apps/develop/frontend
 RUN npm install
 
-# Copy source code
-COPY . .
+# Copy frontend source code
+COPY apps/develop/frontend/ ./
 
 # Set environment variable for Vite build
 ENV VITE_API_URL=$VITE_API_URL
@@ -25,10 +30,10 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/develop/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/develop/frontend/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80
