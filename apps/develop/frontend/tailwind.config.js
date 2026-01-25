@@ -3,7 +3,9 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
+    // Shared UI package - both local path and node_modules
     "../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
+    "./node_modules/@expertly/ui/src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
