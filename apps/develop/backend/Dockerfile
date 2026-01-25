@@ -14,6 +14,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY . .
 
+# Validate FastAPI app loads (fail fast on syntax errors or missing imports)
+RUN python -c "from app.main import app; print('FastAPI app validated successfully')"
+
 # Expose port
 EXPOSE 8000
 
