@@ -24,7 +24,7 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-this-in-production}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
-      - CORS_ORIGINS=["http://salon.174.138.81.31.sslip.io","https://salon.174.138.81.31.sslip.io","http://localhost:5173"]
+      - CORS_ORIGINS=["http://expertly-salon.152.42.152.243.sslip.io","https://expertly-salon.152.42.152.243.sslip.io","http://localhost:5173"]
     depends_on:
       - mongodb
     networks:
@@ -32,7 +32,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.salon-api.rule=Host(`salon-api.174.138.81.31.sslip.io`)"
+      - "traefik.http.routers.salon-api.rule=Host(`expertly-salon-api.152.42.152.243.sslip.io`)"
       - "traefik.http.routers.salon-api.entrypoints=http"
       - "traefik.http.services.salon-api.loadbalancer.server.port=8000"
 
@@ -41,7 +41,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://salon-api.174.138.81.31.sslip.io/api/v1
+        - VITE_API_URL=http://expertly-salon-api.152.42.152.243.sslip.io/api/v1
     container_name: salon_frontend
     restart: unless-stopped
     depends_on:
@@ -51,7 +51,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.salon.rule=Host(`salon.174.138.81.31.sslip.io`)"
+      - "traefik.http.routers.salon.rule=Host(`expertly-salon.152.42.152.243.sslip.io`)"
       - "traefik.http.routers.salon.entrypoints=http"
       - "traefik.http.services.salon.loadbalancer.server.port=80"
 
