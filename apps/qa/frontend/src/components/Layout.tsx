@@ -13,7 +13,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, MainContent } from '@expertly/ui'
+import { Sidebar as SharedSidebar, MainContent, SupportedLanguage } from '@expertly/ui'
 
 interface LayoutProps {
   children: ReactNode
@@ -33,9 +33,8 @@ export default function Layout({ children }: LayoutProps) {
     { name: t('nav.quickStart'), href: '/quick-start', icon: Zap },
   ]
 
-  const toggleLanguage = () => {
-    const newLang = i18n.language === 'en' ? 'es' : 'en'
-    i18n.changeLanguage(newLang)
+  const handleLanguageChange = (lang: SupportedLanguage) => {
+    i18n.changeLanguage(lang)
   }
 
   const handleLogout = () => {
@@ -60,10 +59,12 @@ export default function Layout({ children }: LayoutProps) {
       )}>
         <SharedSidebar
           productCode="qa"
-          productName="QA"
+          productName="VibeTest"
           navigation={navItems}
           currentPath={location.pathname}
           user={user ? { name: user.full_name, role: user.role } : undefined}
+          currentLanguage={i18n.language as SupportedLanguage}
+          onLanguageChange={handleLanguageChange}
           bottomSection={
             <div className="p-4 space-y-2">
               {user && (
@@ -72,12 +73,6 @@ export default function Layout({ children }: LayoutProps) {
                   <span className="truncate">{user.organization.name}</span>
                 </div>
               )}
-              <button
-                onClick={toggleLanguage}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                {i18n.language === 'en' ? 'ES' : 'EN'}
-              </button>
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
@@ -117,7 +112,7 @@ export default function Layout({ children }: LayoutProps) {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <span className="font-semibold text-gray-900">Expertly QA</span>
+            <span className="font-semibold text-gray-900">Expertly VibeTest</span>
             <div className="w-9" /> {/* Spacer for centering */}
           </div>
         </header>

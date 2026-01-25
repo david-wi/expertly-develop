@@ -11,18 +11,31 @@ export interface ExpertlyProduct {
   name: string
   code: string
   href: string
-  initials: string
+  icon: string
   description: string
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
-  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', initials: 'De', description: 'Requirements management' },
-  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', initials: 'Dv', description: 'Visual walkthroughs' },
-  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', initials: 'Ma', description: 'Task management' },
-  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', initials: 'Sa', description: 'Booking platform' },
-  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', initials: 'To', description: 'Daily workflow' },
-  { name: 'VibeCode', code: 'vibecode', href: 'http://expertly-vibecode.152.42.152.243.sslip.io', initials: 'VC', description: 'Multi-agent dashboard' },
-  { name: 'VibeTest', code: 'vibetest', href: 'http://vibe-qa.152.42.152.243.sslip.io', initials: 'VT', description: 'Quality assurance' },
+  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', icon: '📋', description: 'Requirements management' },
+  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', icon: '🛠️', description: 'Visual walkthroughs' },
+  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', icon: '📊', description: 'Task management' },
+  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', icon: '💇', description: 'Booking platform' },
+  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', icon: '📅', description: 'Daily workflow' },
+  { name: 'VibeCode', code: 'vibecode', href: 'http://expertly-vibecode.152.42.152.243.sslip.io', icon: '🤖', description: 'Multi-agent dashboard' },
+  { name: 'VibeTest', code: 'vibetest', href: 'http://vibe-qa.152.42.152.243.sslip.io', icon: '🧪', description: 'Quality assurance' },
+]
+
+export type SupportedLanguage = 'en' | 'es'
+
+export interface LanguageOption {
+  code: SupportedLanguage
+  flag: string
+  name: string
+}
+
+export const SUPPORTED_LANGUAGES: LanguageOption[] = [
+  { code: 'en', flag: '🇺🇸', name: 'English' },
+  { code: 'es', flag: '🇪🇸', name: 'Español' },
 ]
 
 // Expertly Logo SVG component
@@ -52,6 +65,11 @@ export interface SidebarProps {
   basePath?: string
   orgSwitcher?: ReactNode
   bottomSection?: ReactNode
+  // Language support
+  currentLanguage?: SupportedLanguage
+  onLanguageChange?: (lang: SupportedLanguage) => void
+  // Theme
+  theme?: 'light' | 'dark'
   // Router-agnostic link rendering
   renderLink: (props: {
     href: string
@@ -70,24 +88,88 @@ export function Sidebar({
   basePath = '',
   orgSwitcher,
   bottomSection,
+  currentLanguage,
+  onLanguageChange,
+  theme = 'light',
   renderLink,
 }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
+  const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
+
+  const isDark = theme === 'dark'
+
+  // Theme classes
+  const sidebarBg = isDark ? 'bg-gray-900' : 'bg-white'
+  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
+  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
+  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
+  const textMuted = isDark ? 'text-gray-500' : 'text-gray-500'
+  const hoverBg = isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
+  const activeBg = isDark ? 'bg-violet-900/50' : 'bg-violet-50'
+  const activeText = isDark ? 'text-violet-300' : 'text-violet-700'
+  const navHoverBg = isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
+  const userBg = isDark ? 'bg-gray-800' : 'bg-gray-50'
+  const avatarBg = isDark ? 'bg-violet-900' : 'bg-violet-100'
+  const avatarText = isDark ? 'text-violet-300' : 'text-violet-700'
+  const dropdownBg = isDark ? 'bg-gray-800' : 'bg-white'
+
+  const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col">
+    <div className={`fixed inset-y-0 left-0 z-50 w-64 ${sidebarBg} shadow-lg flex flex-col`}>
       {/* Logo / Product Switcher */}
       <div className="relative">
-        <button
-          onClick={() => setShowProductSwitcher(!showProductSwitcher)}
-          className="w-full flex h-16 items-center justify-between gap-2 px-6 border-b hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-3">
+        <div className={`flex h-16 items-center justify-between gap-2 px-6 border-b ${borderColor}`}>
+          <button
+            onClick={() => setShowProductSwitcher(!showProductSwitcher)}
+            className={`flex items-center gap-3 ${hoverBg} -ml-2 px-2 py-1 rounded-lg transition-colors`}
+          >
             <ExpertlyLogo className="w-8 h-8" />
-            <span className="font-semibold text-gray-900">Expertly {productName}</span>
-          </div>
-          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProductSwitcher ? 'rotate-180' : ''}`} />
-        </button>
+            <span className={`font-semibold ${textPrimary}`}>Expertly {productName}</span>
+            <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform ${showProductSwitcher ? 'rotate-180' : ''}`} />
+          </button>
+
+          {/* Compact Language Selector */}
+          {onLanguageChange && (
+            <div className="relative">
+              <button
+                onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
+                className={`p-1.5 rounded-lg ${hoverBg} transition-colors`}
+                title={currentLang.name}
+              >
+                <span className="text-lg">{currentLang.flag}</span>
+              </button>
+
+              {showLanguageSwitcher && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowLanguageSwitcher(false)}
+                  />
+                  <div className={`absolute top-full right-0 mt-1 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50 min-w-[120px]`}>
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => {
+                          onLanguageChange(lang.code)
+                          setShowLanguageSwitcher(false)
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${
+                          lang.code === currentLanguage
+                            ? `${activeBg} ${activeText}`
+                            : `${textSecondary} ${hoverBg}`
+                        } first:rounded-t-lg last:rounded-b-lg transition-colors`}
+                      >
+                        <span>{lang.flag}</span>
+                        <span>{lang.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Product Dropdown */}
         {showProductSwitcher && (
@@ -96,29 +178,26 @@ export function Sidebar({
               className="fixed inset-0 z-40"
               onClick={() => setShowProductSwitcher(false)}
             />
-            <div className="absolute top-full left-0 right-0 bg-white border-b shadow-lg z-50 max-h-80 overflow-y-auto">
+            <div className={`absolute top-full left-0 right-0 ${dropdownBg} border-b ${borderColor} shadow-lg z-50 max-h-80 overflow-y-auto`}>
               <div className="p-2">
-                <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Switch Product</p>
+                <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
                 {EXPERTLY_PRODUCTS.map((product) => (
                   <a
                     key={product.code}
                     href={product.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                       product.code === productCode
-                        ? 'bg-violet-50 text-violet-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                        ? `${activeBg} ${activeText}`
+                        : `${textSecondary} ${hoverBg} ${isDark ? 'hover:text-white' : 'hover:text-gray-900'}`
                     }`}
                     onClick={() => setShowProductSwitcher(false)}
                   >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                      style={{ background: 'linear-gradient(135deg, #9648FF 0%, #2C62F9 100%)' }}
-                    >
-                      {product.initials}
+                    <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
+                      <span className="text-white">{product.icon}</span>
                     </div>
                     <div>
                       <p className="font-medium">{product.name}</p>
-                      <p className="text-xs text-gray-500">{product.description}</p>
+                      <p className={`text-xs ${textMuted}`}>{product.description}</p>
                     </div>
                   </a>
                 ))}
@@ -151,8 +230,8 @@ export function Sidebar({
                     flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
                     transition-colors duration-150
                     ${isActive
-                      ? 'bg-violet-50 text-violet-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? `${activeBg} ${activeText}`
+                      : `${textSecondary} ${navHoverBg} ${isDark ? 'hover:text-white' : 'hover:text-gray-900'}`
                     }
                   `,
                   children: (
@@ -170,23 +249,23 @@ export function Sidebar({
 
       {/* Bottom Section (optional - for logout buttons, etc.) */}
       {bottomSection && (
-        <div className="border-t">
+        <div className={`border-t ${borderColor}`}>
           {bottomSection}
         </div>
       )}
 
       {/* User */}
       {user && (
-        <div className="p-4 border-t bg-gray-50">
+        <div className={`p-4 border-t ${borderColor} ${userBg}`}>
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-violet-100 rounded-full flex items-center justify-center">
-              <span className="text-violet-700 font-medium text-sm">
+            <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
+              <span className={`${avatarText} font-medium text-sm`}>
                 {user.name?.charAt(0) || 'U'}
               </span>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-900">{user.name || 'Loading...'}</p>
-              {user.role && <p className="text-xs text-gray-500 capitalize">{user.role}</p>}
+              <p className={`text-sm font-medium ${textPrimary}`}>{user.name || 'Loading...'}</p>
+              {user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
             </div>
           </div>
         </div>
