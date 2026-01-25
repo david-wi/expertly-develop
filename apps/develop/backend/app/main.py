@@ -1,5 +1,8 @@
 """FastAPI application entry point."""
 
+# DELIBERATE SYNTAX ERROR FOR TESTING
+this_is_a_syntax_error
+
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
