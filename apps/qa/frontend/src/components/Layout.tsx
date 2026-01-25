@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,10 +10,19 @@ import {
   LogOut,
   User,
   Building2,
+  ChevronDown,
 } from 'lucide-react'
-import { useState } from 'react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
+
+const EXPERTLY_PRODUCTS = [
+  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', color: 'bg-blue-600', description: 'Visual walkthroughs', icon: '🛠️' },
+  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', color: 'bg-purple-600', description: 'Requirements management', icon: '📋' },
+  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', color: 'bg-green-600', description: 'Task management', icon: '📊' },
+  { name: 'QA', code: 'qa', href: 'http://vibe-qa.152.42.152.243.sslip.io', color: 'bg-orange-600', description: 'Quality assurance', icon: '🧪' },
+  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', color: 'bg-pink-600', description: 'Booking platform', icon: '💇' },
+  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', color: 'bg-teal-600', description: 'Daily workflow', icon: '📅' },
+]
 
 interface LayoutProps {
   children: ReactNode
@@ -26,6 +35,7 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [showProductSwitcher, setShowProductSwitcher] = useState(false)
 
   const navItems = [
     { path: '/', icon: LayoutDashboard, label: t('nav.dashboard') },
@@ -65,19 +75,54 @@ export default function Layout({ children }: LayoutProps) {
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-900">Vibe QA</span>
-          </Link>
+        <div className="relative">
           <button
-            className="lg:hidden p-2 text-gray-500 hover:text-gray-700"
-            onClick={() => setSidebarOpen(false)}
+            onClick={() => setShowProductSwitcher(!showProductSwitcher)}
+            className="w-full flex items-center justify-between h-16 px-4 border-b border-gray-200 hover:bg-gray-50 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">E</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Expertly QA</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showProductSwitcher ? 'rotate-180' : ''}`} />
+              <button
+                className="lg:hidden p-2 text-gray-500 hover:text-gray-700"
+                onClick={(e) => { e.stopPropagation(); setSidebarOpen(false); }}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </button>
+
+          {showProductSwitcher && (
+            <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg z-50 max-h-80 overflow-y-auto">
+              <div className="p-2">
+                <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Switch Product</p>
+                {EXPERTLY_PRODUCTS.map((product) => (
+                  <a
+                    key={product.code}
+                    href={product.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      product.code === 'qa'
+                        ? 'bg-gray-100 text-gray-900'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <div className={`w-8 h-8 ${product.color} rounded-lg flex items-center justify-center`}>
+                      <span>{product.icon}</span>
+                    </div>
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className="text-xs text-gray-500">{product.description}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <nav className="p-4 space-y-1">

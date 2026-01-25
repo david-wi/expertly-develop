@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../stores/appStore';
 
@@ -14,17 +15,65 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: SettingsIcon },
 ];
 
+const EXPERTLY_PRODUCTS = [
+  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', color: 'bg-blue-600', description: 'Visual walkthroughs', icon: '🛠️' },
+  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', color: 'bg-purple-600', description: 'Requirements management', icon: '📋' },
+  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', color: 'bg-green-600', description: 'Task management', icon: '📊' },
+  { name: 'QA', code: 'qa', href: 'http://vibe-qa.152.42.152.243.sslip.io', color: 'bg-orange-600', description: 'Quality assurance', icon: '🧪' },
+  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', color: 'bg-pink-600', description: 'Booking platform', icon: '💇' },
+  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', color: 'bg-teal-600', description: 'Daily workflow', icon: '📅' },
+];
+
 export function Sidebar() {
   const location = useLocation();
   const { sidebarOpen } = useAppStore();
+  const [showProductSwitcher, setShowProductSwitcher] = useState(false);
 
   if (!sidebarOpen) return null;
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-gray-900 text-white flex flex-col z-40">
-      {/* Logo */}
-      <div className="h-16 flex items-center px-6 border-b border-gray-800">
-        <span className="text-xl font-bold">Expertly</span>
+      {/* Product Switcher */}
+      <div className="relative">
+        <button
+          onClick={() => setShowProductSwitcher(!showProductSwitcher)}
+          className="w-full h-16 flex items-center justify-between px-6 border-b border-gray-800 hover:bg-gray-800 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-teal-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">E</span>
+            </div>
+            <span className="text-xl font-bold">Expertly Today</span>
+          </div>
+          <ChevronDownIcon className={`w-4 h-4 text-gray-400 transition-transform ${showProductSwitcher ? 'rotate-180' : ''}`} />
+        </button>
+
+        {showProductSwitcher && (
+          <div className="absolute top-full left-0 right-0 bg-gray-800 border-b border-gray-700 shadow-lg z-50 max-h-80 overflow-y-auto">
+            <div className="p-2">
+              <p className="px-3 py-2 text-xs font-medium text-gray-400 uppercase">Switch Product</p>
+              {EXPERTLY_PRODUCTS.map((product) => (
+                <a
+                  key={product.code}
+                  href={product.href}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    product.code === 'today'
+                      ? 'bg-gray-700 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}
+                >
+                  <div className={`w-8 h-8 ${product.color} rounded-lg flex items-center justify-center`}>
+                    <span>{product.icon}</span>
+                  </div>
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-xs text-gray-400">{product.description}</p>
+                  </div>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -149,6 +198,14 @@ function ArchiveIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
     </svg>
   );
 }
