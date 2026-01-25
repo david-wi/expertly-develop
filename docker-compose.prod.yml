@@ -1,199 +1,58 @@
 services:
-  # Gateway - routes requests to appropriate apps
-  gateway:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-    volumes:
-      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+  backend:
+    build: ./apps/develop/backend
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017
+      - MONGODB_DATABASE=expertly_develop
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - DEBUG=false
     depends_on:
-      - develop-frontend
-      - define
-      - manage-frontend
-      - qa-frontend
-      - salon-frontend
-      - today-frontend
+      - mongo
     networks:
       - coolify
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.expertly-gateway.rule=Host(`expertly.152.42.152.243.sslip.io`)"
-      - "traefik.http.services.expertly-gateway.loadbalancer.server.port=80"
+      - "traefik.http.routers.ed-backend.rule=Host(`expertly-develop-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
-  # === DEVELOP ===
-  develop-backend:
-    build: ./apps/develop/backend
-    environment:
-      - MONGODB_URL=mongodb://develop-mongo:27017
-      - MONGODB_DATABASE=expertly_develop
-      - ENCRYPTION_KEY=${DEVELOP_ENCRYPTION_KEY}
-      - DEBUG=false
-    depends_on:
-      - develop-mongo
-    networks:
-      - default
-    restart: unless-stopped
-
-  develop-worker:
+  worker:
     build:
       context: ./apps/develop/backend
       dockerfile: Dockerfile.worker
     environment:
-      - MONGODB_URL=mongodb://develop-mongo:27017
+      - MONGODB_URL=mongodb://mongo:27017
       - MONGODB_DATABASE=expertly_develop
-      - ENCRYPTION_KEY=${DEVELOP_ENCRYPTION_KEY}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
     volumes:
-      - develop_artifacts:/app/data/artifacts
+      - artifacts_data:/app/data/artifacts
     depends_on:
-      - develop-mongo
+      - mongo
     networks:
       - default
     restart: unless-stopped
 
-  develop-frontend:
+  frontend:
     build:
       context: ./apps/develop/frontend
       args:
-        VITE_API_URL: /develop/api/v1
+        VITE_API_URL: http://expertly-develop-api.152.42.152.243.sslip.io/api/v1
+    depends_on:
+      - backend
     networks:
+      - coolify
       - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ed-frontend.rule=Host(`expertly-develop.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.ed-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
-  develop-mongo:
+  mongo:
     image: mongo:7
     volumes:
-      - develop_mongo_data:/data/db
-    networks:
-      - default
-    restart: unless-stopped
-
-  # === DEFINE ===
-  define:
-    build: ./apps/define
-    environment:
-      - NODE_ENV=production
-    volumes:
-      - define_data:/app/data
-    networks:
-      - default
-    restart: unless-stopped
-
-  # === MANAGE ===
-  manage-backend:
-    build: ./apps/manage/backend
-    environment:
-      - MONGODB_URL=mongodb://manage-mongo:27017
-      - DATABASE_NAME=expertly_manage
-      - JWT_SECRET_KEY=${MANAGE_JWT_SECRET}
-    depends_on:
-      - manage-mongo
-    networks:
-      - default
-    restart: unless-stopped
-
-  manage-frontend:
-    build: ./apps/manage/frontend
-    networks:
-      - default
-    restart: unless-stopped
-
-  manage-mongo:
-    image: mongo:7
-    volumes:
-      - manage_mongo_data:/data/db
-    networks:
-      - default
-    restart: unless-stopped
-
-  # === QA ===
-  qa-backend:
-    build: ./apps/qa/backend
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@qa-postgres:5432/expertly_qa
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    depends_on:
-      - qa-postgres
-    networks:
-      - default
-    restart: unless-stopped
-
-  qa-frontend:
-    build: ./apps/qa/frontend
-    networks:
-      - default
-    restart: unless-stopped
-
-  qa-postgres:
-    image: postgres:16-alpine
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=expertly_qa
-    volumes:
-      - qa_postgres_data:/var/lib/postgresql/data
-    networks:
-      - default
-    restart: unless-stopped
-
-  # === SALON ===
-  salon-backend:
-    build: ./apps/salon/backend
-    environment:
-      - MONGODB_URL=mongodb://salon-mongo:27017
-      - DATABASE_NAME=expertly_salon
-      - JWT_SECRET_KEY=${SALON_JWT_SECRET}
-      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
-      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-    depends_on:
-      - salon-mongo
-    networks:
-      - default
-    restart: unless-stopped
-
-  salon-frontend:
-    build: ./apps/salon/frontend
-    networks:
-      - default
-    restart: unless-stopped
-
-  salon-mongo:
-    image: mongo:7
-    volumes:
-      - salon_mongo_data:/data/db
-    networks:
-      - default
-    restart: unless-stopped
-
-  # === TODAY ===
-  today-backend:
-    build: ./apps/today/backend
-    environment:
-      - DATABASE_URL=postgresql://postgres:postgres@today-postgres:5432/expertly_today
-      - JWT_SECRET_KEY=${TODAY_JWT_SECRET}
-    depends_on:
-      - today-postgres
-    networks:
-      - default
-    restart: unless-stopped
-
-  today-frontend:
-    build: ./apps/today/frontend
-    networks:
-      - default
-    restart: unless-stopped
-
-  today-postgres:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=expertly_today
-    volumes:
-      - today_postgres_data:/var/lib/postgresql/data
+      - mongo_data:/data/db
     networks:
       - default
     restart: unless-stopped
@@ -205,10 +64,5 @@ networks:
     driver: bridge
 
 volumes:
-  develop_mongo_data:
-  develop_artifacts:
-  define_data:
-  manage_mongo_data:
-  qa_postgres_data:
-  salon_mongo_data:
-  today_postgres_data:
+  mongo_data:
+  artifacts_data:
