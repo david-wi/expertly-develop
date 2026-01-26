@@ -1,46 +1,53 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, Link, useLocation } from 'react-router-dom'
+import {
+  Users,
+  UsersRound,
+  Building2,
+} from 'lucide-react'
+import { Sidebar, MainContent, formatBuildTimestamp } from '@expertly/ui'
 
-const navItems = [
-  { to: '/users', label: 'Users & Bots' },
-  { to: '/teams', label: 'Teams' },
-  { to: '/organizations', label: 'Organizations' },
+const navigation = [
+  { name: 'Users & Bots', href: '/users', icon: Users },
+  { name: 'Teams', href: '/teams', icon: UsersRound },
+  { name: 'Organizations', href: '/organizations', icon: Building2 },
 ]
 
 export default function Layout() {
+  const location = useLocation()
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-8">
-              <h1 className="text-xl font-bold text-gray-900">Expertly Identity</h1>
-              <nav className="flex space-x-4">
-                {navItems.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    className={({ isActive }) =>
-                      `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                        isActive
-                          ? 'bg-gray-100 text-gray-900'
-                          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                      }`
-                    }
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
-              </nav>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Sidebar
+        productCode="identity"
+        productName="Identity"
+        navigation={navigation}
+        currentPath={location.pathname}
+        buildInfo={
+          formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
+            <span className="text-[10px] text-gray-400 block text-right">
+              {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
+            </span>
+          )
+        }
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
+          </Link>
+        )}
+      />
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <MainContent>
         <Outlet />
-      </main>
+      </MainContent>
+
+      {/* Subtle marketing page link - fixed to bottom-right of page */}
+      <Link
+        to="/landing"
+        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-primary-600 transition-colors"
+      >
+        View marketing page
+      </Link>
     </div>
   )
 }

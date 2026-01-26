@@ -10,9 +10,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@expertly/ui": "file:../../../packages/ui",
     "@tanstack/react-query": "^5.90.19",
     "axios": "^1.13.2",
-    "lucide-react": "^0.460.0",
+    "lucide-react": "^0.469.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0"

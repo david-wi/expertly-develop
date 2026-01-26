@@ -1,23 +1,26 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { Dashboard } from './pages/Dashboard'
 import { Themes } from './pages/Themes'
 import { ThemeDetail } from './pages/ThemeDetail'
 import { ThemeCreate } from './pages/ThemeCreate'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route element={<Layout />}>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/themes" element={<Themes />} />
-          <Route path="/themes/new" element={<ThemeCreate />} />
-          <Route path="/themes/:id" element={<ThemeDetail />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      {/* Public landing page (no layout) */}
+      <Route path="/landing" element={<LandingPage />} />
+
+      {/* App routes */}
+      <Route element={<Layout />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/themes" element={<Themes />} />
+        <Route path="/themes/new" element={<ThemeCreate />} />
+        <Route path="/themes/:id" element={<ThemeDetail />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   )
 }
 
