@@ -282,6 +282,37 @@ test.describe('Calendar Page', () => {
     await expect(page.getByText('Haircut')).toBeVisible();
     await expect(page.getByText('$55')).toBeVisible();
   });
+
+  test('day/week toggle switches views', async ({ page }) => {
+    // Both toggle buttons should be visible
+    const dayButton = page.getByRole('button', { name: 'Day', exact: true });
+    const weekButton = page.getByRole('button', { name: 'Week', exact: true });
+
+    await expect(dayButton).toBeVisible();
+    await expect(weekButton).toBeVisible();
+
+    // Default should be week view - check for day abbreviations in header
+    await page.waitForLoadState('networkidle');
+
+    // Click Day button and verify day view
+    await dayButton.click();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'e2e-screenshots/calendar-day-view.png', fullPage: true });
+
+    // In day view, we should see staff names (Sarah Johnson, Mike Chen)
+    await expect(page.getByText('Sarah')).toBeVisible();
+    await expect(page.getByText('Mike')).toBeVisible();
+
+    // Click Week button and verify week view
+    await weekButton.click();
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: 'e2e-screenshots/calendar-week-view.png', fullPage: true });
+
+    // In week view, we should see day abbreviations (Sun, Mon, Tue, etc.)
+    await expect(page.getByText('Sun')).toBeVisible();
+    await expect(page.getByText('Mon')).toBeVisible();
+    await expect(page.getByText('Tue')).toBeVisible();
+  });
 });
 
 // ============================================
