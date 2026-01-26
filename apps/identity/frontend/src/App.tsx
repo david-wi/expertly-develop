@@ -4,12 +4,14 @@ import UsersPage from './pages/UsersPage'
 import TeamsPage from './pages/TeamsPage'
 import OrganizationsPage from './pages/OrganizationsPage'
 import LandingPage from './pages/LandingPage'
+import LoginPage from './pages/LoginPage'
 
 export default function App() {
   return (
     <Routes>
-      {/* Public landing page (no layout) */}
+      {/* Public routes (no layout) */}
       <Route path="/landing" element={<LandingPage />} />
+      <Route path="/login" element={<LoginPage />} />
 
       {/* App routes */}
       <Route path="/" element={<Layout />}>

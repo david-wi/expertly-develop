@@ -8,11 +8,13 @@ WORKDIR /app
 # Copy package files
 COPY apps/define/package.json apps/define/package-lock.json ./
 
-# Copy the shared UI package
+# Copy the shared packages
 COPY packages/ui ./packages/ui
+COPY packages/auth ./packages/auth
 
-# Update package.json to use local path for @expertly/ui
+# Update package.json to use local paths for shared packages
 RUN sed -i 's|"@expertly/ui": "\*"|"@expertly/ui": "file:./packages/ui"|' package.json
+RUN sed -i 's|"@expertly/auth": "workspace:\*"|"@expertly/auth": "file:./packages/auth"|' package.json
 
 # Install dependencies
 RUN npm install
@@ -36,6 +38,9 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV IDENTITY_API_URL=https://identity-api.ai.devintensive.com
+ENV IDENTITY_URL=https://identity.ai.devintensive.com
+ENV NEXT_PUBLIC_IDENTITY_API_URL=https://identity-api.ai.devintensive.com
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs

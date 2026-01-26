@@ -4,8 +4,12 @@ from enum import Enum
 from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, JSON
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
+from passlib.context import CryptContext
 
 from app.database import Base
+
+# Password hashing context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class UserType(str, Enum):
@@ -47,6 +51,7 @@ class User(Base):
 
     # Auth
     api_key_hash = Column(String(255), nullable=True)
+    password_hash = Column(String(255), nullable=True)  # For login authentication
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -55,3 +60,14 @@ class User(Base):
     # Relationships
     organization = relationship("Organization", back_populates="users")
     team_memberships = relationship("TeamMember", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+
+    def set_password(self, password: str) -> None:
+        """Hash and set the user's password."""
+        self.password_hash = pwd_context.hash(password)
+
+    def verify_password(self, password: str) -> bool:
+        """Verify a password against the stored hash."""
+        if not self.password_hash:
+            return False
+        return pwd_context.verify(password, self.password_hash)

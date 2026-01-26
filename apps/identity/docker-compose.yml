@@ -7,9 +7,14 @@ services:
       - "8010:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/identity
+      - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AUTH_COOKIE_DOMAIN=localhost
+      - SESSION_EXPIRY_DAYS=30
+      - SESSION_SECRET=dev-secret-change-in-production
     depends_on:
       - db
+      - redis
 
   frontend:
     build: ./frontend
@@ -29,5 +34,14 @@ services:
     ports:
       - "5442:5432"
 
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - identity_redis:/data
+    ports:
+      - "6379:6379"
+
 volumes:
   identity_pgdata:
+  identity_redis:

@@ -6,16 +6,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.database import init_db
-from app.api.v1 import users, teams, organizations, images
+from app.api.v1 import users, teams, organizations, images, auth
+from app.core.redis import close_redis
 
 settings = get_settings()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize database on startup."""
+    """Initialize database and Redis on startup, cleanup on shutdown."""
     await init_db()
     yield
+    await close_redis()
 
 
 app = FastAPI(
@@ -25,16 +27,31 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS
+# CORS - allow all subdomains of ai.devintensive.com
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://define.ai.devintensive.com",
+        "https://develop.ai.devintensive.com",
+        "https://identity.ai.devintensive.com",
+        "https://manage.ai.devintensive.com",
+        "https://today.ai.devintensive.com",
+        "https://admin.ai.devintensive.com",
+        "https://salon.ai.devintensive.com",
+        "https://qa.ai.devintensive.com",
+        "https://vibecode.ai.devintensive.com",
+        "https://vibetest.ai.devintensive.com",
+        "http://localhost:3000",
+        "http://localhost:3010",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # API routes
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(organizations.router, prefix="/api/v1/organizations", tags=["Organizations"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(teams.router, prefix="/api/v1/teams", tags=["Teams"])

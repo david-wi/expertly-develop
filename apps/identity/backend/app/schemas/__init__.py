@@ -17,6 +17,13 @@ from app.schemas.team import (
     TeamMemberAdd,
     TeamMemberResponse,
 )
+from app.schemas.auth import (
+    LoginRequest,
+    LoginResponse,
+    AuthUserResponse,
+    ValidateResponse,
+    SessionInfo,
+)
 
 __all__ = [
     "UserCreate",
@@ -32,4 +39,9 @@ __all__ = [
     "TeamResponse",
     "TeamMemberAdd",
     "TeamMemberResponse",
+    "LoginRequest",
+    "LoginResponse",
+    "AuthUserResponse",
+    "ValidateResponse",
+    "SessionInfo",
 ]

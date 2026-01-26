@@ -177,6 +177,53 @@ export const imagesApi = {
   },
 }
 
+// Auth types
+export interface AuthUser {
+  id: string
+  name: string
+  email: string | null
+  organization_id: string
+  organization_name: string | null
+  role: string
+  avatar_url: string | null
+}
+
+export interface LoginResponse {
+  session_token: string
+  expires_at: string
+  user: AuthUser
+}
+
+export interface ValidateResponse {
+  valid: boolean
+  user: AuthUser | null
+  expires_at: string | null
+}
+
+// Auth API
+export const authApi = {
+  login: async (email: string, password: string): Promise<LoginResponse> => {
+    const { data } = await api.post('/auth/login', { email, password })
+    return data
+  },
+  logout: async (sessionToken?: string): Promise<void> => {
+    const headers = sessionToken ? { 'X-Session-Token': sessionToken } : {}
+    await api.post('/auth/logout', null, { headers })
+  },
+  validate: async (sessionToken: string): Promise<ValidateResponse> => {
+    const { data } = await api.get('/auth/validate', {
+      headers: { 'X-Session-Token': sessionToken },
+    })
+    return data
+  },
+  me: async (sessionToken: string): Promise<AuthUser> => {
+    const { data } = await api.get('/auth/me', {
+      headers: { 'X-Session-Token': sessionToken },
+    })
+    return data
+  },
+}
+
 export const setOrganizationId = (orgId: string) => {
   localStorage.setItem(ORG_STORAGE_KEY, orgId)
 }

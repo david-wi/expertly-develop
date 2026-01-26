@@ -1,69 +1,88 @@
-import { NextAuthOptions } from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import bcrypt from 'bcryptjs';
+import { cookies, headers } from 'next/headers';
 
-// Hardcoded users for simple internal tool auth
-// Easy to add more users or switch to database later
-const users = [
-  {
-    id: '1',
-    email: 'david@example.com',
-    name: 'David',
-    // Password: "expertly123" - change this in production
-    passwordHash: bcrypt.hashSync('expertly123', 10),
-  },
-];
+const IDENTITY_API_URL = process.env.IDENTITY_API_URL || 'https://identity-api.ai.devintensive.com';
+const SESSION_COOKIE_NAME = 'expertly_session';
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: 'Email', type: 'email', placeholder: 'you@example.com' },
-        password: { label: 'Password', type: 'password' },
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string | null;
+  organization_id: string;
+  organization_name: string | null;
+  role: string;
+  avatar_url: string | null;
+}
+
+/**
+ * Get the current authenticated user from the session cookie.
+ * Call this from Server Components or Server Actions.
+ */
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  // First try to get user from headers (set by middleware)
+  const headersList = await headers();
+  const userId = headersList.get('x-user-id');
+
+  if (userId) {
+    return {
+      id: userId,
+      name: headersList.get('x-user-name') || '',
+      email: headersList.get('x-user-email') || null,
+      organization_id: headersList.get('x-organization-id') || '',
+      organization_name: null,
+      role: 'member',
+      avatar_url: null,
+    };
+  }
+
+  // Fallback: validate session directly
+  const cookieStore = await cookies();
+  const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+
+  if (!sessionToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${IDENTITY_API_URL}/api/v1/auth/validate`, {
+      method: 'GET',
+      headers: {
+        'X-Session-Token': sessionToken,
+        'Content-Type': 'application/json',
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
+      cache: 'no-store',
+    });
 
-        const user = users.find((u) => u.email === credentials.email);
-        if (!user) {
-          return null;
-        }
+    if (!response.ok) {
+      return null;
+    }
 
-        const isValid = await bcrypt.compare(credentials.password, user.passwordHash);
-        if (!isValid) {
-          return null;
-        }
+    const data = await response.json();
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-        };
-      },
-    }),
-  ],
-  session: {
-    strategy: 'jwt',
-    maxAge: 30 * 24 * 60 * 60, // 30 days
-  },
-  pages: {
-    signIn: '/login',
-  },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).id = token.id;
-      }
-      return session;
-    },
-  },
-};
+    if (!data.valid || !data.user) {
+      return null;
+    }
+
+    return data.user as AuthUser;
+  } catch (error) {
+    console.error('Failed to get current user:', error);
+    return null;
+  }
+}
+
+/**
+ * Check if the current request is authenticated.
+ * Call this from Server Components or Server Actions.
+ */
+export async function isAuthenticated(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return user !== null;
+}
+
+/**
+ * Get the session token from cookies.
+ * Useful for API routes that need to pass the token.
+ */
+export async function getSessionToken(): Promise<string | null> {
+  const cookieStore = await cookies();
+  return cookieStore.get(SESSION_COOKIE_NAME)?.value || null;
+}

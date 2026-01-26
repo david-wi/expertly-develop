@@ -11,8 +11,16 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/identity"
 
+    # Redis
+    redis_url: str = "redis://localhost:6379"
+
     # OpenAI for avatar generation
     openai_api_key: str = ""
+
+    # Auth settings
+    auth_cookie_domain: str = ".ai.devintensive.com"
+    session_expiry_days: int = 30
+    session_secret: str = "change-me-in-production"
 
     class Config:
         env_file = ".env"

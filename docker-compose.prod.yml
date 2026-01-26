@@ -156,9 +156,14 @@ services:
     build: ./apps/identity/backend
     environment:
       - DATABASE_URL=postgresql+asyncpg://identity:identity@identity-db:5432/identity
+      - REDIS_URL=redis://redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - AUTH_COOKIE_DOMAIN=.ai.devintensive.com
+      - SESSION_EXPIRY_DAYS=30
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
     depends_on:
       - identity-db
+      - redis
     networks:
       - coolify
       - default
@@ -217,6 +222,11 @@ services:
     build:
       context: .
       dockerfile: ./apps/define/Dockerfile
+    environment:
+      - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
+      - IDENTITY_URL=https://identity.ai.devintensive.com
+      - NEXT_PUBLIC_IDENTITY_API_URL=https://identity-api.ai.devintensive.com
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     networks:
       - coolify
       - default
@@ -488,6 +498,20 @@ services:
   # ===================
   # SHARED DATABASES
   # ===================
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
   mongo:
     image: mongo:7
     volumes:
@@ -508,4 +532,5 @@ volumes:
   identity_postgres_data:
   mongo_data:
   qa_postgres_data:
+  redis_data:
   today_postgres_data:
