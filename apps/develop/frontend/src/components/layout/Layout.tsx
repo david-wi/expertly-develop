@@ -69,15 +69,15 @@ export default function Layout() {
       <MainContent>
         <Outlet />
 
-        {/* Footer with landing page link */}
-        <footer className="mt-12 pt-8 border-t border-gray-200">
-          <div className="flex items-center justify-between text-xs text-gray-400">
-            <span>Expertly Develop</span>
-            <Link to="/landing" className="hover:text-primary-600 transition-colors">
-              View marketing page
-            </Link>
-          </div>
-        </footer>
+        {/* Subtle marketing page link */}
+        <div className="mt-12 flex justify-end">
+          <Link
+            to="/landing"
+            className="text-xs text-gray-400 hover:text-primary-600 transition-colors"
+          >
+            View marketing page
+          </Link>
+        </div>
       </MainContent>
     </div>
   )
