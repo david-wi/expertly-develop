@@ -45,6 +45,8 @@ class ProjectResponse(BaseModel):
     visibility: str
     site_url: Optional[str]
     has_credentials: bool
+    is_owner: bool = False
+    can_edit: bool = False
     created_at: datetime
     updated_at: datetime
 

@@ -1,19 +1,37 @@
-import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, ExternalLink, Play, FileBox } from 'lucide-react'
+import { useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, ExternalLink, Play, FileBox, Trash2, Lock, Users, Globe } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Badge, getStatusBadgeVariant } from '../components/common/Badge'
 import { projectsApi, artifactsApi, jobsApi, personasApi } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
 
+const visibilityConfig = {
+  private: { icon: Lock, tooltip: 'Private - Only you can see this project' },
+  team: { icon: Users, tooltip: 'Team - Visible to your team members' },
+  companywide: { icon: Globe, tooltip: 'Company-wide - Visible to everyone in the organization' },
+}
+
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', id],
     queryFn: () => projectsApi.get(id!),
     enabled: !!id,
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => projectsApi.delete(id!),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      navigate('/projects')
+    },
   })
 
   const { data: artifacts } = useQuery({
@@ -50,17 +68,36 @@ export default function ProjectDetailPage() {
           <ArrowLeft className="w-5 h-5 text-gray-600" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+            {(() => {
+              const config = visibilityConfig[project.visibility as keyof typeof visibilityConfig] || visibilityConfig.private
+              const VisibilityIcon = config.icon
+              return (
+                <span title={config.tooltip}>
+                  <VisibilityIcon className="w-5 h-5 text-gray-400" />
+                </span>
+              )
+            })()}
+          </div>
           {project.description && (
             <p className="text-gray-600 mt-1">{project.description}</p>
           )}
         </div>
-        <Link to={`/walkthroughs/new?project=${id}`}>
-          <Button>
-            <Play className="w-4 h-4 mr-2" />
-            Run Walkthrough
-          </Button>
-        </Link>
+        <div className="flex items-center gap-2">
+          {project.can_edit && (
+            <Button variant="secondary" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          )}
+          <Link to={`/walkthroughs/new?project=${id}`}>
+            <Button>
+              <Play className="w-4 h-4 mr-2" />
+              Run Walkthrough
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -201,6 +238,41 @@ export default function ProjectDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setShowDeleteConfirm(false)} />
+          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Delete Project</h2>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{project.name}</strong>? This action cannot be undone.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="secondary"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => deleteMutation.mutate()}
+                disabled={deleteMutation.isPending}
+                className="flex-1"
+              >
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Project'}
+              </Button>
+            </div>
+            {deleteMutation.isError && (
+              <p className="text-red-600 text-sm mt-4">
+                Failed to delete project. You may not have permission.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

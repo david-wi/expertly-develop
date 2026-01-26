@@ -13,11 +13,18 @@ from app.services.job_service import job_service
 router = APIRouter()
 
 
-def job_to_response(job, user_names: Dict[str, str] = None) -> JobResponse:
+def job_to_response(
+    job,
+    user_names: Dict[str, str] = None,
+    project_names: Dict[str, str] = None,
+) -> JobResponse:
     """Convert job model to response schema."""
     requested_by_name = None
     if user_names and job.requested_by:
         requested_by_name = user_names.get(str(job.requested_by))
+    project_name = None
+    if project_names and job.project_id:
+        project_name = project_names.get(str(job.project_id))
     return JobResponse(
         id=str(job.id),
         job_type=job.job_type.value if isinstance(job.job_type, JobType) else job.job_type,
@@ -29,6 +36,7 @@ def job_to_response(job, user_names: Dict[str, str] = None) -> JobResponse:
         completed_at=job.completed_at,
         elapsed_ms=job.elapsed_ms,
         project_id=str(job.project_id) if job.project_id else None,
+        project_name=project_name,
         requested_by_name=requested_by_name,
         result=job.result,
         error=job.error,
@@ -58,20 +66,29 @@ async def list_jobs(
         offset=offset,
     )
 
+    db = get_database()
+
     # Lookup user names for jobs with requested_by
     user_ids = [j.requested_by for j in jobs if j.requested_by]
     user_names = {}
     if user_ids:
-        db = get_database()
         cursor = db.users.find({"_id": {"$in": user_ids}}, {"_id": 1, "name": 1})
         async for u in cursor:
             user_names[str(u["_id"])] = u["name"]
+
+    # Lookup project names for jobs with project_id
+    project_ids = [j.project_id for j in jobs if j.project_id]
+    project_names = {}
+    if project_ids:
+        cursor = db.projects.find({"_id": {"$in": project_ids}}, {"_id": 1, "name": 1})
+        async for p in cursor:
+            project_names[str(p["_id"])] = p["name"]
 
     total = await job_service.count_jobs(user.tenant_id)
     stats = await job_service.get_queue_stats(user.tenant_id)
 
     return JobListResponse(
-        items=[job_to_response(j, user_names) for j in jobs],
+        items=[job_to_response(j, user_names, project_names) for j in jobs],
         total=total,
         stats=stats,
     )
@@ -97,15 +114,23 @@ async def get_job(
             detail="Job not found",
         )
 
+    db = get_database()
+
     # Lookup user name if requested_by is set
     user_names = {}
     if job.requested_by:
-        db = get_database()
         u = await db.users.find_one({"_id": job.requested_by}, {"_id": 1, "name": 1})
         if u:
             user_names[str(u["_id"])] = u["name"]
 
-    return job_to_response(job, user_names)
+    # Lookup project name if project_id is set
+    project_names = {}
+    if job.project_id:
+        p = await db.projects.find_one({"_id": job.project_id}, {"_id": 1, "name": 1})
+        if p:
+            project_names[str(p["_id"])] = p["name"]
+
+    return job_to_response(job, user_names, project_names)
 
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)

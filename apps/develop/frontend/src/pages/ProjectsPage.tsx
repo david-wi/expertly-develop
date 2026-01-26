@@ -26,10 +26,10 @@ export default function ProjectsPage() {
     },
   })
 
-  const visibilityIcon = {
-    private: Lock,
-    team: Users,
-    companywide: Globe,
+  const visibilityConfig = {
+    private: { icon: Lock, tooltip: 'Private - Only you can see this project' },
+    team: { icon: Users, tooltip: 'Team - Visible to your team members' },
+    companywide: { icon: Globe, tooltip: 'Company-wide - Visible to everyone in the organization' },
   }
 
   return (
@@ -64,14 +64,17 @@ export default function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {data?.items?.map((project) => {
-            const VisibilityIcon = visibilityIcon[project.visibility as keyof typeof visibilityIcon] || Lock
+            const config = visibilityConfig[project.visibility as keyof typeof visibilityConfig] || visibilityConfig.private
+            const VisibilityIcon = config.icon
             return (
               <Link key={project.id} to={`/projects/${project.id}`}>
                 <Card className="h-full hover:shadow-md transition-shadow">
                   <CardContent className="space-y-4">
                     <div className="flex items-start justify-between">
                       <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
-                      <VisibilityIcon className="w-4 h-4 text-gray-400" />
+                      <span title={config.tooltip}>
+                        <VisibilityIcon className="w-4 h-4 text-gray-400" />
+                      </span>
                     </div>
 
                     {project.description && (

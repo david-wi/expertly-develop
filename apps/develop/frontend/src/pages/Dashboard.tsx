@@ -114,6 +114,8 @@ export default function Dashboard() {
                             {job.job_type.replace('_', ' ')}
                           </p>
                           <p className="text-xs text-gray-500">
+                            {job.project_name && <span className="text-primary-600">{job.project_name}</span>}
+                            {job.project_name && ' · '}
                             {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                             {job.requested_by_name && ` · ${job.requested_by_name}`}
                           </p>
@@ -170,6 +172,8 @@ export default function Dashboard() {
                         <div>
                           <p className="text-sm font-medium text-gray-900">{artifact.label}</p>
                           <p className="text-xs text-gray-500">
+                            {artifact.project_name && <span className="text-primary-600">{artifact.project_name}</span>}
+                            {artifact.project_name && ' · '}
                             {formatDistanceToNow(new Date(artifact.created_at), { addSuffix: true })}
                             {artifact.created_by_name && ` · ${artifact.created_by_name}`}
                           </p>

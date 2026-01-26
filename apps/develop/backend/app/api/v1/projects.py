@@ -18,8 +18,13 @@ from app.services.project_service import project_service
 router = APIRouter()
 
 
-def project_to_response(project) -> ProjectResponse:
+def project_to_response(project, user: UserContext = None) -> ProjectResponse:
     """Convert project model to response schema."""
+    is_owner = False
+    can_edit = False
+    if user:
+        is_owner = project.owner_id == user.user_id
+        can_edit = is_owner or user.role == "admin"
     return ProjectResponse(
         id=str(project.id),
         name=project.name,
@@ -27,6 +32,8 @@ def project_to_response(project) -> ProjectResponse:
         visibility=project.visibility.value if isinstance(project.visibility, Visibility) else project.visibility,
         site_url=project.site_url,
         has_credentials=project.site_credentials is not None,
+        is_owner=is_owner,
+        can_edit=can_edit,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
@@ -51,7 +58,7 @@ async def list_projects(
     total = await project_service.count_projects(user.tenant_id)
 
     return ProjectListResponse(
-        items=[project_to_response(p) for p in projects],
+        items=[project_to_response(p, user) for p in projects],
         total=total,
         limit=limit,
         offset=offset,
@@ -73,7 +80,7 @@ async def create_project(
         site_url=data.site_url,
     )
 
-    return project_to_response(project)
+    return project_to_response(project, user)
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
@@ -97,7 +104,7 @@ async def get_project(
             detail="Project not found",
         )
 
-    return project_to_response(project)
+    return project_to_response(project, user)
 
 
 @router.put("/{project_id}", response_model=ProjectResponse)
@@ -125,7 +132,7 @@ async def update_project(
     updates = data.model_dump(exclude_none=True)
     project = await project_service.update_project(ObjectId(project_id), **updates)
 
-    return project_to_response(project)
+    return project_to_response(project, user)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -176,4 +183,4 @@ async def update_project_credentials(
         site_credentials,
     )
 
-    return project_to_response(project)
+    return project_to_response(project, user)

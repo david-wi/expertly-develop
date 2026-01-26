@@ -28,6 +28,8 @@ export interface Project {
   visibility: string
   site_url: string | null
   has_credentials: boolean
+  is_owner: boolean
+  can_edit: boolean
   created_at: string
   updated_at: string
 }
@@ -50,6 +52,7 @@ export interface Job {
   completed_at: string | null
   elapsed_ms: number | null
   project_id: string | null
+  project_name: string | null
   requested_by_name: string | null
   result: Record<string, unknown> | null
   error: string | null
@@ -63,6 +66,7 @@ export interface Artifact {
   format: string
   status: string
   project_id: string | null
+  project_name: string | null
   job_id: string | null
   created_by_name: string | null
   created_at: string

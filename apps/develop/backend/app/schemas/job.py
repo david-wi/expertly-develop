@@ -20,6 +20,7 @@ class JobResponse(BaseModel):
     completed_at: Optional[datetime]
     elapsed_ms: Optional[int]
     project_id: Optional[str]
+    project_name: Optional[str] = None
     requested_by_name: Optional[str] = None
     result: Optional[Dict[str, Any]]
     error: Optional[str]

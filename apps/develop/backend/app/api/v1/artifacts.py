@@ -14,11 +14,18 @@ from app.services.document_service import document_service
 router = APIRouter()
 
 
-def artifact_to_response(artifact: Artifact, user_names: Dict[str, str] = None) -> ArtifactResponse:
+def artifact_to_response(
+    artifact: Artifact,
+    user_names: Dict[str, str] = None,
+    project_names: Dict[str, str] = None,
+) -> ArtifactResponse:
     """Convert artifact model to response schema."""
     created_by_name = None
     if user_names and artifact.created_by:
         created_by_name = user_names.get(str(artifact.created_by))
+    project_name = None
+    if project_names and artifact.project_id:
+        project_name = project_names.get(str(artifact.project_id))
     return ArtifactResponse(
         id=str(artifact.id),
         label=artifact.label,
@@ -27,6 +34,7 @@ def artifact_to_response(artifact: Artifact, user_names: Dict[str, str] = None) 
         format=artifact.format,
         status=artifact.status,
         project_id=str(artifact.project_id) if artifact.project_id else None,
+        project_name=project_name,
         job_id=str(artifact.job_id) if artifact.job_id else None,
         created_by_name=created_by_name,
         created_at=artifact.created_at,
@@ -70,10 +78,18 @@ async def list_artifacts(
         async for u in user_cursor:
             user_names[str(u["_id"])] = u["name"]
 
+    # Lookup project names for artifacts with project_id
+    project_ids = [a.project_id for a in artifacts if a.project_id]
+    project_names = {}
+    if project_ids:
+        project_cursor = db.projects.find({"_id": {"$in": project_ids}}, {"_id": 1, "name": 1})
+        async for p in project_cursor:
+            project_names[str(p["_id"])] = p["name"]
+
     total = await db.artifacts.count_documents(query)
 
     return ArtifactListResponse(
-        items=[artifact_to_response(a, user_names) for a in artifacts],
+        items=[artifact_to_response(a, user_names, project_names) for a in artifacts],
         total=total,
     )
 
@@ -106,7 +122,14 @@ async def get_artifact(
         if u:
             user_names[str(u["_id"])] = u["name"]
 
-    return artifact_to_response(artifact, user_names)
+    # Lookup project name if project_id is set
+    project_names = {}
+    if artifact.project_id:
+        p = await db.projects.find_one({"_id": artifact.project_id}, {"_id": 1, "name": 1})
+        if p:
+            project_names[str(p["_id"])] = p["name"]
+
+    return artifact_to_response(artifact, user_names, project_names)
 
 
 @router.get("/{artifact_id}/download")
