@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import federation from '@originjs/vite-plugin-federation'
 
 // UI remote URL - use environment variable in production, local in dev
+// Module federation dynamically loads UI components from the remote
 const UI_REMOTE_URL = process.env.VITE_UI_REMOTE_URL || 'https://ui.ai.devintensive.com'
 
 export default defineConfig({
