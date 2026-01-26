@@ -156,14 +156,14 @@ services:
     build: ./apps/identity/backend
     environment:
       - DATABASE_URL=postgresql+asyncpg://identity:identity@identity-db:5432/identity
-      - REDIS_URL=redis://redis:6379
+      - REDIS_URL=redis://app-redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AUTH_COOKIE_DOMAIN=.ai.devintensive.com
       - SESSION_EXPIRY_DAYS=30
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
     depends_on:
       - identity-db
-      - redis
+      - app-redis
     networks:
       - coolify
       - default
@@ -498,7 +498,7 @@ services:
   # ===================
   # SHARED DATABASES
   # ===================
-  redis:
+  app-redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes --protected-mode no
     volumes:
