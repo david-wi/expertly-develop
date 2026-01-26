@@ -64,7 +64,7 @@ export function Sidebar({ ws }: SidebarProps) {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg flex flex-col">
+    <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-lg flex flex-col">
       {/* Logo / Product Switcher */}
       <div className="relative">
         <button

@@ -20,17 +20,13 @@ export interface ExpertlyProduct {
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: '📋', description: 'Requirements management' },
-  { name: 'Design', code: 'design', href: 'https://design.ai.devintensive.com', icon: '🎨', description: 'Design system' },
   { name: 'Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: '🛠️', description: 'Visual walkthroughs' },
-  { name: 'Hospitality', code: 'hospitality', href: 'https://hospitality.ai.devintensive.com', icon: '🏨', description: 'Hospitality management' },
-  { name: 'Logistics', code: 'logistics', href: 'https://logistics.ai.devintensive.com', icon: '🚚', description: 'Logistics management' },
+  { name: 'Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: '🔐', description: 'Users & authentication' },
   { name: 'Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: '📊', description: 'Task management' },
-  { name: 'Partnerships', code: 'partnerships', href: 'https://partnerships.ai.devintensive.com', icon: '🤝', description: 'Partnership management' },
   { name: 'Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: '💇', description: 'Salon management' },
-  { name: 'Simulate', code: 'simulate', href: 'https://simulate.ai.devintensive.com', icon: '🎯', description: 'Simulation platform' },
   { name: 'Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: '📅', description: 'Daily workflow' },
-  { name: 'VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '🤖', description: 'Vibe coding platform' },
-  { name: 'VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'Vibe testing platform' },
+  { name: 'VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '💻', description: 'AI coding assistant' },
+  { name: 'VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'AI testing platform' },
 ]
 
 export type SupportedLanguage = 'en' | 'es'
@@ -135,7 +131,7 @@ export function Sidebar({
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-64 ${sidebarBg} shadow-lg flex flex-col overflow-hidden`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col overflow-hidden`}>
       {/* Logo / Product Switcher */}
       <div className="relative flex-shrink-0">
         <div className={`flex h-14 items-center justify-between px-4 border-b ${borderColor}`}>
@@ -144,7 +140,7 @@ export function Sidebar({
             className={`flex items-center gap-2 ${hoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
           >
             <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
-            <span className={`font-semibold ${textPrimary} truncate text-sm`}>Expertly {productName}</span>
+            <span className={`font-semibold ${textPrimary} text-base whitespace-nowrap`}>Expertly {productName}</span>
             <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
 
@@ -197,7 +193,7 @@ export function Sidebar({
               className="fixed inset-0 z-40"
               onClick={() => setShowProductSwitcher(false)}
             />
-            <div className={`fixed left-0 top-14 w-64 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
+            <div className={`fixed left-0 top-14 w-72 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
               <div className="p-2">
                 <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
                 {EXPERTLY_PRODUCTS.map((product) => (
@@ -321,7 +317,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
 export function MainContent({ children }: { children: ReactNode }) {
   return (
-    <div className="pl-64">
+    <div className="pl-72">
       <main className="p-8">
         {children}
       </main>

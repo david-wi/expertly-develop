@@ -15,7 +15,7 @@ function MainApp() {
   return (
     <div className="h-screen flex bg-gray-100">
       <Sidebar ws={ws} />
-      <main className="flex-1 ml-64 overflow-hidden">
+      <main className="flex-1 ml-72 overflow-hidden">
         <Dashboard ws={ws} />
       </main>
       <ConnectionStatus connected={connected} />
