@@ -1,5 +1,7 @@
-import { createContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react'
-import { ThemeId, ThemeMode, themes, getThemeColors, ThemeColors } from './themes'
+import { createContext, useEffect, useState, useCallback, useRef } from 'react'
+import type { ReactNode } from 'react'
+import { themes, getThemeColors } from './themes'
+import type { ThemeId, ThemeMode, ThemeColors } from './themes'
 
 const THEME_STORAGE_KEY = 'expertly-theme'
 const MODE_STORAGE_KEY = 'expertly-theme-mode'

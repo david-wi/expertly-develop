@@ -1,5 +1,6 @@
 import { ChevronDown } from 'lucide-react'
-import { useState, ReactNode, ComponentType } from 'react'
+import { useState } from 'react'
+import type { ReactNode, ComponentType } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { useTheme } from '../theme/useTheme'
 

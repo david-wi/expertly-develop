@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
 import { Sun, Moon, ChevronDown, Palette } from 'lucide-react'
 import { useTheme } from './useTheme'
-import { themeList, ThemeId } from './themes'
+import { themeList } from './themes'
+import type { ThemeId } from './themes'
 
 interface ThemeSwitcherProps {
   showThemeSelector?: boolean
