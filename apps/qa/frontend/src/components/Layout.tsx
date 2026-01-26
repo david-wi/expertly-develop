@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import React, { ReactNode, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -8,12 +8,11 @@ import {
   Menu,
   X,
   LogOut,
-  User,
   Building2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, MainContent, SupportedLanguage } from '@expertly/ui'
+import { Sidebar as SharedSidebar, SupportedLanguage } from '@expertly/ui'
 
 interface LayoutProps {
   children: ReactNode
@@ -25,7 +24,6 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   const navItems = [
     { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
@@ -82,7 +80,7 @@ export default function Layout({ children }: LayoutProps) {
               </button>
             </div>
           }
-          renderLink={({ href, className, children }) => (
+          renderLink={({ href, className, children }: { href: string; className: string; children: React.ReactNode }) => (
             <Link
               to={href}
               onClick={() => setSidebarOpen(false)}
