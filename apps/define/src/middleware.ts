@@ -72,7 +72,11 @@ export async function middleware(request: NextRequest) {
 }
 
 function redirectToLogin(request: NextRequest): NextResponse {
-  const returnUrl = request.url;
+  // Build the return URL using the host header (which has the external domain)
+  const host = request.headers.get('host') || 'define.ai.devintensive.com';
+  const protocol = request.headers.get('x-forwarded-proto') || 'https';
+  const returnUrl = `${protocol}://${host}${request.nextUrl.pathname}${request.nextUrl.search}`;
+
   const loginUrl = new URL('/login', IDENTITY_URL);
   loginUrl.searchParams.set('return_url', returnUrl);
   return NextResponse.redirect(loginUrl);
