@@ -19,15 +19,15 @@ export interface ExpertlyProduct {
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
-  { name: 'Admin', code: 'admin', href: 'http://expertly-admin.152.42.152.243.sslip.io', icon: '⚙️', description: 'System administration' },
-  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', icon: '📋', description: 'Requirements management' },
-  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', icon: '🛠️', description: 'Visual walkthroughs' },
-  { name: 'Identity', code: 'identity', href: 'http://expertly-identity.152.42.152.243.sslip.io', icon: '👤', description: 'Users & teams' },
-  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', icon: '📊', description: 'Task management' },
-  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', icon: '💇', description: 'Booking platform' },
-  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', icon: '📅', description: 'Daily workflow' },
-  { name: 'VibeCode', code: 'vibecode', href: 'http://expertly-vibecode.152.42.152.243.sslip.io', icon: '🤖', description: 'Multi-agent dashboard' },
-  { name: 'VibeTest', code: 'vibetest', href: 'http://vibe-qa.152.42.152.243.sslip.io', icon: '🧪', description: 'Quality assurance' },
+  { name: 'Admin', code: 'admin', href: 'https://expertly-admin.152.42.152.243.sslip.io', icon: '⚙️', description: 'System administration' },
+  { name: 'Define', code: 'define', href: 'https://expertly-define.152.42.152.243.sslip.io', icon: '📋', description: 'Requirements management' },
+  { name: 'Develop', code: 'develop', href: 'https://expertly-develop.152.42.152.243.sslip.io', icon: '🛠️', description: 'Visual walkthroughs' },
+  { name: 'Identity', code: 'identity', href: 'https://expertly-identity.152.42.152.243.sslip.io', icon: '👤', description: 'Users & teams' },
+  { name: 'Manage', code: 'manage', href: 'https://expertly-manage.152.42.152.243.sslip.io', icon: '📊', description: 'Task management' },
+  { name: 'Salon', code: 'salon', href: 'https://expertly-salon.152.42.152.243.sslip.io', icon: '💇', description: 'Booking platform' },
+  { name: 'Today', code: 'today', href: 'https://expertly-today.152.42.152.243.sslip.io', icon: '📅', description: 'Daily workflow' },
+  { name: 'VibeCode', code: 'vibecode', href: 'https://expertly-vibecode.152.42.152.243.sslip.io', icon: '🤖', description: 'Multi-agent dashboard' },
+  { name: 'VibeTest', code: 'vibetest', href: 'https://vibe-qa.152.42.152.243.sslip.io', icon: '🧪', description: 'Quality assurance' },
 ]
 
 export type SupportedLanguage = 'en' | 'es'

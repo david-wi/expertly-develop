@@ -59,16 +59,16 @@ python -m seeds.seed_themes
 
 ## Production URLs
 
-- **Frontend**: http://expertly-admin.152.42.152.243.sslip.io
-- **API**: http://expertly-admin-api.152.42.152.243.sslip.io
-- **API Docs**: http://expertly-admin-api.152.42.152.243.sslip.io/api/docs
+- **Frontend**: https://expertly-admin.152.42.152.243.sslip.io
+- **API**: https://expertly-admin-api.152.42.152.243.sslip.io
+- **API Docs**: https://expertly-admin-api.152.42.152.243.sslip.io/api/docs
 
 ## Integration with Other Apps
 
 Other Expertly apps can use the Admin themes API by passing `themesApiUrl` to ThemeProvider:
 
 ```tsx
-<ThemeProvider themesApiUrl="http://expertly-admin-api.152.42.152.243.sslip.io/api/public/themes">
+<ThemeProvider themesApiUrl="https://expertly-admin-api.152.42.152.243.sslip.io/api/public/themes">
   <App />
 </ThemeProvider>
 ```

@@ -16,8 +16,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.ed-backend.entrypoints=http"
+      - "traefik.http.routers.ed-backend.entrypoints=https"
       - "traefik.http.routers.ed-backend.rule=Host(`expertly-develop-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.ed-backend.tls=true"
+      - "traefik.http.routers.ed-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
@@ -42,7 +44,7 @@ services:
       context: .
       dockerfile: ./apps/develop/frontend/Dockerfile
       args:
-        VITE_API_URL: http://expertly-develop-api.152.42.152.243.sslip.io/api/v1
+        VITE_API_URL: https://expertly-develop-api.152.42.152.243.sslip.io/api/v1
     depends_on:
       - develop-backend
     networks:
@@ -50,8 +52,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.ed-frontend.entrypoints=http"
+      - "traefik.http.routers.ed-frontend.entrypoints=https"
       - "traefik.http.routers.ed-frontend.rule=Host(`expertly-develop.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.ed-frontend.tls=true"
+      - "traefik.http.routers.ed-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.ed-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
@@ -71,8 +75,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.admin-backend.entrypoints=http"
+      - "traefik.http.routers.admin-backend.entrypoints=https"
       - "traefik.http.routers.admin-backend.rule=Host(`expertly-admin-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.admin-backend.tls=true"
+      - "traefik.http.routers.admin-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
@@ -80,7 +86,7 @@ services:
     build:
       context: ./apps/admin/frontend
       args:
-        VITE_API_URL: http://expertly-admin-api.152.42.152.243.sslip.io/api
+        VITE_API_URL: https://expertly-admin-api.152.42.152.243.sslip.io/api
     depends_on:
       - admin-backend
     networks:
@@ -88,8 +94,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.admin-frontend.entrypoints=http"
+      - "traefik.http.routers.admin-frontend.entrypoints=https"
       - "traefik.http.routers.admin-frontend.rule=Host(`expertly-admin.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.admin-frontend.tls=true"
+      - "traefik.http.routers.admin-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.admin-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
@@ -117,7 +125,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.define.entrypoints=https"
       - "traefik.http.routers.define.rule=Host(`expertly-define.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.define.tls=true"
+      - "traefik.http.routers.define.tls.certresolver=letsencrypt"
       - "traefik.http.services.define.loadbalancer.server.port=3000"
     restart: unless-stopped
 
@@ -136,7 +147,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.manage-backend.entrypoints=https"
       - "traefik.http.routers.manage-backend.rule=Host(`expertly-manage-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.manage-backend.tls=true"
+      - "traefik.http.routers.manage-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.manage-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
@@ -145,7 +159,7 @@ services:
       context: .
       dockerfile: ./apps/manage/frontend/Dockerfile
       args:
-        VITE_API_URL: http://expertly-manage-api.152.42.152.243.sslip.io/api
+        VITE_API_URL: https://expertly-manage-api.152.42.152.243.sslip.io/api
     depends_on:
       - manage-backend
     networks:
@@ -153,7 +167,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.manage-frontend.entrypoints=https"
       - "traefik.http.routers.manage-frontend.rule=Host(`expertly-manage.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.manage-frontend.tls=true"
+      - "traefik.http.routers.manage-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.manage-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
@@ -172,7 +189,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.qa-backend.entrypoints=https"
       - "traefik.http.routers.qa-backend.rule=Host(`vibe-qa.152.42.152.243.sslip.io`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.qa-backend.tls=true"
+      - "traefik.http.routers.qa-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.qa-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
@@ -187,7 +207,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.qa-frontend.entrypoints=https"
       - "traefik.http.routers.qa-frontend.rule=Host(`vibe-qa.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.qa-frontend.tls=true"
+      - "traefik.http.routers.qa-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.qa-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
@@ -219,7 +242,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.salon-backend.entrypoints=https"
       - "traefik.http.routers.salon-backend.rule=Host(`expertly-salon-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.salon-backend.tls=true"
+      - "traefik.http.routers.salon-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.salon-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
@@ -228,7 +254,7 @@ services:
       context: .
       dockerfile: ./apps/salon/frontend/Dockerfile
       args:
-        VITE_API_URL: http://expertly-salon-api.152.42.152.243.sslip.io/api/v1
+        VITE_API_URL: https://expertly-salon-api.152.42.152.243.sslip.io/api/v1
     depends_on:
       - salon-backend
     networks:
@@ -236,7 +262,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.salon-frontend.entrypoints=https"
       - "traefik.http.routers.salon-frontend.rule=Host(`expertly-salon.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.salon-frontend.tls=true"
+      - "traefik.http.routers.salon-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.salon-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
@@ -254,7 +283,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.today-backend.entrypoints=https"
       - "traefik.http.routers.today-backend.rule=Host(`expertly-today-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.today-backend.tls=true"
+      - "traefik.http.routers.today-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.today-backend.loadbalancer.server.port=8000"
     restart: unless-stopped
 
@@ -263,7 +295,7 @@ services:
       context: .
       dockerfile: ./apps/today/frontend/Dockerfile
       args:
-        VITE_API_URL: http://expertly-today-api.152.42.152.243.sslip.io/api
+        VITE_API_URL: https://expertly-today-api.152.42.152.243.sslip.io/api
     depends_on:
       - today-backend
     networks:
@@ -271,7 +303,10 @@ services:
       - default
     labels:
       - "traefik.enable=true"
+      - "traefik.http.routers.today-frontend.entrypoints=https"
       - "traefik.http.routers.today-frontend.rule=Host(`expertly-today.152.42.152.243.sslip.io`)"
+      - "traefik.http.routers.today-frontend.tls=true"
+      - "traefik.http.routers.today-frontend.tls.certresolver=letsencrypt"
       - "traefik.http.services.today-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
