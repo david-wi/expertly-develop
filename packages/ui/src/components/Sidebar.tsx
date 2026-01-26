@@ -144,7 +144,7 @@ export function Sidebar({
             className={`flex items-center gap-2 ${hoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
           >
             <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
-            <span className={`font-semibold ${textPrimary} truncate text-sm`}>{productName}</span>
+            <span className={`font-semibold ${textPrimary} truncate text-sm`}>Expertly {productName}</span>
             <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
 
