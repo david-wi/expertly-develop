@@ -51,8 +51,9 @@ RUN echo 'server { \
         try_files $uri $uri/ /index.html; \
     } \
     \
-    # Cache control for remoteEntry.js - no cache to always get latest \
+    # Serve remoteEntry.js from assets folder (vite-plugin-federation output) \
     location = /remoteEntry.js { \
+        alias /usr/share/nginx/html/assets/remoteEntry.js; \
         add_header Cache-Control "no-cache, no-store, must-revalidate"; \
         add_header Access-Control-Allow-Origin *; \
     } \
