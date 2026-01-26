@@ -1,10 +1,11 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Palette } from 'lucide-react'
+import { LayoutDashboard, Palette, Activity } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from '@expertly/ui'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Themes', href: '/themes', icon: Palette },
+  { name: 'Monitoring', href: '/monitoring', icon: Activity },
 ]
 
 export function Layout() {

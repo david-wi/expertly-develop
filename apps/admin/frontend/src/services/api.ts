@@ -6,6 +6,10 @@ import type {
   ThemeCreateInput,
   ThemeUpdateInput,
 } from '@/types/theme'
+import type {
+  MonitoringResponse,
+  HealthHistoryResponse,
+} from '@/types/monitoring'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -55,6 +59,28 @@ export const themesApi = {
       null,
       { params: { changed_by: changedBy } }
     )
+    return response.data
+  },
+}
+
+// Monitoring API
+export const monitoringApi = {
+  getStatus: async (refresh = false): Promise<MonitoringResponse> => {
+    const response = await api.get<MonitoringResponse>('/monitoring', {
+      params: { refresh },
+    })
+    return response.data
+  },
+
+  runChecks: async (): Promise<MonitoringResponse> => {
+    const response = await api.post<MonitoringResponse>('/monitoring/check')
+    return response.data
+  },
+
+  getHistory: async (serviceName: string, limit = 100): Promise<HealthHistoryResponse> => {
+    const response = await api.get<HealthHistoryResponse>(`/monitoring/history/${encodeURIComponent(serviceName)}`, {
+      params: { limit },
+    })
     return response.data
   },
 }
