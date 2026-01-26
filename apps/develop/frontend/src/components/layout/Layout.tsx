@@ -45,7 +45,7 @@ export default function Layout() {
   const currentTenantId = localStorage.getItem(TENANT_STORAGE_KEY) || currentUser?.tenant.id || null
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       <Sidebar
         productCode="develop"
         productName="Develop"
@@ -63,7 +63,7 @@ export default function Layout() {
         }
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
-            <span className="text-[10px] text-gray-400 block text-right">
+            <span className="text-[10px] text-theme-text-muted block text-right">
               {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
             </span>
           )
@@ -86,7 +86,7 @@ export default function Layout() {
       {/* Subtle marketing page link - fixed to bottom-right of page */}
       <Link
         to="/landing"
-        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-primary-600 transition-colors"
+        className="fixed bottom-4 right-4 text-xs text-theme-text-muted hover:text-primary-600 transition-colors"
       >
         View marketing page
       </Link>
