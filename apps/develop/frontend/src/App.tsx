@@ -7,10 +7,15 @@ import JobQueuePage from './pages/JobQueuePage'
 import JobDetailPage from './pages/JobDetailPage'
 import ArtifactsPage from './pages/ArtifactsPage'
 import WalkthroughPage from './pages/WalkthroughPage'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   return (
     <Routes>
+      {/* Public landing page (no layout) */}
+      <Route path="/landing" element={<LandingPage />} />
+
+      {/* Authenticated app routes */}
       <Route path="/" element={<Layout />}>
         <Route index element={<Dashboard />} />
         <Route path="projects" element={<ProjectsPage />} />
