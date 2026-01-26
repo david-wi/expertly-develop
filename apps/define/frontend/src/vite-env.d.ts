@@ -3,6 +3,7 @@
 interface ImportMetaEnv {
   readonly VITE_UI_REMOTE_URL: string
   readonly VITE_BUILD_TIMESTAMP: string
+  readonly VITE_GIT_COMMIT?: string
 }
 
 interface ImportMeta {
@@ -37,6 +38,10 @@ declare module 'expertly_ui/index' {
     orgSwitcher?: ReactNode
     buildInfo?: ReactNode
     renderLink: (props: RenderLinkProps) => ReactNode
+    versionCheck?: {
+      currentCommit?: string
+      safeMinutes?: number
+    }
   }
 
   interface MainContentProps {

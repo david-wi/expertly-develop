@@ -74,6 +74,10 @@ declare module '@expertly/ui' {
       children: ReactNode
       onClick?: () => void
     }) => ReactNode
+    versionCheck?: {
+      currentCommit?: string
+      safeMinutes?: number
+    }
   }
 
   export type SupportedLanguage = 'en' | 'es'
