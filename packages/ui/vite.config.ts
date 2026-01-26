@@ -24,12 +24,10 @@ export default defineConfig({
         react: {
           singleton: true,
           requiredVersion: '^18.0.0 || ^19.0.0',
-          import: false, // Remote should use host's React, not bundle its own
         },
         'react-dom': {
           singleton: true,
           requiredVersion: '^18.0.0 || ^19.0.0',
-          import: false, // Remote should use host's React-DOM, not bundle its own
         },
       },
     }),
