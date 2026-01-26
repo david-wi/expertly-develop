@@ -26,7 +26,7 @@ FROM nginx:alpine
 COPY apps/admin/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
-COPY --from=builder /app/apps/admin/frontend/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 
