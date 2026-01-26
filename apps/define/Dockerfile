@@ -5,15 +5,24 @@ FROM base AS deps
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
+# Copy package files
+COPY apps/define/package.json apps/define/package-lock.json ./
+
+# Copy the shared UI package
+COPY packages/ui ./packages/ui
+
+# Update package.json to use local path for @expertly/ui
+RUN sed -i 's|"@expertly/ui": "\*"|"@expertly/ui": "file:./packages/ui"|' package.json
+
 # Install dependencies
-COPY package.json package-lock.json ./
 RUN npm ci
 
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY --from=deps /app/packages ./packages
+COPY apps/define .
 
 # Build the application
 RUN npm run build

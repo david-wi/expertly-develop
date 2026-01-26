@@ -109,7 +109,9 @@ services:
   # EXPERTLY DEFINE
   # ===================
   define:
-    build: ./apps/define
+    build:
+      context: .
+      dockerfile: ./apps/define/Dockerfile
     networks:
       - coolify
       - default
