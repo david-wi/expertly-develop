@@ -33,3 +33,6 @@ htmlcov/
 *.db
 data/
 venv/
+
+# Claude credentials
+.claude/gitignore/
