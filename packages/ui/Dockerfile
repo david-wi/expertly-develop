@@ -51,11 +51,6 @@ RUN echo 'server { \
         try_files $uri $uri/ /index.html; \
     } \
     \
-    # Serve remoteEntry.js from assets folder (vite-plugin-federation output) \
-    location = /remoteEntry.js { \
-        rewrite ^/remoteEntry.js$ /assets/remoteEntry.js last; \
-    } \
-    \
     # No cache for version.json - always get latest \
     location = /version.json { \
         add_header Cache-Control "no-cache, no-store, must-revalidate"; \
