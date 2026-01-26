@@ -22,9 +22,9 @@ services:
       - "traefik.http.routers.ed-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
-      timeout: 3s
+      timeout: 5s
       retries: 3
     restart: unless-stopped
 
@@ -86,7 +86,7 @@ services:
       - "traefik.http.routers.admin-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -141,7 +141,7 @@ services:
       - "traefik.http.routers.define.tls.certresolver=letsencrypt"
       - "traefik.http.services.define.loadbalancer.server.port=3000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -168,7 +168,7 @@ services:
       - "traefik.http.routers.manage-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.manage-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -215,7 +215,7 @@ services:
       - "traefik.http.routers.qa-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.qa-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -273,7 +273,7 @@ services:
       - "traefik.http.routers.salon-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.salon-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -319,7 +319,7 @@ services:
       - "traefik.http.routers.today-backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.today-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
