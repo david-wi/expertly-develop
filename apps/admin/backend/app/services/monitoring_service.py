@@ -4,7 +4,7 @@ import asyncio
 import httpx
 from datetime import datetime, timezone, timedelta
 from typing import Optional
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.monitoring import ServiceHealthCheck
