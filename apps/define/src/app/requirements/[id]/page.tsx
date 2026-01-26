@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { RichTextViewer } from '@/components/ui/rich-text-viewer';
 import {
   Dialog,
   DialogContent,
@@ -249,13 +250,13 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
                             What this does
                           </label>
-                          <Textarea
-                            value={editForm.whatThisDoes}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, whatThisDoes: e.target.value })
+                          <RichTextEditor
+                            content={editForm.whatThisDoes}
+                            onChange={(content) =>
+                              setEditForm({ ...editForm, whatThisDoes: content })
                             }
                             placeholder="Users can..."
-                            rows={2}
+                            requirementId={id}
                           />
                           <p className="text-xs text-gray-500 mt-1">One clear sentence starting with "Users can..."</p>
                         </div>
@@ -263,13 +264,13 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
                             Why this exists
                           </label>
-                          <Textarea
-                            value={editForm.whyThisExists}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, whyThisExists: e.target.value })
+                          <RichTextEditor
+                            content={editForm.whyThisExists}
+                            onChange={(content) =>
+                              setEditForm({ ...editForm, whyThisExists: content })
                             }
                             placeholder="This helps people..."
-                            rows={2}
+                            requirementId={id}
                           />
                           <p className="text-xs text-gray-500 mt-1">One or two sentences in plain English</p>
                         </div>
@@ -277,13 +278,13 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
                             Not included within this requirement
                           </label>
-                          <Textarea
-                            value={editForm.notIncluded}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, notIncluded: e.target.value })
+                          <RichTextEditor
+                            content={editForm.notIncluded}
+                            onChange={(content) =>
+                              setEditForm({ ...editForm, notIncluded: content })
                             }
-                            placeholder="• Branching or merging versions&#10;• Restoring only part of an automation"
-                            rows={3}
+                            placeholder="Branching or merging versions, Restoring only part of an automation..."
+                            requirementId={id}
                           />
                           <p className="text-xs text-gray-500 mt-1">Bullets that avoid confusion and scope creep</p>
                         </div>
@@ -291,13 +292,13 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
                             How we know it works
                           </label>
-                          <Textarea
-                            value={editForm.acceptanceCriteria}
-                            onChange={(e) =>
-                              setEditForm({ ...editForm, acceptanceCriteria: e.target.value })
+                          <RichTextEditor
+                            content={editForm.acceptanceCriteria}
+                            onChange={(content) =>
+                              setEditForm({ ...editForm, acceptanceCriteria: content })
                             }
-                            placeholder="• Users can see a list of versions&#10;• Users can compare any two versions"
-                            rows={3}
+                            placeholder="Users can see a list of versions, Users can compare any two versions..."
+                            requirementId={id}
                           />
                           <p className="text-xs text-gray-500 mt-1">Acceptance criteria that can map to tests</p>
                         </div>
@@ -379,24 +380,18 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                       <div className="space-y-6">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">What this does</h3>
-                          <p className="text-gray-600">
-                            {requirement.whatThisDoes || 'Not defined yet.'}
-                          </p>
+                          <RichTextViewer content={requirement.whatThisDoes} />
                         </div>
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 mb-2">Why this exists</h3>
-                          <p className="text-gray-600">
-                            {requirement.whyThisExists || 'Not defined yet.'}
-                          </p>
+                          <RichTextViewer content={requirement.whyThisExists} />
                         </div>
                         {requirement.notIncluded && (
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">
                               Not included within this requirement
                             </h3>
-                            <div className="text-gray-600 whitespace-pre-wrap">
-                              {requirement.notIncluded}
-                            </div>
+                            <RichTextViewer content={requirement.notIncluded} />
                           </div>
                         )}
                         {requirement.acceptanceCriteria && (
@@ -404,9 +399,7 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">
                               How we know it works
                             </h3>
-                            <div className="text-gray-600 whitespace-pre-wrap">
-                              {requirement.acceptanceCriteria}
-                            </div>
+                            <RichTextViewer content={requirement.acceptanceCriteria} />
                           </div>
                         )}
                         {tags.length > 0 && (

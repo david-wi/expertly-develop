@@ -140,6 +140,19 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_jira_settings_product ON jira_settings(product_id);
     CREATE INDEX IF NOT EXISTS idx_jira_story_drafts_product ON jira_story_drafts(product_id);
     CREATE INDEX IF NOT EXISTS idx_jira_story_drafts_requirement ON jira_story_drafts(requirement_id);
+
+    CREATE TABLE IF NOT EXISTS attachments (
+      id TEXT PRIMARY KEY,
+      requirement_id TEXT NOT NULL REFERENCES requirements(id) ON DELETE CASCADE,
+      filename TEXT NOT NULL,
+      original_filename TEXT NOT NULL,
+      mime_type TEXT NOT NULL,
+      size_bytes INTEGER NOT NULL,
+      storage_path TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_attachments_requirement ON attachments(requirement_id);
   `);
 
   // Migration: Add prefix column to products if it doesn't exist

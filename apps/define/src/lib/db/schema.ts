@@ -109,6 +109,17 @@ export const jiraStoryDrafts = sqliteTable('jira_story_drafts', {
   updatedAt: text('updated_at').notNull(),
 });
 
+export const attachments = sqliteTable('attachments', {
+  id: text('id').primaryKey(),
+  requirementId: text('requirement_id').notNull().references(() => requirements.id, { onDelete: 'cascade' }),
+  filename: text('filename').notNull(), // Stored filename (UUID-based)
+  originalFilename: text('original_filename').notNull(), // User-friendly name
+  mimeType: text('mime_type').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  storagePath: text('storage_path').notNull(), // Relative path within uploads directory
+  createdAt: text('created_at').notNull(),
+});
+
 // Type exports
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
@@ -128,3 +139,5 @@ export type JiraSettings = typeof jiraSettings.$inferSelect;
 export type NewJiraSettings = typeof jiraSettings.$inferInsert;
 export type JiraStoryDraft = typeof jiraStoryDrafts.$inferSelect;
 export type NewJiraStoryDraft = typeof jiraStoryDrafts.$inferInsert;
+export type Attachment = typeof attachments.$inferSelect;
+export type NewAttachment = typeof attachments.$inferInsert;
