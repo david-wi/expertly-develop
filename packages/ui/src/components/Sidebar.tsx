@@ -70,6 +70,8 @@ export interface SidebarProps {
   basePath?: string
   orgSwitcher?: ReactNode
   bottomSection?: ReactNode
+  // Build info displayed above theme switcher (e.g., version number, build timestamp)
+  buildInfo?: ReactNode
   // Language support
   currentLanguage?: SupportedLanguage
   onLanguageChange?: (lang: SupportedLanguage) => void
@@ -93,6 +95,7 @@ export function Sidebar({
   basePath = '',
   orgSwitcher,
   bottomSection,
+  buildInfo,
   currentLanguage,
   onLanguageChange,
   showThemeSwitcher = true,
@@ -259,6 +262,13 @@ export function Sidebar({
           })}
         </ul>
       </nav>
+
+      {/* Build Info (optional - displayed above theme switcher line) */}
+      {buildInfo && (
+        <div className="px-4 py-1 flex-shrink-0">
+          {buildInfo}
+        </div>
+      )}
 
       {/* Theme Switcher */}
       {showThemeSwitcher && (

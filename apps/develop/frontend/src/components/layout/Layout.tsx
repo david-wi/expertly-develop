@@ -64,33 +64,32 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Sidebar wrapper for absolute positioning of build timestamp */}
-      <div className="relative">
-        <Sidebar
-          productCode="develop"
-          productName="Develop"
-          navigation={navigation}
-          currentPath={location.pathname}
-          user={currentUser ? { name: currentUser.name, role: currentUser.role } : undefined}
-          orgSwitcher={
-            <OrganizationSwitcher
-              currentTenantId={currentTenantId}
-              onSwitch={handleOrgSwitch}
-            />
-          }
-          renderLink={({ href, className, children }) => (
-            <Link to={href} className={className}>
-              {children}
-            </Link>
-          )}
-        />
-        {/* Build timestamp in bottom-right corner of sidebar */}
-        {buildTimestamp && (
-          <span className="fixed bottom-1 left-56 text-[10px] text-gray-400 pointer-events-none">
-            {buildTimestamp}
-          </span>
+      <Sidebar
+        productCode="develop"
+        productName="Develop"
+        navigation={navigation}
+        currentPath={location.pathname}
+        user={currentUser ? {
+          name: currentUser.name,
+          role: currentUser.role,
+        } : undefined}
+        orgSwitcher={
+          <OrganizationSwitcher
+            currentTenantId={currentTenantId}
+            onSwitch={handleOrgSwitch}
+          />
+        }
+        buildInfo={
+          buildTimestamp ? (
+            <span className="text-[10px] text-gray-400 block text-right">{buildTimestamp}</span>
+          ) : undefined
+        }
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
+          </Link>
         )}
-      </div>
+      />
 
       {/* Main content */}
       <MainContent>
