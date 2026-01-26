@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react'
+import { ReactNode, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -80,13 +80,13 @@ export default function Layout({ children }: LayoutProps) {
               </button>
             </div>
           }
-          renderLink={({ href, className, children }: { href: string; className: string; children: React.ReactNode }) => (
+          renderLink={(props) => (
             <Link
-              to={href}
+              to={props.href}
               onClick={() => setSidebarOpen(false)}
-              className={className}
+              className={props.className}
             >
-              {children}
+              {props.children}
             </Link>
           )}
         />
