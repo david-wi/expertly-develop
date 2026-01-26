@@ -67,6 +67,12 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-4">
               <a
+                href="/download"
+                className="text-gray-600 hover:text-gray-900 font-medium"
+              >
+                Download Agent
+              </a>
+              <a
                 href="/"
                 className="text-gray-600 hover:text-gray-900 font-medium"
               >

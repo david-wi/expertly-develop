@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import { Sidebar } from './components/Sidebar';
 import ConnectionStatus from './components/ConnectionStatus';
 import LandingPage from './pages/LandingPage';
+import DownloadPage from './pages/DownloadPage';
 import { ExternalLink } from 'lucide-react';
 
 function MainApp() {
@@ -43,9 +44,12 @@ export default function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Simple routing: /landing shows the landing page, everything else shows the main app
+  // Simple routing
   if (currentPath === '/landing') {
     return <LandingPage />;
+  }
+  if (currentPath === '/download') {
+    return <DownloadPage />;
   }
 
   return <MainApp />;

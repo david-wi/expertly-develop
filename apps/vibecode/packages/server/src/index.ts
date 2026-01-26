@@ -40,6 +40,54 @@ app.get('/ready', (_, res) => {
   res.json({ ready: true });
 });
 
+// Desktop agent update endpoint for Tauri updater
+// Format: /updates/:target/:arch/:current_version
+app.get('/updates/:target/:arch/:current_version', (req, res) => {
+  const { target, arch, current_version } = req.params;
+  console.log(`[Updates] Check for ${target}/${arch} from version ${current_version}`);
+
+  // In production, this would check against actual releases
+  // For now, return no update available
+  // When a new version is released, update the version and urls below
+  const LATEST_VERSION = '0.1.0';
+
+  if (current_version === LATEST_VERSION) {
+    // No update available - return 204 No Content
+    res.status(204).send();
+    return;
+  }
+
+  // Update available - return update manifest
+  const baseUrl = 'https://github.com/david-wi/expertly-develop/releases/latest/download';
+
+  // Build platform-specific download URL
+  let url = '';
+  let signature = ''; // Would be populated from signed releases
+
+  if (target.includes('darwin')) {
+    url = arch === 'aarch64'
+      ? `${baseUrl}/Vibecode.Agent_${LATEST_VERSION}_aarch64.app.tar.gz`
+      : `${baseUrl}/Vibecode.Agent_${LATEST_VERSION}_x64.app.tar.gz`;
+  } else if (target.includes('windows')) {
+    url = `${baseUrl}/Vibecode.Agent_${LATEST_VERSION}_x64-setup.nsis.zip`;
+  } else if (target.includes('linux')) {
+    url = `${baseUrl}/Vibecode.Agent_${LATEST_VERSION}_amd64.AppImage.tar.gz`;
+  }
+
+  if (!url) {
+    res.status(204).send();
+    return;
+  }
+
+  res.json({
+    version: LATEST_VERSION,
+    notes: 'Bug fixes and improvements',
+    pub_date: new Date().toISOString(),
+    url,
+    signature, // Required for signed updates
+  });
+});
+
 // API endpoint for remote execution
 app.post('/api/chat', async (req, res) => {
   try {
