@@ -3,7 +3,7 @@ import { useDashboardStore, type ExecutionMode, type ChatMessage, type ImageAtta
 
 const WS_URL = import.meta.env.DEV
   ? 'ws://localhost:3001'
-  : `ws://${window.location.host}`;
+  : `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`;
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
