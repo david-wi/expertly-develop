@@ -4,8 +4,8 @@ set -e
 echo "Starting backend discovery..."
 
 discover_backend() {
-    # Get all IPv4 addresses for 'backend'
-    BACKEND_IPS=$(nslookup backend 127.0.0.11 2>/dev/null | grep "Address:" | grep -v "127.0.0.11" | grep -E "^Address: [0-9]" | awk '{print $2}')
+    # Get all IPv4 addresses for 'today-backend'
+    BACKEND_IPS=$(nslookup today-backend 127.0.0.11 2>/dev/null | grep "Address:" | grep -v "127.0.0.11" | grep -E "^Address: [0-9]" | awk '{print $2}')
 
     echo "Found backend IPs: $BACKEND_IPS" >&2
 
@@ -44,8 +44,8 @@ if [ -n "$FOUND_BACKEND" ]; then
     BACKEND_HOST="$FOUND_BACKEND"
     echo "Setting BACKEND_HOST=$BACKEND_HOST"
 else
-    echo "WARNING: Could not discover Expertly Today backend after $MAX_RETRIES attempts, using default 'backend'"
-    BACKEND_HOST="backend"
+    echo "WARNING: Could not discover Expertly Today backend after $MAX_RETRIES attempts, using default 'today-backend'"
+    BACKEND_HOST="today-backend"
 fi
 
 export BACKEND_HOST
