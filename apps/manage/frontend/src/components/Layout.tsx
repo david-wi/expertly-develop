@@ -7,7 +7,7 @@ import {
   Users,
   Users2,
 } from 'lucide-react'
-import { Sidebar, MainContent, BuildTimestamp } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp } from '@expertly/ui'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -28,7 +28,13 @@ export default function Layout() {
         productName="Manage"
         navigation={navigation}
         currentPath={location.pathname}
-        buildInfo={<BuildTimestamp timestamp={import.meta.env.VITE_BUILD_TIMESTAMP} />}
+        buildInfo={
+          formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
+            <span className="text-[10px] text-gray-400 block text-right">
+              {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
+            </span>
+          )
+        }
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

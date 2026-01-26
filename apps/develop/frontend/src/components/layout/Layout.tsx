@@ -7,7 +7,7 @@ import {
   FileBox,
   Play,
 } from 'lucide-react'
-import { Sidebar, MainContent, BuildTimestamp } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp } from '@expertly/ui'
 import OrganizationSwitcher from './OrganizationSwitcher'
 import { usersApi, CurrentUser, TENANT_STORAGE_KEY } from '../../api/client'
 
@@ -61,7 +61,13 @@ export default function Layout() {
             onSwitch={handleOrgSwitch}
           />
         }
-        buildInfo={<BuildTimestamp timestamp={import.meta.env.VITE_BUILD_TIMESTAMP} />}
+        buildInfo={
+          formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
+            <span className="text-[10px] text-gray-400 block text-right">
+              {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
+            </span>
+          )
+        }
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -72,17 +78,15 @@ export default function Layout() {
       {/* Main content */}
       <MainContent>
         <Outlet />
-
-        {/* Subtle marketing page link */}
-        <div className="mt-12 flex justify-end">
-          <Link
-            to="/landing"
-            className="text-xs text-gray-400 hover:text-primary-600 transition-colors"
-          >
-            View marketing page
-          </Link>
-        </div>
       </MainContent>
+
+      {/* Subtle marketing page link - fixed to bottom-right of page */}
+      <Link
+        to="/landing"
+        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-primary-600 transition-colors"
+      >
+        View marketing page
+      </Link>
     </div>
   )
 }

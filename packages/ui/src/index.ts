@@ -14,7 +14,7 @@ export {
 } from './components/Sidebar'
 
 // Build info utilities
-export { formatBuildTimestamp, BuildTimestamp } from './utils/buildInfo'
+export { formatBuildTimestamp } from './utils/buildInfo'
 
 // Theme system
 export {

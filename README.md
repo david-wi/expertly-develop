@@ -106,8 +106,8 @@ npm run dev
 4. Deploy using `docker-compose.prod.yml`
 
 ### URLs
-- Frontend: http://expertly-develop.152.42.152.243.sslip.io
-- API: http://expertly-develop-api.152.42.152.243.sslip.io
+- Frontend: https://develop.ai.devintensive.com
+- API: https://develop-api.ai.devintensive.com
 
 ## Project Structure
 

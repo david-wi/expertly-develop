@@ -16,15 +16,3 @@ export function formatBuildTimestamp(timestamp: string | undefined): string | nu
     return null
   }
 }
-
-/**
- * React component for displaying build timestamp in sidebar
- * Use with Sidebar's buildInfo prop
- */
-export function BuildTimestamp({ timestamp }: { timestamp: string | undefined }) {
-  const formatted = formatBuildTimestamp(timestamp)
-  if (!formatted) return null
-  return (
-    <span className="text-[10px] text-gray-400 block text-right">{formatted}</span>
-  )
-}

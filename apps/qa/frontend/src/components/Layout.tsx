@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, BuildTimestamp } from '@expertly/ui'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp } from '@expertly/ui'
 
 interface LayoutProps {
   children: ReactNode
@@ -63,7 +63,13 @@ export default function Layout({ children }: LayoutProps) {
           user={user ? { name: user.full_name, role: user.role } : undefined}
           currentLanguage={i18n.language as SupportedLanguage}
           onLanguageChange={handleLanguageChange}
-          buildInfo={<BuildTimestamp timestamp={import.meta.env.VITE_BUILD_TIMESTAMP} />}
+          buildInfo={
+            formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
+              <span className="text-[10px] text-gray-400 block text-right">
+                {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
+              </span>
+            )
+          }
           bottomSection={
             <div className="p-4 space-y-2">
               {user && (

@@ -5,8 +5,8 @@
 **ALWAYS deploy to Digital Ocean after making changes.**
 
 - After commits, push to GitHub and deploy to the DO droplet
-- Deployment URL: **http://vibe-qa.152.42.152.243.sslip.io**
-- Backend API: http://vibe-qa.152.42.152.243.sslip.io/api/v1
+- Deployment URL: **https://qa.ai.devintensive.com**
+- Backend API: https://qa.ai.devintensive.com/api/v1
 
 ### Deployment Commands
 
@@ -34,7 +34,7 @@ conn.commit()
 
 ### Architecture
 - Uses docker-compose.prod.yml for production
-- Traefik handles routing via sslip.io domain
+- Deployed via Coolify with custom domain
 - Frontend nginx proxies /api to backend
 
 ## Default User

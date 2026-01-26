@@ -111,8 +111,8 @@ Expertly Today is a database-driven replacement for David's file-based Claude as
 - None currently
 
 ## Notes
-- **Deployed URL**: http://zg8cwo8osssc4oww48s4804s.152.42.152.243.sslip.io/
-- **API Docs**: http://zg8cwo8osssc4oww48s4804s.152.42.152.243.sslip.io/api/docs
+- **Deployed URL**: https://today.ai.devintensive.com/
+- **API Docs**: https://today.ai.devintensive.com/api/docs
 - **API Key**: `e87623cff95b3847794076a899211fd8f2f4c5d17115746e59f575774c06d753`
 - **Floating IP**: 152.42.152.243
 - **Coolify Dashboard**: http://152.42.152.243:8000
