@@ -15,7 +15,7 @@ COPY packages/ui ./packages/ui
 RUN sed -i 's|"@expertly/ui": "\*"|"@expertly/ui": "file:./packages/ui"|' package.json
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Rebuild the source code only when needed
 FROM base AS builder
