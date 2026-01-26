@@ -1,7 +1,8 @@
 """Theme and ThemeVersion models for managing application themes."""
 
 import uuid
-from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey, UniqueConstraint
+from datetime import datetime, timezone
+from sqlalchemy import Column, String, Text, Integer, Boolean, ForeignKey, UniqueConstraint, DateTime
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base, TimestampMixin, UUID, JSONB
@@ -81,8 +82,8 @@ class ThemeVersion(Base):
     change_summary = Column(Text, nullable=True)
     changed_by = Column(String(100), nullable=True)
     changed_at = Column(
-        TimestampMixin.created_at.fget(TimestampMixin).type,
-        default=TimestampMixin.created_at.fget(TimestampMixin).default.arg,
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
 
