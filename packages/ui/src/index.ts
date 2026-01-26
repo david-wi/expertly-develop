@@ -12,3 +12,20 @@ export {
   type SupportedLanguage,
   type LanguageOption,
 } from './components/Sidebar'
+
+// Theme system
+export {
+  ThemeProvider,
+  ThemeContext,
+  useTheme,
+  ThemeSwitcher,
+  themes,
+  themeList,
+  getTheme,
+  getThemeColors,
+  type ThemeContextValue,
+  type ThemeId,
+  type ThemeMode,
+  type Theme,
+  type ThemeColors,
+} from './theme'

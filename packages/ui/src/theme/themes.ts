@@ -1,0 +1,189 @@
+// Theme definitions for Expertly apps
+
+export type ThemeId = 'violet' | 'ocean'
+export type ThemeMode = 'light' | 'dark'
+
+export interface ThemeColors {
+  // Primary color palette
+  primary: {
+    50: string
+    100: string
+    200: string
+    300: string
+    400: string
+    500: string
+    600: string
+    700: string
+    800: string
+    900: string
+    950: string
+  }
+  // Background colors
+  background: {
+    default: string
+    surface: string
+    elevated: string
+  }
+  // Text colors
+  text: {
+    primary: string
+    secondary: string
+    muted: string
+  }
+  // Border colors
+  border: {
+    default: string
+    subtle: string
+  }
+}
+
+export interface Theme {
+  id: ThemeId
+  name: string
+  colors: {
+    light: ThemeColors
+    dark: ThemeColors
+  }
+}
+
+export const themes: Record<ThemeId, Theme> = {
+  violet: {
+    id: 'violet',
+    name: 'Violet',
+    colors: {
+      light: {
+        primary: {
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+          950: '#2e1065',
+        },
+        background: {
+          default: '#f9fafb', // gray-50
+          surface: '#ffffff',
+          elevated: '#ffffff',
+        },
+        text: {
+          primary: '#111827', // gray-900
+          secondary: '#4b5563', // gray-600
+          muted: '#6b7280', // gray-500
+        },
+        border: {
+          default: '#e5e7eb', // gray-200
+          subtle: '#f3f4f6', // gray-100
+        },
+      },
+      dark: {
+        primary: {
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
+          950: '#2e1065',
+        },
+        background: {
+          default: '#111827', // gray-900
+          surface: '#1f2937', // gray-800
+          elevated: '#374151', // gray-700
+        },
+        text: {
+          primary: '#f9fafb', // gray-50
+          secondary: '#9ca3af', // gray-400
+          muted: '#6b7280', // gray-500
+        },
+        border: {
+          default: '#374151', // gray-700
+          subtle: '#1f2937', // gray-800
+        },
+      },
+    },
+  },
+  ocean: {
+    id: 'ocean',
+    name: 'Ocean',
+    colors: {
+      light: {
+        primary: {
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+          950: '#042f2e',
+        },
+        background: {
+          default: '#f9fafb', // gray-50
+          surface: '#ffffff',
+          elevated: '#ffffff',
+        },
+        text: {
+          primary: '#111827', // gray-900
+          secondary: '#4b5563', // gray-600
+          muted: '#6b7280', // gray-500
+        },
+        border: {
+          default: '#e5e7eb', // gray-200
+          subtle: '#f3f4f6', // gray-100
+        },
+      },
+      dark: {
+        primary: {
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
+          950: '#042f2e',
+        },
+        background: {
+          default: '#0f172a', // slate-900
+          surface: '#1e293b', // slate-800
+          elevated: '#334155', // slate-700
+        },
+        text: {
+          primary: '#f8fafc', // slate-50
+          secondary: '#94a3b8', // slate-400
+          muted: '#64748b', // slate-500
+        },
+        border: {
+          default: '#334155', // slate-700
+          subtle: '#1e293b', // slate-800
+        },
+      },
+    },
+  },
+}
+
+export const themeList = Object.values(themes)
+
+export function getTheme(id: ThemeId): Theme {
+  return themes[id] || themes.violet
+}
+
+export function getThemeColors(id: ThemeId, mode: ThemeMode): ThemeColors {
+  const theme = getTheme(id)
+  return theme.colors[mode]
+}

@@ -1,5 +1,7 @@
 import { ChevronDown } from 'lucide-react'
 import { useState, ReactNode, ComponentType } from 'react'
+import { ThemeSwitcher } from '../theme/ThemeSwitcher'
+import { useTheme } from '../theme/useTheme'
 
 export interface NavItem {
   name: string
@@ -69,8 +71,8 @@ export interface SidebarProps {
   // Language support
   currentLanguage?: SupportedLanguage
   onLanguageChange?: (lang: SupportedLanguage) => void
-  // Theme
-  theme?: 'light' | 'dark'
+  // Theme switcher visibility
+  showThemeSwitcher?: boolean
   // Router-agnostic link rendering
   renderLink: (props: {
     href: string
@@ -91,28 +93,36 @@ export function Sidebar({
   bottomSection,
   currentLanguage,
   onLanguageChange,
-  theme = 'light',
+  showThemeSwitcher = true,
   renderLink,
 }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
 
-  const isDark = theme === 'dark'
+  // Get current theme mode for styling
+  let isDark = false
+  try {
+    const themeContext = useTheme()
+    isDark = themeContext.mode === 'dark'
+  } catch {
+    // ThemeProvider not available, use light mode
+    isDark = false
+  }
 
-  // Theme classes
-  const sidebarBg = isDark ? 'bg-gray-900' : 'bg-white'
-  const borderColor = isDark ? 'border-gray-700' : 'border-gray-200'
-  const textPrimary = isDark ? 'text-white' : 'text-gray-900'
-  const textSecondary = isDark ? 'text-gray-400' : 'text-gray-600'
-  const textMuted = isDark ? 'text-gray-500' : 'text-gray-500'
-  const hoverBg = isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
-  const activeBg = isDark ? 'bg-violet-900/50' : 'bg-violet-50'
-  const activeText = isDark ? 'text-violet-300' : 'text-violet-700'
-  const navHoverBg = isDark ? 'hover:bg-gray-800' : 'hover:bg-gray-100'
-  const userBg = isDark ? 'bg-gray-800' : 'bg-gray-50'
-  const avatarBg = isDark ? 'bg-violet-900' : 'bg-violet-100'
-  const avatarText = isDark ? 'text-violet-300' : 'text-violet-700'
-  const dropdownBg = isDark ? 'bg-gray-800' : 'bg-white'
+  // Theme-aware classes using CSS variables
+  const sidebarBg = 'bg-theme-bg-surface'
+  const borderColor = 'border-theme-border'
+  const textPrimary = 'text-theme-text-primary'
+  const textSecondary = 'text-theme-text-secondary'
+  const textMuted = 'text-theme-text-muted'
+  const hoverBg = 'hover:bg-theme-bg-elevated'
+  const activeBg = isDark ? 'bg-primary-900/50' : 'bg-primary-50'
+  const activeText = isDark ? 'text-primary-300' : 'text-primary-700'
+  const navHoverBg = 'hover:bg-theme-bg-elevated'
+  const userBg = isDark ? 'bg-theme-bg-elevated' : 'bg-theme-bg'
+  const avatarBg = isDark ? 'bg-primary-900' : 'bg-primary-100'
+  const avatarText = isDark ? 'text-primary-300' : 'text-primary-700'
+  const dropdownBg = 'bg-theme-bg-surface'
 
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
@@ -189,11 +199,11 @@ export function Sidebar({
                     className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                       product.code === productCode
                         ? `${activeBg} ${activeText}`
-                        : `${textSecondary} ${hoverBg} ${isDark ? 'hover:text-white' : 'hover:text-gray-900'}`
+                        : `${textSecondary} ${hoverBg} hover:${textPrimary}`
                     }`}
                     onClick={() => setShowProductSwitcher(false)}
                   >
-                    <div className="w-8 h-8 bg-violet-600 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                       <span className="text-white">{product.icon}</span>
                     </div>
                     <div>
@@ -232,7 +242,7 @@ export function Sidebar({
                     transition-colors duration-150
                     ${isActive
                       ? `${activeBg} ${activeText}`
-                      : `${textSecondary} ${navHoverBg} ${isDark ? 'hover:text-white' : 'hover:text-gray-900'}`
+                      : `${textSecondary} ${navHoverBg} hover:${textPrimary}`
                     }
                   `,
                   children: (
@@ -247,6 +257,13 @@ export function Sidebar({
           })}
         </ul>
       </nav>
+
+      {/* Theme Switcher */}
+      {showThemeSwitcher && (
+        <div className={`px-4 py-3 border-t ${borderColor} flex-shrink-0`}>
+          <ThemeSwitcher />
+        </div>
+      )}
 
       {/* Bottom Section (optional - for logout buttons, etc.) */}
       {bottomSection && (
@@ -281,7 +298,7 @@ export interface MainLayoutProps {
 
 export function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       {children}
     </div>
   )
