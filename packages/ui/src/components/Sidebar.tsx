@@ -116,28 +116,28 @@ export function Sidebar({
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-64 ${sidebarBg} shadow-lg flex flex-col`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-64 ${sidebarBg} shadow-lg flex flex-col overflow-hidden`}>
       {/* Logo / Product Switcher */}
-      <div className="relative">
-        <div className={`flex h-16 items-center justify-between gap-2 px-6 border-b ${borderColor}`}>
+      <div className="relative flex-shrink-0">
+        <div className={`flex h-14 items-center justify-between px-4 border-b ${borderColor}`}>
           <button
             onClick={() => setShowProductSwitcher(!showProductSwitcher)}
-            className={`flex items-center gap-3 ${hoverBg} -ml-2 px-2 py-1 rounded-lg transition-colors`}
+            className={`flex items-center gap-2 ${hoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
           >
-            <ExpertlyLogo className="w-8 h-8" />
-            <span className={`font-semibold ${textPrimary}`}>Expertly {productName}</span>
-            <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform ${showProductSwitcher ? 'rotate-180' : ''}`} />
+            <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
+            <span className={`font-semibold ${textPrimary} truncate text-sm`}>{productName}</span>
+            <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Compact Language Selector */}
           {onLanguageChange && (
-            <div className="relative">
+            <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
                 className={`p-1.5 rounded-lg ${hoverBg} transition-colors`}
                 title={currentLang.name}
               >
-                <span className="text-lg">{currentLang.flag}</span>
+                <span className="text-base">{currentLang.flag}</span>
               </button>
 
               {showLanguageSwitcher && (
@@ -209,13 +209,13 @@ export function Sidebar({
 
       {/* Organization Switcher (optional) */}
       {orgSwitcher && (
-        <div className="mt-4 relative">
+        <div className="px-3 py-2 flex-shrink-0">
           {orgSwitcher}
         </div>
       )}
 
       {/* Navigation */}
-      <nav className="mt-2 px-3 flex-1 overflow-y-auto">
+      <nav className="px-3 py-2 flex-1 min-h-0 overflow-y-auto">
         <ul className="space-y-1">
           {navigation.map((item) => {
             const fullHref = basePath + item.href
@@ -249,14 +249,14 @@ export function Sidebar({
 
       {/* Bottom Section (optional - for logout buttons, etc.) */}
       {bottomSection && (
-        <div className={`border-t ${borderColor}`}>
+        <div className={`border-t ${borderColor} flex-shrink-0`}>
           {bottomSection}
         </div>
       )}
 
       {/* User */}
       {user && (
-        <div className={`p-4 border-t ${borderColor} ${userBg}`}>
+        <div className={`p-4 border-t ${borderColor} ${userBg} flex-shrink-0`}>
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
               <span className={`${avatarText} font-medium text-sm`}>
