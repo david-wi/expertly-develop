@@ -246,7 +246,7 @@ services:
   today-backend:
     build: ./apps/today/backend
     environment:
-      - DATABASE_URL=postgresql://today:today@today-db:5432/expertly_today
+      - DATABASE_URL=postgresql+asyncpg://today:today@today-db:5432/expertly_today
     depends_on:
       - today-db
     networks:
