@@ -7,6 +7,9 @@ services:
       - DATABASE_URL=postgresql+asyncpg://admin:admin@admin-db:5432/expertly_admin
       - ENVIRONMENT=production
       - DEBUG=false
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
     depends_on:
       admin-db:
         condition: service_healthy

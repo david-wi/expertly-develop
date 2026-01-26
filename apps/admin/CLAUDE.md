@@ -55,6 +55,7 @@ python -m seeds.seed_themes
 | GET | `/api/themes/{id}/versions` | List version history |
 | POST | `/api/themes/{id}/restore/{version_id}` | Restore to previous version |
 | GET | `/api/public/themes` | Public endpoint for other apps |
+| GET | `/api/metrics` | Server metrics (CPU, memory, disk, network) |
 
 ## Production URLs
 
