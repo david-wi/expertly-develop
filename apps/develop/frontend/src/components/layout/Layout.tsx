@@ -19,6 +19,24 @@ const navigation = [
   { name: 'New Walkthrough', href: '/walkthroughs/new', icon: Play },
 ]
 
+// Format build timestamp as M.DD.HH.MM (e.g., "1.26.14.34" for Jan 26 at 14:34)
+function formatBuildTimestamp(timestamp: string | undefined): string | null {
+  if (!timestamp) return null
+  try {
+    const date = new Date(parseInt(timestamp) * 1000)
+    if (isNaN(date.getTime())) return null
+    const month = date.getMonth() + 1
+    const day = date.getDate().toString().padStart(2, '0')
+    const hour = date.getHours().toString().padStart(2, '0')
+    const minute = date.getMinutes().toString().padStart(2, '0')
+    return `${month}.${day}.${hour}.${minute}`
+  } catch {
+    return null
+  }
+}
+
+const buildTimestamp = formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)
+
 export default function Layout() {
   const location = useLocation()
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
@@ -46,24 +64,33 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Sidebar
-        productCode="develop"
-        productName="Develop"
-        navigation={navigation}
-        currentPath={location.pathname}
-        user={currentUser ? { name: currentUser.name, role: currentUser.role } : undefined}
-        orgSwitcher={
-          <OrganizationSwitcher
-            currentTenantId={currentTenantId}
-            onSwitch={handleOrgSwitch}
-          />
-        }
-        renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
-            {children}
-          </Link>
+      {/* Sidebar wrapper for absolute positioning of build timestamp */}
+      <div className="relative">
+        <Sidebar
+          productCode="develop"
+          productName="Develop"
+          navigation={navigation}
+          currentPath={location.pathname}
+          user={currentUser ? { name: currentUser.name, role: currentUser.role } : undefined}
+          orgSwitcher={
+            <OrganizationSwitcher
+              currentTenantId={currentTenantId}
+              onSwitch={handleOrgSwitch}
+            />
+          }
+          renderLink={({ href, className, children }) => (
+            <Link to={href} className={className}>
+              {children}
+            </Link>
+          )}
+        />
+        {/* Build timestamp in bottom-right corner of sidebar */}
+        {buildTimestamp && (
+          <span className="fixed bottom-1 left-56 text-[10px] text-gray-400 pointer-events-none">
+            {buildTimestamp}
+          </span>
         )}
-      />
+      </div>
 
       {/* Main content */}
       <MainContent>

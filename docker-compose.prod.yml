@@ -51,6 +51,7 @@ services:
       dockerfile: ./apps/develop/frontend/Dockerfile
       args:
         VITE_API_URL: https://develop-api.ai.devintensive.com/api/v1
+        VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
     depends_on:
       - develop-backend
     networks:
@@ -123,6 +124,67 @@ services:
       - POSTGRES_DB=expertly_admin
     volumes:
       - admin_postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY IDENTITY
+  # ===================
+  identity-backend:
+    build: ./apps/identity/backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://identity:identity@identity-db:5432/identity
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - identity-db
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.routers.identity-backend.entrypoints=https"
+      - "traefik.http.routers.identity-backend.rule=Host(`identity-api.ai.devintensive.com`)"
+      - "traefik.http.routers.identity-backend.tls=true"
+      - "traefik.http.routers.identity-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.identity-backend.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  identity-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/identity/frontend/Dockerfile
+      args:
+        VITE_API_URL: https://identity-api.ai.devintensive.com/api
+    depends_on:
+      - identity-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.routers.identity-frontend.entrypoints=https"
+      - "traefik.http.routers.identity-frontend.rule=Host(`identity.ai.devintensive.com`)"
+      - "traefik.http.routers.identity-frontend.tls=true"
+      - "traefik.http.routers.identity-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.identity-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  identity-db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=identity
+      - POSTGRES_PASSWORD=identity
+      - POSTGRES_DB=identity
+    volumes:
+      - identity_postgres_data:/var/lib/postgresql/data
     networks:
       - default
     restart: unless-stopped
@@ -390,6 +452,7 @@ networks:
 volumes:
   admin_postgres_data:
   artifacts_data:
+  identity_postgres_data:
   mongo_data:
   qa_postgres_data:
   today_postgres_data:

@@ -3,8 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Accept API URL as build arg
+# Accept build args
 ARG VITE_API_URL=/api/v1
+ARG VITE_BUILD_TIMESTAMP
 
 # Copy shared UI package
 COPY packages/ui ./packages/ui
@@ -21,11 +22,16 @@ RUN npm install
 # Copy frontend source code
 COPY apps/develop/frontend ./
 
-# Set environment variable for Vite build
+# Set environment variables for Vite build
+# If VITE_BUILD_TIMESTAMP is not provided, generate it at build time
 ENV VITE_API_URL=$VITE_API_URL
-
-# Build the application
-RUN npm run build
+RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
+      export VITE_BUILD_TIMESTAMP=$(date +%s); \
+    else \
+      export VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP; \
+    fi && \
+    echo "Build timestamp: $VITE_BUILD_TIMESTAMP" && \
+    VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP npm run build
 
 # Production stage
 FROM nginx:alpine
