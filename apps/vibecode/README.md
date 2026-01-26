@@ -119,6 +119,44 @@ DEFAULT_EXECUTION_MODE=local # 'local' or 'remote'
 
 The client connects to `ws://localhost:3001` in development. For production, configure via environment.
 
+## Desktop Agent
+
+The **Vibecode Desktop Agent** is a native desktop application that connects to the Vibecode server and executes tools on your local machine. It replaces the Node.js CLI agent with a system tray application.
+
+### Features
+
+- **System tray icon** with color-coded status (green=connected, yellow=working, red=disconnected)
+- **Native UI** for status monitoring and settings
+- **Cross-platform** support (macOS, Windows, Linux)
+- **Auto-reconnect** on network interruption
+- **Resource-aware queuing** - commands are queued when CPU >80% or memory >85%
+- **Auto-updater** for easy updates
+
+### Installation
+
+Download the latest release for your platform:
+- **macOS**: `.dmg` installer
+- **Windows**: `.exe` installer
+- **Linux**: `.AppImage`
+
+Or build from source:
+
+```bash
+cd packages/agent-desktop
+npm install
+npm run build
+```
+
+### Development
+
+Requires [Rust](https://rustup.rs/) and Tauri CLI:
+
+```bash
+cd packages/agent-desktop
+npm install
+npm run dev
+```
+
 ## Roadmap
 
 - [ ] Rich message rendering (markdown, syntax highlighting)
