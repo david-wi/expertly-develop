@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { requirements, requirementVersions, products } from '@/lib/db/schema';
 import { eq, sql, and, isNull } from 'drizzle-orm';
@@ -33,8 +32,8 @@ async function generateStableKey(productId: string, productPrefix: string, offse
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const user = await getCurrentUser();
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -64,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     const productPrefix = product[0].prefix;
     const now = new Date().toISOString();
-    const changedBy = session.user.name || session.user.email || 'User';
+    const changedBy = user.name || user.email || 'User';
 
     // Map tempId -> real ID for parent references
     const tempIdMap = new Map<string, string>();

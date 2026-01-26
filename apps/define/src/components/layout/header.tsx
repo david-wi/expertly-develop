@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSession, signOut } from 'next-auth/react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@expertly/auth/react';
 import { Play, Home, FolderTree, Package, Settings, LogOut, User } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -14,7 +14,13 @@ const navigation = [
 
 export function Header() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/api/auth/logout');
+  };
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white">
@@ -24,7 +30,7 @@ export function Header() {
             <Play className="h-4 w-4 text-white fill-white" />
           </div>
           <span className="text-xl font-semibold">
-            <span className="text-gray-900">Expertly</span>
+            <span className="text-gray-900">Expertly </span>
             <span className="font-bold">Define</span>
           </span>
         </Link>
@@ -58,14 +64,14 @@ export function Header() {
           >
             <Settings className="h-4 w-4" />
           </Link>
-          {session?.user && (
+          {user && (
             <>
               <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
                 <User className="h-4 w-4" />
-                <span>{session.user.name || session.user.email}</span>
+                <span>{user.name || user.email}</span>
               </div>
               <button
-                onClick={() => signOut({ callbackUrl: '/login' })}
+                onClick={handleLogout}
                 className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
