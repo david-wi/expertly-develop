@@ -39,7 +39,7 @@ impl Default for AgentSettings {
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_else(|| ".".to_string()),
             max_concurrent_commands: 5,
-            auto_start_on_login: false,
+            auto_start_on_login: true,  // Default to auto-start so agent is always available
             auto_connect_on_launch: true,
         }
     }

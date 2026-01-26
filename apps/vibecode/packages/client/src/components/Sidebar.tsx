@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { ChevronDown, Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Copy, Check, MessageCircle } from 'lucide-react';
+import { ChevronDown, Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Download, ExternalLink, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDashboardStore } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
 import { EXPERTLY_PRODUCTS as SHARED_PRODUCTS } from 'expertly_ui/index';
 
-// Get the WebSocket URL for the agent command
-const getAgentCommand = () => {
-  const wsUrl = import.meta.env.DEV
-    ? 'ws://localhost:3001'
-    : `ws://${window.location.host}`;
-  return `npx @expertly-vibecode/agent -s ${wsUrl}`;
+// Try to launch the desktop agent via custom URL scheme
+const tryLaunchAgent = () => {
+  // Try to open the app via custom protocol
+  // This will do nothing if the app isn't installed
+  window.location.href = 'vibecode://connect';
 };
 
 // Map shared products to include initials and mark current
@@ -41,7 +40,6 @@ interface SidebarProps {
 
 export function Sidebar({ ws }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false);
-  const [copied, setCopied] = useState(false);
   const { widgets, sessions, chatConversations, serverConfig, connected, agents, addWidget, addChatWidget, removeWidget, clearDisconnectedSessions } = useDashboardStore();
   const [showWidgetMenu, setShowWidgetMenu] = useState(false);
 
@@ -49,14 +47,11 @@ export function Sidebar({ ws }: SidebarProps) {
   const agent = agents[0];
   const metrics = agent?.metrics;
 
-  const handleCopyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(getAgentCommand());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+  const handleLaunchAgent = () => {
+    // Try to launch via custom protocol, then show download page
+    tryLaunchAgent();
+    // After a short delay, if still no agent, suggest download
+    // The protocol handler will open the app if installed
   };
 
   const handleClearDisconnected = () => {
@@ -336,24 +331,24 @@ export function Sidebar({ ws }: SidebarProps) {
         )}
 
         {!serverConfig.hasLocalAgent && (
-          <div className="mt-2">
+          <div className="mt-3 space-y-2">
             <button
-              onClick={handleCopyCommand}
-              className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors group"
-              title="Click to copy command"
+              onClick={handleLaunchAgent}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition-colors"
             >
-              <span>Run</span>
-              <code className="font-mono text-gray-500 group-hover:text-gray-700">npx vibecode-agent</code>
-              <span>locally</span>
-              {copied ? (
-                <Check className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
-              ) : (
-                <Copy className="w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
-              )}
+              <ExternalLink className="w-4 h-4" />
+              Launch Agent
             </button>
-            {copied && (
-              <p className="text-xs text-green-600 mt-1">Copied!</p>
-            )}
+            <a
+              href="/download"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Download className="w-4 h-4" />
+              Download Agent
+            </a>
+            <p className="text-xs text-gray-400 text-center">
+              Runs in your system tray
+            </p>
           </div>
         )}
       </div>

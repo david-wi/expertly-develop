@@ -9,8 +9,9 @@ mod websocket;
 
 use state::{AgentSettings, AppState, ConnectionStatus, LogEntry, SystemMetrics};
 use std::sync::Arc;
-use tauri::{AppHandle, Emitter, Listener, State};
+use tauri::{AppHandle, Emitter, Listener, Manager, State};
 use tauri_plugin_autostart::MacosLauncher;
+use tauri_plugin_deep_link::DeepLinkExt;
 
 type AppStateHandle = Arc<AppState>;
 
@@ -156,6 +157,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_deep_link::init())
         .manage(state.clone())
         .setup(move |app| {
             let handle = app.handle().clone();
@@ -210,6 +212,49 @@ fn main() {
                             "version": update.version,
                             "body": update.body,
                         }));
+                    }
+                }
+            });
+
+            // Handle deep link URLs (vibecode://connect, etc.)
+            let state_for_deeplink = state_clone.clone();
+            let handle_for_deeplink = handle.clone();
+            app.deep_link().on_open_url(move |event| {
+                for url in event.urls() {
+                    log::info!("Deep link received: {}", url);
+
+                    // Parse the URL scheme and path
+                    if url.scheme() == "vibecode" {
+                        match url.host_str() {
+                            Some("connect") | None if url.path() == "/connect" || url.path() == "connect" => {
+                                // Trigger connection
+                                let state = state_for_deeplink.clone();
+                                let app = handle_for_deeplink.clone();
+
+                                if !*state.is_connected.read() {
+                                    state.log_info("Connection triggered via deep link");
+                                    tauri::async_runtime::spawn(async move {
+                                        let _ = websocket::start_connection(app, state).await;
+                                    });
+                                }
+
+                                // Show the main window
+                                if let Some(window) = handle_for_deeplink.get_webview_window("main") {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                            Some("show") | None if url.path() == "/show" || url.path() == "show" => {
+                                // Just show the window
+                                if let Some(window) = handle_for_deeplink.get_webview_window("main") {
+                                    let _ = window.show();
+                                    let _ = window.set_focus();
+                                }
+                            }
+                            _ => {
+                                log::warn!("Unknown deep link path: {}", url);
+                            }
+                        }
                     }
                 }
             });

@@ -14,7 +14,8 @@ import {
   Check,
   Eye,
   EyeOff,
-  Copy,
+  Download,
+  ExternalLink,
   Terminal,
 } from 'lucide-react';
 import { useDashboardStore, type Session, type Widget as WidgetType, type ExecutionMode, type QueuedMessage } from '../store/dashboard-store';
@@ -41,28 +42,14 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
 
   const { removeWidget, toggleWidgetMinimized, setWidgetSession, renameWidget, serverConfig, addMessage, toggleShowStreaming, sessionNameHistory, addSessionNameToHistory, saveSessionConfig, getSessionConfig, addQueuedMessage } = useDashboardStore();
   const [showNameSuggestions, setShowNameSuggestions] = useState(false);
-  const [copiedCommand, setCopiedCommand] = useState(false);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Check if local agent is needed but not connected
   const needsLocalAgent = session?.executionMode === 'local' && !serverConfig.hasLocalAgent;
 
-  // Get agent command for copying
-  const getAgentCommand = () => {
-    const wsUrl = import.meta.env.DEV
-      ? 'ws://localhost:3001'
-      : `ws://${window.location.host}`;
-    return `npx vibecode-agent -s ${wsUrl}`;
-  };
-
-  const handleCopyCommand = async () => {
-    try {
-      await navigator.clipboard.writeText(getAgentCommand());
-      setCopiedCommand(true);
-      setTimeout(() => setCopiedCommand(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
-    }
+  // Try to launch the desktop agent via custom URL scheme
+  const handleLaunchAgent = () => {
+    window.location.href = 'vibecode://connect';
   };
 
   // Filter suggestions based on input
@@ -464,23 +451,27 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">Local Agent Required</h3>
                 <p className="text-sm text-gray-500 mb-4 max-w-xs">
-                  Run the agent command in your terminal to enable local execution.
+                  Install and run the Vibecode Agent to enable local file access and command execution.
                 </p>
-                <button
-                  onClick={handleCopyCommand}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-mono text-gray-700 transition-colors group"
-                  title="Click to copy"
-                >
-                  <code className="text-gray-800">npx vibecode-agent</code>
-                  {copiedCommand ? (
-                    <Check className="w-4 h-4 text-green-600 flex-shrink-0" />
-                  ) : (
-                    <Copy className="w-4 h-4 text-gray-400 group-hover:text-gray-600 flex-shrink-0" />
-                  )}
-                </button>
-                {copiedCommand && (
-                  <p className="text-xs text-green-600 mt-2">Copied to clipboard!</p>
-                )}
+                <div className="flex flex-col gap-2 w-full max-w-xs">
+                  <button
+                    onClick={handleLaunchAgent}
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    Launch Agent
+                  </button>
+                  <a
+                    href="/download"
+                    className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 hover:bg-gray-50 rounded-lg text-sm text-gray-700 transition-colors"
+                  >
+                    <Download className="w-4 h-4" />
+                    Download Agent
+                  </a>
+                </div>
+                <p className="text-xs text-gray-400 mt-3">
+                  The agent runs quietly in your system tray
+                </p>
               </div>
             ) : (
               <MessageList
