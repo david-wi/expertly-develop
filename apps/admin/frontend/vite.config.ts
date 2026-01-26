@@ -11,7 +11,7 @@ export default defineConfig({
     federation({
       name: 'expertly_admin',
       remotes: {
-        expertly_ui: `${UI_REMOTE_URL}/remoteEntry.js`,
+        expertly_ui: `${UI_REMOTE_URL}/assets/remoteEntry.js`,
       },
       shared: {
         react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
