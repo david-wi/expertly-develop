@@ -10,7 +10,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-theme-text-secondary">
             {label}
           </label>
         )}
@@ -18,10 +18,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={`
             block w-full rounded-lg border px-3 py-2 text-sm
-            placeholder-gray-400 shadow-sm
+            placeholder-theme-text-muted shadow-sm bg-theme-bg-surface text-theme-text-primary
             focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-            disabled:bg-gray-50 disabled:text-gray-500
-            ${error ? 'border-red-300' : 'border-gray-300'}
+            disabled:bg-theme-bg-elevated disabled:text-theme-text-muted
+            ${error ? 'border-red-300' : 'border-theme-border'}
             ${className}
           `}
           {...props}
@@ -46,7 +46,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-theme-text-secondary">
             {label}
           </label>
         )}
@@ -54,10 +54,10 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           className={`
             block w-full rounded-lg border px-3 py-2 text-sm
-            placeholder-gray-400 shadow-sm
+            placeholder-theme-text-muted shadow-sm bg-theme-bg-surface text-theme-text-primary
             focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-            disabled:bg-gray-50 disabled:text-gray-500
-            ${error ? 'border-red-300' : 'border-gray-300'}
+            disabled:bg-theme-bg-elevated disabled:text-theme-text-muted
+            ${error ? 'border-red-300' : 'border-theme-border'}
             ${className}
           `}
           {...props}
@@ -84,7 +84,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="space-y-1">
         {label && (
-          <label className="block text-sm font-medium text-gray-700">
+          <label className="block text-sm font-medium text-theme-text-secondary">
             {label}
           </label>
         )}
@@ -92,10 +92,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           className={`
             block w-full rounded-lg border px-3 py-2 text-sm
-            shadow-sm bg-white
+            shadow-sm bg-theme-bg-surface text-theme-text-primary
             focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500
-            disabled:bg-gray-50 disabled:text-gray-500
-            ${error ? 'border-red-300' : 'border-gray-300'}
+            disabled:bg-theme-bg-elevated disabled:text-theme-text-muted
+            ${error ? 'border-red-300' : 'border-theme-border'}
             ${className}
           `}
           {...props}

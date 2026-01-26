@@ -41,8 +41,8 @@ export default function JobQueuePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Job Queue</h1>
-          <p className="text-gray-600 mt-1">Monitor and manage running jobs</p>
+          <h1 className="text-2xl font-bold text-theme-text-primary">Job Queue</h1>
+          <p className="text-theme-text-secondary mt-1">Monitor and manage running jobs</p>
         </div>
         <Button variant="secondary" onClick={() => refetch()}>
           <RefreshCw className="w-4 h-4 mr-2" />
@@ -65,8 +65,8 @@ export default function JobQueuePage() {
             <CardContent className="flex items-center gap-3">
               <stat.icon className={`w-8 h-8 ${stat.color}`} />
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <p className="text-sm text-gray-600">{stat.label}</p>
+                <p className="text-2xl font-bold text-theme-text-primary">{stat.value}</p>
+                <p className="text-sm text-theme-text-secondary">{stat.label}</p>
               </div>
             </CardContent>
           </Card>
@@ -77,7 +77,7 @@ export default function JobQueuePage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">
+            <h2 className="text-lg font-semibold text-theme-text-primary">
               {statusFilter ? `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Jobs` : 'All Jobs'}
             </h2>
             {statusFilter && (
@@ -89,23 +89,23 @@ export default function JobQueuePage() {
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="text-center py-12 text-gray-500">Loading jobs...</div>
+            <div className="text-center py-12 text-theme-text-muted">Loading jobs...</div>
           ) : jobs.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">No jobs found</div>
+            <div className="text-center py-12 text-theme-text-muted">No jobs found</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 border-b">
+                <thead className="bg-theme-bg-elevated border-b">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-theme-text-muted uppercase">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-theme-text-muted uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-theme-text-muted uppercase">Progress</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-theme-text-muted uppercase">Duration</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-theme-text-muted uppercase">Created</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-theme-text-muted uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-theme-border">
                   {jobs.map((job) => (
                     <JobRow
                       key={job.id}
@@ -134,14 +134,14 @@ function JobRow({ job, onCancel, onClick }: { job: Job; onCancel: () => void; on
   const canCancel = job.status === 'pending' || job.status === 'running'
 
   return (
-    <tr className="hover:bg-gray-50 cursor-pointer" onClick={onClick}>
+    <tr className="hover:bg-theme-bg-elevated cursor-pointer" onClick={onClick}>
       <td className="px-6 py-4">
         <div>
-          <p className="text-sm font-medium text-gray-900 capitalize">
+          <p className="text-sm font-medium text-theme-text-primary capitalize">
             {job.job_type.replace('_', ' ')}
           </p>
           {job.current_step && (
-            <p className="text-xs text-gray-500 truncate max-w-[200px]">{job.current_step}</p>
+            <p className="text-xs text-theme-text-muted truncate max-w-[200px]">{job.current_step}</p>
           )}
         </div>
       </td>
@@ -151,24 +151,24 @@ function JobRow({ job, onCancel, onClick }: { job: Job; onCancel: () => void; on
       <td className="px-6 py-4">
         {job.status === 'running' ? (
           <div className="flex items-center gap-2">
-            <div className="w-24 bg-gray-200 rounded-full h-2">
+            <div className="w-24 bg-theme-border rounded-full h-2">
               <div
                 className="bg-primary-600 h-2 rounded-full transition-all"
                 style={{ width: `${job.progress}%` }}
               />
             </div>
-            <span className="text-xs text-gray-600">{job.progress}%</span>
+            <span className="text-xs text-theme-text-secondary">{job.progress}%</span>
           </div>
         ) : job.status === 'completed' ? (
           <span className="text-sm text-green-600">100%</span>
         ) : (
-          <span className="text-sm text-gray-400">-</span>
+          <span className="text-sm text-theme-text-muted">-</span>
         )}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-600">
+      <td className="px-6 py-4 text-sm text-theme-text-secondary">
         {formatElapsed(job.elapsed_ms)}
       </td>
-      <td className="px-6 py-4 text-sm text-gray-500">
+      <td className="px-6 py-4 text-sm text-theme-text-muted">
         {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
       </td>
       <td className="px-6 py-4">

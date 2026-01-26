@@ -61,7 +61,7 @@ export default function OrganizationSwitcher({ currentTenantId, onSwitch }: Orga
   if (loading) {
     return (
       <div className="px-3 py-2">
-        <div className="h-9 bg-gray-100 rounded-lg animate-pulse" />
+        <div className="h-9 bg-theme-bg-elevated rounded-lg animate-pulse" />
       </div>
     )
   }
@@ -76,23 +76,23 @@ export default function OrganizationSwitcher({ currentTenantId, onSwitch }: Orga
     <div className="px-3 mb-4" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-theme-text-secondary bg-theme-bg-elevated hover:bg-theme-border rounded-lg transition-colors"
       >
         <div className="flex items-center gap-2 truncate">
-          <Building2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <Building2 className="w-4 h-4 text-theme-text-muted flex-shrink-0" />
           <span className="truncate">{currentOrg?.name || 'Select Organization'}</span>
         </div>
-        <ChevronDown className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-theme-text-muted flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute left-3 right-3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+        <div className="absolute left-3 right-3 mt-1 bg-theme-bg-surface border border-theme-border rounded-lg shadow-lg z-50 overflow-hidden">
           {organizations.map((org) => (
             <button
               key={org.id}
               onClick={() => handleSelect(org)}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-50 transition-colors ${
-                org.id === currentTenantId ? 'bg-primary-50 text-primary-700' : 'text-gray-700'
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-theme-bg-elevated transition-colors ${
+                org.id === currentTenantId ? 'bg-primary-50 text-primary-700' : 'text-theme-text-secondary'
               }`}
             >
               <Building2 className="w-4 h-4 flex-shrink-0" />
@@ -104,10 +104,10 @@ export default function OrganizationSwitcher({ currentTenantId, onSwitch }: Orga
           ))}
           {hasOverride && (
             <>
-              <div className="border-t border-gray-100" />
+              <div className="border-t border-theme-border-subtle" />
               <button
                 onClick={handleClearOverride}
-                className="w-full px-3 py-2 text-sm text-left text-gray-500 hover:bg-gray-50 transition-colors"
+                className="w-full px-3 py-2 text-sm text-left text-theme-text-muted hover:bg-theme-bg-elevated transition-colors"
               >
                 Reset to default
               </button>

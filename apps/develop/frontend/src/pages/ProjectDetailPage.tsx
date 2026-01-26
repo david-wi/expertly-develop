@@ -53,35 +53,35 @@ export default function ProjectDetailPage() {
   })
 
   if (isLoading) {
-    return <div className="text-center py-12 text-gray-500">Loading project...</div>
+    return <div className="text-center py-12 text-theme-text-muted">Loading project...</div>
   }
 
   if (!project) {
-    return <div className="text-center py-12 text-gray-500">Project not found</div>
+    return <div className="text-center py-12 text-theme-text-muted">Project not found</div>
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link to="/projects" className="p-2 hover:bg-gray-100 rounded-lg">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        <Link to="/projects" className="p-2 hover:bg-theme-bg-elevated rounded-lg">
+          <ArrowLeft className="w-5 h-5 text-theme-text-secondary" />
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+            <h1 className="text-2xl font-bold text-theme-text-primary">{project.name}</h1>
             {(() => {
               const config = visibilityConfig[project.visibility as keyof typeof visibilityConfig] || visibilityConfig.private
               const VisibilityIcon = config.icon
               return (
                 <span title={config.tooltip}>
-                  <VisibilityIcon className="w-5 h-5 text-gray-400" />
+                  <VisibilityIcon className="w-5 h-5 text-theme-text-muted" />
                 </span>
               )
             })()}
           </div>
           {project.description && (
-            <p className="text-gray-600 mt-1">{project.description}</p>
+            <p className="text-theme-text-secondary mt-1">{project.description}</p>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -106,23 +106,23 @@ export default function ProjectDetailPage() {
           {/* Project Details */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">Project Details</h2>
+              <h2 className="text-lg font-semibold text-theme-text-primary">Project Details</h2>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-500">Visibility</p>
+                  <p className="text-sm text-theme-text-muted">Visibility</p>
                   <p className="font-medium capitalize">{project.visibility}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-500">Credentials</p>
+                  <p className="text-sm text-theme-text-muted">Credentials</p>
                   <p className="font-medium">{project.has_credentials ? 'Configured' : 'Not set'}</p>
                 </div>
               </div>
 
               {project.site_url && (
                 <div>
-                  <p className="text-sm text-gray-500">Site URL</p>
+                  <p className="text-sm text-theme-text-muted">Site URL</p>
                   <a
                     href={project.site_url}
                     target="_blank"
@@ -136,7 +136,7 @@ export default function ProjectDetailPage() {
               )}
 
               <div className="pt-4 border-t">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-theme-text-muted">
                   Created {formatDistanceToNow(new Date(project.created_at), { addSuffix: true })}
                 </p>
               </div>
@@ -146,22 +146,22 @@ export default function ProjectDetailPage() {
           {/* Recent Jobs */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">Recent Jobs</h2>
+              <h2 className="text-lg font-semibold text-theme-text-primary">Recent Jobs</h2>
             </CardHeader>
             <CardContent className="p-0">
               {!jobs?.items?.length ? (
-                <p className="text-gray-500 text-sm p-6">No jobs yet</p>
+                <p className="text-theme-text-muted text-sm p-6">No jobs yet</p>
               ) : (
-                <ul className="divide-y divide-gray-200">
+                <ul className="divide-y divide-theme-border">
                   {jobs.items.slice(0, 5).map((job) => (
                     <li key={job.id}>
-                      <Link to={`/jobs/${job.id}`} className="block px-6 py-4 hover:bg-gray-50">
+                      <Link to={`/jobs/${job.id}`} className="block px-6 py-4 hover:bg-theme-bg-elevated">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-theme-text-primary">
                               {job.job_type.replace('_', ' ')}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-theme-text-muted">
                               {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
                               {job.requested_by_name && ` · ${job.requested_by_name}`}
                             </p>
@@ -184,11 +184,11 @@ export default function ProjectDetailPage() {
           {/* Personas */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">Personas</h2>
+              <h2 className="text-lg font-semibold text-theme-text-primary">Personas</h2>
             </CardHeader>
             <CardContent>
               {!personas?.items?.length ? (
-                <p className="text-gray-500 text-sm">No personas configured</p>
+                <p className="text-theme-text-muted text-sm">No personas configured</p>
               ) : (
                 <ul className="space-y-3">
                   {personas.items.map((persona) => (
@@ -196,7 +196,7 @@ export default function ProjectDetailPage() {
                       <div>
                         <p className="text-sm font-medium">{persona.name}</p>
                         {persona.role_description && (
-                          <p className="text-xs text-gray-500 truncate max-w-[180px]">
+                          <p className="text-xs text-theme-text-muted truncate max-w-[180px]">
                             {persona.role_description}
                           </p>
                         )}
@@ -214,11 +214,11 @@ export default function ProjectDetailPage() {
           {/* Artifacts */}
           <Card>
             <CardHeader>
-              <h2 className="text-lg font-semibold text-gray-900">Artifacts</h2>
+              <h2 className="text-lg font-semibold text-theme-text-primary">Artifacts</h2>
             </CardHeader>
             <CardContent>
               {!artifacts?.items?.length ? (
-                <p className="text-gray-500 text-sm">No artifacts yet</p>
+                <p className="text-theme-text-muted text-sm">No artifacts yet</p>
               ) : (
                 <ul className="space-y-3">
                   {artifacts.items.slice(0, 5).map((artifact) => (
@@ -243,9 +243,9 @@ export default function ProjectDetailPage() {
       {showDeleteConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowDeleteConfirm(false)} />
-          <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-2">Delete Project</h2>
-            <p className="text-gray-600 mb-6">
+          <div className="relative bg-theme-bg-surface rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-xl font-semibold text-theme-text-primary mb-2">Delete Project</h2>
+            <p className="text-theme-text-secondary mb-6">
               Are you sure you want to delete <strong>{project.name}</strong>? This action cannot be undone.
             </p>
             <div className="flex gap-3">

@@ -37,8 +37,8 @@ export default function ProjectsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-600 mt-1">Manage your applications and their configurations</p>
+          <h1 className="text-2xl font-bold text-theme-text-primary">Projects</h1>
+          <p className="text-theme-text-secondary mt-1">Manage your applications and their configurations</p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
@@ -49,12 +49,12 @@ export default function ProjectsPage() {
       {/* Projects Grid */}
       {isLoading ? (
         <div className="text-center py-12">
-          <p className="text-gray-500">Loading projects...</p>
+          <p className="text-theme-text-muted">Loading projects...</p>
         </div>
       ) : data?.items?.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
-            <p className="text-gray-500 mb-4">No projects yet. Create your first project to get started.</p>
+            <p className="text-theme-text-muted mb-4">No projects yet. Create your first project to get started.</p>
             <Button onClick={() => setShowCreateModal(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Create Project
@@ -71,14 +71,14 @@ export default function ProjectsPage() {
                 <Card className="h-full hover:shadow-md transition-shadow">
                   <CardContent className="space-y-4">
                     <div className="flex items-start justify-between">
-                      <h3 className="text-lg font-semibold text-gray-900">{project.name}</h3>
+                      <h3 className="text-lg font-semibold text-theme-text-primary">{project.name}</h3>
                       <span title={config.tooltip}>
-                        <VisibilityIcon className="w-4 h-4 text-gray-400" />
+                        <VisibilityIcon className="w-4 h-4 text-theme-text-muted" />
                       </span>
                     </div>
 
                     {project.description && (
-                      <p className="text-sm text-gray-600 line-clamp-2">{project.description}</p>
+                      <p className="text-sm text-theme-text-secondary line-clamp-2">{project.description}</p>
                     )}
 
                     {project.site_url && (
@@ -95,7 +95,7 @@ export default function ProjectsPage() {
                           <Badge variant="success">Credentials</Badge>
                         )}
                       </div>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-theme-text-muted">
                         {formatDistanceToNow(new Date(project.updated_at), { addSuffix: true })}
                       </span>
                     </div>
@@ -143,8 +143,8 @@ function CreateProjectModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="relative bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Create Project</h2>
+      <div className="relative bg-theme-bg-surface rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 className="text-xl font-semibold text-theme-text-primary mb-4">Create Project</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input

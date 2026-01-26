@@ -55,8 +55,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Welcome back, David</p>
+          <h1 className="text-2xl font-bold text-theme-text-primary">Dashboard</h1>
+          <p className="text-theme-text-secondary mt-1">Welcome back, David</p>
         </div>
         <Link
           to="/walkthroughs/new"
@@ -77,8 +77,8 @@ export default function Dashboard() {
                   <stat.icon className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                  <p className="text-sm text-gray-600">{stat.name}</p>
+                  <p className="text-2xl font-bold text-theme-text-primary">{stat.value}</p>
+                  <p className="text-sm text-theme-text-secondary">{stat.name}</p>
                 </div>
               </CardContent>
             </Card>
@@ -91,7 +91,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Jobs</h2>
+              <h2 className="text-lg font-semibold text-theme-text-primary">Recent Jobs</h2>
               <Link
                 to="/jobs"
                 className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
@@ -102,18 +102,18 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-0">
             {recentJobs.length === 0 ? (
-              <p className="text-gray-500 text-sm p-6">No jobs yet</p>
+              <p className="text-theme-text-muted text-sm p-6">No jobs yet</p>
             ) : (
-              <ul className="divide-y divide-gray-200">
+              <ul className="divide-y divide-theme-border">
                 {recentJobs.map((job) => (
                   <li key={job.id}>
-                    <Link to={`/jobs/${job.id}`} className="block px-6 py-4 hover:bg-gray-50">
+                    <Link to={`/jobs/${job.id}`} className="block px-6 py-4 hover:bg-theme-bg-elevated">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-theme-text-primary">
                             {job.job_type.replace('_', ' ')}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-theme-text-muted">
                             {job.project_name && <span className="text-primary-600">{job.project_name}</span>}
                             {job.project_name && ' · '}
                             {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
@@ -122,7 +122,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex items-center gap-3">
                           {job.status === 'running' && (
-                            <div className="w-16 bg-gray-200 rounded-full h-2">
+                            <div className="w-16 bg-theme-border rounded-full h-2">
                               <div
                                 className="bg-primary-600 h-2 rounded-full transition-all"
                                 style={{ width: `${job.progress}%` }}
@@ -146,7 +146,7 @@ export default function Dashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Artifacts</h2>
+              <h2 className="text-lg font-semibold text-theme-text-primary">Recent Artifacts</h2>
               <Link
                 to="/artifacts"
                 className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1"
@@ -157,21 +157,21 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-0">
             {recentArtifacts.length === 0 ? (
-              <p className="text-gray-500 text-sm p-6">No artifacts yet</p>
+              <p className="text-theme-text-muted text-sm p-6">No artifacts yet</p>
             ) : (
-              <ul className="divide-y divide-gray-200">
+              <ul className="divide-y divide-theme-border">
                 {recentArtifacts.map((artifact) => (
                   <li key={artifact.id}>
                     <a
                       href={artifactsApi.download(artifact.id)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block px-6 py-4 hover:bg-gray-50 cursor-pointer"
+                      className="block px-6 py-4 hover:bg-theme-bg-elevated cursor-pointer"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{artifact.label}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-theme-text-primary">{artifact.label}</p>
+                          <p className="text-xs text-theme-text-muted">
                             {artifact.project_name && <span className="text-primary-600">{artifact.project_name}</span>}
                             {artifact.project_name && ' · '}
                             {formatDistanceToNow(new Date(artifact.created_at), { addSuffix: true })}

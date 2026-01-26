@@ -91,18 +91,18 @@ export default function WalkthroughPage() {
     <div className="max-w-3xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button onClick={() => navigate(-1)} className="p-2 hover:bg-gray-100 rounded-lg">
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-theme-bg-elevated rounded-lg">
+          <ArrowLeft className="w-5 h-5 text-theme-text-secondary" />
         </button>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Walkthrough</h1>
-          <p className="text-gray-600 mt-1">Generate a visual walkthrough of your application</p>
+          <h1 className="text-2xl font-bold text-theme-text-primary">New Walkthrough</h1>
+          <p className="text-theme-text-secondary mt-1">Generate a visual walkthrough of your application</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold text-gray-900">Walkthrough Configuration</h2>
+          <h2 className="text-lg font-semibold text-theme-text-primary">Walkthrough Configuration</h2>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -190,16 +190,16 @@ Capture "After navigation"`}
       {/* Help */}
       <Card>
         <CardHeader>
-          <h2 className="text-lg font-semibold text-gray-900">Scenario Syntax</h2>
+          <h2 className="text-lg font-semibold text-theme-text-primary">Scenario Syntax</h2>
         </CardHeader>
         <CardContent>
-          <div className="text-sm text-gray-600 space-y-2">
+          <div className="text-sm text-theme-text-secondary space-y-2">
             <p>Each line in the scenario represents a step. Supported commands:</p>
             <ul className="list-disc list-inside space-y-1 ml-2">
-              <li><code className="bg-gray-100 px-1 rounded">Navigate to /path</code> - Go to a URL path</li>
-              <li><code className="bg-gray-100 px-1 rounded">Click .selector</code> - Click an element</li>
-              <li><code className="bg-gray-100 px-1 rounded">Wait N seconds</code> - Pause execution</li>
-              <li><code className="bg-gray-100 px-1 rounded">Capture "Description"</code> - Take a screenshot with label</li>
+              <li><code className="bg-theme-bg-elevated px-1 rounded">Navigate to /path</code> - Go to a URL path</li>
+              <li><code className="bg-theme-bg-elevated px-1 rounded">Click .selector</code> - Click an element</li>
+              <li><code className="bg-theme-bg-elevated px-1 rounded">Wait N seconds</code> - Pause execution</li>
+              <li><code className="bg-theme-bg-elevated px-1 rounded">Capture "Description"</code> - Take a screenshot with label</li>
             </ul>
             <p className="mt-4">Any other text will capture the current screen state.</p>
           </div>
