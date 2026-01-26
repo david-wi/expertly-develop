@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { X, Calendar, Clock, User, AlertCircle } from 'lucide-react';
+import { X, Calendar, User, AlertCircle } from 'lucide-react';
 import { Button } from '../ui';
 import type { Appointment, Staff } from '../../types';
 

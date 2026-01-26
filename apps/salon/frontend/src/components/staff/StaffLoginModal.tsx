@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, Mail, Shield, UserCheck, UserX, Trash2 } from 'lucide-react';
+import { X, Mail, UserCheck, UserX, Trash2 } from 'lucide-react';
 import { Button, Input } from '../ui';
 import { users as usersApi } from '../../services/api';
-import type { Staff, User } from '../../types';
+import type { Staff } from '../../types';
 
 interface StaffLoginModalProps {
   staff: Staff;
@@ -13,7 +13,6 @@ interface StaffLoginModalProps {
 
 export function StaffLoginModal({ staff, isOpen, onClose }: StaffLoginModalProps) {
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<'view' | 'create'>('view');
   const [formData, setFormData] = useState({
     email: staff.email || '',
     password: '',
@@ -30,14 +29,6 @@ export function StaffLoginModal({ staff, isOpen, onClose }: StaffLoginModalProps
   });
 
   const staffUser = users.find((u) => u.staff_id === staff.id);
-
-  useEffect(() => {
-    if (staffUser) {
-      setMode('view');
-    } else {
-      setMode('create');
-    }
-  }, [staffUser]);
 
   useEffect(() => {
     setFormData({
@@ -60,7 +51,6 @@ export function StaffLoginModal({ staff, isOpen, onClose }: StaffLoginModalProps
     }) => usersApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      setMode('view');
     },
     onError: (err: any) => {
       setError(err.response?.data?.detail || 'Failed to create login');
@@ -82,7 +72,6 @@ export function StaffLoginModal({ staff, isOpen, onClose }: StaffLoginModalProps
     mutationFn: (id: string) => usersApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      setMode('create');
     },
     onError: (err: any) => {
       setError(err.response?.data?.detail || 'Failed to delete user');
