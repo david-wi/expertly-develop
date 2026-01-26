@@ -1,0 +1,67 @@
+{
+  "app": {
+    "name": "Expertly VibeCode",
+    "tagline": "The place to vibe code"
+  },
+  "sidebar": {
+    "widgets": "Widgets",
+    "addWidget": "Add widget",
+    "clearDisconnected": "Clear disconnected sessions",
+    "switchProduct": "Switch Product",
+    "noWidgets": "No widgets yet"
+  },
+  "widget": {
+    "newWidget": "New Widget",
+    "newSession": "New Session",
+    "sessionName": "Session Name",
+    "workingDirectory": "Working Directory",
+    "executionMode": "Execution Mode",
+    "local": "Local",
+    "remote": "Remote",
+    "remoteNotConfigured": "Remote execution not configured",
+    "initialPrompt": "Initial Prompt (optional)",
+    "startSession": "Start Session",
+    "noMessages": "No messages yet",
+    "sendMessage": "Send a message...",
+    "working": "Working...",
+    "processing": "Processing..."
+  },
+  "status": {
+    "ready": "Ready",
+    "busy": "Working...",
+    "waiting": "Waiting",
+    "error": "Error",
+    "disconnected": "Disconnected",
+    "noSession": "No session"
+  },
+  "products": {
+    "develop": {
+      "name": "Develop",
+      "description": "Visual walkthroughs"
+    },
+    "define": {
+      "name": "Define",
+      "description": "Requirements management"
+    },
+    "manage": {
+      "name": "Manage",
+      "description": "Task management"
+    },
+    "qa": {
+      "name": "QA",
+      "description": "Quality assurance"
+    },
+    "salon": {
+      "name": "Salon",
+      "description": "Booking platform"
+    },
+    "today": {
+      "name": "Today",
+      "description": "Daily workflow"
+    },
+    "vibecode": {
+      "name": "VibeCode",
+      "description": "The place to vibe code"
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "@expertly-vibecode/agent",
+  "version": "0.1.0",
+  "description": "Local agent for Expertly VibeCode - executes tools on your machine",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "vibecode-agent": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "commander": "^12.0.0",
+    "glob": "^10.3.10",
+    "pidusage": "^4.0.1",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/pidusage": "^2.0.5",
+    "@types/ws": "^8.5.10",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

@@ -433,6 +433,38 @@ services:
     restart: unless-stopped
 
   # ===================
+  # EXPERTLY VIBECODE
+  # ===================
+  vibecode:
+    build:
+      context: ./apps/vibecode
+      dockerfile: Dockerfile
+      target: production
+    environment:
+      - NODE_ENV=production
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - PORT=3001
+      - REMOTE_SERVER_URL=${REMOTE_SERVER_URL:-}
+      - DEFAULT_EXECUTION_MODE=${DEFAULT_EXECUTION_MODE:-local}
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.routers.vibecode.entrypoints=https"
+      - "traefik.http.routers.vibecode.rule=Host(`vibecode.ai.devintensive.com`)"
+      - "traefik.http.routers.vibecode.tls=true"
+      - "traefik.http.routers.vibecode.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vibecode.loadbalancer.server.port=3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ===================
   # SHARED DATABASES
   # ===================
   mongo:

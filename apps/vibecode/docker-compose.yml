@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      target: builder
+    ports:
+      - "3001:3001"
+      - "5173:5173"
+    environment:
+      - NODE_ENV=development
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - PORT=3001
+      - REMOTE_SERVER_URL=${REMOTE_SERVER_URL:-}
+      - DEFAULT_EXECUTION_MODE=${DEFAULT_EXECUTION_MODE:-local}
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/packages/server/node_modules
+      - /app/packages/client/node_modules
+    command: npm run dev

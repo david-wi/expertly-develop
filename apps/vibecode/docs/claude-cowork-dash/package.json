@@ -1,0 +1,24 @@
+{
+  "name": "claude-cowork-dash",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-widget dashboard for managing Claude Code agent sessions",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev -w @cowork-dash/server",
+    "dev:client": "npm run dev -w @cowork-dash/client",
+    "build": "npm run build -w @cowork-dash/server && npm run build -w @cowork-dash/client",
+    "start": "npm run start -w @cowork-dash/server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

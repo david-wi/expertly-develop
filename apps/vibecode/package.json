@@ -1,0 +1,30 @@
+{
+  "name": "expertly-vibecode",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-widget dashboard for managing Claude Code agent sessions with hybrid local/remote execution",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm run dev -w @expertly-vibecode/server",
+    "dev:client": "npm run dev -w @expertly-vibecode/client",
+    "dev:agent": "npm run dev -w @expertly-vibecode/agent",
+    "build": "npm run build -w @expertly-vibecode/server && npm run build -w @expertly-vibecode/client && npm run build -w @expertly-vibecode/agent",
+    "build:agent": "npm run build -w @expertly-vibecode/agent",
+    "start": "npm run start -w @expertly-vibecode/server",
+    "agent": "npm run start -w @expertly-vibecode/agent",
+    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "typecheck": "npm run typecheck -w @expertly-vibecode/server && npm run typecheck -w @expertly-vibecode/client"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "concurrently": "^8.2.2",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
