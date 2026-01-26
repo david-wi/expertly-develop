@@ -19,15 +19,18 @@ export interface ExpertlyProduct {
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
-  { name: 'Admin', code: 'admin', href: 'https://expertly-admin.152.42.152.243.sslip.io', icon: '⚙️', description: 'System administration' },
-  { name: 'Define', code: 'define', href: 'https://expertly-define.152.42.152.243.sslip.io', icon: '📋', description: 'Requirements management' },
-  { name: 'Develop', code: 'develop', href: 'https://expertly-develop.152.42.152.243.sslip.io', icon: '🛠️', description: 'Visual walkthroughs' },
-  { name: 'Identity', code: 'identity', href: 'https://expertly-identity.152.42.152.243.sslip.io', icon: '👤', description: 'Users & teams' },
-  { name: 'Manage', code: 'manage', href: 'https://expertly-manage.152.42.152.243.sslip.io', icon: '📊', description: 'Task management' },
-  { name: 'Salon', code: 'salon', href: 'https://expertly-salon.152.42.152.243.sslip.io', icon: '💇', description: 'Booking platform' },
-  { name: 'Today', code: 'today', href: 'https://expertly-today.152.42.152.243.sslip.io', icon: '📅', description: 'Daily workflow' },
-  { name: 'VibeCode', code: 'vibecode', href: 'https://expertly-vibecode.152.42.152.243.sslip.io', icon: '🤖', description: 'Multi-agent dashboard' },
-  { name: 'VibeTest', code: 'vibetest', href: 'https://vibe-qa.152.42.152.243.sslip.io', icon: '🧪', description: 'Quality assurance' },
+  { name: 'Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: '📋', description: 'Requirements management' },
+  { name: 'Design', code: 'design', href: 'https://design.ai.devintensive.com', icon: '🎨', description: 'Design system' },
+  { name: 'Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: '🛠️', description: 'Visual walkthroughs' },
+  { name: 'Hospitality', code: 'hospitality', href: 'https://hospitality.ai.devintensive.com', icon: '🏨', description: 'Hospitality management' },
+  { name: 'Logistics', code: 'logistics', href: 'https://logistics.ai.devintensive.com', icon: '🚚', description: 'Logistics management' },
+  { name: 'Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: '📊', description: 'Task management' },
+  { name: 'Partnerships', code: 'partnerships', href: 'https://partnerships.ai.devintensive.com', icon: '🤝', description: 'Partnership management' },
+  { name: 'Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: '💇', description: 'Salon management' },
+  { name: 'Simulate', code: 'simulate', href: 'https://simulate.ai.devintensive.com', icon: '🎯', description: 'Simulation platform' },
+  { name: 'Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: '📅', description: 'Daily workflow' },
+  { name: 'VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '🤖', description: 'Vibe coding platform' },
+  { name: 'VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'Vibe testing platform' },
 ]
 
 export type SupportedLanguage = 'en' | 'es'

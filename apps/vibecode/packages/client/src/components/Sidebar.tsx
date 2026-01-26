@@ -13,13 +13,18 @@ const getAgentCommand = () => {
 };
 
 const EXPERTLY_PRODUCTS = [
-  { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', description: 'Requirements management', initials: 'De' },
-  { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', description: 'Visual walkthroughs', initials: 'Dv' },
-  { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', description: 'Task management', initials: 'Ma' },
-  { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', description: 'Booking platform', initials: 'Sa' },
-  { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', description: 'Daily workflow', initials: 'To' },
-  { name: 'VibeCode', code: 'vibecode', href: 'http://expertly-vibecode.152.42.152.243.sslip.io', description: 'Multi-agent dashboard', initials: 'VC', current: true },
-  { name: 'VibeTest', code: 'vibetest', href: 'http://vibe-qa.152.42.152.243.sslip.io', description: 'Quality assurance', initials: 'VT' },
+  { name: 'Define', code: 'define', href: 'https://define.ai.devintensive.com', description: 'Requirements management', initials: 'De' },
+  { name: 'Design', code: 'design', href: 'https://design.ai.devintensive.com', description: 'Design system', initials: 'Ds' },
+  { name: 'Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', description: 'Visual walkthroughs', initials: 'Dv' },
+  { name: 'Hospitality', code: 'hospitality', href: 'https://hospitality.ai.devintensive.com', description: 'Hospitality management', initials: 'Ho' },
+  { name: 'Logistics', code: 'logistics', href: 'https://logistics.ai.devintensive.com', description: 'Logistics management', initials: 'Lo' },
+  { name: 'Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', description: 'Task management', initials: 'Ma' },
+  { name: 'Partnerships', code: 'partnerships', href: 'https://partnerships.ai.devintensive.com', description: 'Partnership management', initials: 'Pa' },
+  { name: 'Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', description: 'Salon management', initials: 'Sa' },
+  { name: 'Simulate', code: 'simulate', href: 'https://simulate.ai.devintensive.com', description: 'Simulation platform', initials: 'Si' },
+  { name: 'Today', code: 'today', href: 'https://today.ai.devintensive.com', description: 'Daily workflow', initials: 'To' },
+  { name: 'VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', description: 'Vibe coding platform', initials: 'VC', current: true },
+  { name: 'VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', description: 'Vibe testing platform', initials: 'VT' },
 ];
 
 // Expertly Logo SVG component
