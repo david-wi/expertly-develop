@@ -2,6 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import federation from '@originjs/vite-plugin-federation'
 
+// Module federation remote for shared UI components
+// Rebuild triggered: fix deployment issues
 export default defineConfig({
   plugins: [
     react(),
