@@ -6,6 +6,9 @@ services:
     build:
       context: ./packages/ui
       dockerfile: Dockerfile
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-}
+        GIT_BRANCH: ${GIT_BRANCH:-main}
     networks:
       - coolify
       - default
@@ -72,6 +75,7 @@ services:
       args:
         VITE_API_URL: https://develop-api.ai.devintensive.com/api/v1
         VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - develop-backend
     networks:
@@ -188,6 +192,7 @@ services:
       dockerfile: ./apps/identity/frontend/Dockerfile
       args:
         VITE_API_URL: https://identity-api.ai.devintensive.com/api
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - identity-backend
     networks:
@@ -255,6 +260,7 @@ services:
         VITE_UI_REMOTE_URL: https://ui.ai.devintensive.com
         VITE_IDENTITY_URL: https://identity.ai.devintensive.com
         VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - define-backend
     networks:

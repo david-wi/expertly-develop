@@ -29,6 +29,9 @@ export default function Layout() {
             </span>
           )
         }
+        versionCheck={{
+          currentCommit: import.meta.env.VITE_GIT_COMMIT,
+        }}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

@@ -6,6 +6,7 @@ WORKDIR /app
 # Accept build args
 ARG VITE_API_URL
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+ARG VITE_GIT_COMMIT
 
 # Copy frontend package files and install deps
 COPY apps/identity/frontend/package.json apps/identity/frontend/package-lock.json* ./
@@ -17,6 +18,7 @@ COPY apps/identity/frontend ./
 # Set environment variables for Vite build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
+ENV VITE_GIT_COMMIT=$VITE_GIT_COMMIT
 RUN npm run build
 
 # Production stage

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { ReactNode, ComponentType } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { useTheme } from '../theme/useTheme'
+import { VersionChecker } from './VersionChecker'
 
 export interface NavItem {
   name: string
@@ -83,6 +84,13 @@ export interface SidebarProps {
     children: ReactNode
     onClick?: () => void
   }) => ReactNode
+  // Version checking - shows banner when newer version is available
+  versionCheck?: {
+    /** Current app's git commit SHA (from VITE_GIT_COMMIT env var) */
+    currentCommit?: string
+    /** Minutes to wait before showing update alert (default: 10) */
+    safeMinutes?: number
+  }
 }
 
 export function Sidebar({
@@ -99,6 +107,7 @@ export function Sidebar({
   onLanguageChange,
   showThemeSwitcher = true,
   renderLink,
+  versionCheck,
 }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
@@ -132,6 +141,14 @@ export function Sidebar({
 
   return (
     <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col overflow-hidden`}>
+      {/* Version Update Banner */}
+      {versionCheck?.currentCommit && (
+        <VersionChecker
+          currentCommit={versionCheck.currentCommit}
+          safeMinutes={versionCheck.safeMinutes}
+        />
+      )}
+
       {/* Logo / Product Switcher */}
       <div className="relative flex-shrink-0">
         <div className={`flex h-14 items-center justify-between px-4 border-b ${borderColor}`}>

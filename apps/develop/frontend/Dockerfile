@@ -7,6 +7,7 @@ WORKDIR /app
 ARG VITE_API_URL=/api/v1
 ARG VITE_BUILD_TIMESTAMP
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+ARG VITE_GIT_COMMIT
 
 # Copy frontend package files and install deps
 COPY apps/develop/frontend/package.json apps/develop/frontend/package-lock.json* ./
@@ -19,6 +20,7 @@ COPY apps/develop/frontend ./
 # UI components loaded via Module Federation from VITE_UI_REMOTE_URL
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
+ENV VITE_GIT_COMMIT=$VITE_GIT_COMMIT
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
       export VITE_BUILD_TIMESTAMP=$(date +%s); \
     else \
@@ -26,6 +28,7 @@ RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
     fi && \
     echo "Build timestamp: $VITE_BUILD_TIMESTAMP" && \
     echo "UI Remote URL: $VITE_UI_REMOTE_URL" && \
+    echo "Git commit: $VITE_GIT_COMMIT" && \
     VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP npm run build
 
 # Production stage
@@ -35,7 +38,7 @@ FROM nginx:alpine
 COPY apps/develop/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
-COPY --from=builder /app/apps/develop/frontend/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80

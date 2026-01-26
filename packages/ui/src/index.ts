@@ -16,6 +16,14 @@ export {
 // Build info utilities
 export { formatBuildTimestamp } from './utils/buildInfo'
 
+// Version checker
+export {
+  VersionChecker,
+  getVersionFromEnv,
+  type VersionCheckerProps,
+  type VersionInfo,
+} from './components/VersionChecker'
+
 // Theme system
 export {
   ThemeProvider,

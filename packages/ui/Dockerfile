@@ -1,7 +1,18 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Install git for version script
+RUN apk add --no-cache git
+
 WORKDIR /app
+
+# Accept build args for version info
+ARG GIT_COMMIT
+ARG GIT_BRANCH=main
+
+# Set environment variables for version script fallback
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV GIT_BRANCH=${GIT_BRANCH}
 
 # Copy package files
 COPY package.json ./
@@ -12,7 +23,7 @@ RUN npm install
 # Copy source files
 COPY . .
 
-# Build the federation remote
+# Build the federation remote (prebuild generates version.json)
 RUN npm run build
 
 # Production stage - serve static files
@@ -20,6 +31,9 @@ FROM nginx:alpine
 
 # Copy built files to nginx
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy version.json from public folder (generated during build)
+COPY --from=builder /app/public/version.json /usr/share/nginx/html/version.json
 
 # Configure nginx for SPA and CORS
 RUN echo 'server { \
@@ -39,6 +53,12 @@ RUN echo 'server { \
     \
     # Cache control for remoteEntry.js - no cache to always get latest \
     location = /remoteEntry.js { \
+        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
+        add_header Access-Control-Allow-Origin *; \
+    } \
+    \
+    # No cache for version.json - always get latest \
+    location = /version.json { \
         add_header Cache-Control "no-cache, no-store, must-revalidate"; \
         add_header Access-Control-Allow-Origin *; \
     } \
