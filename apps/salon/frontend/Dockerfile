@@ -8,7 +8,7 @@ ENV VITE_API_URL=$VITE_API_URL
 
 # Install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source and build
 COPY . .

@@ -11,15 +11,16 @@
   },
   "dependencies": {
     "@expertly/ui": "file:../../../packages/ui",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.1.1",
     "@tanstack/react-query": "^5.62.11",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
-    "lucide-react": "^0.469.0"
+    "lucide-react": "^0.469.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.1.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.0",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@vitejs/plugin-react": "^4.3.4",
