@@ -7,19 +7,19 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Violet primary palette for unified Expertly branding
+        // Primary palette using CSS variables for theme support
         primary: {
-          50: '#f5f3ff',
-          100: '#ede9fe',
-          200: '#ddd6fe',
-          300: '#c4b5fd',
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-          700: '#6d28d9',
-          800: '#5b21b6',
-          900: '#4c1d95',
-          950: '#2e1065',
+          50: 'var(--theme-primary-50)',
+          100: 'var(--theme-primary-100)',
+          200: 'var(--theme-primary-200)',
+          300: 'var(--theme-primary-300)',
+          400: 'var(--theme-primary-400)',
+          500: 'var(--theme-primary-500)',
+          600: 'var(--theme-primary-600)',
+          700: 'var(--theme-primary-700)',
+          800: 'var(--theme-primary-800)',
+          900: 'var(--theme-primary-900)',
+          950: 'var(--theme-primary-950)',
         },
         // Theme colors using CSS variables
         'theme-bg': 'var(--theme-bg-default)',
