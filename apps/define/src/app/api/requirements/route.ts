@@ -4,15 +4,15 @@ import { requirements, requirementVersions, products } from '@/lib/db/schema';
 import { eq, sql, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 
-// Generate stable key for a product
-async function generateStableKey(productId: string): Promise<string> {
+// Generate stable key for a product using its prefix (e.g., "ED-001")
+async function generateStableKey(productId: string, productPrefix: string): Promise<string> {
   const result = await db
     .select({ count: sql<number>`count(*)` })
     .from(requirements)
     .where(eq(requirements.productId, productId));
 
   const count = result[0]?.count || 0;
-  return `REQ-${String(count + 1).padStart(3, '0')}`;
+  return `${productPrefix}-${String(count + 1).padStart(3, '0')}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'productId and title are required' }, { status: 400 });
     }
 
-    // Verify product exists
+    // Verify product exists and get its prefix
     const product = await db
       .select()
       .from(products)
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     const now = new Date().toISOString();
-    const stableKey = await generateStableKey(productId);
+    const stableKey = await generateStableKey(productId, product[0].prefix);
 
     // Get max order index for siblings
     const siblings = await db
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
       title: title.trim(),
       whatThisDoes: whatThisDoes?.trim() || null,
       whyThisExists: whyThisExists?.trim() || null,
-      notIncluded: notIncluded ? JSON.stringify(notIncluded) : null,
-      acceptanceCriteria: acceptanceCriteria ? JSON.stringify(acceptanceCriteria) : null,
+      notIncluded: notIncluded?.trim() || null,
+      acceptanceCriteria: acceptanceCriteria?.trim() || null,
       status,
       priority,
       tags: tags ? JSON.stringify(tags) : null,

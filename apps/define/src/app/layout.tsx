@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/layout/sidebar";
+import { ConditionalWrapper } from "@/components/layout/conditional-wrapper";
+import { SessionProvider } from "@/components/providers/session-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -20,13 +21,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} font-sans antialiased`}>
-        <Sidebar />
-        <main className="pl-64 min-h-screen">
-          <div className="p-8">
+      <body className={`${inter.variable} font-sans antialiased bg-gray-50`}>
+        <SessionProvider>
+          <ConditionalWrapper>
             {children}
-          </div>
-        </main>
+          </ConditionalWrapper>
+        </SessionProvider>
       </body>
     </html>
   );

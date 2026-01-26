@@ -32,8 +32,12 @@ import {
   FileText,
   Search,
   ArrowLeft,
+  Sparkles,
+  Send,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { BulkImportDialog } from '@/components/requirements/bulk-import-dialog';
+import { JiraDraftsDialog } from '@/components/jira/jira-drafts-dialog';
 
 interface Requirement {
   id: string;
@@ -179,11 +183,19 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
+  const [jiraDraftsOpen, setJiraDraftsOpen] = useState(false);
+  const [allDraftsOpen, setAllDraftsOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newReq, setNewReq] = useState({
     title: '',
     whatThisDoes: '',
+    whyThisExists: '',
+    notIncluded: '',
+    acceptanceCriteria: '',
+    status: 'draft',
     priority: 'medium',
+    tags: [] as string[],
     parentId: '',
   });
 
@@ -234,13 +246,28 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           productId: id,
           title: newReq.title,
           whatThisDoes: newReq.whatThisDoes || null,
+          whyThisExists: newReq.whyThisExists || null,
+          notIncluded: newReq.notIncluded || null,
+          acceptanceCriteria: newReq.acceptanceCriteria || null,
+          status: newReq.status,
           priority: newReq.priority,
+          tags: newReq.tags.length > 0 ? newReq.tags : null,
           parentId: newReq.parentId || null,
         }),
       });
 
       if (response.ok) {
-        setNewReq({ title: '', whatThisDoes: '', priority: 'medium', parentId: '' });
+        setNewReq({
+          title: '',
+          whatThisDoes: '',
+          whyThisExists: '',
+          notIncluded: '',
+          acceptanceCriteria: '',
+          status: 'draft',
+          priority: 'medium',
+          tags: [],
+          parentId: '',
+        });
         setDialogOpen(false);
         fetchProduct();
       }
@@ -289,13 +316,20 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Product map</CardTitle>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
+                <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => setAllDraftsOpen(true)} title="Jira Drafts">
+                    <Send className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setBulkImportOpen(true)} title="AI Import">
+                    <Sparkles className="h-4 w-4" />
+                  </Button>
+                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </DialogTrigger>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <form onSubmit={createRequirement}>
                       <DialogHeader>
                         <DialogTitle>Add Requirement</DialogTitle>
@@ -320,30 +354,112 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                             What this does
                           </label>
                           <Textarea
-                            placeholder="Users can..."
+                            placeholder="Users can view, compare, and restore previous versions..."
                             value={newReq.whatThisDoes}
                             onChange={(e) => setNewReq({ ...newReq, whatThisDoes: e.target.value })}
                             rows={2}
                           />
+                          <p className="text-xs text-gray-500 mt-1">One clear sentence starting with "Users can..."</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
-                            Priority
+                            Why this exists
                           </label>
-                          <Select
-                            value={newReq.priority}
-                            onValueChange={(value) => setNewReq({ ...newReq, priority: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="critical">Critical</SelectItem>
-                              <SelectItem value="high">High</SelectItem>
-                              <SelectItem value="medium">Medium</SelectItem>
-                              <SelectItem value="low">Low</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Textarea
+                            placeholder="This helps people understand changes over time and recover safely from mistakes."
+                            value={newReq.whyThisExists}
+                            onChange={(e) => setNewReq({ ...newReq, whyThisExists: e.target.value })}
+                            rows={2}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">One or two sentences in plain English</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            Not included within this requirement
+                          </label>
+                          <Textarea
+                            placeholder="• Branching or merging versions&#10;• Restoring only part of an automation"
+                            value={newReq.notIncluded}
+                            onChange={(e) => setNewReq({ ...newReq, notIncluded: e.target.value })}
+                            rows={3}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Bullets that avoid confusion and scope creep</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            How we know it works
+                          </label>
+                          <Textarea
+                            placeholder="• Users can see a list of versions with author and timestamp&#10;• Users can compare any two versions and clearly see what changed"
+                            value={newReq.acceptanceCriteria}
+                            onChange={(e) => setNewReq({ ...newReq, acceptanceCriteria: e.target.value })}
+                            rows={3}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Acceptance criteria that can map to tests</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                              Status
+                            </label>
+                            <Select
+                              value={newReq.status}
+                              onValueChange={(value) => setNewReq({ ...newReq, status: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="draft">Draft</SelectItem>
+                                <SelectItem value="ready_to_build">Ready to Build</SelectItem>
+                                <SelectItem value="implemented">Implemented</SelectItem>
+                                <SelectItem value="verified">Verified</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                              Priority
+                            </label>
+                            <Select
+                              value={newReq.priority}
+                              onValueChange={(value) => setNewReq({ ...newReq, priority: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="low">Low</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            Tags
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {['functional', 'nonfunctional', 'security', 'performance', 'usability', 'invariant'].map((tag) => (
+                              <label key={tag} className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={newReq.tags.includes(tag)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setNewReq({ ...newReq, tags: [...newReq.tags, tag] });
+                                    } else {
+                                      setNewReq({ ...newReq, tags: newReq.tags.filter((t) => t !== tag) });
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="text-sm text-gray-700">{tag}</span>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                         {product.requirements.length > 0 && (
                           <div>
@@ -351,14 +467,14 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                               Parent (optional)
                             </label>
                             <Select
-                              value={newReq.parentId}
-                              onValueChange={(value) => setNewReq({ ...newReq, parentId: value })}
+                              value={newReq.parentId || 'none'}
+                              onValueChange={(value) => setNewReq({ ...newReq, parentId: value === 'none' ? '' : value })}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="None (root level)" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="">None (root level)</SelectItem>
+                                <SelectItem value="none">None (root level)</SelectItem>
                                 {product.requirements.map((req) => (
                                   <SelectItem key={req.id} value={req.id}>
                                     {req.title}
@@ -381,6 +497,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                     </form>
                   </DialogContent>
                 </Dialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -438,7 +555,9 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                       <Link href={`/requirements/${selectedRequirement.id}`}>
                         <Button>Open requirement</Button>
                       </Link>
-                      <Button variant="outline">Draft Jira stories</Button>
+                      <Button variant="outline" onClick={() => setJiraDraftsOpen(true)}>
+                        Draft Jira stories
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -454,6 +573,38 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
           </Card>
         </div>
       </div>
+
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        productId={id}
+        productName={product.name}
+        existingRequirements={product.requirements.map((r) => ({
+          id: r.id,
+          stableKey: r.stableKey,
+          title: r.title,
+          parentId: r.parentId,
+        }))}
+        onSuccess={fetchProduct}
+      />
+
+      {selectedRequirement && (
+        <JiraDraftsDialog
+          open={jiraDraftsOpen}
+          onOpenChange={setJiraDraftsOpen}
+          productId={id}
+          productName={product.name}
+          requirementId={selectedRequirement.id}
+          requirementTitle={selectedRequirement.title}
+        />
+      )}
+
+      <JiraDraftsDialog
+        open={allDraftsOpen}
+        onOpenChange={setAllDraftsOpen}
+        productId={id}
+        productName={product.name}
+      />
     </div>
   );
 }

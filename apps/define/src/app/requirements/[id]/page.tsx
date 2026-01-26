@@ -143,10 +143,11 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
           title: data.title,
           whatThisDoes: data.whatThisDoes || '',
           whyThisExists: data.whyThisExists || '',
-          notIncluded: data.notIncluded ? JSON.parse(data.notIncluded) : [],
-          acceptanceCriteria: data.acceptanceCriteria ? JSON.parse(data.acceptanceCriteria) : [],
+          notIncluded: data.notIncluded || '',
+          acceptanceCriteria: data.acceptanceCriteria || '',
           status: data.status,
           priority: data.priority,
+          tags: data.tags ? JSON.parse(data.tags) : [],
         });
       }
     } catch (error) {
@@ -164,6 +165,7 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...editForm,
+          tags: editForm.tags?.length > 0 ? editForm.tags : null,
           changeSummary: 'Updated requirement details',
         }),
       });
@@ -195,10 +197,7 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
     );
   }
 
-  const notIncluded = requirement.notIncluded ? JSON.parse(requirement.notIncluded) : [];
-  const acceptanceCriteria = requirement.acceptanceCriteria
-    ? JSON.parse(requirement.acceptanceCriteria)
-    : [];
+  const tags = requirement.tags ? JSON.parse(requirement.tags) : [];
   const passingTests = requirement.testLinks.filter((t) => t.status === 'passing').length;
   const failingTests = requirement.testLinks.filter((t) => t.status === 'failing').length;
 
@@ -214,7 +213,12 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
             Back to product
           </Link>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">{requirement.title}</h1>
+        <div className="flex items-center gap-3 mb-8">
+          <Badge variant="outline" className="text-base font-mono px-3 py-1">
+            {requirement.stableKey}
+          </Badge>
+          <h1 className="text-3xl font-bold text-gray-900">{requirement.title}</h1>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
@@ -251,8 +255,9 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                               setEditForm({ ...editForm, whatThisDoes: e.target.value })
                             }
                             placeholder="Users can..."
-                            rows={3}
+                            rows={2}
                           />
+                          <p className="text-xs text-gray-500 mt-1">One clear sentence starting with "Users can..."</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -263,27 +268,102 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                             onChange={(e) =>
                               setEditForm({ ...editForm, whyThisExists: e.target.value })
                             }
+                            placeholder="This helps people..."
                             rows={2}
                           />
+                          <p className="text-xs text-gray-500 mt-1">One or two sentences in plain English</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700 mb-1 block">
-                            Status
+                            Not included within this requirement
                           </label>
-                          <Select
-                            value={editForm.status}
-                            onValueChange={(value) => setEditForm({ ...editForm, status: value })}
-                          >
-                            <SelectTrigger className="w-48">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="draft">Draft</SelectItem>
-                              <SelectItem value="ready_to_build">Ready to build</SelectItem>
-                              <SelectItem value="implemented">Implemented</SelectItem>
-                              <SelectItem value="verified">Verified</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Textarea
+                            value={editForm.notIncluded}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, notIncluded: e.target.value })
+                            }
+                            placeholder="• Branching or merging versions&#10;• Restoring only part of an automation"
+                            rows={3}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Bullets that avoid confusion and scope creep</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            How we know it works
+                          </label>
+                          <Textarea
+                            value={editForm.acceptanceCriteria}
+                            onChange={(e) =>
+                              setEditForm({ ...editForm, acceptanceCriteria: e.target.value })
+                            }
+                            placeholder="• Users can see a list of versions&#10;• Users can compare any two versions"
+                            rows={3}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Acceptance criteria that can map to tests</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                              Status
+                            </label>
+                            <Select
+                              value={editForm.status}
+                              onValueChange={(value) => setEditForm({ ...editForm, status: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="draft">Draft</SelectItem>
+                                <SelectItem value="ready_to_build">Ready to build</SelectItem>
+                                <SelectItem value="implemented">Implemented</SelectItem>
+                                <SelectItem value="verified">Verified</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium text-gray-700 mb-1 block">
+                              Priority
+                            </label>
+                            <Select
+                              value={editForm.priority}
+                              onValueChange={(value) => setEditForm({ ...editForm, priority: value })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="critical">Critical</SelectItem>
+                                <SelectItem value="high">High</SelectItem>
+                                <SelectItem value="medium">Medium</SelectItem>
+                                <SelectItem value="low">Low</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700 mb-1 block">
+                            Tags
+                          </label>
+                          <div className="flex flex-wrap gap-2">
+                            {['functional', 'nonfunctional', 'security', 'performance', 'usability', 'invariant'].map((tag) => (
+                              <label key={tag} className="flex items-center gap-1.5 cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={editForm.tags?.includes(tag)}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setEditForm({ ...editForm, tags: [...(editForm.tags || []), tag] });
+                                    } else {
+                                      setEditForm({ ...editForm, tags: (editForm.tags || []).filter((t: string) => t !== tag) });
+                                    }
+                                  }}
+                                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                />
+                                <span className="text-sm text-gray-700">{tag}</span>
+                              </label>
+                            ))}
+                          </div>
                         </div>
                         <div className="flex gap-2">
                           <Button onClick={saveRequirement} disabled={saving}>
@@ -309,31 +389,34 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                             {requirement.whyThisExists || 'Not defined yet.'}
                           </p>
                         </div>
-                        {notIncluded.length > 0 && (
+                        {requirement.notIncluded && (
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">
                               Not included within this requirement
                             </h3>
-                            <ul className="list-disc list-inside text-gray-600 space-y-1">
-                              {notIncluded.map((item: string, i: number) => (
-                                <li key={i}>{item}</li>
-                              ))}
-                            </ul>
+                            <div className="text-gray-600 whitespace-pre-wrap">
+                              {requirement.notIncluded}
+                            </div>
                           </div>
                         )}
-                        {acceptanceCriteria.length > 0 && (
+                        {requirement.acceptanceCriteria && (
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">
                               How we know it works
                             </h3>
-                            <ul className="space-y-2">
-                              {acceptanceCriteria.map((item: string, i: number) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                  <span className="text-gray-600">{item}</span>
-                                </li>
+                            <div className="text-gray-600 whitespace-pre-wrap">
+                              {requirement.acceptanceCriteria}
+                            </div>
+                          </div>
+                        )}
+                        {tags.length > 0 && (
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">Tags</h3>
+                            <div className="flex flex-wrap gap-2">
+                              {tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline">{tag}</Badge>
                               ))}
-                            </ul>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -20,10 +20,25 @@ import { Plus, FolderTree, Loader2 } from 'lucide-react';
 interface Product {
   id: string;
   name: string;
+  prefix: string;
   description: string | null;
   createdAt: string;
   updatedAt: string;
   requirementCount: number;
+}
+
+// Generate a suggested prefix from product name
+function suggestPrefix(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return '';
+  if (words.length === 1) {
+    return words[0].substring(0, 3).toUpperCase();
+  }
+  return words
+    .slice(0, 4)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
 }
 
 export default function ProductsPage() {
@@ -31,7 +46,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [newProduct, setNewProduct] = useState({ name: '', description: '' });
+  const [newProduct, setNewProduct] = useState({ name: '', prefix: '', description: '' });
 
   useEffect(() => {
     fetchProducts();
@@ -62,7 +77,7 @@ export default function ProductsPage() {
       });
 
       if (response.ok) {
-        setNewProduct({ name: '', description: '' });
+        setNewProduct({ name: '', prefix: '', description: '' });
         setDialogOpen(false);
         fetchProducts();
       }
@@ -103,9 +118,34 @@ export default function ProductsPage() {
                   <Input
                     placeholder="e.g., Automation Designer"
                     value={newProduct.name}
-                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      const suggested = suggestPrefix(name);
+                      // Auto-update prefix if user hasn't manually edited it
+                      if (!newProduct.prefix || newProduct.prefix === suggestPrefix(newProduct.name)) {
+                        setNewProduct({ ...newProduct, name, prefix: suggested });
+                      } else {
+                        setNewProduct({ ...newProduct, name });
+                      }
+                    }}
                     required
                   />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                    Requirement Prefix
+                  </label>
+                  <Input
+                    placeholder="e.g., AD"
+                    value={newProduct.prefix}
+                    onChange={(e) => setNewProduct({ ...newProduct, prefix: e.target.value.toUpperCase() })}
+                    className="w-32 font-mono"
+                    maxLength={6}
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Used for requirement IDs (e.g., {newProduct.prefix || 'XX'}-001)
+                  </p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -123,7 +163,7 @@ export default function ProductsPage() {
                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={creating || !newProduct.name.trim()}>
+                <Button type="submit" disabled={creating || !newProduct.name.trim() || !newProduct.prefix.trim()}>
                   {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Create Product
                 </Button>
@@ -143,11 +183,11 @@ export default function ProductsPage() {
             <FolderTree className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">No products yet</h2>
             <p className="text-gray-500 mb-6">
-              Create your first product to start managing requirements.
+              Create a product to start managing requirements.
             </p>
             <Button onClick={() => setDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              Create your first product
+              Create a product
             </Button>
           </CardContent>
         </Card>

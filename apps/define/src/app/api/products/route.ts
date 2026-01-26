@@ -10,6 +10,7 @@ export async function GET() {
       .select({
         id: products.id,
         name: products.name,
+        prefix: products.prefix,
         description: products.description,
         createdAt: products.createdAt,
         updatedAt: products.updatedAt,
@@ -27,19 +28,49 @@ export async function GET() {
   }
 }
 
+// Generate a suggested prefix from product name (e.g., "Expertly Define" -> "ED")
+function generatePrefix(name: string): string {
+  const words = name.trim().split(/\s+/);
+  if (words.length === 1) {
+    // Single word: take first 3 letters
+    return words[0].substring(0, 3).toUpperCase();
+  }
+  // Multiple words: take first letter of each word (up to 4)
+  return words
+    .slice(0, 4)
+    .map((w) => w[0])
+    .join('')
+    .toUpperCase();
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, description } = body;
+    const { name, prefix, description } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+    }
+
+    // Use provided prefix or generate one
+    const finalPrefix = prefix?.trim().toUpperCase() || generatePrefix(name);
+
+    // Check if prefix is already in use
+    const existing = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(eq(products.prefix, finalPrefix))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return NextResponse.json({ error: `Prefix "${finalPrefix}" is already in use` }, { status: 400 });
     }
 
     const now = new Date().toISOString();
     const newProduct = {
       id: uuidv4(),
       name: name.trim(),
+      prefix: finalPrefix,
       description: description?.trim() || null,
       createdAt: now,
       updatedAt: now,

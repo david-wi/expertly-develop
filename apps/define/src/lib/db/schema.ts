@@ -3,6 +3,7 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 export const products = sqliteTable('products', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
+  prefix: text('prefix').notNull(), // Unique prefix for requirement IDs (e.g., "ED" for "Expertly Define")
   description: text('description'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -16,8 +17,8 @@ export const requirements = sqliteTable('requirements', {
   title: text('title').notNull(),
   whatThisDoes: text('what_this_does'),
   whyThisExists: text('why_this_exists'),
-  notIncluded: text('not_included'), // JSON array
-  acceptanceCriteria: text('acceptance_criteria'), // JSON array
+  notIncluded: text('not_included'),
+  acceptanceCriteria: text('acceptance_criteria'),
   status: text('status').notNull().default('draft'), // draft, ready_to_build, implemented, verified
   priority: text('priority').notNull().default('medium'), // critical, high, medium, low
   tags: text('tags'), // JSON array
@@ -79,6 +80,35 @@ export const releaseSnapshots = sqliteTable('release_snapshots', {
   releasedAt: text('released_at'),
 });
 
+export const jiraSettings = sqliteTable('jira_settings', {
+  id: text('id').primaryKey(),
+  productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  jiraHost: text('jira_host').notNull(), // e.g., "mycompany.atlassian.net"
+  jiraEmail: text('jira_email').notNull(),
+  jiraApiToken: text('jira_api_token').notNull(),
+  defaultProjectKey: text('default_project_key').notNull(), // e.g., "PROJ"
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+export const jiraStoryDrafts = sqliteTable('jira_story_drafts', {
+  id: text('id').primaryKey(),
+  productId: text('product_id').notNull().references(() => products.id, { onDelete: 'cascade' }),
+  requirementId: text('requirement_id').references(() => requirements.id, { onDelete: 'set null' }),
+  summary: text('summary').notNull(), // Jira issue title
+  description: text('description'), // Full description in Jira format
+  issueType: text('issue_type').notNull().default('Story'), // Story, Task, Bug, Epic
+  priority: text('priority').notNull().default('Medium'), // Highest, High, Medium, Low, Lowest
+  labels: text('labels'), // JSON array
+  storyPoints: integer('story_points'),
+  status: text('status').notNull().default('draft'), // draft, sent, failed
+  jiraIssueKey: text('jira_issue_key'), // Populated after sending (e.g., "PROJ-123")
+  jiraUrl: text('jira_url'), // Link to created issue
+  errorMessage: text('error_message'), // If sending failed
+  createdAt: text('created_at').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
 // Type exports
 export type Product = typeof products.$inferSelect;
 export type NewProduct = typeof products.$inferInsert;
@@ -94,3 +124,7 @@ export type DeliveryLink = typeof deliveryLinks.$inferSelect;
 export type NewDeliveryLink = typeof deliveryLinks.$inferInsert;
 export type ReleaseSnapshot = typeof releaseSnapshots.$inferSelect;
 export type NewReleaseSnapshot = typeof releaseSnapshots.$inferInsert;
+export type JiraSettings = typeof jiraSettings.$inferSelect;
+export type NewJiraSettings = typeof jiraSettings.$inferInsert;
+export type JiraStoryDraft = typeof jiraStoryDrafts.$inferSelect;
+export type NewJiraStoryDraft = typeof jiraStoryDrafts.$inferInsert;

@@ -98,11 +98,11 @@ export default async function Dashboard() {
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">Welcome to Expertly Define</h2>
             <p className="text-gray-500 mb-6 max-w-md mx-auto">
-              Start by creating your first product to begin managing requirements, tracking implementations, and ensuring verification.
+              Start by creating a product to begin managing requirements, tracking implementations, and ensuring verification.
             </p>
             <Link href="/products">
               <Button>
-                Create your first product
+                Create a product
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>

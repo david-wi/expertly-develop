@@ -110,8 +110,8 @@ export async function PUT(
     if (title !== undefined) updates.title = title.trim();
     if (whatThisDoes !== undefined) updates.whatThisDoes = whatThisDoes?.trim() || null;
     if (whyThisExists !== undefined) updates.whyThisExists = whyThisExists?.trim() || null;
-    if (notIncluded !== undefined) updates.notIncluded = notIncluded ? JSON.stringify(notIncluded) : null;
-    if (acceptanceCriteria !== undefined) updates.acceptanceCriteria = acceptanceCriteria ? JSON.stringify(acceptanceCriteria) : null;
+    if (notIncluded !== undefined) updates.notIncluded = notIncluded?.trim() || null;
+    if (acceptanceCriteria !== undefined) updates.acceptanceCriteria = acceptanceCriteria?.trim() || null;
     if (status !== undefined) updates.status = status;
     if (priority !== undefined) updates.priority = priority;
     if (tags !== undefined) updates.tags = tags ? JSON.stringify(tags) : null;
