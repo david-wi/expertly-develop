@@ -1,7 +1,0 @@
-/Users/david/Code/expertly-develop/apps/vibecode/packages/agent-desktop/src-tauri/target/release/deps/strsim-f97d9a3b85a01449.d: /Users/david/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/strsim-0.11.1/src/lib.rs
-
-/Users/david/Code/expertly-develop/apps/vibecode/packages/agent-desktop/src-tauri/target/release/deps/libstrsim-f97d9a3b85a01449.rlib: /Users/david/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/strsim-0.11.1/src/lib.rs
-
-/Users/david/Code/expertly-develop/apps/vibecode/packages/agent-desktop/src-tauri/target/release/deps/libstrsim-f97d9a3b85a01449.rmeta: /Users/david/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/strsim-0.11.1/src/lib.rs
-
-/Users/david/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/strsim-0.11.1/src/lib.rs:
