@@ -6,8 +6,9 @@ WORKDIR /app
 # Copy the shared UI package first
 COPY packages/ui ./packages/ui
 
-# Build argument for API URL
+# Build arguments
 ARG VITE_API_URL=http://localhost:8000/api/v1
+ARG VITE_BUILD_TIMESTAMP
 ENV VITE_API_URL=$VITE_API_URL
 
 # Copy package files
@@ -19,9 +20,9 @@ RUN npm pkg set dependencies.@expertly/ui=file:./packages/ui
 # Install dependencies
 RUN npm install
 
-# Copy source and build
+# Copy source and build with timestamp
 COPY apps/salon/frontend .
-RUN npm run build
+RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production image
 FROM nginx:alpine

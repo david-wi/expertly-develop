@@ -11,7 +11,7 @@ import {
   Gift,
   Globe,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar } from '@expertly/ui';
+import { Sidebar as SharedSidebar, BuildTimestamp } from '@expertly/ui';
 import { useAuthStore } from '../../stores/authStore';
 
 const navItems = [
@@ -37,6 +37,7 @@ export function Sidebar() {
       navigation={navItems}
       currentPath={location.pathname}
       user={salon ? { name: salon.name } : undefined}
+      buildInfo={<BuildTimestamp timestamp={import.meta.env.VITE_BUILD_TIMESTAMP} />}
       bottomSection={
         <div className="p-4">
           <button

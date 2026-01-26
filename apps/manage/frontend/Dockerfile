@@ -8,6 +8,7 @@ COPY packages/ui ./packages/ui
 
 # Accept build args
 ARG VITE_API_URL
+ARG VITE_BUILD_TIMESTAMP
 
 # Set environment variables for build
 ENV VITE_API_URL=$VITE_API_URL
@@ -24,8 +25,8 @@ RUN npm install
 # Copy source code
 COPY apps/manage/frontend .
 
-# Build the application
-RUN npm run build
+# Build the application with timestamp
+RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production stage
 FROM nginx:alpine

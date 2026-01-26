@@ -6,6 +6,9 @@ WORKDIR /app
 # Copy the shared UI package first
 COPY packages/ui ./packages/ui
 
+# Accept build args
+ARG VITE_BUILD_TIMESTAMP
+
 # Copy package files
 COPY apps/qa/frontend/package*.json ./
 
@@ -18,8 +21,8 @@ RUN npm install
 # Copy source code
 COPY apps/qa/frontend .
 
-# Build the application
-RUN npm run build
+# Build the application with timestamp
+RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production stage
 FROM nginx:alpine

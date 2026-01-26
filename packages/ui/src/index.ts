@@ -13,6 +13,9 @@ export {
   type LanguageOption,
 } from './components/Sidebar'
 
+// Build info utilities
+export { formatBuildTimestamp, BuildTimestamp } from './utils/buildInfo'
+
 // Theme system
 export {
   ThemeProvider,

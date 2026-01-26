@@ -6,6 +6,9 @@ WORKDIR /app
 # Copy the shared UI package first
 COPY packages/ui ./packages/ui
 
+# Accept build args
+ARG VITE_BUILD_TIMESTAMP
+
 # Copy package files
 COPY apps/today/frontend/package*.json ./
 
@@ -15,9 +18,9 @@ RUN npm pkg set dependencies.@expertly/ui=file:./packages/ui
 # Install dependencies
 RUN npm install
 
-# Copy source and build
+# Copy source and build with timestamp
 COPY apps/today/frontend .
-RUN npm run build
+RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production stage - nginx to serve static files
 FROM nginx:alpine

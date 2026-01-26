@@ -11,7 +11,7 @@ import {
   Archive,
   Settings,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar } from '@expertly/ui';
+import { Sidebar as SharedSidebar, BuildTimestamp } from '@expertly/ui';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -36,6 +36,7 @@ export function Sidebar() {
       navigation={navigation}
       currentPath={location.pathname}
       user={{ name: 'Claude', role: 'AI Assistant' }}
+      buildInfo={<BuildTimestamp timestamp={import.meta.env.VITE_BUILD_TIMESTAMP} />}
       renderLink={({ href, className, children }) => (
         <Link to={href} className={className}>
           {children}

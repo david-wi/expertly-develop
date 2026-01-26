@@ -20,12 +20,16 @@ RUN npm install
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Accept build args
+ARG NEXT_PUBLIC_BUILD_TIMESTAMP
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY apps/define .
 
-# Build the application
-RUN npm run build
+# Build the application with timestamp
+RUN NEXT_PUBLIC_BUILD_TIMESTAMP=${NEXT_PUBLIC_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner

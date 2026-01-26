@@ -7,7 +7,7 @@ import {
   FileBox,
   Play,
 } from 'lucide-react'
-import { Sidebar, MainContent } from '@expertly/ui'
+import { Sidebar, MainContent, BuildTimestamp } from '@expertly/ui'
 import OrganizationSwitcher from './OrganizationSwitcher'
 import { usersApi, CurrentUser, TENANT_STORAGE_KEY } from '../../api/client'
 
@@ -18,24 +18,6 @@ const navigation = [
   { name: 'Artifacts', href: '/artifacts', icon: FileBox },
   { name: 'New Walkthrough', href: '/walkthroughs/new', icon: Play },
 ]
-
-// Format build timestamp as M.DD.HH.MM (e.g., "1.26.14.34" for Jan 26 at 14:34)
-function formatBuildTimestamp(timestamp: string | undefined): string | null {
-  if (!timestamp) return null
-  try {
-    const date = new Date(parseInt(timestamp) * 1000)
-    if (isNaN(date.getTime())) return null
-    const month = date.getMonth() + 1
-    const day = date.getDate().toString().padStart(2, '0')
-    const hour = date.getHours().toString().padStart(2, '0')
-    const minute = date.getMinutes().toString().padStart(2, '0')
-    return `${month}.${day}.${hour}.${minute}`
-  } catch {
-    return null
-  }
-}
-
-const buildTimestamp = formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)
 
 export default function Layout() {
   const location = useLocation()
@@ -79,11 +61,7 @@ export default function Layout() {
             onSwitch={handleOrgSwitch}
           />
         }
-        buildInfo={
-          buildTimestamp ? (
-            <span className="text-[10px] text-gray-400 block text-right">{buildTimestamp}</span>
-          ) : undefined
-        }
+        buildInfo={<BuildTimestamp timestamp={import.meta.env.VITE_BUILD_TIMESTAMP} />}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

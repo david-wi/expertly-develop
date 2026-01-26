@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, FolderTree, Package, Settings } from 'lucide-react';
-import { Sidebar as SharedSidebar, ThemeProvider } from '@expertly/ui';
+import { Sidebar as SharedSidebar, ThemeProvider, BuildTimestamp } from '@expertly/ui';
 import type { ReactNode } from 'react';
 
 const navigation = [
@@ -34,6 +34,7 @@ export function Sidebar() {
         currentPath={pathname}
         renderLink={renderLink}
         showThemeSwitcher={true}
+        buildInfo={<BuildTimestamp timestamp={process.env.NEXT_PUBLIC_BUILD_TIMESTAMP} />}
       />
     </ThemeProvider>
   );
