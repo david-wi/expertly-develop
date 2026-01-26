@@ -3,14 +3,20 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
+# Copy the shared UI package first
+COPY packages/ui ./packages/ui
+
 # Copy package files
-COPY package*.json ./
+COPY apps/qa/frontend/package*.json ./
+
+# Add @expertly/ui as local dependency
+RUN npm pkg set dependencies.@expertly/ui=file:./packages/ui
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
-COPY . .
+COPY apps/qa/frontend .
 
 # Build the application
 RUN npm run build
@@ -22,7 +28,7 @@ FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/qa/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Expose port
 EXPOSE 80

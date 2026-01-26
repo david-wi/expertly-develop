@@ -142,7 +142,8 @@ services:
 
   manage-frontend:
     build:
-      context: ./apps/manage/frontend
+      context: .
+      dockerfile: ./apps/manage/frontend/Dockerfile
       args:
         VITE_API_URL: http://expertly-manage-api.152.42.152.243.sslip.io/api
     depends_on:
@@ -176,7 +177,9 @@ services:
     restart: unless-stopped
 
   qa-frontend:
-    build: ./apps/qa/frontend
+    build:
+      context: .
+      dockerfile: ./apps/qa/frontend/Dockerfile
     depends_on:
       - qa-backend
     networks:
@@ -222,7 +225,8 @@ services:
 
   salon-frontend:
     build:
-      context: ./apps/salon/frontend
+      context: .
+      dockerfile: ./apps/salon/frontend/Dockerfile
       args:
         VITE_API_URL: http://expertly-salon-api.152.42.152.243.sslip.io/api/v1
     depends_on:
@@ -256,7 +260,8 @@ services:
 
   today-frontend:
     build:
-      context: ./apps/today/frontend
+      context: .
+      dockerfile: ./apps/today/frontend/Dockerfile
       args:
         VITE_API_URL: http://expertly-today-api.152.42.152.243.sslip.io/api
     depends_on:
