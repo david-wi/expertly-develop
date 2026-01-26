@@ -1,8 +1,56 @@
 @import "tailwindcss";
 
+/* Theme Base CSS Variables
+ * These are the default values (Violet theme, light mode).
+ * The ThemeProvider will override these at runtime.
+ */
 :root {
   --background: #f9fafb;
   --foreground: #111827;
+
+  /* Primary color palette - Violet (default) */
+  --theme-primary-50: #f5f3ff;
+  --theme-primary-100: #ede9fe;
+  --theme-primary-200: #ddd6fe;
+  --theme-primary-300: #c4b5fd;
+  --theme-primary-400: #a78bfa;
+  --theme-primary-500: #8b5cf6;
+  --theme-primary-600: #7c3aed;
+  --theme-primary-700: #6d28d9;
+  --theme-primary-800: #5b21b6;
+  --theme-primary-900: #4c1d95;
+  --theme-primary-950: #2e1065;
+
+  /* Background colors */
+  --theme-bg-default: #f9fafb;
+  --theme-bg-surface: #ffffff;
+  --theme-bg-elevated: #ffffff;
+
+  /* Text colors */
+  --theme-text-primary: #111827;
+  --theme-text-secondary: #4b5563;
+  --theme-text-muted: #6b7280;
+
+  /* Border colors */
+  --theme-border-default: #e5e7eb;
+  --theme-border-subtle: #f3f4f6;
+}
+
+/* Dark mode */
+.dark {
+  --background: #111827;
+  --foreground: #f9fafb;
+
+  --theme-bg-default: #111827;
+  --theme-bg-surface: #1f2937;
+  --theme-bg-elevated: #374151;
+
+  --theme-text-primary: #f9fafb;
+  --theme-text-secondary: #9ca3af;
+  --theme-text-muted: #6b7280;
+
+  --theme-border-default: #374151;
+  --theme-border-subtle: #1f2937;
 }
 
 @theme inline {
@@ -10,23 +58,34 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
 
-  /* Violet primary color palette for unified Expertly branding */
-  --color-primary-50: #f5f3ff;
-  --color-primary-100: #ede9fe;
-  --color-primary-200: #ddd6fe;
-  --color-primary-300: #c4b5fd;
-  --color-primary-400: #a78bfa;
-  --color-primary-500: #8b5cf6;
-  --color-primary-600: #7c3aed;
-  --color-primary-700: #6d28d9;
-  --color-primary-800: #5b21b6;
-  --color-primary-900: #4c1d95;
-  --color-primary-950: #2e1065;
+  /* Primary colors from CSS variables for theme support */
+  --color-primary-50: var(--theme-primary-50);
+  --color-primary-100: var(--theme-primary-100);
+  --color-primary-200: var(--theme-primary-200);
+  --color-primary-300: var(--theme-primary-300);
+  --color-primary-400: var(--theme-primary-400);
+  --color-primary-500: var(--theme-primary-500);
+  --color-primary-600: var(--theme-primary-600);
+  --color-primary-700: var(--theme-primary-700);
+  --color-primary-800: var(--theme-primary-800);
+  --color-primary-900: var(--theme-primary-900);
+  --color-primary-950: var(--theme-primary-950);
+
+  /* Theme semantic colors */
+  --color-theme-bg: var(--theme-bg-default);
+  --color-theme-bg-surface: var(--theme-bg-surface);
+  --color-theme-bg-elevated: var(--theme-bg-elevated);
+  --color-theme-text: var(--theme-text-primary);
+  --color-theme-text-primary: var(--theme-text-primary);
+  --color-theme-text-secondary: var(--theme-text-secondary);
+  --color-theme-text-muted: var(--theme-text-muted);
+  --color-theme-border: var(--theme-border-default);
+  --color-theme-border-subtle: var(--theme-border-subtle);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--theme-bg-default);
+  color: var(--theme-text-primary);
 }
 
 /* Custom scrollbar */
@@ -39,13 +98,25 @@ body {
   background: #f1f5f9;
 }
 
+.dark ::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 4px;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: #4b5563;
+}
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
 }
 
 /* Animation keyframes */
