@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { productsApi, Product } from '@/api/client'
-import { formatDistanceToNow } from 'date-fns'
 import {
   ArrowRight,
   FileText,

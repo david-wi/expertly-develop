@@ -29,7 +29,6 @@ import {
   FileText,
   Search,
   ArrowLeft,
-  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
