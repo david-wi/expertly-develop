@@ -18,6 +18,7 @@ export interface ExpertlyProduct {
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', icon: '📋', description: 'Requirements management' },
   { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', icon: '🛠️', description: 'Visual walkthroughs' },
+  { name: 'Identity', code: 'identity', href: 'http://expertly-identity.152.42.152.243.sslip.io', icon: '👤', description: 'Users & teams' },
   { name: 'Manage', code: 'manage', href: 'http://expertly-manage.152.42.152.243.sslip.io', icon: '📊', description: 'Task management' },
   { name: 'Salon', code: 'salon', href: 'http://expertly-salon.152.42.152.243.sslip.io', icon: '💇', description: 'Booking platform' },
   { name: 'Today', code: 'today', href: 'http://expertly-today.152.42.152.243.sslip.io', icon: '📅', description: 'Daily workflow' },
