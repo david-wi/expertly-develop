@@ -50,6 +50,7 @@ export interface Job {
   completed_at: string | null
   elapsed_ms: number | null
   project_id: string | null
+  requested_by_name: string | null
   result: Record<string, unknown> | null
   error: string | null
 }
@@ -63,6 +64,7 @@ export interface Artifact {
   status: string
   project_id: string | null
   job_id: string | null
+  created_by_name: string | null
   created_at: string
 }
 

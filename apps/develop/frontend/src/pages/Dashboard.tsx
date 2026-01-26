@@ -115,6 +115,7 @@ export default function Dashboard() {
                           </p>
                           <p className="text-xs text-gray-500">
                             {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
+                            {job.requested_by_name && ` · ${job.requested_by_name}`}
                           </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -158,16 +159,24 @@ export default function Dashboard() {
             ) : (
               <ul className="divide-y divide-gray-200">
                 {recentArtifacts.map((artifact) => (
-                  <li key={artifact.id} className="px-6 py-4 hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{artifact.label}</p>
-                        <p className="text-xs text-gray-500">
-                          {formatDistanceToNow(new Date(artifact.created_at), { addSuffix: true })}
-                        </p>
+                  <li key={artifact.id}>
+                    <a
+                      href={artifactsApi.download(artifact.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block px-6 py-4 hover:bg-gray-50 cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{artifact.label}</p>
+                          <p className="text-xs text-gray-500">
+                            {formatDistanceToNow(new Date(artifact.created_at), { addSuffix: true })}
+                            {artifact.created_by_name && ` · ${artifact.created_by_name}`}
+                          </p>
+                        </div>
+                        <Badge>{artifact.format.toUpperCase()}</Badge>
                       </div>
-                      <Badge>{artifact.format.toUpperCase()}</Badge>
-                    </div>
+                    </a>
                   </li>
                 ))}
               </ul>

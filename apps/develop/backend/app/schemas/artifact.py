@@ -16,6 +16,7 @@ class ArtifactResponse(BaseModel):
     status: str
     project_id: Optional[str]
     job_id: Optional[str]
+    created_by_name: Optional[str] = None
     created_at: datetime
 
     class Config:

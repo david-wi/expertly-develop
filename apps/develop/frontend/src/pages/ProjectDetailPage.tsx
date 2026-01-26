@@ -126,6 +126,7 @@ export default function ProjectDetailPage() {
                             </p>
                             <p className="text-xs text-gray-500">
                               {formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}
+                              {job.requested_by_name && ` · ${job.requested_by_name}`}
                             </p>
                           </div>
                           <Badge variant={getStatusBadgeVariant(job.status)}>

@@ -1,6 +1,6 @@
 """Artifact API endpoints."""
 
-from typing import Optional
+from typing import Dict, Optional
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
@@ -14,8 +14,11 @@ from app.services.document_service import document_service
 router = APIRouter()
 
 
-def artifact_to_response(artifact: Artifact) -> ArtifactResponse:
+def artifact_to_response(artifact: Artifact, user_names: Dict[str, str] = None) -> ArtifactResponse:
     """Convert artifact model to response schema."""
+    created_by_name = None
+    if user_names and artifact.created_by:
+        created_by_name = user_names.get(str(artifact.created_by))
     return ArtifactResponse(
         id=str(artifact.id),
         label=artifact.label,
@@ -25,6 +28,7 @@ def artifact_to_response(artifact: Artifact) -> ArtifactResponse:
         status=artifact.status,
         project_id=str(artifact.project_id) if artifact.project_id else None,
         job_id=str(artifact.job_id) if artifact.job_id else None,
+        created_by_name=created_by_name,
         created_at=artifact.created_at,
     )
 
@@ -57,10 +61,19 @@ async def list_artifacts(
     )
 
     artifacts = [Artifact.from_mongo(doc) async for doc in cursor]
+
+    # Lookup user names for artifacts with created_by
+    user_ids = [a.created_by for a in artifacts if a.created_by]
+    user_names = {}
+    if user_ids:
+        user_cursor = db.users.find({"_id": {"$in": user_ids}}, {"_id": 1, "name": 1})
+        async for u in user_cursor:
+            user_names[str(u["_id"])] = u["name"]
+
     total = await db.artifacts.count_documents(query)
 
     return ArtifactListResponse(
-        items=[artifact_to_response(a) for a in artifacts],
+        items=[artifact_to_response(a, user_names) for a in artifacts],
         total=total,
     )
 
@@ -84,7 +97,16 @@ async def get_artifact(
             detail="Artifact not found",
         )
 
-    return artifact_to_response(Artifact.from_mongo(doc))
+    artifact = Artifact.from_mongo(doc)
+
+    # Lookup user name if created_by is set
+    user_names = {}
+    if artifact.created_by:
+        u = await db.users.find_one({"_id": artifact.created_by}, {"_id": 1, "name": 1})
+        if u:
+            user_names[str(u["_id"])] = u["name"]
+
+    return artifact_to_response(artifact, user_names)
 
 
 @router.get("/{artifact_id}/download")

@@ -1,10 +1,11 @@
 """Job queue API endpoints."""
 
-from typing import Optional
+from typing import Dict, Optional
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.deps import UserContext, get_current_user
+from app.database import get_database
 from app.models.job import JobStatus, JobType
 from app.schemas.job import JobResponse, JobListResponse, JobCreateResponse
 from app.services.job_service import job_service
@@ -12,8 +13,11 @@ from app.services.job_service import job_service
 router = APIRouter()
 
 
-def job_to_response(job) -> JobResponse:
+def job_to_response(job, user_names: Dict[str, str] = None) -> JobResponse:
     """Convert job model to response schema."""
+    requested_by_name = None
+    if user_names and job.requested_by:
+        requested_by_name = user_names.get(str(job.requested_by))
     return JobResponse(
         id=str(job.id),
         job_type=job.job_type.value if isinstance(job.job_type, JobType) else job.job_type,
@@ -25,6 +29,7 @@ def job_to_response(job) -> JobResponse:
         completed_at=job.completed_at,
         elapsed_ms=job.elapsed_ms,
         project_id=str(job.project_id) if job.project_id else None,
+        requested_by_name=requested_by_name,
         result=job.result,
         error=job.error,
     )
@@ -53,11 +58,20 @@ async def list_jobs(
         offset=offset,
     )
 
+    # Lookup user names for jobs with requested_by
+    user_ids = [j.requested_by for j in jobs if j.requested_by]
+    user_names = {}
+    if user_ids:
+        db = get_database()
+        cursor = db.users.find({"_id": {"$in": user_ids}}, {"_id": 1, "name": 1})
+        async for u in cursor:
+            user_names[str(u["_id"])] = u["name"]
+
     total = await job_service.count_jobs(user.tenant_id)
     stats = await job_service.get_queue_stats(user.tenant_id)
 
     return JobListResponse(
-        items=[job_to_response(j) for j in jobs],
+        items=[job_to_response(j, user_names) for j in jobs],
         total=total,
         stats=stats,
     )
@@ -83,7 +97,15 @@ async def get_job(
             detail="Job not found",
         )
 
-    return job_to_response(job)
+    # Lookup user name if requested_by is set
+    user_names = {}
+    if job.requested_by:
+        db = get_database()
+        u = await db.users.find_one({"_id": job.requested_by}, {"_id": 1, "name": 1})
+        if u:
+            user_names[str(u["_id"])] = u["name"]
+
+    return job_to_response(job, user_names)
 
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
