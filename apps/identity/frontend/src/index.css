@@ -1,4 +1,4 @@
-@import '../../../../packages/ui/src/styles/theme-base.css';
+@import '@expertly/ui/src/styles/theme-base.css';
 
 @tailwind base;
 @tailwind components;

@@ -1,40 +1,38 @@
 # Build stage
-FROM node:20-alpine as build
+FROM node:20-alpine AS builder
 
 WORKDIR /app
-
-# Copy the shared UI package first
-COPY packages/ui ./packages/ui
 
 # Accept build args
 ARG VITE_API_URL
 
-# Set environment variables for build
-ENV VITE_API_URL=$VITE_API_URL
+# Copy shared UI package
+COPY packages/ui ./packages/ui
 
-# Copy package files
-COPY apps/identity/frontend/package*.json ./
-
-# Add @expertly/ui as local dependency
-RUN npm pkg set dependencies.@expertly/ui=file:./packages/ui
-
-# Install dependencies
+# Install UI package dependencies
+WORKDIR /app/packages/ui
 RUN npm install
 
-# Copy source code
-COPY apps/identity/frontend .
+# Copy frontend package files and install deps
+WORKDIR /app/apps/identity/frontend
+COPY apps/identity/frontend/package.json apps/identity/frontend/package-lock.json* ./
+RUN npm install
 
-# Build the application
+# Copy frontend source code
+COPY apps/identity/frontend ./
+
+# Set environment variables for Vite build
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Copy built assets
-COPY --from=build /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
+# Copy nginx config
 COPY apps/identity/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built files
+COPY --from=builder /app/apps/identity/frontend/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80
