@@ -37,7 +37,7 @@ Uses unified gateway for routing:
 - `/develop` → Expertly Develop
 - `/define` → Expertly Define
 - `/manage` → Expertly Manage
-- `/qa` → Expertly QA
+- `/qa` → Expertly VibeTest
 - `/salon` → Expertly Salon
 - `/today` → Expertly Today
 

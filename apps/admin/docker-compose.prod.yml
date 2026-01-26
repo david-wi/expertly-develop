@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  admin-backend:
+    build: ./backend
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://admin:admin@admin-db:5432/expertly_admin
+      - ENVIRONMENT=production
+      - DEBUG=false
+    depends_on:
+      admin-db:
+        condition: service_healthy
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-backend.entrypoints=http"
+      - "traefik.http.routers.admin-backend.rule=Host(`expertly-admin-api.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+
+  admin-frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://expertly-admin-api.152.42.152.243.sslip.io/api
+    depends_on:
+      - admin-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.admin-frontend.entrypoints=http"
+      - "traefik.http.routers.admin-frontend.rule=Host(`expertly-admin.152.42.152.243.sslip.io`)"
+      - "traefik.http.services.admin-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  admin-db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_DB=expertly_admin
+    volumes:
+      - admin_postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d expertly_admin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
+  default:
+    driver: bridge
+
+volumes:
+  admin_postgres_data:

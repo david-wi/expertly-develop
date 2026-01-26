@@ -1,0 +1,62 @@
+import axios from 'axios'
+import type {
+  Theme,
+  ThemeListResponse,
+  ThemeVersionListResponse,
+  ThemeCreateInput,
+  ThemeUpdateInput,
+} from '@/types/theme'
+
+const API_URL = import.meta.env.VITE_API_URL || '/api'
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+})
+
+// Theme API
+export const themesApi = {
+  list: async (includeInactive = false): Promise<ThemeListResponse> => {
+    const response = await api.get<ThemeListResponse>('/themes', {
+      params: { include_inactive: includeInactive },
+    })
+    return response.data
+  },
+
+  get: async (id: string): Promise<Theme> => {
+    const response = await api.get<Theme>(`/themes/${id}`)
+    return response.data
+  },
+
+  create: async (data: ThemeCreateInput): Promise<Theme> => {
+    const response = await api.post<Theme>('/themes', data)
+    return response.data
+  },
+
+  update: async (id: string, data: ThemeUpdateInput): Promise<Theme> => {
+    const response = await api.put<Theme>(`/themes/${id}`, data)
+    return response.data
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/themes/${id}`)
+  },
+
+  getVersions: async (id: string): Promise<ThemeVersionListResponse> => {
+    const response = await api.get<ThemeVersionListResponse>(`/themes/${id}/versions`)
+    return response.data
+  },
+
+  restoreVersion: async (themeId: string, versionId: string, changedBy?: string): Promise<Theme> => {
+    const response = await api.post<Theme>(
+      `/themes/${themeId}/restore/${versionId}`,
+      null,
+      { params: { changed_by: changedBy } }
+    )
+    return response.data
+  },
+}
+
+export default api

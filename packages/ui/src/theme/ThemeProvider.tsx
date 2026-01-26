@@ -1,15 +1,27 @@
-import { createContext, useEffect, useState, useCallback, ReactNode } from 'react'
-import { ThemeId, ThemeMode, themes, getThemeColors } from './themes'
+import { createContext, useEffect, useState, useCallback, ReactNode, useRef } from 'react'
+import { ThemeId, ThemeMode, themes, getThemeColors, ThemeColors } from './themes'
 
 const THEME_STORAGE_KEY = 'expertly-theme'
 const MODE_STORAGE_KEY = 'expertly-theme-mode'
 
+// Type for API themes
+interface ApiTheme {
+  id: string
+  name: string
+  slug: string
+  colors: {
+    light: ThemeColors
+    dark: ThemeColors
+  }
+}
+
 export interface ThemeContextValue {
-  themeId: ThemeId
+  themeId: ThemeId | string
   mode: ThemeMode
-  setTheme: (id: ThemeId) => void
+  setTheme: (id: ThemeId | string) => void
   setMode: (mode: ThemeMode) => void
   toggleMode: () => void
+  availableThemes: { id: string; name: string }[]
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null)
@@ -19,13 +31,10 @@ function getSystemMode(): ThemeMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
-function getStoredTheme(): ThemeId {
+function getStoredTheme(): string {
   if (typeof window === 'undefined') return 'violet'
   const stored = localStorage.getItem(THEME_STORAGE_KEY)
-  if (stored && (stored === 'violet' || stored === 'ocean')) {
-    return stored
-  }
-  return 'violet'
+  return stored || 'violet'
 }
 
 function getStoredMode(): ThemeMode | null {
@@ -37,8 +46,20 @@ function getStoredMode(): ThemeMode | null {
   return null
 }
 
-function applyThemeToDOM(themeId: ThemeId, mode: ThemeMode) {
-  const colors = getThemeColors(themeId, mode)
+function applyThemeToDOM(themeId: string, mode: ThemeMode, customThemes?: Map<string, ApiTheme>) {
+  let colors: ThemeColors
+
+  // Check if it's a custom theme from API
+  if (customThemes?.has(themeId)) {
+    const customTheme = customThemes.get(themeId)!
+    colors = customTheme.colors[mode]
+  } else if (themes[themeId as ThemeId]) {
+    colors = getThemeColors(themeId as ThemeId, mode)
+  } else {
+    // Fallback to violet
+    colors = getThemeColors('violet', mode)
+  }
+
   const root = document.documentElement
 
   // Apply primary colors
@@ -76,14 +97,17 @@ interface ThemeProviderProps {
   children: ReactNode
   defaultTheme?: ThemeId
   defaultMode?: ThemeMode
+  /** Optional URL to fetch themes from Admin API */
+  themesApiUrl?: string
 }
 
 export function ThemeProvider({
   children,
   defaultTheme = 'violet',
   defaultMode,
+  themesApiUrl,
 }: ThemeProviderProps) {
-  const [themeId, setThemeId] = useState<ThemeId>(() => getStoredTheme() || defaultTheme)
+  const [themeId, setThemeId] = useState<string>(() => getStoredTheme() || defaultTheme)
   const [mode, setModeState] = useState<ThemeMode>(() => {
     const stored = getStoredMode()
     if (stored) return stored
@@ -91,9 +115,51 @@ export function ThemeProvider({
     return getSystemMode()
   })
 
+  // Store custom themes from API
+  const customThemesRef = useRef<Map<string, ApiTheme>>(new Map())
+  const [availableThemes, setAvailableThemes] = useState<{ id: string; name: string }[]>(() => {
+    // Start with hardcoded themes
+    return Object.values(themes).map(t => ({ id: t.id, name: t.name }))
+  })
+
+  // Fetch themes from API if URL provided
+  useEffect(() => {
+    if (!themesApiUrl) return
+
+    const fetchThemes = async () => {
+      try {
+        const response = await fetch(themesApiUrl)
+        if (!response.ok) {
+          console.warn('Failed to fetch themes from Admin API, using defaults')
+          return
+        }
+
+        const apiThemes: ApiTheme[] = await response.json()
+
+        // Store custom themes
+        const customMap = new Map<string, ApiTheme>()
+        apiThemes.forEach(theme => {
+          customMap.set(theme.slug, theme)
+        })
+        customThemesRef.current = customMap
+
+        // Update available themes list
+        setAvailableThemes(apiThemes.map(t => ({ id: t.slug, name: t.name })))
+
+        // Re-apply current theme in case it was updated
+        applyThemeToDOM(themeId, mode, customMap)
+      } catch (error) {
+        console.warn('Error fetching themes from Admin API:', error)
+        // Continue with hardcoded themes
+      }
+    }
+
+    fetchThemes()
+  }, [themesApiUrl, themeId, mode])
+
   // Apply theme on mount and when values change
   useEffect(() => {
-    applyThemeToDOM(themeId, mode)
+    applyThemeToDOM(themeId, mode, customThemesRef.current)
   }, [themeId, mode])
 
   // Listen for system theme changes
@@ -109,8 +175,9 @@ export function ThemeProvider({
     return () => mediaQuery.removeEventListener('change', handleChange)
   }, [])
 
-  const setTheme = useCallback((id: ThemeId) => {
-    if (themes[id]) {
+  const setTheme = useCallback((id: string) => {
+    // Accept both hardcoded themes and custom themes from API
+    if (themes[id as ThemeId] || customThemesRef.current.has(id)) {
       setThemeId(id)
       localStorage.setItem(THEME_STORAGE_KEY, id)
     }
@@ -130,7 +197,7 @@ export function ThemeProvider({
   }, [])
 
   return (
-    <ThemeContext.Provider value={{ themeId, mode, setTheme, setMode, toggleMode }}>
+    <ThemeContext.Provider value={{ themeId, mode, setTheme, setMode, toggleMode, availableThemes }}>
       {children}
     </ThemeContext.Provider>
   )

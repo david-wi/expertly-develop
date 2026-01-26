@@ -47,7 +47,7 @@ export function Header() {
           {showProductSwitcher && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowProductSwitcher(false)} />
-              <div className="absolute top-full left-0 mt-1 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+              <div className="fixed left-6 top-16 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-[calc(100vh-5rem)] overflow-y-auto">
                 <div className="p-2">
                   <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Switch Product</p>
                   {EXPERTLY_PRODUCTS.map((product) => (

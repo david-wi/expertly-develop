@@ -18,6 +18,7 @@ export interface ExpertlyProduct {
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
+  { name: 'Admin', code: 'admin', href: 'http://expertly-admin.152.42.152.243.sslip.io', icon: '⚙️', description: 'System administration' },
   { name: 'Define', code: 'define', href: 'http://expertly-define.152.42.152.243.sslip.io', icon: '📋', description: 'Requirements management' },
   { name: 'Develop', code: 'develop', href: 'http://expertly-develop.152.42.152.243.sslip.io', icon: '🛠️', description: 'Visual walkthroughs' },
   { name: 'Identity', code: 'identity', href: 'http://expertly-identity.152.42.152.243.sslip.io', icon: '👤', description: 'Users & teams' },
@@ -189,7 +190,7 @@ export function Sidebar({
               className="fixed inset-0 z-40"
               onClick={() => setShowProductSwitcher(false)}
             />
-            <div className={`absolute top-full left-0 right-0 ${dropdownBg} border-b ${borderColor} shadow-lg z-50 max-h-80 overflow-y-auto`}>
+            <div className={`fixed left-0 top-14 w-64 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
               <div className="p-2">
                 <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
                 {EXPERTLY_PRODUCTS.map((product) => (
