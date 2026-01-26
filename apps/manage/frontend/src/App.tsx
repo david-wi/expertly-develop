@@ -5,12 +5,14 @@ import Queues from './pages/Queues'
 import Users from './pages/Users'
 import Teams from './pages/Teams'
 import RecurringTasks from './pages/RecurringTasks'
+import LandingPage from './pages/LandingPage'
 import Layout from './components/Layout'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="tasks" element={<Tasks />} />

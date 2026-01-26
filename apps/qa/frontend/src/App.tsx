@@ -7,14 +7,17 @@ import Projects from './pages/Projects'
 import ProjectDetail from './pages/ProjectDetail'
 import QuickStart from './pages/QuickStart'
 import TestRun from './pages/TestRun'
+import EnvironmentSetup from './pages/EnvironmentSetup'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   return (
     <AuthProvider>
       <Routes>
         {/* Public routes */}
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
 
@@ -55,6 +58,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <TestRun />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/projects/:projectId/environments"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <EnvironmentSetup />
               </Layout>
             </ProtectedRoute>
           }

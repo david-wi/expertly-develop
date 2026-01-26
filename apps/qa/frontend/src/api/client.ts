@@ -154,13 +154,28 @@ export const projectsApi = {
 export const environmentsApi = {
   list: (projectId: string) =>
     api.get(`/projects/${projectId}/environments`).then(r => r.data),
+  get: (projectId: string, environmentId: string) =>
+    api.get(`/projects/${projectId}/environments/${environmentId}`).then(r => r.data),
   create: (projectId: string, data: {
     name: string;
     type: string;
     base_url: string;
     credentials?: object;
     is_default?: boolean;
+    is_read_only?: boolean;
+    notes?: string;
   }) => api.post(`/projects/${projectId}/environments`, data).then(r => r.data),
+  update: (projectId: string, environmentId: string, data: {
+    name?: string;
+    type?: string;
+    base_url?: string;
+    credentials?: object;
+    is_default?: boolean;
+    is_read_only?: boolean;
+    notes?: string;
+  }) => api.patch(`/projects/${projectId}/environments/${environmentId}`, data).then(r => r.data),
+  delete: (projectId: string, environmentId: string) =>
+    api.delete(`/projects/${projectId}/environments/${environmentId}`),
 }
 
 // Tests

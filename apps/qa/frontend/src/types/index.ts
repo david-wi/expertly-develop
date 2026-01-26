@@ -51,10 +51,16 @@ export interface Environment {
   id: string
   project_id: string
   name: string
-  type: 'staging' | 'production' | 'qa' | 'development'
+  type: 'staging' | 'production' | 'qa' | 'development' | string
   base_url: string
   is_default: boolean
+  is_read_only: boolean
   notes: string | null
+  credentials?: {
+    username?: string
+    password?: string
+    login_url?: string
+  }
   created_at: string
   updated_at: string
 }

@@ -1,10 +1,13 @@
+import { useState, useEffect } from 'react';
 import { useDashboardStore } from './store/dashboard-store';
 import { useWebSocket } from './hooks/useWebSocket';
 import Dashboard from './components/Dashboard';
 import { Sidebar } from './components/Sidebar';
 import ConnectionStatus from './components/ConnectionStatus';
+import LandingPage from './pages/LandingPage';
+import { ExternalLink } from 'lucide-react';
 
-export default function App() {
+function MainApp() {
   const { connected } = useDashboardStore();
   const ws = useWebSocket();
 
@@ -15,6 +18,35 @@ export default function App() {
         <Dashboard ws={ws} />
       </main>
       <ConnectionStatus connected={connected} />
+
+      {/* Fixed bottom-right link to marketing page */}
+      <a
+        href="/landing"
+        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition-colors shadow-lg"
+      >
+        <ExternalLink className="w-4 h-4" />
+        View marketing page
+      </a>
     </div>
   );
+}
+
+export default function App() {
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Simple routing: /landing shows the landing page, everything else shows the main app
+  if (currentPath === '/landing') {
+    return <LandingPage />;
+  }
+
+  return <MainApp />;
 }
