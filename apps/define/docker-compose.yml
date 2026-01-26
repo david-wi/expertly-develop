@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - SKIP_AUTH=true
+      - LOG_LEVEL=DEBUG
+      - DATABASE_URL=sqlite:///./data/expertly-define.db
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+        - VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-dev}
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+    name: expertly-define

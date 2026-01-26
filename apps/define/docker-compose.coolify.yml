@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  define-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+      args:
+        - VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+        - VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-${SOURCE_COMMIT:-unknown}}
+    depends_on:
+      - define-backend
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.define-frontend.rule=Host(`define.ai.devintensive.com`)"
+      - "traefik.http.routers.define-frontend.entrypoints=websecure"
+      - "traefik.http.routers.define-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.define-frontend.loadbalancer.server.port=80"
+    restart: unless-stopped
+    networks:
+      - traefik
+      - default
+
+  define-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - define-data:/app/data
+      - define-uploads:/app/uploads
+    environment:
+      - SKIP_AUTH=${SKIP_AUTH:-false}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=sqlite:///./data/expertly-define.db
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.define-backend.rule=Host(`define-api.ai.devintensive.com`)"
+      - "traefik.http.routers.define-backend.entrypoints=websecure"
+      - "traefik.http.routers.define-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.define-backend.loadbalancer.server.port=8000"
+    restart: unless-stopped
+    networks:
+      - traefik
+      - default
+
+volumes:
+  define-data:
+  define-uploads:
+
+networks:
+  traefik:
+    external: true

@@ -218,31 +218,54 @@ services:
   # ===================
   # EXPERTLY DEFINE
   # ===================
-  define:
-    build:
-      context: .
-      dockerfile: ./apps/define/Dockerfile
+  define-backend:
+    build: ./apps/define/backend
     environment:
-      - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
-      - IDENTITY_URL=https://identity.ai.devintensive.com
-      - NEXT_PUBLIC_IDENTITY_API_URL=https://identity-api.ai.devintensive.com
+      - SKIP_AUTH=${SKIP_AUTH:-false}
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=sqlite:///./data/expertly-define.db
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - define_data:/app/data
+      - define_uploads:/app/uploads
     networks:
       - coolify
       - default
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
-      - "traefik.http.routers.define.entrypoints=https"
-      - "traefik.http.routers.define.rule=Host(`define.ai.devintensive.com`)"
-      - "traefik.http.routers.define.tls=true"
-      - "traefik.http.routers.define.tls.certresolver=letsencrypt"
-      - "traefik.http.services.define.loadbalancer.server.port=3000"
+      - "traefik.http.routers.define-backend.entrypoints=https"
+      - "traefik.http.routers.define-backend.rule=Host(`define-api.ai.devintensive.com`)"
+      - "traefik.http.routers.define-backend.tls=true"
+      - "traefik.http.routers.define-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.define-backend.loadbalancer.server.port=8000"
     healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 3s
       retries: 3
+    restart: unless-stopped
+
+  define-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/define/frontend/Dockerfile.prod
+      args:
+        VITE_UI_REMOTE_URL: https://ui.ai.devintensive.com
+        VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
+    depends_on:
+      - define-backend
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.routers.define-frontend.entrypoints=https"
+      - "traefik.http.routers.define-frontend.rule=Host(`define.ai.devintensive.com`)"
+      - "traefik.http.routers.define-frontend.tls=true"
+      - "traefik.http.routers.define-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.define-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # ===================
@@ -529,6 +552,8 @@ networks:
 volumes:
   admin_postgres_data:
   artifacts_data:
+  define_data:
+  define_uploads:
   identity_postgres_data:
   mongo_data:
   qa_postgres_data:
