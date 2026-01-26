@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Accept build args
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+ARG VITE_IDENTITY_URL=https://identity.ai.devintensive.com
 ARG VITE_BUILD_TIMESTAMP
 
 # Copy frontend package files and install deps
@@ -16,6 +17,7 @@ COPY apps/define/frontend ./
 
 # Set environment variables for Vite build
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
+ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
       export VITE_BUILD_TIMESTAMP=$(date +%s); \
     else \
@@ -23,6 +25,7 @@ RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
     fi && \
     echo "Build timestamp: $VITE_BUILD_TIMESTAMP" && \
     echo "UI Remote URL: $VITE_UI_REMOTE_URL" && \
+    echo "Identity URL: $VITE_IDENTITY_URL" && \
     VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP npm run build
 
 # Production stage

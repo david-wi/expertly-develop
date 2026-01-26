@@ -1,11 +1,31 @@
 import axios from 'axios'
 
+// Identity service URL for authentication
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
+
 const api = axios.create({
   baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with requests
 })
+
+// Redirect to Identity login on 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Build return URL from current location
+      const returnUrl = window.location.href
+      const loginUrl = new URL('/login', IDENTITY_URL)
+      loginUrl.searchParams.set('return_url', returnUrl)
+      window.location.href = loginUrl.toString()
+      return new Promise(() => {}) // Never resolve - we're redirecting
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Types
 export interface Product {

@@ -225,6 +225,7 @@ services:
       - LOG_LEVEL=INFO
       - DATABASE_URL=sqlite:///./data/expertly-define.db
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
     volumes:
       - define_data:/app/data
       - define_uploads:/app/uploads
@@ -252,6 +253,7 @@ services:
       dockerfile: ./apps/define/frontend/Dockerfile.prod
       args:
         VITE_UI_REMOTE_URL: https://ui.ai.devintensive.com
+        VITE_IDENTITY_URL: https://identity.ai.devintensive.com
         VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
     depends_on:
       - define-backend

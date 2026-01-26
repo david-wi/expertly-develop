@@ -8,6 +8,8 @@ class Settings(BaseSettings):
 
     # Auth
     skip_auth: bool = False
+    identity_api_url: str = "https://identity-api.ai.devintensive.com"
+    session_cookie_name: str = "expertly_session"
 
     # App
     app_name: str = "Expertly Define"
