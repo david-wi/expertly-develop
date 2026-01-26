@@ -98,7 +98,8 @@ services:
 
   admin-frontend:
     build:
-      context: ./apps/admin/frontend
+      context: .
+      dockerfile: ./apps/admin/frontend/Dockerfile
       args:
         VITE_API_URL: https://admin-api.ai.devintensive.com/api
     depends_on:
