@@ -4,7 +4,7 @@ import {
   UsersRound,
   Building2,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
 
 const navigation = [
   { name: 'Users & Bots', href: '/users', icon: Users },

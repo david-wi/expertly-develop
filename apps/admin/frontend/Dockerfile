@@ -5,16 +5,9 @@ WORKDIR /app
 
 # Accept build args
 ARG VITE_API_URL
-
-# Copy shared UI package
-COPY packages/ui ./packages/ui
-
-# Install UI package dependencies
-WORKDIR /app/packages/ui
-RUN npm install
+ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 
 # Copy frontend package files and install deps
-WORKDIR /app/apps/admin/frontend
 COPY apps/admin/frontend/package.json apps/admin/frontend/package-lock.json* ./
 RUN npm install
 
@@ -23,6 +16,7 @@ COPY apps/admin/frontend ./
 
 # Set environment variables for Vite build
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 RUN npm run build
 
 # Production stage - nginx to serve static files

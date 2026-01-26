@@ -3,6 +3,7 @@ import { ChevronDown, Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Act
 import { cn } from '../lib/utils';
 import { useDashboardStore } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
+import { EXPERTLY_PRODUCTS as SHARED_PRODUCTS } from 'expertly_ui/index';
 
 // Get the WebSocket URL for the agent command
 const getAgentCommand = () => {
@@ -12,20 +13,12 @@ const getAgentCommand = () => {
   return `npx @expertly-vibecode/agent -s ${wsUrl}`;
 };
 
-const EXPERTLY_PRODUCTS = [
-  { name: 'Define', code: 'define', href: 'https://define.ai.devintensive.com', description: 'Requirements management', initials: 'De' },
-  { name: 'Design', code: 'design', href: 'https://design.ai.devintensive.com', description: 'Design system', initials: 'Ds' },
-  { name: 'Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', description: 'Visual walkthroughs', initials: 'Dv' },
-  { name: 'Hospitality', code: 'hospitality', href: 'https://hospitality.ai.devintensive.com', description: 'Hospitality management', initials: 'Ho' },
-  { name: 'Logistics', code: 'logistics', href: 'https://logistics.ai.devintensive.com', description: 'Logistics management', initials: 'Lo' },
-  { name: 'Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', description: 'Task management', initials: 'Ma' },
-  { name: 'Partnerships', code: 'partnerships', href: 'https://partnerships.ai.devintensive.com', description: 'Partnership management', initials: 'Pa' },
-  { name: 'Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', description: 'Salon management', initials: 'Sa' },
-  { name: 'Simulate', code: 'simulate', href: 'https://simulate.ai.devintensive.com', description: 'Simulation platform', initials: 'Si' },
-  { name: 'Today', code: 'today', href: 'https://today.ai.devintensive.com', description: 'Daily workflow', initials: 'To' },
-  { name: 'VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', description: 'Vibe coding platform', initials: 'VC', current: true },
-  { name: 'VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', description: 'Vibe testing platform', initials: 'VT' },
-];
+// Map shared products to include initials and mark current
+const EXPERTLY_PRODUCTS = SHARED_PRODUCTS.map(p => ({
+  ...p,
+  initials: p.name.slice(0, 2),
+  current: p.code === 'vibecode',
+}));
 
 // Expertly Logo SVG component
 function ExpertlyLogo({ className = 'w-8 h-8' }: { className?: string }) {

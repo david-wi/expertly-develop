@@ -3,19 +3,15 @@ FROM node:20-alpine as build
 
 WORKDIR /app
 
-# Copy the shared UI package first
-COPY packages/ui ./packages/ui
-
 # Build arguments
 ARG VITE_API_URL=http://localhost:8000/api/v1
 ARG VITE_BUILD_TIMESTAMP
+ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 
 # Copy package files
 COPY apps/salon/frontend/package*.json ./
-
-# Add @expertly/ui as local dependency
-RUN npm pkg set dependencies.@expertly/ui=file:./packages/ui
 
 # Install dependencies
 RUN npm install

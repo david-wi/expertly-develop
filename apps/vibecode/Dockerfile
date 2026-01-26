@@ -3,6 +3,10 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
+# Build args for federation
+ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
+
 # Copy package files
 COPY package*.json ./
 COPY packages/server/package*.json ./packages/server/

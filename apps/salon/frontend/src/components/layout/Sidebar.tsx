@@ -11,7 +11,7 @@ import {
   Gift,
   Globe,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp } from '@expertly/ui';
+import { Sidebar as SharedSidebar, formatBuildTimestamp } from 'expertly_ui/index';
 import { useAuthStore } from '../../stores/authStore';
 
 const navItems = [

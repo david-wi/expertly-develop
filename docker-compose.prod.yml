@@ -1,5 +1,25 @@
 services:
   # ===================
+  # EXPERTLY UI (Module Federation Remote)
+  # ===================
+  ui:
+    build:
+      context: ./packages/ui
+      dockerfile: Dockerfile
+    networks:
+      - coolify
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.routers.ui.entrypoints=https"
+      - "traefik.http.routers.ui.rule=Host(`ui.ai.devintensive.com`)"
+      - "traefik.http.routers.ui.tls=true"
+      - "traefik.http.routers.ui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ui.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
   # EXPERTLY DEVELOP
   # ===================
   develop-backend:

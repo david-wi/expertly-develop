@@ -6,16 +6,9 @@ WORKDIR /app
 # Accept build args
 ARG VITE_API_URL=/api/v1
 ARG VITE_BUILD_TIMESTAMP
-
-# Copy shared UI package
-COPY packages/ui ./packages/ui
-
-# Install UI package dependencies
-WORKDIR /app/packages/ui
-RUN npm install
+ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 
 # Copy frontend package files and install deps
-WORKDIR /app/apps/develop/frontend
 COPY apps/develop/frontend/package.json apps/develop/frontend/package-lock.json* ./
 RUN npm install
 
@@ -23,14 +16,16 @@ RUN npm install
 COPY apps/develop/frontend ./
 
 # Set environment variables for Vite build
-# If VITE_BUILD_TIMESTAMP is not provided, generate it at build time
+# UI components loaded via Module Federation from VITE_UI_REMOTE_URL
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
       export VITE_BUILD_TIMESTAMP=$(date +%s); \
     else \
       export VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP; \
     fi && \
     echo "Build timestamp: $VITE_BUILD_TIMESTAMP" && \
+    echo "UI Remote URL: $VITE_UI_REMOTE_URL" && \
     VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP npm run build
 
 # Production stage

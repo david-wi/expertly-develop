@@ -12,7 +12,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp } from '@expertly/ui'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp } from 'expertly_ui/index'
 
 interface LayoutProps {
   children: ReactNode

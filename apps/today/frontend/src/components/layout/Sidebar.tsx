@@ -11,7 +11,7 @@ import {
   Archive,
   Settings,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp } from '@expertly/ui';
+import { Sidebar as SharedSidebar, formatBuildTimestamp } from 'expertly_ui/index';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },

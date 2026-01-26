@@ -7,7 +7,7 @@ import {
   Users,
   Users2,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
