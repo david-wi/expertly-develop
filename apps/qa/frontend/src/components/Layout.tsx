@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react'
+import React, { ReactNode, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -86,7 +86,7 @@ export default function Layout({ children }: LayoutProps) {
               onClick={() => setSidebarOpen(false)}
               className={props.className}
             >
-              {props.children}
+              {props.children as React.ReactNode}
             </Link>
           )}
         />
