@@ -17,7 +17,8 @@ async def get_redis() -> redis.Redis:
         redis_pool = redis.ConnectionPool.from_url(
             settings.redis_url,
             encoding="utf-8",
-            decode_responses=True
+            decode_responses=True,
+            protocol=2  # Use RESP2 protocol to avoid HELLO auth issues with Redis 7
         )
     return redis.Redis(connection_pool=redis_pool)
 
