@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 
@@ -48,6 +48,18 @@ export default function Artifacts() {
     queryKey: ['artifacts'],
     queryFn: () => api.getArtifacts()
   });
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedFile) {
+        setSelectedFile(null);
+        setFileContent(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [selectedFile]);
 
   const loadFileContent = async (file: ArtifactFile) => {
     setSelectedFile(file);

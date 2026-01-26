@@ -26,6 +26,20 @@ export default function Teams() {
     loadData()
   }, [])
 
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showCreateModal) setShowCreateModal(false)
+        if (showEditModal) setShowEditModal(false)
+        if (showDeleteConfirm) setShowDeleteConfirm(false)
+        if (showMembersModal) setShowMembersModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showCreateModal, showEditModal, showDeleteConfirm, showMembersModal])
+
   const loadData = async () => {
     setLoading(true)
     try {

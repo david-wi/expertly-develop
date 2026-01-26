@@ -40,6 +40,19 @@ export default function RecurringTasks() {
     loadData()
   }, [filter])
 
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showCreateModal) setShowCreateModal(false)
+        if (showEditModal) setShowEditModal(false)
+        if (showDeleteConfirm) setShowDeleteConfirm(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showCreateModal, showEditModal, showDeleteConfirm])
+
   const loadData = async () => {
     setLoading(true)
     try {

@@ -17,6 +17,17 @@ export default function OrganizationsPage() {
     loadOrganizations()
   }, [])
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showCreateModal) {
+        setShowCreateModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showCreateModal])
+
   const loadOrganizations = async () => {
     setLoading(true)
     try {

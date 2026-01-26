@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { waitlist, clients, services, staff } from '../services/api';
@@ -52,6 +52,18 @@ export default function WaitlistPage() {
       queryClient.invalidateQueries({ queryKey: ['waitlist-matches'] });
     },
   });
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showAddModal) setShowAddModal(false);
+        if (showMatchesModal) setShowMatchesModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showAddModal, showMatchesModal]);
 
   const handleCheckMatches = () => {
     setShowMatchesModal(true);

@@ -52,6 +52,21 @@ export default function UsersPage() {
     }
   }, [filter, orgId])
 
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showCreateModal) setShowCreateModal(false)
+        if (showEditModal) setShowEditModal(false)
+        if (showDeleteConfirm) setShowDeleteConfirm(false)
+        if (showApiKeyModal) setShowApiKeyModal(false)
+        if (showAppearanceModal) setShowAppearanceModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showCreateModal, showEditModal, showDeleteConfirm, showApiKeyModal, showAppearanceModal])
+
   const loadUsers = async () => {
     setLoading(true)
     try {

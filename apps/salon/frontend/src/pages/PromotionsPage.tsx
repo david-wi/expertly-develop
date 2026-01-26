@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { promotions } from '../services/api';
@@ -47,6 +47,18 @@ export default function PromotionsPage() {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
     },
   });
+
+  // Close modals on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (showAddModal) setShowAddModal(false);
+        if (editingPromo) setEditingPromo(null);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showAddModal, editingPromo]);
 
   const formatDiscount = (promo: Promotion) => {
     if (promo.discount_type === 'percentage') {

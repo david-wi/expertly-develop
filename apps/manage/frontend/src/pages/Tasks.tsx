@@ -21,6 +21,17 @@ export default function Tasks() {
     fetchTasks()
   }, [fetchQueues, fetchTasks])
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showCreateModal) {
+        setShowCreateModal(false)
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [showCreateModal])
+
   const filteredTasks = tasks.filter((task) => {
     if (filterQueue && task.queue_id !== filterQueue) return false
     if (filterStatus && task.status !== filterStatus) return false
