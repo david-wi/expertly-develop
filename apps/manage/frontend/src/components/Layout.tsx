@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
+import { useAppStore } from '../stores/appStore'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -25,6 +26,11 @@ const navigation = [
 export default function Layout() {
   const location = useLocation()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
+  const { user, fetchUser } = useAppStore()
+
+  useEffect(() => {
+    fetchUser()
+  }, [fetchUser])
 
   const handleViewChange = (newState: ViewAsState) => {
     setViewAs(newState)
@@ -39,7 +45,7 @@ export default function Layout() {
         productName="Manage"
         navigation={navigation}
         currentPath={location.pathname}
-        bottomSection={
+        orgSwitcher={
           <ViewAsSwitcher onViewChange={handleViewChange} />
         }
         buildInfo={
@@ -54,6 +60,7 @@ export default function Layout() {
             {children}
           </Link>
         )}
+        user={user ? { name: user.name } : undefined}
       />
       <MainContent>
         <Outlet context={{ viewAs }} />
