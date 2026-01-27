@@ -66,6 +66,7 @@ export interface SidebarProps {
   user?: {
     name: string
     role?: string
+    organization?: string
   }
   basePath?: string
   orgSwitcher?: ReactNode
@@ -309,9 +310,10 @@ export function Sidebar({
                 {user.name?.charAt(0) || 'U'}
               </span>
             </div>
-            <div>
-              <p className={`text-sm font-medium ${textPrimary}`}>{user.name || 'Loading...'}</p>
-              {user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
+            <div className="min-w-0">
+              <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
+              {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
+              {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
             </div>
           </div>
         </div>

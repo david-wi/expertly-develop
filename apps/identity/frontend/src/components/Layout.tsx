@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   User,
@@ -7,6 +8,7 @@ import {
   KeyRound,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
+import { authApi, AuthUser, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [
   { name: 'Users', href: '/users', icon: User },
@@ -18,6 +20,55 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
+  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getOrganizationId())
+
+  useEffect(() => {
+    // Fetch current user
+    const fetchUser = async () => {
+      try {
+        // Try to get user from session cookie (no token needed with withCredentials)
+        const user = await authApi.me('')
+        setCurrentUser(user)
+        // If user has an organization and none is selected, select it
+        if (user.organization_id && !selectedOrgId) {
+          setSelectedOrgId(user.organization_id)
+          setOrganizationId(user.organization_id)
+        }
+      } catch {
+        // Not logged in or error - ignore
+      }
+    }
+    fetchUser()
+  }, [])
+
+  useEffect(() => {
+    // Fetch organizations
+    const fetchOrgs = async () => {
+      try {
+        const orgs = await organizationsApi.list()
+        setOrganizations(orgs)
+        // If we have orgs but none selected, select the first one
+        if (orgs.length > 0 && !selectedOrgId) {
+          setSelectedOrgId(orgs[0].id)
+          setOrganizationId(orgs[0].id)
+        }
+      } catch {
+        // Error fetching orgs - ignore
+      }
+    }
+    fetchOrgs()
+  }, [])
+
+  const handleOrgChange = (orgId: string) => {
+    setSelectedOrgId(orgId)
+    setOrganizationId(orgId)
+    // Reload the page to refresh data with new org
+    window.location.reload()
+  }
+
+  const selectedOrg = organizations.find(o => o.id === selectedOrgId)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -26,6 +77,23 @@ export default function Layout() {
         productName="Identity"
         navigation={navigation}
         currentPath={location.pathname}
+        user={currentUser ? {
+          name: currentUser.name,
+          organization: currentUser.organization_name || selectedOrg?.name,
+        } : undefined}
+        orgSwitcher={organizations.length > 0 ? (
+          <select
+            value={selectedOrgId || ''}
+            onChange={(e) => handleOrgChange(e.target.value)}
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          >
+            {organizations.map((org) => (
+              <option key={org.id} value={org.id}>
+                {org.name}
+              </option>
+            ))}
+          </select>
+        ) : undefined}
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">
