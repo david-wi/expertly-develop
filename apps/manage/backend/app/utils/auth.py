@@ -113,22 +113,25 @@ async def get_current_user(
             return User(**user_doc)
 
         # If no local user found, create one based on Identity user
-        # First, ensure the organization exists
-        org_doc = await db.organizations.find_one({"_id": ObjectId(identity_user.organization_id)})
+        # First, ensure the organization exists (look up by identity_id)
+        org_doc = await db.organizations.find_one({"identity_id": identity_user.organization_id})
         if not org_doc:
-            # Create organization
+            # Create organization with new ObjectId
             org_data = {
-                "_id": ObjectId(identity_user.organization_id),
+                "_id": ObjectId(),
+                "identity_id": identity_user.organization_id,
                 "name": identity_user.organization_name or "Default Organization",
                 "slug": identity_user.organization_id[:8],
                 "is_default": False,
             }
             await db.organizations.insert_one(org_data)
+            org_doc = org_data
 
-        # Create local user linked to Identity
+        # Create local user linked to Identity (with new ObjectId)
         user_data = {
-            "_id": ObjectId(identity_user.id),
-            "organization_id": ObjectId(identity_user.organization_id),
+            "_id": ObjectId(),
+            "identity_id": identity_user.id,
+            "organization_id": org_doc["_id"],
             "email": identity_user.email,
             "name": identity_user.name,
             "user_type": "human",

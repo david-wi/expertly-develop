@@ -77,27 +77,28 @@ async def _ensure_local_user(identity_user: IdentityUser, db) -> dict:
     if user:
         return user
 
-    # Create tenant if needed
-    tenant = await db.tenants.find_one({"_id": ObjectId(identity_user.organization_id)})
+    # Create tenant if needed (look up by identity_id)
+    tenant = await db.tenants.find_one({"identity_id": identity_user.organization_id})
 
     if not tenant:
-        # Try to find by slug or name match
+        # Try to find by slug match
         tenant = await db.tenants.find_one({"slug": identity_user.organization_id[:8]})
 
         if not tenant:
-            # Create tenant from Identity org
+            # Create tenant from Identity org (with new ObjectId)
             tenant_doc = {
-                "_id": ObjectId(identity_user.organization_id) if len(identity_user.organization_id) == 24 else ObjectId(),
+                "_id": ObjectId(),
+                "identity_id": identity_user.organization_id,
                 "name": identity_user.organization_name or "Default Tenant",
                 "slug": identity_user.organization_id[:8],
             }
             await db.tenants.insert_one(tenant_doc)
             tenant = tenant_doc
 
-    # Create local user linked to Identity
-    user_id = ObjectId(identity_user.id) if len(identity_user.id) == 24 else ObjectId()
+    # Create local user linked to Identity (with new ObjectId)
     user_doc = {
-        "_id": user_id,
+        "_id": ObjectId(),
+        "identity_id": identity_user.id,
         "tenant_id": tenant["_id"],
         "email": identity_user.email,
         "name": identity_user.name,
