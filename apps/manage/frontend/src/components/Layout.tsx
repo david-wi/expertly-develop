@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -8,6 +9,7 @@ import {
   Users2,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
+import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -20,6 +22,13 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
+  const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
+
+  const handleViewChange = (newState: ViewAsState) => {
+    setViewAs(newState)
+    // Reload page to refresh data with new view context
+    window.location.reload()
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -28,6 +37,9 @@ export default function Layout() {
         productName="Manage"
         navigation={navigation}
         currentPath={location.pathname}
+        bottomSection={
+          <ViewAsSwitcher onViewChange={handleViewChange} />
+        }
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">
@@ -42,7 +54,7 @@ export default function Layout() {
         )}
       />
       <MainContent>
-        <Outlet />
+        <Outlet context={{ viewAs }} />
       </MainContent>
     </div>
   )
