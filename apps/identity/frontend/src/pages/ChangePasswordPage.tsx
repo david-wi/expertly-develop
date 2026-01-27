@@ -1,10 +1,9 @@
 import { useState, FormEvent } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Lock, AlertCircle, Loader2, CheckCircle, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import { authApi } from '../services/api'
 
 export default function ChangePasswordPage() {
-  const navigate = useNavigate()
 
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')

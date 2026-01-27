@@ -227,7 +227,7 @@ export default function MagicCodePage() {
                   {code.map((digit, index) => (
                     <input
                       key={index}
-                      ref={(el) => (codeInputRefs.current[index] = el)}
+                      ref={(el) => { codeInputRefs.current[index] = el }}
                       type="text"
                       value={digit}
                       onChange={(e) => handleCodeChange(index, e.target.value)}
