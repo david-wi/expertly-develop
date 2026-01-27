@@ -321,7 +321,7 @@ services:
       context: .
       dockerfile: ./apps/manage/frontend/Dockerfile
       args:
-        VITE_API_URL: https://manage-api.ai.devintensive.com
+        VITE_API_URL: ""
     depends_on:
       - manage-backend
     networks:
