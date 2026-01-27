@@ -91,9 +91,9 @@ jobs:
             echo "=== Deployment to $TARGET complete ==="
           ENDSSH
 
-          # Extract deploy color from output
-          DEPLOY_COLOR=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "cat /tmp/deploy_output | grep DEPLOY_COLOR | cut -d= -f2")
-          echo "deploy_color=$DEPLOY_COLOR" >> $GITHUB_OUTPUT
+          # Extract deploy color from output (trim whitespace)
+          DEPLOY_COLOR=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "cat /tmp/deploy_output 2>/dev/null | grep DEPLOY_COLOR | cut -d= -f2 | tr -d '[:space:]'" || echo "green")
+          echo "deploy_color=${DEPLOY_COLOR}" >> $GITHUB_OUTPUT
 
       - name: Upload build log on failure
         if: failure()
@@ -272,4 +272,3 @@ jobs:
 
             echo "=== Rollback complete - $CURRENT still active ==="
           ENDSSH
-# Blue/green deployment test - 2026-01-27T02:07:23-05:00
