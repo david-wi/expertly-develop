@@ -13,11 +13,11 @@ export default defineConfig({
       name: 'expertly_develop',
       remotes: {
         expertly_ui: `${UI_REMOTE_URL}/assets/remoteEntry.js`,
-      },
+      } as Record<string, unknown>,
       shared: {
         react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
         'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
-      },
+      } as Record<string, unknown>,
     }),
   ],
   build: {
@@ -32,7 +32,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-      },
+      } as Record<string, unknown>,
     },
   },
 })
