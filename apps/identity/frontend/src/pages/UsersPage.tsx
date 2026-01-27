@@ -409,7 +409,7 @@ export default function UsersPage() {
       {/* Create/Edit Modal */}
       {(showCreateModal || showEditModal) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-xl w-full p-6 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-medium text-gray-900 mb-4">
               {showEditModal ? 'Edit User' : `Add New ${formData.user_type === 'bot' ? 'Bot' : 'User'}`}
             </h3>
@@ -418,7 +418,7 @@ export default function UsersPage() {
               {!showEditModal && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                  <div className="flex rounded-md overflow-hidden border border-gray-300">
+                  <div className="flex rounded-md overflow-hidden border border-gray-300 max-w-xs">
                     <button
                       type="button"
                       onClick={() => setFormData({ ...formData, user_type: 'human', bot_config: undefined })}
@@ -445,60 +445,87 @@ export default function UsersPage() {
                 </div>
               )}
 
-              {/* Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder={formData.user_type === 'bot' ? 'e.g., Research Bot' : 'e.g., John Smith'}
-                  required
-                />
-              </div>
-
-              {/* Email (shown for humans, under Advanced for bots) */}
+              {/* Human: Name + Email side by side */}
               {formData.user_type === 'human' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={formData.email || ''}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    placeholder="user@example.com"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      placeholder="e.g., John Smith"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email || ''}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      placeholder="user@example.com"
+                    />
+                  </div>
                 </div>
               )}
 
-              {/* Role (only for humans) */}
+              {/* Human: Title + Role side by side */}
               {formData.user_type === 'human' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as 'owner' | 'admin' | 'member' })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                    <option value="owner">Owner</option>
-                  </select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
+                    <input
+                      type="text"
+                      value={formData.title || ''}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      placeholder="e.g., Senior Developer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <select
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value as 'owner' | 'admin' | 'member' })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                      <option value="owner">Owner</option>
+                    </select>
+                  </div>
                 </div>
               )}
 
-              {/* Title */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
-                <input
-                  type="text"
-                  value={formData.title || ''}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Senior Developer"
-                />
-              </div>
+              {/* Bot: Name + Title side by side */}
+              {formData.user_type === 'bot' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      placeholder="e.g., Research Bot"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title (optional)</label>
+                    <input
+                      type="text"
+                      value={formData.title || ''}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      placeholder="e.g., AI Assistant"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Responsibilities */}
               <div>
@@ -509,7 +536,7 @@ export default function UsersPage() {
                   value={formData.responsibilities || ''}
                   onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
+                  rows={2}
                   placeholder={formData.user_type === 'bot'
                     ? 'Describe what this bot does...'
                     : 'Describe their responsibilities...'}
@@ -567,28 +594,25 @@ export default function UsersPage() {
 
               {/* Bot-specific config */}
               {(formData.user_type === 'bot' || selectedUser?.user_type === 'bot') && (
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Bot Configuration</h4>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      What I can help with
-                    </label>
-                    <textarea
-                      value={formData.bot_config?.what_i_can_help_with || ''}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          bot_config: {
-                            ...formData.bot_config,
-                            what_i_can_help_with: e.target.value,
-                          },
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                      rows={3}
-                      placeholder="e.g., LinkedIn posting, research, content writing..."
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    What I can help with
+                  </label>
+                  <textarea
+                    value={formData.bot_config?.what_i_can_help_with || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        bot_config: {
+                          ...formData.bot_config,
+                          what_i_can_help_with: e.target.value,
+                        },
+                      })
+                    }
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    rows={2}
+                    placeholder="e.g., LinkedIn posting, research, content writing..."
+                  />
                 </div>
               )}
 
