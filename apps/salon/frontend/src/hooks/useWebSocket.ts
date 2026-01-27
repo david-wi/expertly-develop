@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { getAccessToken } from '../services/api';
 import { useCalendarStore } from '../stores/calendarStore';
 
+// WebSocket uses cookies for auth (same as API), no token needed
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/api/v1/ws';
 const RECONNECT_DELAY = 3000;
 const PING_INTERVAL = 30000;
@@ -47,18 +47,13 @@ export function useWebSocket() {
   );
 
   const connect = useCallback(() => {
-    const token = getAccessToken();
-    if (!token) {
-      console.log('No token available for WebSocket connection');
-      return;
-    }
-
     // Close existing connection if any
     if (wsRef.current) {
       wsRef.current.close();
     }
 
-    const ws = new WebSocket(`${WS_URL}?token=${token}`);
+    // WebSocket connection - auth is handled via cookies
+    const ws = new WebSocket(WS_URL);
 
     ws.onopen = () => {
       console.log('WebSocket connected');
@@ -130,14 +125,6 @@ export function useWebSocket() {
       disconnect();
     };
   }, [connect, disconnect]);
-
-  // Reconnect when token changes (e.g., after login)
-  useEffect(() => {
-    const token = getAccessToken();
-    if (token && !isConnected) {
-      connect();
-    }
-  }, [connect, isConnected]);
 
   return {
     isConnected,
