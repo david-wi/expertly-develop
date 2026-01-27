@@ -29,11 +29,8 @@ RUN npm run build
 # Production stage - serve static files
 FROM nginx:alpine
 
-# Copy built files to nginx
+# Copy built files to nginx (vite copies public/* to dist/ automatically)
 COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy version.json from public folder (generated during build)
-COPY --from=builder /app/public/version.json /usr/share/nginx/html/version.json
 
 # Configure nginx for SPA and CORS
 RUN echo 'server { \
