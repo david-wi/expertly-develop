@@ -48,7 +48,14 @@ declare module 'expertly_ui/index' {
     children: ReactNode
   }
 
+  interface ThemeProviderProps {
+    children: ReactNode
+    defaultTheme?: string
+    defaultMode?: 'light' | 'dark'
+  }
+
   export const Sidebar: FC<SidebarProps>
   export const MainContent: FC<MainContentProps>
+  export const ThemeProvider: FC<ThemeProviderProps>
   export function formatBuildTimestamp(timestamp: string | undefined): string | null
 }
