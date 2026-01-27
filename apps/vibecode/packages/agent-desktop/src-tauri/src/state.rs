@@ -34,7 +34,7 @@ pub struct AgentSettings {
 impl Default for AgentSettings {
     fn default() -> Self {
         Self {
-            server_url: "ws://vibecode.ai.devintensive.com".to_string(),
+            server_url: "wss://vibecode.ai.devintensive.com".to_string(),
             working_directory: dirs::home_dir()
                 .map(|p| p.to_string_lossy().to_string())
                 .unwrap_or_else(|| ".".to_string()),

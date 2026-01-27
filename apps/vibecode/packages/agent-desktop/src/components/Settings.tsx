@@ -50,7 +50,7 @@ export default function Settings({ settings, onSave, onCancel }: SettingsProps) 
               setFormData({ ...formData, serverUrl: e.target.value })
             }
             className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-expertly-primary font-mono text-sm"
-            placeholder="ws://vibecode.ai.devintensive.com"
+            placeholder="wss://vibecode.ai.devintensive.com"
           />
           <p className="mt-1 text-xs text-gray-500">
             WebSocket server address
