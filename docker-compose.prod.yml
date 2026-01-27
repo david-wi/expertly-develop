@@ -508,6 +508,8 @@ services:
       - PORT=3001
       - REMOTE_SERVER_URL=${REMOTE_SERVER_URL:-}
       - DEFAULT_EXECUTION_MODE=${DEFAULT_EXECUTION_MODE:-local}
+    volumes:
+      - ./apps/vibecode/packages/server/downloads:/app/packages/server/downloads
     networks:
       - coolify
       - default
