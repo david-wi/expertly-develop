@@ -79,6 +79,20 @@ async def create_user(
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new user or bot."""
+    # Check for duplicate email in organization
+    if user_data.email:
+        existing = await db.execute(
+            select(User).where(
+                User.organization_id == org.id,
+                func.lower(User.email) == user_data.email.lower()
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400,
+                detail="A user with this email already exists in the organization"
+            )
+
     # Generate API key
     api_key = secrets.token_urlsafe(32)
     api_key_hash = bcrypt.hash(api_key)
@@ -136,6 +150,21 @@ async def update_user(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+
+    # Check for duplicate email if email is being changed
+    if user_data.email and user_data.email.lower() != (user.email or "").lower():
+        existing = await db.execute(
+            select(User).where(
+                User.organization_id == org.id,
+                func.lower(User.email) == user_data.email.lower(),
+                User.id != user_id
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=400,
+                detail="A user with this email already exists in the organization"
+            )
 
     update_data = user_data.model_dump(exclude_unset=True)
     if "bot_config" in update_data and update_data["bot_config"]:

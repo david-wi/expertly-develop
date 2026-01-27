@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 from enum import Enum
-from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, DateTime, Boolean, ForeignKey, Text, JSON, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from passlib.context import CryptContext
@@ -27,6 +27,16 @@ class User(Base):
     """User model - supports both human and bot users."""
 
     __tablename__ = "users"
+    __table_args__ = (
+        # Unique email per organization (only for non-null emails)
+        Index(
+            'ix_users_org_email_unique',
+            'organization_id',
+            'email',
+            unique=True,
+            postgresql_where=Column('email').isnot(None)
+        ),
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     organization_id = Column(UUID(as_uuid=True), ForeignKey("organizations.id"), nullable=False)
