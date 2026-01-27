@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   usersApi,
   imagesApi,
@@ -6,6 +7,7 @@ import {
   CreateUserRequest,
   UpdateUserRequest,
   getOrganizationId,
+  clearOrganizationId,
 } from '../services/api'
 
 type UserFilter = 'all' | 'human' | 'bot'
@@ -15,6 +17,7 @@ interface UsersPageProps {
 }
 
 export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
+  const navigate = useNavigate()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<UserFilter>(defaultFilter)
@@ -77,8 +80,17 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
       const userType = filter === 'all' ? undefined : filter
       const data = await usersApi.list(userType)
       setUsers(data)
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to load users:', error)
+      // If organization not found (404), clear stale org ID and redirect
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number } }
+        if (axiosError.response?.status === 404) {
+          clearOrganizationId()
+          navigate('/organizations')
+          return
+        }
+      }
     } finally {
       setLoading(false)
     }
@@ -104,9 +116,21 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
       setShowApiKeyModal(true)
       await loadUsers()
       resetForm()
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Failed to create user:', error)
-      alert(error instanceof Error ? error.message : 'Failed to create user')
+      // If organization not found (404), clear stale org ID and redirect
+      if (error && typeof error === 'object' && 'response' in error) {
+        const axiosError = error as { response?: { status?: number; data?: { detail?: string } } }
+        if (axiosError.response?.status === 404) {
+          clearOrganizationId()
+          alert('Organization not found. Please select an organization.')
+          navigate('/organizations')
+          return
+        }
+        alert(axiosError.response?.data?.detail || 'Failed to create user')
+      } else {
+        alert(error instanceof Error ? error.message : 'Failed to create user')
+      }
     } finally {
       setSaving(false)
     }

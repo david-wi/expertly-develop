@@ -34,9 +34,14 @@ export default function OrganizationsPage() {
       const data = await organizationsApi.list()
       setOrganizations(data)
 
-      // Auto-select first org if none selected
-      if (!currentOrgId && data.length > 0) {
+      // Auto-select first org if none selected, or if current org doesn't exist
+      const currentOrgExists = data.some(org => org.id === currentOrgId)
+      if ((!currentOrgId || !currentOrgExists) && data.length > 0) {
         selectOrganization(data[0].id)
+      } else if (data.length === 0 && currentOrgId) {
+        // Clear stale org ID if no orgs exist
+        setOrganizationId('')
+        setCurrentOrgId(null)
       }
     } catch (error) {
       console.error('Failed to load organizations:', error)
