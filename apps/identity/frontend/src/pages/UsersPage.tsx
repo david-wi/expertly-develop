@@ -355,7 +355,9 @@ export default function UsersPage() {
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-sm text-gray-700 capitalize">{user.role}</span>
+                    <span className="text-sm text-gray-700 capitalize">
+                      {user.user_type === 'bot' ? 'Bot' : user.role}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
                     <span
@@ -430,7 +432,7 @@ export default function UsersPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData({ ...formData, user_type: 'bot', bot_config: {} })}
+                      onClick={() => setFormData({ ...formData, user_type: 'bot', role: 'member', bot_config: {} })}
                       className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                         formData.user_type === 'bot'
                           ? 'bg-purple-600 text-white'
@@ -470,19 +472,21 @@ export default function UsersPage() {
                 </div>
               )}
 
-              {/* Role */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'owner' | 'admin' | 'member' })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="member">Member</option>
-                  <option value="admin">Admin</option>
-                  <option value="owner">Owner</option>
-                </select>
-              </div>
+              {/* Role (only for humans) */}
+              {formData.user_type === 'human' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <select
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value as 'owner' | 'admin' | 'member' })}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                </div>
+              )}
 
               {/* Title */}
               <div>
