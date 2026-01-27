@@ -10,11 +10,11 @@ services:
         GIT_COMMIT: ${GIT_COMMIT:-}
         GIT_BRANCH: ${GIT_BRANCH:-main}
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.ui.entrypoints=https"
       - "traefik.http.routers.ui.rule=Host(`ui.ai.devintensive.com`)"
       - "traefik.http.routers.ui.tls=true"
@@ -35,11 +35,11 @@ services:
     depends_on:
       - mongo
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.ed-backend.entrypoints=https"
       - "traefik.http.routers.ed-backend.rule=Host(`develop-api.ai.devintensive.com`)"
       - "traefik.http.routers.ed-backend.tls=true"
@@ -79,11 +79,11 @@ services:
     depends_on:
       - develop-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.ed-frontend.entrypoints=https"
       - "traefik.http.routers.ed-frontend.rule=Host(`develop.ai.devintensive.com`)"
       - "traefik.http.routers.ed-frontend.tls=true"
@@ -103,11 +103,11 @@ services:
     depends_on:
       - admin-db
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.admin-backend.entrypoints=https"
       - "traefik.http.routers.admin-backend.rule=Host(`admin-api.ai.devintensive.com`)"
       - "traefik.http.routers.admin-backend.tls=true"
@@ -129,11 +129,11 @@ services:
     depends_on:
       - admin-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.admin-frontend.entrypoints=https"
       - "traefik.http.routers.admin-frontend.rule=Host(`admin.ai.devintensive.com`)"
       - "traefik.http.routers.admin-frontend.tls=true"
@@ -169,11 +169,11 @@ services:
       - identity-db
       - app-redis
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.identity-backend.entrypoints=https"
       - "traefik.http.routers.identity-backend.rule=Host(`identity-api.ai.devintensive.com`)"
       - "traefik.http.routers.identity-backend.tls=true"
@@ -196,11 +196,11 @@ services:
     depends_on:
       - identity-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.identity-frontend.entrypoints=https"
       - "traefik.http.routers.identity-frontend.rule=Host(`identity.ai.devintensive.com`)"
       - "traefik.http.routers.identity-frontend.tls=true"
@@ -235,11 +235,11 @@ services:
       - define_data:/app/data
       - define_uploads:/app/uploads
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.define-backend.entrypoints=https"
       - "traefik.http.routers.define-backend.rule=Host(`define-api.ai.devintensive.com`)"
       - "traefik.http.routers.define-backend.tls=true"
@@ -264,11 +264,11 @@ services:
     depends_on:
       - define-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.define-frontend.entrypoints=https"
       - "traefik.http.routers.define-frontend.rule=Host(`define.ai.devintensive.com`)"
       - "traefik.http.routers.define-frontend.tls=true"
@@ -287,11 +287,11 @@ services:
     depends_on:
       - mongo
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.manage-backend.entrypoints=https"
       - "traefik.http.routers.manage-backend.rule=Host(`manage-api.ai.devintensive.com`)"
       - "traefik.http.routers.manage-backend.tls=true"
@@ -313,11 +313,11 @@ services:
     depends_on:
       - manage-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.manage-frontend.entrypoints=https"
       - "traefik.http.routers.manage-frontend.rule=Host(`manage.ai.devintensive.com`)"
       - "traefik.http.routers.manage-frontend.tls=true"
@@ -336,11 +336,11 @@ services:
     depends_on:
       - qa-db
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.qa-backend.entrypoints=https"
       - "traefik.http.routers.qa-backend.rule=Host(`qa.ai.devintensive.com`) && PathPrefix(`/api`)"
       - "traefik.http.routers.qa-backend.tls=true"
@@ -360,11 +360,11 @@ services:
     depends_on:
       - qa-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.qa-frontend.entrypoints=https"
       - "traefik.http.routers.qa-frontend.rule=Host(`qa.ai.devintensive.com`)"
       - "traefik.http.routers.qa-frontend.tls=true"
@@ -396,11 +396,11 @@ services:
     depends_on:
       - mongo
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.salon-backend.entrypoints=https"
       - "traefik.http.routers.salon-backend.rule=Host(`salon-api.ai.devintensive.com`)"
       - "traefik.http.routers.salon-backend.tls=true"
@@ -422,11 +422,11 @@ services:
     depends_on:
       - salon-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.salon-frontend.entrypoints=https"
       - "traefik.http.routers.salon-frontend.rule=Host(`salon.ai.devintensive.com`)"
       - "traefik.http.routers.salon-frontend.tls=true"
@@ -444,11 +444,11 @@ services:
     depends_on:
       - today-db
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.today-backend.entrypoints=https"
       - "traefik.http.routers.today-backend.rule=Host(`today-api.ai.devintensive.com`)"
       - "traefik.http.routers.today-backend.tls=true"
@@ -470,11 +470,11 @@ services:
     depends_on:
       - today-backend
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.today-frontend.entrypoints=https"
       - "traefik.http.routers.today-frontend.rule=Host(`today.ai.devintensive.com`)"
       - "traefik.http.routers.today-frontend.tls=true"
@@ -511,11 +511,11 @@ services:
     volumes:
       - ./apps/vibecode/packages/server/downloads:/app/packages/server/downloads
     networks:
-      - coolify
+      - traefik
       - default
     labels:
       - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
+      - "traefik.docker.network=traefik"
       - "traefik.http.routers.vibecode.entrypoints=https"
       - "traefik.http.routers.vibecode.rule=Host(`vibecode.ai.devintensive.com`)"
       - "traefik.http.routers.vibecode.tls=true"
@@ -554,7 +554,7 @@ services:
     restart: unless-stopped
 
 networks:
-  coolify:
+  traefik:
     external: true
   default:
     driver: bridge
