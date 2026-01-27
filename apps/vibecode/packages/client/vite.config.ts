@@ -13,8 +13,8 @@ export default defineConfig({
         expertly_ui: `${UI_REMOTE_URL}/remoteEntry.js`,
       } as const as any,
       shared: {
-        react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
-        'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
+        react: { singleton: true, requiredVersion: '^19.0.0', eager: true },
+        'react-dom': { singleton: true, requiredVersion: '^19.0.0', eager: true },
       } as const as any,
     }),
   ],
