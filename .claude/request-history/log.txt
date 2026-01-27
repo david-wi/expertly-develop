@@ -1,0 +1,1 @@
+20260127 - Fixed oversized logo in sidebar by updating Tailwind config to scan shared UI package source files. Updated Dockerfiles to copy UI package into build context.

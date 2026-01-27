@@ -328,24 +328,24 @@ services:
   # ===================
   # EXPERTLY VIBETEST
   # ===================
-  qa-backend:
-    build: ./apps/qa/backend
+  vibetest-backend:
+    build: ./apps/vibetest/backend
     environment:
-      - DATABASE_URL=postgresql://vibeqa:vibeqa@qa-db:5432/vibeqa
-      - SECRET_KEY=${QA_SECRET_KEY:-super-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://vibetest:vibetest@vibetest-db:5432/vibetest
+      - SECRET_KEY=${VIBETEST_SECRET_KEY:-super-secret-key-change-in-production}
     depends_on:
-      - qa-db
+      - vibetest-db
     networks:
       - traefik
       - default
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.qa-backend.entrypoints=https"
-      - "traefik.http.routers.qa-backend.rule=Host(`qa.ai.devintensive.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.qa-backend.tls=true"
-      - "traefik.http.routers.qa-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.qa-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.vibetest-backend.entrypoints=https"
+      - "traefik.http.routers.vibetest-backend.rule=Host(`vibetest.ai.devintensive.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.vibetest-backend.tls=true"
+      - "traefik.http.routers.vibetest-backend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vibetest-backend.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -353,33 +353,33 @@ services:
       retries: 3
     restart: unless-stopped
 
-  qa-frontend:
+  vibetest-frontend:
     build:
       context: .
-      dockerfile: ./apps/qa/frontend/Dockerfile
+      dockerfile: ./apps/vibetest/frontend/Dockerfile
     depends_on:
-      - qa-backend
+      - vibetest-backend
     networks:
       - traefik
       - default
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.qa-frontend.entrypoints=https"
-      - "traefik.http.routers.qa-frontend.rule=Host(`qa.ai.devintensive.com`)"
-      - "traefik.http.routers.qa-frontend.tls=true"
-      - "traefik.http.routers.qa-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.qa-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.vibetest-frontend.entrypoints=https"
+      - "traefik.http.routers.vibetest-frontend.rule=Host(`vibetest.ai.devintensive.com`)"
+      - "traefik.http.routers.vibetest-frontend.tls=true"
+      - "traefik.http.routers.vibetest-frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vibetest-frontend.loadbalancer.server.port=80"
     restart: unless-stopped
 
-  qa-db:
+  vibetest-db:
     image: postgres:15
     environment:
-      - POSTGRES_USER=vibeqa
-      - POSTGRES_PASSWORD=vibeqa
-      - POSTGRES_DB=vibeqa
+      - POSTGRES_USER=vibetest
+      - POSTGRES_PASSWORD=vibetest
+      - POSTGRES_DB=vibetest
     volumes:
-      - qa_postgres_data:/var/lib/postgresql/data
+      - vibetest_postgres_data:/var/lib/postgresql/data
     networks:
       - default
     restart: unless-stopped
@@ -566,6 +566,6 @@ volumes:
   define_uploads:
   identity_postgres_data:
   mongo_data:
-  qa_postgres_data:
+  vibetest_postgres_data:
   redis_data:
   today_postgres_data:
