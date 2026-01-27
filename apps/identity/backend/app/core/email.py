@@ -5,6 +5,8 @@ from typing import Optional
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+import aiosmtplib
+
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -17,38 +19,50 @@ async def send_email(
     text_content: Optional[str] = None,
 ) -> bool:
     """
-    Send an email.
+    Send an email via SMTP.
 
     Returns True if successful, False otherwise.
-    For now, this logs the email content since SMTP is not configured.
-    In production, this would send via SMTP or an email service.
+    Falls back to logging if SMTP is not configured.
     """
     settings = get_settings()
 
-    # For now, just log the email (SMTP not configured)
-    # In production, you would configure SMTP_HOST, SMTP_PORT, etc.
-    logger.info(f"EMAIL TO: {to_email}")
-    logger.info(f"SUBJECT: {subject}")
-    logger.info(f"CONTENT: {text_content or html_content}")
+    # Check if SMTP is configured
+    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+        # Fall back to logging
+        logger.info(f"EMAIL TO: {to_email}")
+        logger.info(f"SUBJECT: {subject}")
+        logger.info(f"CONTENT: {text_content or html_content[:500]}...")
+        logger.warning("SMTP not configured - email logged but not sent")
+        return True
 
-    # TODO: Implement actual email sending when SMTP is configured
-    # Example with aiosmtplib:
-    # async with aiosmtplib.SMTP(
-    #     hostname=settings.smtp_host,
-    #     port=settings.smtp_port,
-    #     use_tls=settings.smtp_use_tls,
-    # ) as smtp:
-    #     await smtp.login(settings.smtp_user, settings.smtp_password)
-    #     msg = MIMEMultipart("alternative")
-    #     msg["Subject"] = subject
-    #     msg["From"] = settings.smtp_from_email
-    #     msg["To"] = to_email
-    #     if text_content:
-    #         msg.attach(MIMEText(text_content, "plain"))
-    #     msg.attach(MIMEText(html_content, "html"))
-    #     await smtp.send_message(msg)
+    try:
+        # Build the message
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email or settings.smtp_user}>"
+        msg["To"] = to_email
 
-    return True
+        # Add text and HTML parts
+        if text_content:
+            msg.attach(MIMEText(text_content, "plain"))
+        msg.attach(MIMEText(html_content, "html"))
+
+        # Send via SMTP
+        await aiosmtplib.send(
+            msg,
+            hostname=settings.smtp_host,
+            port=settings.smtp_port,
+            username=settings.smtp_user,
+            password=settings.smtp_password,
+            start_tls=True,  # Use STARTTLS (required for Gmail on port 587)
+        )
+
+        logger.info(f"Email sent successfully to {to_email}")
+        return True
+
+    except Exception as e:
+        logger.error(f"Failed to send email to {to_email}: {e}")
+        return False
 
 
 async def send_magic_code_email(email: str, code: str) -> bool:

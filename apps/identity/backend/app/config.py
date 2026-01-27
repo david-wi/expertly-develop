@@ -25,6 +25,14 @@ class Settings(BaseSettings):
     # Frontend URL for password reset links
     identity_frontend_url: str = "https://identity.ai.devintensive.com"
 
+    # Email/SMTP settings (Gmail: smtp.gmail.com, port 587)
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""  # For Gmail, use an App Password
+    smtp_from_email: str = ""
+    smtp_from_name: str = "Expertly"
+
     class Config:
         env_file = ".env"
 
