@@ -17,6 +17,9 @@ RUN npm install
 # Copy source code
 COPY apps/vibetest/frontend .
 
+# Copy shared UI package source for Tailwind to scan
+COPY packages/ui/src ./packages-ui-src
+
 # Build the application with timestamp
 RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 

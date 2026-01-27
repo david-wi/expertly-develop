@@ -499,8 +499,8 @@ services:
   # ===================
   vibecode:
     build:
-      context: ./apps/vibecode
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./apps/vibecode/Dockerfile
       target: production
     environment:
       - NODE_ENV=production

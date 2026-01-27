@@ -7,17 +7,20 @@ WORKDIR /app
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 
-# Copy package files
-COPY package*.json ./
-COPY packages/server/package*.json ./packages/server/
-COPY packages/client/package*.json ./packages/client/
-COPY packages/agent/package*.json ./packages/agent/
+# Copy package files (paths relative to repo root)
+COPY apps/vibecode/package*.json ./
+COPY apps/vibecode/packages/server/package*.json ./packages/server/
+COPY apps/vibecode/packages/client/package*.json ./packages/client/
+COPY apps/vibecode/packages/agent/package*.json ./packages/agent/
 
 # Install dependencies
 RUN npm install
 
 # Copy source code
-COPY . .
+COPY apps/vibecode/. .
+
+# Copy shared UI package source for Tailwind to scan
+COPY packages/ui/src ./packages-ui-src
 
 # Build both packages
 RUN npm run build
@@ -34,8 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl bash grep 
 RUN mkdir -p /workspace && chmod 777 /workspace
 
 # Copy package files for production install
-COPY package*.json ./
-COPY packages/server/package*.json ./packages/server/
+COPY apps/vibecode/package*.json ./
+COPY apps/vibecode/packages/server/package*.json ./packages/server/
 
 # Install production dependencies only
 RUN npm install --omit=dev --workspace=@expertly-vibecode/server

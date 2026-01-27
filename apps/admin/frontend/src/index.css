@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Source the shared UI package for Tailwind */
+@source "../../../../packages/ui/src/**/*.{js,ts,jsx,tsx}";
+/* Docker build: UI package copied to packages-ui-src */
+@source "./packages-ui-src/**/*.{js,ts,jsx,tsx}";
+
 /* Theme CSS variables */
 :root {
   /* Primary colors - defaults to violet */

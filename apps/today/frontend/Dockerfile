@@ -16,6 +16,9 @@ RUN npm install
 
 # Copy source and build with timestamp
 COPY apps/today/frontend .
+
+# Copy shared UI package source for Tailwind to scan
+COPY packages/ui/src ./packages-ui-src
 RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production stage - nginx to serve static files
