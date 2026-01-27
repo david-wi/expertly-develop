@@ -15,6 +15,10 @@ RUN npm install
 # Copy frontend source code
 COPY apps/identity/frontend ./
 
+# Copy shared UI package source for Tailwind to scan
+COPY packages/ui/src ./packages-ui-src
+COPY packages/ui/tailwind.preset.js ./packages-ui-src/
+
 # Set environment variables for Vite build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
