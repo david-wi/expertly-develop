@@ -42,9 +42,9 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     index index.html; \
     \
-    # Serve remoteEntry.js from assets folder at root URL \
-    location = /remoteEntry.js { \
-        alias /usr/share/nginx/html/assets/remoteEntry.js; \
+    # Serve federation files from assets folder at root URL \
+    location ~ ^/(__federation.*\.js|remoteEntry\.js)$ { \
+        alias /usr/share/nginx/html/assets/$1; \
         add_header Access-Control-Allow-Origin * always; \
         add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
         add_header Cache-Control "no-cache" always; \
