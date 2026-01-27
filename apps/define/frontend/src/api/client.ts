@@ -198,6 +198,18 @@ export const jiraApi = {
     api.post('/jira/send-all', { product_id: productId, draft_ids: draftIds }),
 }
 
+// Users API
+export interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  organization_id: string | null
+}
+
+export const usersApi = {
+  me: () => api.get<CurrentUser>('/users/me').then((r) => r.data),
+}
+
 // AI API
 export const aiApi = {
   parseRequirements: (data: {

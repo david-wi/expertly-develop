@@ -13,12 +13,31 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
+// Identity service URL for authentication
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
+
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true, // Send cookies with requests
 })
+
+// Redirect to Identity login on 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      const returnUrl = window.location.href
+      const loginUrl = new URL('/login', IDENTITY_URL)
+      loginUrl.searchParams.set('return_url', returnUrl)
+      window.location.href = loginUrl.toString()
+      return new Promise(() => {}) // Never resolve - we're redirecting
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Theme API
 export const themesApi = {
@@ -59,6 +78,21 @@ export const themesApi = {
       null,
       { params: { changed_by: changedBy } }
     )
+    return response.data
+  },
+}
+
+// Users API
+export interface CurrentUser {
+  id: string
+  name: string
+  email: string
+  organization_id: string | null
+}
+
+export const usersApi = {
+  me: async (): Promise<CurrentUser> => {
+    const response = await api.get<CurrentUser>('/users/me')
     return response.data
   },
 }

@@ -1,6 +1,8 @@
+import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
+import { usersApi, CurrentUser } from '@/services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -10,6 +12,11 @@ const navigation = [
 
 export function Layout() {
   const location = useLocation()
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
+
+  useEffect(() => {
+    usersApi.me().then(setCurrentUser).catch(console.error)
+  }, [])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,6 +37,7 @@ export function Layout() {
             {children}
           </Link>
         )}
+        user={currentUser ? { name: currentUser.name } : undefined}
       />
 
       {/* Main content */}

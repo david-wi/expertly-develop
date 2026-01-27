@@ -9,9 +9,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy identity-client package first
+COPY packages/identity-client /tmp/identity-client
+
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir /tmp/identity-client && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /tmp/identity-client
 
 # Copy application code
 COPY . .

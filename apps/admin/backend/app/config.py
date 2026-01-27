@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
+    # Identity service
+    identity_api_url: str = "https://identity-api.ai.devintensive.com"
+    skip_auth: bool = False
+    default_user_id: str = "dev-user"
+    default_user_name: str = "Developer"
+    default_user_email: str = "dev@example.com"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
