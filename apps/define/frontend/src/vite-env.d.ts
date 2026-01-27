@@ -34,6 +34,7 @@ declare module 'expertly_ui/index' {
     user?: {
       name: string
       role?: string
+      organization?: string
     }
     orgSwitcher?: ReactNode
     buildInfo?: ReactNode
