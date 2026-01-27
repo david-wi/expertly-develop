@@ -7,7 +7,10 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     database_name: str = "expertly_manage"
 
-    # Auth
+    # Identity Service (centralized auth)
+    identity_api_url: str = "https://identity.ai.devintensive.com"
+
+    # Auth (legacy - kept for backward compatibility)
     skip_auth: bool = False
     api_key_prefix: str = "em_live_"
 

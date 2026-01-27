@@ -1,142 +1,66 @@
 import axios from 'axios'
 
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
+
 const api = axios.create({
   baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
+  // Include cookies for cross-origin requests (Identity session cookie)
+  withCredentials: true,
 })
 
-// Token storage keys
-const ACCESS_TOKEN_KEY = 'vibeqa_access_token'
-const REFRESH_TOKEN_KEY = 'vibeqa_refresh_token'
-
-// Token management
-export const tokenStorage = {
-  getAccessToken: () => localStorage.getItem(ACCESS_TOKEN_KEY),
-  getRefreshToken: () => localStorage.getItem(REFRESH_TOKEN_KEY),
-  setTokens: (accessToken: string, refreshToken: string) => {
-    localStorage.setItem(ACCESS_TOKEN_KEY, accessToken)
-    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
-  },
-  clearTokens: () => {
-    localStorage.removeItem(ACCESS_TOKEN_KEY)
-    localStorage.removeItem(REFRESH_TOKEN_KEY)
-  },
-}
-
-// Request interceptor - add auth header
-api.interceptors.request.use(
-  (config) => {
-    const token = tokenStorage.getAccessToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  },
-  (error) => Promise.reject(error)
-)
-
-// Response interceptor - handle token refresh
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (token: string) => void
-  reject: (error: unknown) => void
-}> = []
-
-const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error)
-    } else if (token) {
-      prom.resolve(token)
-    }
-  })
-  failedQueue = []
-}
-
+// Response interceptor - handle auth errors
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config
-
-    // If error is 401 and we haven't tried refreshing yet
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        // Wait for the refresh to complete
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`
-            return api(originalRequest)
-          })
-          .catch((err) => Promise.reject(err))
-      }
-
-      originalRequest._retry = true
-      isRefreshing = true
-
-      const refreshToken = tokenStorage.getRefreshToken()
-
-      if (!refreshToken) {
-        tokenStorage.clearTokens()
-        window.location.href = '/login'
-        return Promise.reject(error)
-      }
-
-      try {
-        const response = await axios.post('/api/v1/auth/refresh', {
-          refresh_token: refreshToken,
-        })
-
-        const { access_token, refresh_token: newRefreshToken } = response.data
-        tokenStorage.setTokens(access_token, newRefreshToken)
-
-        processQueue(null, access_token)
-
-        originalRequest.headers.Authorization = `Bearer ${access_token}`
-        return api(originalRequest)
-      } catch (refreshError) {
-        processQueue(refreshError, null)
-        tokenStorage.clearTokens()
-        window.location.href = '/login'
-        return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
-      }
+    if (error.response?.status === 401) {
+      // Not authenticated - redirect to Identity login
+      const returnUrl = encodeURIComponent(window.location.href)
+      window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`
     }
-
     return Promise.reject(error)
   }
 )
 
-// Auth API
+// Auth API - uses Identity session cookies
 export const authApi = {
-  register: (data: {
-    email: string
-    password: string
-    full_name: string
-    organization_name: string
-  }) =>
-    api.post('/auth/register', data).then((r) => {
-      tokenStorage.setTokens(r.data.access_token, r.data.refresh_token)
-      return r.data
-    }),
-
-  login: (data: { email: string; password: string }) =>
-    api.post('/auth/login', data).then((r) => {
-      tokenStorage.setTokens(r.data.access_token, r.data.refresh_token)
-      return r.data
-    }),
-
-  logout: () => {
-    tokenStorage.clearTokens()
-  },
-
   me: () => api.get('/auth/me').then((r) => r.data),
 
-  isAuthenticated: () => !!tokenStorage.getAccessToken(),
+  logout: () => {
+    const returnUrl = encodeURIComponent(window.location.origin + '/login')
+    window.location.href = `${IDENTITY_URL}/logout?returnUrl=${returnUrl}`
+  },
+
+  getIdentityUrls: () =>
+    api.get('/auth/identity-urls').then((r) => r.data) as Promise<{
+      login_url: string
+      logout_url: string
+      register_url: string
+      users_management_url: string
+    }>,
+
+  isAuthenticated: async () => {
+    try {
+      await api.get('/auth/me')
+      return true
+    } catch {
+      return false
+    }
+  },
+}
+
+// Legacy token storage (deprecated - kept for cleanup)
+export const tokenStorage = {
+  getAccessToken: () => null,
+  getRefreshToken: () => null,
+  setTokens: () => {},
+  clearTokens: () => {
+    // Clean up any old tokens from localStorage
+    localStorage.removeItem('vibeqa_access_token')
+    localStorage.removeItem('vibeqa_refresh_token')
+  },
 }
 
 // Projects

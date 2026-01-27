@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Security
     encryption_key: str = ""  # Must be set in production
 
+    # Identity Service (centralized auth)
+    identity_api_url: str = "https://identity.ai.devintensive.com"
+
     # Worker
     job_poll_interval: int = 2  # seconds
     max_concurrent_jobs: int = 3

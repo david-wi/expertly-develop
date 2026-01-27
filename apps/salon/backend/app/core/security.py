@@ -1,99 +1,113 @@
-from datetime import datetime, timedelta, timezone
+"""Security utilities using Identity service for authentication."""
+
 from typing import Optional, Any
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, status, Request
 from bson import ObjectId
 
 from ..config import settings
 from .database import get_collection
 
-
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-security = HTTPBearer()
-
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+# Import from shared identity-client package
+from identity_client import IdentityClient, IdentityAuth, User as IdentityUser
+from identity_client.auth import get_session_token, SESSION_COOKIE_NAME, SESSION_HEADER_NAME
 
 
-def get_password_hash(password: str) -> str:
-    """Generate password hash."""
-    return pwd_context.hash(password)
+# Identity service client
+_identity_client: Optional[IdentityClient] = None
+_identity_auth: Optional[IdentityAuth] = None
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Create a JWT access token."""
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
-        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
-    )
-    to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
+def get_identity_client() -> IdentityClient:
+    """Get or create Identity client."""
+    global _identity_client
+    if _identity_client is None:
+        _identity_client = IdentityClient(base_url=settings.identity_api_url)
+    return _identity_client
 
 
-def create_refresh_token(data: dict) -> str:
-    """Create a JWT refresh token."""
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(days=settings.refresh_token_expire_days)
-    to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)
-
-
-def decode_token(token: str) -> dict[str, Any]:
-    """Decode and validate a JWT token."""
-    try:
-        payload = jwt.decode(
-            token,
-            settings.jwt_secret_key,
-            algorithms=[settings.jwt_algorithm]
+def get_identity_auth() -> IdentityAuth:
+    """Get or create Identity auth middleware."""
+    global _identity_auth
+    if _identity_auth is None:
+        _identity_auth = IdentityAuth(
+            identity_url=settings.identity_api_url,
+            client=get_identity_client(),
         )
-        return payload
-    except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    return _identity_auth
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> dict:
-    """Get current authenticated user from JWT token."""
-    payload = decode_token(credentials.credentials)
+async def get_current_user(request: Request) -> dict:
+    """
+    Get current authenticated user from Identity session.
 
-    if payload.get("type") != "access":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token type",
-        )
+    The user is returned as a dict with MongoDB-compatible fields for backward compatibility.
+    """
+    auth = get_identity_auth()
+    identity_user = await auth.get_current_user(request)
 
-    user_id = payload.get("sub")
-    if not user_id:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token payload",
-        )
-
+    # Map Identity user to local user representation
+    # Look up the user in our local users collection by email
     users_collection = get_collection("users")
-    user = await users_collection.find_one({"_id": ObjectId(user_id)})
+    local_user = await users_collection.find_one({"email": identity_user.email.lower()})
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
+    if local_user:
+        # Return local user data (includes salon_id, staff_id, etc.)
+        return local_user
 
-    if not user.get("is_active", True):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User account is disabled",
-        )
+    # If no local user found, create a minimal representation
+    # This allows Identity-only users to access the system
+    return {
+        "_id": ObjectId(),  # Temporary ID
+        "email": identity_user.email,
+        "first_name": identity_user.name.split()[0] if identity_user.name else "",
+        "last_name": " ".join(identity_user.name.split()[1:]) if identity_user.name and len(identity_user.name.split()) > 1 else "",
+        "role": _map_identity_role(identity_user.role),
+        "salon_id": None,  # No salon association
+        "staff_id": None,
+        "is_active": identity_user.is_active,
+        "identity_user_id": identity_user.id,
+        "organization_id": identity_user.organization_id,
+    }
 
-    return user
+
+def _map_identity_role(identity_role: str) -> str:
+    """Map Identity service role to salon role."""
+    role_mapping = {
+        "owner": "owner",
+        "admin": "admin",
+        "member": "manager",  # Default members to manager
+        "viewer": "staff",
+    }
+    return role_mapping.get(identity_role, "staff")
+
+
+async def get_current_user_optional(request: Request) -> Optional[dict]:
+    """Get current user if authenticated, None otherwise."""
+    auth = get_identity_auth()
+    identity_user = await auth.get_current_user_optional(request)
+
+    if not identity_user:
+        return None
+
+    # Same logic as get_current_user
+    users_collection = get_collection("users")
+    local_user = await users_collection.find_one({"email": identity_user.email.lower()})
+
+    if local_user:
+        return local_user
+
+    return {
+        "_id": ObjectId(),
+        "email": identity_user.email,
+        "first_name": identity_user.name.split()[0] if identity_user.name else "",
+        "last_name": " ".join(identity_user.name.split()[1:]) if identity_user.name and len(identity_user.name.split()) > 1 else "",
+        "role": _map_identity_role(identity_user.role),
+        "salon_id": None,
+        "staff_id": None,
+        "is_active": identity_user.is_active,
+        "identity_user_id": identity_user.id,
+        "organization_id": identity_user.organization_id,
+    }
 
 
 async def get_current_active_user(
@@ -105,7 +119,8 @@ async def get_current_active_user(
 
 def require_role(*roles: str):
     """Dependency factory that requires specific roles."""
-    async def role_checker(current_user: dict = Depends(get_current_user)) -> dict:
+    async def role_checker(request: Request) -> dict:
+        current_user = await get_current_user(request)
         user_role = current_user.get("role", "staff")
         if user_role not in roles:
             raise HTTPException(
@@ -114,3 +129,20 @@ def require_role(*roles: str):
             )
         return current_user
     return role_checker
+
+
+# Keep password utilities for local user management (staff accounts)
+# These are used when creating salon-specific user accounts
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def get_password_hash(password: str) -> str:
+    """Generate password hash."""
+    return pwd_context.hash(password)

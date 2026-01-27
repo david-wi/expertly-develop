@@ -1,7 +1,5 @@
-import axios, { type AxiosError, type AxiosRequestConfig } from 'axios';
+import axios, { type AxiosError } from 'axios';
 import type {
-  AuthResponse,
-  LoginRequest,
   User,
   Salon,
   Staff,
@@ -27,93 +25,49 @@ import type {
 } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com';
 
 const api = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  // Include cookies for cross-origin requests (Identity session cookie)
+  withCredentials: true,
 });
 
-// Token management
-let accessToken: string | null = null;
-
-export const setAccessToken = (token: string | null) => {
-  accessToken = token;
-  if (token) {
-    localStorage.setItem('access_token', token);
-  } else {
-    localStorage.removeItem('access_token');
-  }
-};
-
-export const getAccessToken = () => {
-  if (!accessToken) {
-    accessToken = localStorage.getItem('access_token');
-  }
-  return accessToken;
-};
-
-// Request interceptor
-api.interceptors.request.use((config) => {
-  const token = getAccessToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Response interceptor for token refresh
+// Response interceptor for auth errors
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     if (error.response?.status === 401) {
-      // Try to refresh token
-      const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
-        try {
-          const response = await axios.post<AuthResponse>(`${API_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
-          });
-          setAccessToken(response.data.access_token);
-          localStorage.setItem('refresh_token', response.data.refresh_token);
-
-          // Retry original request
-          const originalRequest = error.config as AxiosRequestConfig;
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${response.data.access_token}`;
-          }
-          return api(originalRequest);
-        } catch {
-          // Refresh failed, clear tokens
-          setAccessToken(null);
-          localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
-        }
-      } else {
-        window.location.href = '/login';
-      }
+      // Not authenticated - redirect to Identity login
+      const returnUrl = encodeURIComponent(window.location.href);
+      window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`;
     }
     return Promise.reject(error);
   }
 );
 
-// Auth
+// Auth - uses Identity session cookies
 export const auth = {
-  login: async (data: LoginRequest): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>('/auth/login', data);
-    setAccessToken(response.data.access_token);
-    localStorage.setItem('refresh_token', response.data.refresh_token);
+  me: async (): Promise<User> => {
+    const response = await api.get<User>('/auth/me');
     return response.data;
   },
 
   logout: () => {
-    setAccessToken(null);
-    localStorage.removeItem('refresh_token');
+    // Redirect to Identity logout
+    const returnUrl = encodeURIComponent(window.location.origin + '/login');
+    window.location.href = `${IDENTITY_URL}/logout?returnUrl=${returnUrl}`;
   },
 
-  me: async (): Promise<User> => {
-    const response = await api.get<User>('/auth/me');
+  getIdentityUrls: async (): Promise<{
+    login_url: string;
+    logout_url: string;
+    users_management_url: string;
+  }> => {
+    const response = await api.get('/auth/identity-urls');
     return response.data;
   },
 };

@@ -1,7 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User, Salon } from '../types';
-import { auth, salon, setAccessToken } from '../services/api';
+import { auth, salon } from '../services/api';
+
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com';
 
 interface AuthState {
   user: User | null;
@@ -10,7 +12,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (email: string, password: string) => Promise<void>;
+  checkAuth: () => Promise<void>;
   logout: () => void;
   loadUser: () => Promise<void>;
   loadSalon: () => Promise<void>;
@@ -26,45 +28,36 @@ export const useAuthStore = create<AuthState>()(
       isLoading: false,
       error: null,
 
-      login: async (email: string, password: string) => {
+      checkAuth: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await auth.login({ email, password });
+          // Check if we have a valid Identity session by calling /auth/me
+          const user = await auth.me();
           set({
-            user: response.user,
+            user,
             isAuthenticated: true,
             isLoading: false,
           });
-          // Load salon data after login
+          // Load salon data after confirming auth
           await get().loadSalon();
         } catch (error) {
           set({
-            error: error instanceof Error ? error.message : 'Login failed',
+            user: null,
+            isAuthenticated: false,
             isLoading: false,
           });
-          throw error;
         }
       },
 
       logout: () => {
-        auth.logout();
-        set({
-          user: null,
-          salon: null,
-          isAuthenticated: false,
-        });
+        // Redirect to Identity logout
+        const returnUrl = encodeURIComponent(window.location.origin + '/login');
+        window.location.href = `${IDENTITY_URL}/logout?returnUrl=${returnUrl}`;
       },
 
       loadUser: async () => {
-        const token = localStorage.getItem('access_token');
-        if (!token) {
-          set({ isAuthenticated: false });
-          return;
-        }
-
         set({ isLoading: true });
         try {
-          setAccessToken(token);
           const user = await auth.me();
           set({
             user,
@@ -78,7 +71,6 @@ export const useAuthStore = create<AuthState>()(
             isAuthenticated: false,
             isLoading: false,
           });
-          setAccessToken(null);
         }
       },
 

@@ -12,7 +12,10 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_database: str = "salon_booking"
 
-    # JWT Authentication
+    # Identity Service (centralized auth)
+    identity_api_url: str = "https://identity.ai.devintensive.com"
+
+    # JWT Authentication (deprecated - kept for backward compatibility)
     jwt_secret_key: str = "change-this-in-production-use-strong-secret"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24  # 24 hours

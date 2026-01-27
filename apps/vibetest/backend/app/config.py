@@ -15,7 +15,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql://localhost:5432/vibeqa"
 
-    # Security
+    # Identity Service (centralized auth)
+    identity_api_url: str = "https://identity.ai.devintensive.com"
+
+    # Security (legacy - kept for backward compatibility)
     secret_key: str = "change-me-in-production"
     encryption_key: str = "change-me-in-production-32bytes!"
     access_token_expire_minutes: int = 60 * 24  # 24 hours

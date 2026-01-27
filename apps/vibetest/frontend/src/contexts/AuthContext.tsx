@@ -9,17 +9,12 @@ import {
 import { authApi, tokenStorage } from '../api/client'
 import { User } from '../types'
 
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
+
 interface AuthContextType {
   user: User | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (email: string, password: string) => Promise<void>
-  register: (
-    email: string,
-    password: string,
-    fullName: string,
-    organizationName: string
-  ) => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
 }
@@ -40,54 +35,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(userData)
     } catch (error) {
       setUser(null)
+      // Clean up any old tokens from localStorage
       tokenStorage.clearTokens()
     }
   }, [])
 
   useEffect(() => {
     const initAuth = async () => {
-      if (tokenStorage.getAccessToken()) {
-        try {
-          await refreshUser()
-          setIsLoading(false)
-          return
-        } catch {
-          // Token invalid, try auto-login
-        }
-      }
-
-      // Auto-login with default credentials (temporary - remove when adding real auth)
       try {
-        await authApi.login({ email: 'david@bodnick.com', password: 'david123' })
+        // Check if we have a valid Identity session by calling /auth/me
         await refreshUser()
       } catch {
-        // Auto-login failed, user needs to register/login manually
+        // Not authenticated - user will be redirected to Identity login
+        // when they try to access protected resources
       }
       setIsLoading(false)
     }
 
     initAuth()
   }, [refreshUser])
-
-  const login = async (email: string, password: string) => {
-    await authApi.login({ email, password })
-    await refreshUser()
-  }
-
-  const register = async (
-    email: string,
-    password: string,
-    fullName: string,
-    organizationName: string
-  ) => {
-    await authApi.register({
-      email,
-      password,
-      full_name: fullName,
-      organization_name: organizationName,
-    })
-    await refreshUser()
-  }
 
   const logout = () => {
     authApi.logout()
@@ -98,8 +64,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     user,
     isLoading,
     isAuthenticated: !!user,
-    login,
-    register,
     logout,
     refreshUser,
   }

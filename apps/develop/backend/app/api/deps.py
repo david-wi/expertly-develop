@@ -2,10 +2,51 @@
 
 from typing import Optional
 from bson import ObjectId
-from fastapi import Depends, HTTPException, Header, status
+from fastapi import Depends, HTTPException, Header, Request, status
 from pydantic import BaseModel
 
 from app.database import get_database
+from app.config import get_settings
+
+# Import from shared identity-client package
+from identity_client import IdentityClient, IdentityAuth
+from identity_client.models import User as IdentityUser
+
+# Identity service client (singleton)
+_identity_client: Optional[IdentityClient] = None
+_identity_auth: Optional[IdentityAuth] = None
+
+
+def get_identity_client() -> IdentityClient:
+    """Get or create Identity client."""
+    global _identity_client
+    settings = get_settings()
+    if _identity_client is None:
+        _identity_client = IdentityClient(base_url=settings.identity_api_url)
+    return _identity_client
+
+
+def get_identity_auth() -> IdentityAuth:
+    """Get or create Identity auth middleware."""
+    global _identity_auth
+    settings = get_settings()
+    if _identity_auth is None:
+        _identity_auth = IdentityAuth(
+            identity_url=settings.identity_api_url,
+            client=get_identity_client(),
+        )
+    return _identity_auth
+
+
+def _map_identity_role(identity_role: str) -> str:
+    """Map Identity service role to develop role."""
+    role_mapping = {
+        "owner": "admin",
+        "admin": "admin",
+        "member": "user",
+        "viewer": "user",
+    }
+    return role_mapping.get(identity_role, "user")
 
 
 class UserContext(BaseModel):
@@ -28,22 +69,73 @@ async def get_default_user() -> Optional[dict]:
     return user
 
 
+async def _ensure_local_user(identity_user: IdentityUser, db) -> dict:
+    """Ensure local user and tenant exist for Identity user, create if needed."""
+    # Look up local user by email
+    user = await db.users.find_one({"email": identity_user.email, "deleted_at": None})
+
+    if user:
+        return user
+
+    # Create tenant if needed
+    tenant = await db.tenants.find_one({"_id": ObjectId(identity_user.organization_id)})
+
+    if not tenant:
+        # Try to find by slug or name match
+        tenant = await db.tenants.find_one({"slug": identity_user.organization_id[:8]})
+
+        if not tenant:
+            # Create tenant from Identity org
+            tenant_doc = {
+                "_id": ObjectId(identity_user.organization_id) if len(identity_user.organization_id) == 24 else ObjectId(),
+                "name": identity_user.organization_name or "Default Tenant",
+                "slug": identity_user.organization_id[:8],
+            }
+            await db.tenants.insert_one(tenant_doc)
+            tenant = tenant_doc
+
+    # Create local user linked to Identity
+    user_id = ObjectId(identity_user.id) if len(identity_user.id) == 24 else ObjectId()
+    user_doc = {
+        "_id": user_id,
+        "tenant_id": tenant["_id"],
+        "email": identity_user.email,
+        "name": identity_user.name,
+        "role": _map_identity_role(identity_user.role),
+        "is_default": False,
+    }
+    await db.users.insert_one(user_doc)
+
+    return user_doc
+
+
 async def get_current_user(
+    request: Request,
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
     x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-Id"),
 ) -> UserContext:
     """
     Get the current user context.
 
-    For now, returns the default user (David).
-    Later can be extended to support API key or JWT authentication.
+    Authentication priority:
+    1. Identity session cookie (X-Session-Token header or expertly_session cookie)
+    2. API key (X-API-Key header)
+    3. Default user (for backward compatibility)
 
     Supports tenant switching via X-Tenant-Id header for admin users.
     """
     db = get_database()
+    user = None
 
-    # If API key provided, authenticate with it
-    if x_api_key:
+    # Try Identity session first
+    auth = get_identity_auth()
+    identity_user = await auth.get_current_user_optional(request)
+
+    if identity_user:
+        # Ensure local user exists
+        user = await _ensure_local_user(identity_user, db)
+    elif x_api_key:
+        # Fall back to API key authentication
         user = await db.users.find_one({"api_key": x_api_key, "deleted_at": None})
         if not user:
             raise HTTPException(
@@ -51,12 +143,12 @@ async def get_current_user(
                 detail="Invalid API key",
             )
     else:
-        # Use default user
+        # Fall back to default user for backward compatibility
         user = await get_default_user()
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="No default user configured. Please seed the database.",
+                detail="Authentication required. Provide session cookie or X-API-Key header.",
             )
 
     # Determine tenant_id (possibly overridden)

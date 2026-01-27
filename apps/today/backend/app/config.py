@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/expertly_today"
 
-    # Authentication
+    # Identity Service (centralized auth)
+    identity_api_url: str = "https://identity.ai.devintensive.com"
+
+    # Authentication (legacy - kept for backward compatibility)
     jwt_secret_key: str = "CHANGE_ME_IN_PRODUCTION"
     jwt_algorithm: str = "HS256"
     jwt_expire_minutes: int = 60 * 24 * 7  # 1 week

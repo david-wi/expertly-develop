@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1'
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
 
 export const TENANT_STORAGE_KEY = 'expertly-tenant-id'
 
@@ -9,6 +10,8 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // Include cookies for cross-origin requests (Identity session cookie)
+  withCredentials: true,
 })
 
 // Add interceptor to include X-Tenant-Id header from localStorage
@@ -19,6 +22,19 @@ api.interceptors.request.use((config) => {
   }
   return config
 })
+
+// Add interceptor to handle 401 responses by redirecting to Identity login
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Not authenticated - redirect to Identity login
+      const returnUrl = encodeURIComponent(window.location.href)
+      window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`
+    }
+    return Promise.reject(error)
+  }
+)
 
 // Types
 export interface Project {

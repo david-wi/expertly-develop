@@ -1,186 +1,52 @@
-"""Authentication endpoints."""
-import re
-import uuid
-from datetime import datetime
+"""
+Authentication endpoints using Identity service.
 
-from fastapi import APIRouter, Depends, HTTPException, status
+Most authentication operations (login, logout, register) are handled by the
+Identity service at https://identity.ai.devintensive.com. This module provides:
+- Session validation endpoint (/auth/me)
+- Identity redirect URLs
+
+Note: Login/logout/register are now handled by the Identity frontend.
+"""
+
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Organization, User
-from app.schemas.auth import (
-    UserRegister,
-    UserLogin,
-    TokenResponse,
-    TokenRefresh,
-    UserResponse,
-    OrganizationResponse,
-)
-from app.services.password import hash_password, verify_password
-from app.services.auth import (
-    create_access_token,
-    create_refresh_token,
-    decode_refresh_token,
-)
+from app.models import User
+from app.schemas.auth import UserResponse, OrganizationResponse
 from app.api.deps import get_current_user
+from app.config import get_settings
 
 router = APIRouter()
+settings = get_settings()
+
+# Identity service URLs for frontend to redirect to
+IDENTITY_LOGIN_URL = f"{settings.identity_api_url}/login"
+IDENTITY_LOGOUT_URL = f"{settings.identity_api_url}/logout"
+IDENTITY_REGISTER_URL = f"{settings.identity_api_url}/register"
+IDENTITY_USERS_URL = f"{settings.identity_api_url}/users"
 
 
-def generate_slug(name: str) -> str:
-    """Generate a URL-friendly slug from a name."""
-    # Convert to lowercase, replace spaces with hyphens, remove special chars
-    slug = name.lower().strip()
-    slug = re.sub(r"[^\w\s-]", "", slug)
-    slug = re.sub(r"[\s_]+", "-", slug)
-    slug = re.sub(r"-+", "-", slug)
-    return slug[:50]  # Limit length
-
-
-@router.post("/register", response_model=TokenResponse, status_code=201)
-def register(
-    user_in: UserRegister,
-    db: Session = Depends(get_db),
-):
-    """Register a new user and organization."""
-    # Check if email already exists
-    existing_user = db.query(User).filter(User.email == user_in.email).first()
-    if existing_user:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
-        )
-
-    now = datetime.utcnow()
-    org_id = str(uuid.uuid4())
-    user_id = str(uuid.uuid4())
-
-    # Generate unique slug
-    base_slug = generate_slug(user_in.organization_name)
-    slug = base_slug
-    counter = 1
-    while db.query(Organization).filter(Organization.slug == slug).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-
-    # Create organization
-    organization = Organization(
-        id=org_id,
-        name=user_in.organization_name,
-        slug=slug,
-        is_active=True,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(organization)
-
-    # Create user as owner
-    user = User(
-        id=user_id,
-        organization_id=org_id,
-        email=user_in.email,
-        password_hash=hash_password(user_in.password),
-        full_name=user_in.full_name,
-        role="owner",
-        is_active=True,
-        is_verified=False,
-        created_at=now,
-        updated_at=now,
-    )
-    db.add(user)
-
-    db.commit()
-
-    # Generate tokens
-    access_token = create_access_token(user_id, org_id, "owner")
-    refresh_token = create_refresh_token(user_id)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
-
-
-@router.post("/login", response_model=TokenResponse)
-def login(
-    user_in: UserLogin,
-    db: Session = Depends(get_db),
-):
-    """Authenticate user and return tokens."""
-    user = db.query(User).filter(
-        User.email == user_in.email,
-        User.deleted_at.is_(None)
-    ).first()
-
-    if not user or not verify_password(user_in.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password"
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
-        )
-
-    # Generate tokens
-    access_token = create_access_token(user.id, user.organization_id, user.role)
-    refresh_token = create_refresh_token(user.id)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=refresh_token,
-    )
-
-
-@router.post("/refresh", response_model=TokenResponse)
-def refresh_token(
-    token_in: TokenRefresh,
-    db: Session = Depends(get_db),
-):
-    """Exchange refresh token for new access token."""
-    payload = decode_refresh_token(token_in.refresh_token)
-
-    if not payload:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired refresh token"
-        )
-
-    user_id = payload.get("sub")
-    user = db.query(User).filter(
-        User.id == user_id,
-        User.deleted_at.is_(None)
-    ).first()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found"
-        )
-
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
-        )
-
-    # Generate new tokens
-    access_token = create_access_token(user.id, user.organization_id, user.role)
-    new_refresh_token = create_refresh_token(user.id)
-
-    return TokenResponse(
-        access_token=access_token,
-        refresh_token=new_refresh_token,
-    )
+@router.get("/identity-urls")
+async def get_identity_urls():
+    """Get Identity service URLs for frontend redirects."""
+    return {
+        "login_url": IDENTITY_LOGIN_URL,
+        "logout_url": IDENTITY_LOGOUT_URL,
+        "register_url": IDENTITY_REGISTER_URL,
+        "users_management_url": IDENTITY_USERS_URL,
+    }
 
 
 @router.get("/me", response_model=UserResponse)
-def get_current_user_info(
-    current_user: User = Depends(get_current_user),
+async def get_current_user_info(
+    request: Request,
+    db: Session = Depends(get_db),
 ):
-    """Get current user information."""
+    """Get current user information from Identity session."""
+    current_user = await get_current_user(request, db)
+
     return UserResponse(
         id=current_user.id,
         email=current_user.email,

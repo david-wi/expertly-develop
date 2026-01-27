@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_URL || ''
+const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -7,9 +8,17 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
       'Content-Type': 'application/json',
       ...options.headers,
     },
+    // Include cookies for cross-origin requests (Identity session cookie)
+    credentials: 'include',
   })
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Not authenticated - redirect to Identity login
+      const returnUrl = encodeURIComponent(window.location.href)
+      window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`
+      throw new Error('Redirecting to login...')
+    }
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
     throw new Error(error.detail || `HTTP ${response.status}`)
   }
