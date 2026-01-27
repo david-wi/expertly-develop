@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
-  Users,
+  User,
+  Bot,
   UsersRound,
   Building2,
   KeyRound,
@@ -8,7 +9,8 @@ import {
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
 
 const navigation = [
-  { name: 'Users & Bots', href: '/users', icon: Users },
+  { name: 'Users', href: '/users', icon: User },
+  { name: 'Bots', href: '/bots', icon: Bot },
   { name: 'Teams', href: '/teams', icon: UsersRound },
   { name: 'Organizations', href: '/organizations', icon: Building2 },
   { name: 'Change Password', href: '/change-password', icon: KeyRound },

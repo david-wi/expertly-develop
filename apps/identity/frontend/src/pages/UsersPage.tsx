@@ -10,10 +10,14 @@ import {
 
 type UserFilter = 'all' | 'human' | 'bot'
 
-export default function UsersPage() {
+interface UsersPageProps {
+  defaultFilter?: UserFilter
+}
+
+export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [filter, setFilter] = useState<UserFilter>('all')
+  const [filter, setFilter] = useState<UserFilter>(defaultFilter)
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -273,35 +277,43 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Users & Bots</h2>
+        <h2 className="text-2xl font-bold text-gray-900">
+          {defaultFilter === 'bot' ? 'Bots' : defaultFilter === 'human' ? 'Users' : 'Users & Bots'}
+        </h2>
         <div className="flex items-center space-x-3">
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value as UserFilter)}
-            className="border border-gray-300 rounded-md px-3 py-2 text-sm"
-          >
-            <option value="all">All</option>
-            <option value="human">Humans</option>
-            <option value="bot">Bots</option>
-          </select>
-          <button
-            onClick={() => {
-              resetForm('human')
-              setShowCreateModal(true)
-            }}
-            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors"
-          >
-            Add User
-          </button>
-          <button
-            onClick={() => {
-              resetForm('bot')
-              setShowCreateModal(true)
-            }}
-            className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 transition-colors"
-          >
-            Add Bot
-          </button>
+          {defaultFilter === 'all' && (
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as UserFilter)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="all">All</option>
+              <option value="human">Humans</option>
+              <option value="bot">Bots</option>
+            </select>
+          )}
+          {(defaultFilter === 'all' || defaultFilter === 'human') && (
+            <button
+              onClick={() => {
+                resetForm('human')
+                setShowCreateModal(true)
+              }}
+              className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 transition-colors"
+            >
+              Add User
+            </button>
+          )}
+          {(defaultFilter === 'all' || defaultFilter === 'bot') && (
+            <button
+              onClick={() => {
+                resetForm('bot')
+                setShowCreateModal(true)
+              }}
+              className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 transition-colors"
+            >
+              Add Bot
+            </button>
+          )}
         </div>
       </div>
 

@@ -23,7 +23,8 @@ export default function App() {
       {/* App routes */}
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/users" replace />} />
-        <Route path="users" element={<UsersPage />} />
+        <Route path="users" element={<UsersPage defaultFilter="human" />} />
+        <Route path="bots" element={<UsersPage defaultFilter="bot" />} />
         <Route path="teams" element={<TeamsPage />} />
         <Route path="organizations" element={<OrganizationsPage />} />
         <Route path="change-password" element={<ChangePasswordPage />} />
