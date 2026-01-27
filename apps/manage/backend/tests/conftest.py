@@ -1,86 +1,82 @@
-"""Pytest configuration and fixtures for API tests."""
-import asyncio
-from typing import AsyncGenerator
+"""Pytest configuration and fixtures for backend tests."""
 import pytest
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from unittest.mock import AsyncMock, MagicMock
 from bson import ObjectId
-
-from app.main import app
-from app.database import get_database, set_database
-from app.config import get_settings
-
-
-# Use a test database
-TEST_DB_NAME = "expertly_manage_test"
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def test_db() -> AsyncGenerator[AsyncIOMotorDatabase, None]:
-    """Create a clean test database for each test."""
-    settings = get_settings()
-    client = AsyncIOMotorClient(settings.mongodb_url)
-    db = client[TEST_DB_NAME]
-
-    # Drop existing collections
-    collections = await db.list_collection_names()
-    for coll in collections:
-        await db[coll].drop()
-
-    # Set the test database
-    set_database(db)
-
-    yield db
-
-    # Cleanup after test
-    for coll in await db.list_collection_names():
-        await db[coll].drop()
-
-    client.close()
-
-
-@pytest_asyncio.fixture(scope="function")
-async def seeded_db(test_db: AsyncIOMotorDatabase) -> AsyncIOMotorDatabase:
-    """Create a test database with seed data."""
-    from app.utils.seed import seed_database
-
-    await seed_database()
-    return test_db
-
-
-@pytest_asyncio.fixture
-async def client(test_db: AsyncIOMotorDatabase) -> AsyncGenerator[AsyncClient, None]:
-    """Create an async HTTP client for testing."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
-
-
-@pytest_asyncio.fixture
-async def seeded_client(seeded_db: AsyncIOMotorDatabase) -> AsyncGenerator[AsyncClient, None]:
-    """Create an async HTTP client with seeded database."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+from dataclasses import dataclass
 
 
 @pytest.fixture
-def api_key() -> str:
-    """Return the default API key for testing."""
-    settings = get_settings()
-    return settings.default_api_key
+def mock_db():
+    """Create a mock database with async methods."""
+    db = MagicMock()
+    db.playbooks = MagicMock()
+    db.playbooks.find_one = AsyncMock()
+    db.playbooks.find = MagicMock()
+    db.playbooks.insert_one = AsyncMock()
+    db.playbooks.find_one_and_update = AsyncMock()
+    return db
+
+
+@dataclass
+class MockUser:
+    """Mock user for testing without importing app.models."""
+    id: str
+    organization_id: str
+    email: str
+    name: str
+    user_type: str
+    role: str
+    is_active: bool
+    is_default: bool
 
 
 @pytest.fixture
-def auth_headers(api_key: str) -> dict:
-    """Return headers with API key authentication."""
-    return {"X-API-Key": api_key}
+def sample_user():
+    """Create a sample user for testing."""
+    return MockUser(
+        id=str(ObjectId()),
+        organization_id=str(ObjectId()),
+        email="test@example.com",
+        name="Test User",
+        user_type="human",
+        role="admin",
+        is_active=True,
+        is_default=False,
+    )
+
+
+@pytest.fixture
+def sample_playbook_data():
+    """Create sample playbook data."""
+    return {
+        "_id": "test-playbook-id",
+        "organization_id": ObjectId(),
+        "name": "Test Playbook",
+        "description": "A test playbook",
+        "steps": [],
+        "scope_type": "organization",
+        "scope_id": None,
+        "version": 1,
+        "history": [],
+        "is_active": True,
+        "created_by": "user-123",
+    }
+
+
+@pytest.fixture
+def sample_step_data():
+    """Create sample step data."""
+    return {
+        "id": "step-1",
+        "order": 1,
+        "title": "First Step",
+        "description": "Do this first",
+        "nested_playbook_id": None,
+        "assignee_type": "anyone",
+        "assignee_id": None,
+        "queue_id": None,
+        "approval_required": False,
+        "approver_type": None,
+        "approver_id": None,
+        "approver_queue_id": None,
+    }
