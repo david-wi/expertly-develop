@@ -1,3 +1,4 @@
 20260127 - Fixed oversized logo in sidebar by updating Tailwind config to scan shared UI package source files. Updated Dockerfiles to copy UI package into build context.
 20260127 - Fixed login loop bug (withCredentials missing in identity frontend). Added passwordless login with email code for @expertly.com/@webintensive.com domains, password change, forgot password, and password strength validation. Visually verified all flows.
 20260127 - Added DEPLOY_COLOR variable to all Traefik labels for blue/green deployment isolation. This ensures unique router names (e.g., ui-blue, ui-green) to prevent routing conflicts when both colors are running during deployment transitions.
+20260127 - Removed stale /opt/traefik/dynamic/apps.yaml file that was routing vibetest to old qa container name.
