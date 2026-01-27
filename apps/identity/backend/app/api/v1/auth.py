@@ -40,7 +40,7 @@ from app.core.email import send_magic_code_email, send_password_reset_email
 logger = logging.getLogger(__name__)
 
 # Allowed email domains for magic code login
-MAGIC_CODE_ALLOWED_DOMAINS = {"expertly.com", "webintensive.com"}
+MAGIC_CODE_ALLOWED_DOMAINS = {"expertly.com"}
 
 # Password reset token expiry
 RESET_TOKEN_EXPIRY_MINUTES = 15
@@ -385,7 +385,7 @@ async def request_magic_code(
     """
     Request a magic code for passwordless login.
 
-    Only available for @expertly.com and @webintensive.com domains.
+    Only available for @expertly.com domain.
     """
     email = request_data.email.lower()
 
@@ -393,7 +393,7 @@ async def request_magic_code(
     if not _is_magic_code_allowed(email):
         raise HTTPException(
             status_code=403,
-            detail="Magic code login is only available for @expertly.com and @webintensive.com email addresses"
+            detail="Magic code login is only available for @expertly.com email addresses"
         )
 
     # Check if user exists

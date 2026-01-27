@@ -165,7 +165,7 @@ export default function MagicCodePage() {
 
               <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300">
                 <p className="text-sm">
-                  Available for <strong>@expertly.com</strong> and <strong>@webintensive.com</strong> email addresses only.
+                  Available for <strong>@expertly.com</strong> email addresses only.
                 </p>
               </div>
 

@@ -131,7 +131,7 @@ export default function LoginPage() {
           {/* Magic code option */}
           <div className="mt-6 pt-6 border-t border-slate-700">
             <p className="text-center text-sm text-slate-400 mb-3">
-              Expertly or WebIntensive employee?
+              Expertly employee?
             </p>
             <Link
               to={magicCodeLink}
