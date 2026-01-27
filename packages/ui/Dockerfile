@@ -39,26 +39,44 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     index index.html; \
     \
-    # CORS headers for federation \
-    add_header Access-Control-Allow-Origin *; \
-    add_header Access-Control-Allow-Methods "GET, OPTIONS"; \
-    add_header Access-Control-Allow-Headers "*"; \
-    \
     location / { \
+        # Handle OPTIONS preflight requests \
+        if ($request_method = OPTIONS) { \
+            add_header Access-Control-Allow-Origin * always; \
+            add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
+            add_header Access-Control-Allow-Headers "*" always; \
+            add_header Content-Length 0; \
+            add_header Content-Type text/plain; \
+            return 204; \
+        } \
+        \
+        add_header Access-Control-Allow-Origin * always; \
+        add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
+        add_header Access-Control-Allow-Headers "*" always; \
         try_files $uri $uri/ /index.html; \
     } \
     \
     # No cache for version.json - always get latest \
     location = /version.json { \
-        add_header Cache-Control "no-cache, no-store, must-revalidate"; \
-        add_header Access-Control-Allow-Origin *; \
+        add_header Cache-Control "no-cache, no-store, must-revalidate" always; \
+        add_header Access-Control-Allow-Origin * always; \
     } \
     \
-    # Cache static assets \
+    # Cache static assets with CORS \
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ { \
+        if ($request_method = OPTIONS) { \
+            add_header Access-Control-Allow-Origin * always; \
+            add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
+            add_header Access-Control-Allow-Headers "*" always; \
+            add_header Content-Length 0; \
+            add_header Content-Type text/plain; \
+            return 204; \
+        } \
+        \
         expires 1y; \
-        add_header Cache-Control "public, immutable"; \
-        add_header Access-Control-Allow-Origin *; \
+        add_header Cache-Control "public, immutable" always; \
+        add_header Access-Control-Allow-Origin * always; \
+        add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
