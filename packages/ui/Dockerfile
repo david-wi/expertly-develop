@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS builder
 
+# Cache buster - change this to force rebuild: 2026-01-26-v2
+ARG CACHE_BUST=1
+
 # Install git for version script
 RUN apk add --no-cache git
 
@@ -24,7 +27,7 @@ RUN npm install
 COPY . .
 
 # Build the federation remote (prebuild generates version.json)
-RUN npm run build
+RUN npm run build && echo "=== Build output ===" && ls -la dist/ && ls -la dist/assets/ | head -20
 
 # Production stage - serve static files
 FROM nginx:alpine
