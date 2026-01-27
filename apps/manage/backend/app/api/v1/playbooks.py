@@ -1,12 +1,18 @@
 from datetime import datetime, timezone
+from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 
 from app.database import get_database
-from app.models import Playbook, PlaybookCreate, PlaybookUpdate, PlaybookHistoryEntry, User, ScopeType
+from app.models import (
+    Playbook, PlaybookCreate, PlaybookUpdate, PlaybookHistoryEntry,
+    PlaybookStep, PlaybookStepCreate, User, ScopeType
+)
 from app.api.deps import get_current_user
 
 router = APIRouter()
+
+MAX_NESTING_DEPTH = 5
 
 
 def serialize_playbook(playbook: dict) -> dict:
@@ -19,7 +25,64 @@ def serialize_playbook(playbook: dict) -> dict:
         result["scope_id"] = str(playbook["scope_id"])
     if playbook.get("created_by"):
         result["created_by"] = str(playbook["created_by"])
+    # Steps are already serializable
+    result["steps"] = playbook.get("steps", [])
     return result
+
+
+async def validate_no_circular_refs(
+    db,
+    playbook_id: str,
+    steps: list,
+    visited: set | None = None,
+    depth: int = 0
+) -> None:
+    """
+    Validate that nested playbook references don't create circular dependencies
+    or exceed the maximum nesting depth.
+    """
+    if depth > MAX_NESTING_DEPTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Nesting exceeds maximum depth of {MAX_NESTING_DEPTH}"
+        )
+
+    visited = visited or set()
+
+    if playbook_id in visited:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Circular reference detected: playbook {playbook_id} is already in the chain"
+        )
+
+    visited.add(playbook_id)
+
+    for step in steps:
+        nested_id = step.get("nested_playbook_id") if isinstance(step, dict) else getattr(step, "nested_playbook_id", None)
+        if nested_id:
+            nested = await db.playbooks.find_one({"_id": nested_id})
+            if nested:
+                await validate_no_circular_refs(
+                    db,
+                    nested_id,
+                    nested.get("steps", []),
+                    visited.copy(),
+                    depth + 1
+                )
+
+
+def process_steps(steps: list[PlaybookStepCreate]) -> list[dict]:
+    """Process step create data into PlaybookStep format with IDs and order."""
+    processed = []
+    for idx, step in enumerate(steps):
+        step_data = step.model_dump()
+        # Assign ID if not provided
+        if not step_data.get("id"):
+            step_data["id"] = str(uuid4())
+        # Assign order based on position
+        step_data["order"] = idx + 1
+        processed.append(step_data)
+    return processed
 
 
 def can_access_playbook(playbook: dict, user: User) -> bool:
@@ -109,10 +172,34 @@ async def create_playbook(
     if data.scope_type == ScopeType.USER:
         scope_id = current_user.id
 
+    # Process and validate steps
+    steps = process_steps(data.steps) if data.steps else []
+
+    # Validate nested playbook references (use empty string for new playbook ID)
+    if steps:
+        # For new playbooks, we just need to validate that nested refs exist and don't have circular refs
+        for step in steps:
+            if step.get("nested_playbook_id"):
+                nested = await db.playbooks.find_one({"_id": step["nested_playbook_id"]})
+                if not nested:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Nested playbook {step['nested_playbook_id']} not found"
+                    )
+                # Check depth from the nested playbook
+                await validate_no_circular_refs(
+                    db,
+                    step["nested_playbook_id"],
+                    nested.get("steps", []),
+                    set(),
+                    1  # Start at depth 1 since we're nesting
+                )
+
     playbook = Playbook(
         organization_id=current_user.organization_id,
         name=data.name,
         description=data.description,
+        steps=[PlaybookStep(**s) for s in steps],
         scope_type=data.scope_type,
         scope_id=scope_id,
         created_by=str(current_user.id)
@@ -148,11 +235,12 @@ async def update_playbook(
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    # Create history entry for the current version before updating
+    # Create history entry for the current version before updating (includes steps)
     history_entry = PlaybookHistoryEntry(
         version=current.get("version", 1),
         name=current["name"],
         description=current.get("description"),
+        steps=[PlaybookStep(**s) for s in current.get("steps", [])],
         changed_at=datetime.now(timezone.utc),
         changed_by=str(current_user.id)
     )
@@ -166,6 +254,48 @@ async def update_playbook(
     # For user scope, must be current user
     if update_data.get("scope_type") == ScopeType.USER:
         update_data["scope_id"] = current_user.id
+
+    # Process steps if provided
+    if "steps" in update_data and update_data["steps"] is not None:
+        steps_data = update_data["steps"]
+        # Convert PlaybookStepCreate objects to dicts if needed
+        if steps_data and hasattr(steps_data[0], "model_dump"):
+            steps_data = [s.model_dump() for s in steps_data]
+
+        processed_steps = []
+        for idx, step in enumerate(steps_data):
+            # Assign ID if not provided
+            if not step.get("id"):
+                step["id"] = str(uuid4())
+            # Assign order based on position
+            step["order"] = idx + 1
+            processed_steps.append(step)
+
+        # Validate nested playbook references
+        for step in processed_steps:
+            if step.get("nested_playbook_id"):
+                # Can't reference self
+                if step["nested_playbook_id"] == playbook_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="A playbook cannot reference itself as a nested playbook"
+                    )
+                nested = await db.playbooks.find_one({"_id": step["nested_playbook_id"]})
+                if not nested:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Nested playbook {step['nested_playbook_id']} not found"
+                    )
+                # Check for circular references including this playbook
+                await validate_no_circular_refs(
+                    db,
+                    step["nested_playbook_id"],
+                    nested.get("steps", []),
+                    {playbook_id},  # Include current playbook in visited set
+                    1
+                )
+
+        update_data["steps"] = processed_steps
 
     # Increment version and update timestamp
     update_data["version"] = current.get("version", 1) + 1
@@ -218,7 +348,7 @@ async def duplicate_playbook(
     new_name: str | None = None,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Duplicate a playbook."""
+    """Duplicate a playbook including its steps."""
     db = get_database()
 
     original = await db.playbooks.find_one({
@@ -232,11 +362,19 @@ async def duplicate_playbook(
     if not can_access_playbook(original, current_user):
         raise HTTPException(status_code=403, detail="Access denied to this playbook")
 
+    # Copy steps with new IDs but keep nested_playbook_ids
+    copied_steps = []
+    for step in original.get("steps", []):
+        copied_step = {**step}
+        copied_step["id"] = str(uuid4())  # New ID for the copied step
+        copied_steps.append(PlaybookStep(**copied_step))
+
     # Create copy with new UUID
     new_playbook = Playbook(
         organization_id=current_user.organization_id,
         name=new_name or f"{original['name']} (Copy)",
         description=original.get("description"),
+        steps=copied_steps,
         scope_type=original.get("scope_type", ScopeType.ORGANIZATION),
         scope_id=original.get("scope_id"),
         created_by=str(current_user.id)

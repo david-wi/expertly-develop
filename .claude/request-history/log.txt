@@ -5,3 +5,4 @@
 20260127 - Added Gmail SMTP support for identity email sending. Added aiosmtplib, SMTP config settings, and environment variables in docker-compose.prod.yml. Falls back to logging if SMTP not configured.
 20260127 - Switched from SMTP to Resend API for email (DO blocks SMTP ports). Pending domain verification for expertly.com - emails will work once DNS records propagate.
 20260127 - Identity: Split Users & Bots into separate sidebar items, added user display and org switcher. Manage: Added View As User/Team switcher, moved Active Tasks above Queues, added queue filter tabs and table columns.
+20260127 - Implement Playbooks Expansion: Added PlaybookStep model with AssigneeType enum, updated Playbook/PlaybookCreate/PlaybookUpdate to include steps, added circular reference validation in API, created full-page step editor UI with collapsible cards, reordering, markdown preview, assignee/approver options, and queue overrides.

@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from enum import Enum
 from typing import Optional
 from uuid import uuid4
 from pydantic import BaseModel, Field, ConfigDict
@@ -13,11 +14,57 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class AssigneeType(str, Enum):
+    """Who can be assigned to or approve a step."""
+    USER = "user"      # Specific person
+    TEAM = "team"      # Anyone on a team
+    ANYONE = "anyone"  # Any person in org
+
+
+class PlaybookStep(BaseModel):
+    """A single step in a playbook."""
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    order: int
+    title: str
+    description: Optional[str] = None  # Markdown content
+
+    # Nested playbook (optional) - use another playbook for this step
+    nested_playbook_id: Optional[str] = None
+
+    # Assignment - who works on this step
+    assignee_type: AssigneeType = AssigneeType.ANYONE
+    assignee_id: Optional[str] = None  # user_id or team_id when assignee_type is USER or TEAM
+    queue_id: Optional[str] = None  # Override default queue
+
+    # Approval (optional) - requires approval before continuing
+    approval_required: bool = False
+    approver_type: Optional[AssigneeType] = None
+    approver_id: Optional[str] = None  # user_id or team_id when approver_type is USER or TEAM
+    approver_queue_id: Optional[str] = None  # Queue for approval tasks
+
+
+class PlaybookStepCreate(BaseModel):
+    """Schema for creating/updating a step (without auto-generated id)."""
+    id: Optional[str] = None  # Optional - will be generated if not provided
+    order: Optional[int] = None  # Optional - will be assigned based on position
+    title: str
+    description: Optional[str] = None
+    nested_playbook_id: Optional[str] = None
+    assignee_type: AssigneeType = AssigneeType.ANYONE
+    assignee_id: Optional[str] = None
+    queue_id: Optional[str] = None
+    approval_required: bool = False
+    approver_type: Optional[AssigneeType] = None
+    approver_id: Optional[str] = None
+    approver_queue_id: Optional[str] = None
+
+
 class PlaybookHistoryEntry(BaseModel):
     """A historical version of a playbook."""
     version: int
     name: str
     description: Optional[str] = None
+    steps: list[PlaybookStep] = Field(default_factory=list)  # Snapshot of steps
     changed_at: datetime = Field(default_factory=utc_now)
     changed_by: Optional[str] = None  # User ID who made the change
 
@@ -40,6 +87,9 @@ class Playbook(BaseModel):
     # Core fields
     name: str
     description: Optional[str] = None
+
+    # Steps - the ordered list of steps in this playbook
+    steps: list[PlaybookStep] = Field(default_factory=list)
 
     # Scope - who can access this playbook
     scope_type: ScopeType = ScopeType.ORGANIZATION
@@ -67,6 +117,7 @@ class PlaybookCreate(BaseModel):
     """Schema for creating a playbook."""
     name: str
     description: Optional[str] = None
+    steps: list[PlaybookStepCreate] = Field(default_factory=list)
     scope_type: ScopeType = ScopeType.ORGANIZATION
     scope_id: Optional[str] = None  # User or Team ID
 
@@ -75,6 +126,7 @@ class PlaybookUpdate(BaseModel):
     """Schema for updating a playbook."""
     name: Optional[str] = None
     description: Optional[str] = None
+    steps: Optional[list[PlaybookStepCreate]] = None
     scope_type: Optional[ScopeType] = None
     scope_id: Optional[str] = None
     is_active: Optional[bool] = None

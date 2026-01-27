@@ -372,10 +372,43 @@ export interface UpdateRecurringTaskRequest {
 
 export type ScopeType = 'user' | 'team' | 'organization'
 
+export type AssigneeType = 'user' | 'team' | 'anyone'
+
+export interface PlaybookStep {
+  id: string
+  order: number
+  title: string
+  description?: string
+  nested_playbook_id?: string
+  assignee_type: AssigneeType
+  assignee_id?: string
+  queue_id?: string
+  approval_required: boolean
+  approver_type?: AssigneeType
+  approver_id?: string
+  approver_queue_id?: string
+}
+
+export interface PlaybookStepCreate {
+  id?: string
+  order?: number
+  title: string
+  description?: string
+  nested_playbook_id?: string
+  assignee_type?: AssigneeType
+  assignee_id?: string
+  queue_id?: string
+  approval_required?: boolean
+  approver_type?: AssigneeType
+  approver_id?: string
+  approver_queue_id?: string
+}
+
 export interface PlaybookHistoryEntry {
   version: number
   name: string
   description?: string
+  steps: PlaybookStep[]
   changed_at: string
   changed_by?: string
 }
@@ -385,6 +418,7 @@ export interface Playbook {
   organization_id: string
   name: string
   description?: string
+  steps: PlaybookStep[]
   scope_type: ScopeType
   scope_id?: string
   version: number
@@ -398,6 +432,7 @@ export interface Playbook {
 export interface CreatePlaybookRequest {
   name: string
   description?: string
+  steps?: PlaybookStepCreate[]
   scope_type?: ScopeType
   scope_id?: string
 }
@@ -405,6 +440,7 @@ export interface CreatePlaybookRequest {
 export interface UpdatePlaybookRequest {
   name?: string
   description?: string
+  steps?: PlaybookStepCreate[]
   scope_type?: ScopeType
   scope_id?: string
   is_active?: boolean
