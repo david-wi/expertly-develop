@@ -89,7 +89,7 @@ export default function DownloadBanner({ hasAgent }: DownloadBannerProps) {
   const Icon = info.icon;
 
   return (
-    <div className="bg-gradient-to-r from-brand-600 to-brand-700 text-white px-4 py-3 shadow-lg">
+    <div className="ml-72 bg-gradient-to-r from-brand-600 to-brand-700 text-white px-4 py-3 shadow-lg">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
