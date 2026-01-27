@@ -14,10 +14,11 @@ export default defineConfig({
       remotes: {
         expertly_ui: `${UI_REMOTE_URL}/assets/remoteEntry.js`,
       } as Record<string, unknown>,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       shared: {
         react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
         'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
-      } as Record<string, unknown>,
+      } as any,
     }),
   ],
   build: {
