@@ -272,3 +272,4 @@ jobs:
 
             echo "=== Rollback complete - $CURRENT still active ==="
           ENDSSH
+# Blue/green deployment test - 2026-01-27T02:07:23-05:00
