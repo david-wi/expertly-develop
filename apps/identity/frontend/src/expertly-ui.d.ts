@@ -60,6 +60,7 @@ declare module '@expertly/ui' {
     user?: {
       name: string
       role?: string
+      organization?: string
     }
     basePath?: string
     orgSwitcher?: ReactNode
