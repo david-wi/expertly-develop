@@ -12,8 +12,9 @@ This project uses the standard `.claude/` directory structure for docs, planning
 
 **Expertly Platform Monorepo** - Contains all Expertly applications
 
-- **Coolify Service**: expertlydevelopsvc00000
 - **GitHub**: https://github.com/david-wi/expertly-develop
+- **Deployment**: GitHub Actions (auto-deploys on push to main)
+- **Server Path**: /opt/expertly-develop
 
 ## Deployed Services Checklist
 
@@ -73,10 +74,12 @@ See `apps/future/` directory for planned services that are not yet implemented:
 
 ## Deployment Notes
 
-- Coolify manages deployments via `docker-compose.prod.yml`
-- Traefik routes traffic based on `/traefik/dynamic/expertly-apps.yaml`
-- Container naming: `{service}-expertlydevelopsvc00000`
-- After Coolify deployments, verify traefik config points to correct container names
+- **GitHub Actions** deploys automatically on push to main branch
+- Workflow: `.github/workflows/deploy.yml`
+- Traefik routes traffic via Docker labels in `docker-compose.prod.yml`
+- Container naming: `expertly-develop-{service}-1`
+- Server path: `/opt/expertly-develop`
+- Manual deploy: `ssh root@152.42.152.243 "cd /opt/expertly-develop && git pull && docker compose -f docker-compose.prod.yml up -d --build"`
 
 ## Environment Variables
 
