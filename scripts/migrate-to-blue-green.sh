@@ -30,8 +30,9 @@ echo ""
 echo "=== Starting containers as 'blue' deployment ==="
 export GIT_COMMIT=$(git rev-parse --short HEAD)
 export BUILD_TIMESTAMP=$(date +%s)
+export DEPLOY_COLOR="-blue"
 
-COMPOSE_PROJECT_NAME="expertly-blue" \
+COMPOSE_PROJECT_NAME="expertly-blue" DEPLOY_COLOR="-blue" \
     docker compose -f docker-compose.prod.yml up -d
 
 echo ""

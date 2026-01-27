@@ -66,11 +66,12 @@ jobs:
 
             # Build and deploy to target color
             echo "=== Building $TARGET deployment ==="
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" \
+            export DEPLOY_COLOR="-${TARGET}"
+            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
                 docker compose -f docker-compose.prod.yml build --parallel
 
             echo "=== Starting $TARGET containers ==="
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" \
+            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
                 docker compose -f docker-compose.prod.yml up -d
 
             echo "=== Waiting for containers to be ready ==="
@@ -211,7 +212,7 @@ jobs:
 
             echo "=== Stopping old $OLD deployment ==="
             cd /opt/expertly-develop
-            COMPOSE_PROJECT_NAME="expertly-${OLD}" \
+            COMPOSE_PROJECT_NAME="expertly-${OLD}" DEPLOY_COLOR="-${OLD}" \
                 docker compose -f docker-compose.prod.yml down --remove-orphans || true
 
             # Also stop legacy containers if this is migration from old naming
@@ -267,7 +268,7 @@ jobs:
             echo "=== Rolling back - stopping failed $FAILED deployment ==="
             cd /opt/expertly-develop
 
-            COMPOSE_PROJECT_NAME="expertly-${FAILED}" \
+            COMPOSE_PROJECT_NAME="expertly-${FAILED}" DEPLOY_COLOR="-${FAILED}" \
                 docker compose -f docker-compose.prod.yml down --remove-orphans || true
 
             echo "=== Rollback complete - $CURRENT still active ==="

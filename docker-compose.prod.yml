@@ -15,11 +15,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.ui.entrypoints=https"
-      - "traefik.http.routers.ui.rule=Host(`ui.ai.devintensive.com`)"
-      - "traefik.http.routers.ui.tls=true"
-      - "traefik.http.routers.ui.tls.certresolver=letsencrypt"
-      - "traefik.http.services.ui.loadbalancer.server.port=80"
+      - "traefik.http.routers.ui${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.ui${DEPLOY_COLOR:-}.rule=Host(`ui.ai.devintensive.com`)"
+      - "traefik.http.routers.ui${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.ui${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ui${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # ===================
@@ -40,11 +40,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.ed-backend.entrypoints=https"
-      - "traefik.http.routers.ed-backend.rule=Host(`develop-api.ai.devintensive.com`)"
-      - "traefik.http.routers.ed-backend.tls=true"
-      - "traefik.http.routers.ed-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.ed-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.ed-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.ed-backend${DEPLOY_COLOR:-}.rule=Host(`develop-api.ai.devintensive.com`)"
+      - "traefik.http.routers.ed-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.ed-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ed-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -84,11 +84,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.ed-frontend.entrypoints=https"
-      - "traefik.http.routers.ed-frontend.rule=Host(`develop.ai.devintensive.com`)"
-      - "traefik.http.routers.ed-frontend.tls=true"
-      - "traefik.http.routers.ed-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.ed-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.ed-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.ed-frontend${DEPLOY_COLOR:-}.rule=Host(`develop.ai.devintensive.com`)"
+      - "traefik.http.routers.ed-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.ed-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ed-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # ===================
@@ -108,11 +108,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.admin-backend.entrypoints=https"
-      - "traefik.http.routers.admin-backend.rule=Host(`admin-api.ai.devintensive.com`)"
-      - "traefik.http.routers.admin-backend.tls=true"
-      - "traefik.http.routers.admin-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.admin-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.admin-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.admin-backend${DEPLOY_COLOR:-}.rule=Host(`admin-api.ai.devintensive.com`)"
+      - "traefik.http.routers.admin-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.admin-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -134,11 +134,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.admin-frontend.entrypoints=https"
-      - "traefik.http.routers.admin-frontend.rule=Host(`admin.ai.devintensive.com`)"
-      - "traefik.http.routers.admin-frontend.tls=true"
-      - "traefik.http.routers.admin-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.admin-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.admin-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.admin-frontend${DEPLOY_COLOR:-}.rule=Host(`admin.ai.devintensive.com`)"
+      - "traefik.http.routers.admin-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.admin-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.admin-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   admin-db:
@@ -174,11 +174,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.identity-backend.entrypoints=https"
-      - "traefik.http.routers.identity-backend.rule=Host(`identity-api.ai.devintensive.com`)"
-      - "traefik.http.routers.identity-backend.tls=true"
-      - "traefik.http.routers.identity-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.identity-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.identity-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.identity-backend${DEPLOY_COLOR:-}.rule=Host(`identity-api.ai.devintensive.com`)"
+      - "traefik.http.routers.identity-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.identity-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.identity-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -201,11 +201,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.identity-frontend.entrypoints=https"
-      - "traefik.http.routers.identity-frontend.rule=Host(`identity.ai.devintensive.com`)"
-      - "traefik.http.routers.identity-frontend.tls=true"
-      - "traefik.http.routers.identity-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.identity-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.identity-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.identity-frontend${DEPLOY_COLOR:-}.rule=Host(`identity.ai.devintensive.com`)"
+      - "traefik.http.routers.identity-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.identity-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.identity-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   identity-db:
@@ -240,11 +240,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.define-backend.entrypoints=https"
-      - "traefik.http.routers.define-backend.rule=Host(`define-api.ai.devintensive.com`)"
-      - "traefik.http.routers.define-backend.tls=true"
-      - "traefik.http.routers.define-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.define-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.define-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.define-backend${DEPLOY_COLOR:-}.rule=Host(`define-api.ai.devintensive.com`)"
+      - "traefik.http.routers.define-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.define-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.define-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -269,11 +269,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.define-frontend.entrypoints=https"
-      - "traefik.http.routers.define-frontend.rule=Host(`define.ai.devintensive.com`)"
-      - "traefik.http.routers.define-frontend.tls=true"
-      - "traefik.http.routers.define-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.define-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.define-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.define-frontend${DEPLOY_COLOR:-}.rule=Host(`define.ai.devintensive.com`)"
+      - "traefik.http.routers.define-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.define-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.define-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # ===================
@@ -292,11 +292,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.manage-backend.entrypoints=https"
-      - "traefik.http.routers.manage-backend.rule=Host(`manage-api.ai.devintensive.com`)"
-      - "traefik.http.routers.manage-backend.tls=true"
-      - "traefik.http.routers.manage-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.manage-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.rule=Host(`manage-api.ai.devintensive.com`)"
+      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.manage-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -318,11 +318,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.manage-frontend.entrypoints=https"
-      - "traefik.http.routers.manage-frontend.rule=Host(`manage.ai.devintensive.com`)"
-      - "traefik.http.routers.manage-frontend.tls=true"
-      - "traefik.http.routers.manage-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.manage-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.rule=Host(`manage.ai.devintensive.com`)"
+      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.manage-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # ===================
@@ -341,11 +341,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.vibetest-backend.entrypoints=https"
-      - "traefik.http.routers.vibetest-backend.rule=Host(`vibetest.ai.devintensive.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.vibetest-backend.tls=true"
-      - "traefik.http.routers.vibetest-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.vibetest-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.vibetest-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.vibetest-backend${DEPLOY_COLOR:-}.rule=Host(`vibetest.ai.devintensive.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.vibetest-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.vibetest-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vibetest-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -365,11 +365,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.vibetest-frontend.entrypoints=https"
-      - "traefik.http.routers.vibetest-frontend.rule=Host(`vibetest.ai.devintensive.com`)"
-      - "traefik.http.routers.vibetest-frontend.tls=true"
-      - "traefik.http.routers.vibetest-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.vibetest-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.vibetest-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.vibetest-frontend${DEPLOY_COLOR:-}.rule=Host(`vibetest.ai.devintensive.com`)"
+      - "traefik.http.routers.vibetest-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.vibetest-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vibetest-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   vibetest-db:
@@ -401,11 +401,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.salon-backend.entrypoints=https"
-      - "traefik.http.routers.salon-backend.rule=Host(`salon-api.ai.devintensive.com`)"
-      - "traefik.http.routers.salon-backend.tls=true"
-      - "traefik.http.routers.salon-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.salon-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.salon-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.salon-backend${DEPLOY_COLOR:-}.rule=Host(`salon-api.ai.devintensive.com`)"
+      - "traefik.http.routers.salon-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.salon-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.salon-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -427,11 +427,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.salon-frontend.entrypoints=https"
-      - "traefik.http.routers.salon-frontend.rule=Host(`salon.ai.devintensive.com`)"
-      - "traefik.http.routers.salon-frontend.tls=true"
-      - "traefik.http.routers.salon-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.salon-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.salon-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.salon-frontend${DEPLOY_COLOR:-}.rule=Host(`salon.ai.devintensive.com`)"
+      - "traefik.http.routers.salon-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.salon-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.salon-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   # ===================
@@ -449,11 +449,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.today-backend.entrypoints=https"
-      - "traefik.http.routers.today-backend.rule=Host(`today-api.ai.devintensive.com`)"
-      - "traefik.http.routers.today-backend.tls=true"
-      - "traefik.http.routers.today-backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.today-backend.loadbalancer.server.port=8000"
+      - "traefik.http.routers.today-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.today-backend${DEPLOY_COLOR:-}.rule=Host(`today-api.ai.devintensive.com`)"
+      - "traefik.http.routers.today-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.today-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.today-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -475,11 +475,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.today-frontend.entrypoints=https"
-      - "traefik.http.routers.today-frontend.rule=Host(`today.ai.devintensive.com`)"
-      - "traefik.http.routers.today-frontend.tls=true"
-      - "traefik.http.routers.today-frontend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.today-frontend.loadbalancer.server.port=80"
+      - "traefik.http.routers.today-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.today-frontend${DEPLOY_COLOR:-}.rule=Host(`today.ai.devintensive.com`)"
+      - "traefik.http.routers.today-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.today-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.today-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
   today-db:
@@ -516,11 +516,11 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.vibecode.entrypoints=https"
-      - "traefik.http.routers.vibecode.rule=Host(`vibecode.ai.devintensive.com`)"
-      - "traefik.http.routers.vibecode.tls=true"
-      - "traefik.http.routers.vibecode.tls.certresolver=letsencrypt"
-      - "traefik.http.services.vibecode.loadbalancer.server.port=3001"
+      - "traefik.http.routers.vibecode${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.vibecode${DEPLOY_COLOR:-}.rule=Host(`vibecode.ai.devintensive.com`)"
+      - "traefik.http.routers.vibecode${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.vibecode${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.vibecode${DEPLOY_COLOR:-}.loadbalancer.server.port=3001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
       interval: 30s
