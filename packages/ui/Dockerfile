@@ -35,20 +35,16 @@ FROM nginx:alpine
 # Copy built files to nginx (vite copies public/* to dist/ automatically)
 COPY --from=builder /app/dist /usr/share/nginx/html
 
+# Copy federation files to root for Module Federation compatibility
+RUN cp /usr/share/nginx/html/assets/remoteEntry.js /usr/share/nginx/html/ && \
+    cp /usr/share/nginx/html/assets/__federation*.js /usr/share/nginx/html/
+
 # Configure nginx for SPA and CORS
 RUN echo 'server { \
     listen 80; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
-    \
-    # Serve federation files from assets folder at root URL \
-    location ~ ^/(__federation.*\.js|remoteEntry\.js)$ { \
-        alias /usr/share/nginx/html/assets/$1; \
-        add_header Access-Control-Allow-Origin * always; \
-        add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
-        add_header Cache-Control "no-cache" always; \
-    } \
     \
     location / { \
         # Handle OPTIONS preflight requests \
