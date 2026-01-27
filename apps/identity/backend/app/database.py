@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 
@@ -18,6 +19,14 @@ async def get_db():
 
 
 async def init_db():
-    """Initialize database tables."""
+    """Initialize database tables and indexes."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+        # Create partial unique index for email per organization (if not exists)
+        # This ensures only one user per email per organization (excluding null emails for bots)
+        await conn.execute(text("""
+            CREATE UNIQUE INDEX IF NOT EXISTS ix_users_org_email_unique
+            ON users (organization_id, email)
+            WHERE email IS NOT NULL
+        """))
