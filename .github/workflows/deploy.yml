@@ -214,6 +214,12 @@ jobs:
             COMPOSE_PROJECT_NAME="expertly-${OLD}" \
                 docker compose -f docker-compose.prod.yml down --remove-orphans || true
 
+            # Also stop legacy containers if this is migration from old naming
+            if docker ps --filter "name=expertly-develop-" -q | grep -q .; then
+                echo "=== Stopping legacy expertly-develop containers (migration) ==="
+                docker compose -f docker-compose.prod.yml down --remove-orphans || true
+            fi
+
             echo "=== Cleaning up old images ==="
             docker image prune -f
 
