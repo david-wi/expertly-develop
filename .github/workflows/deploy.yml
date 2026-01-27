@@ -17,7 +17,40 @@ env:
   SITES: "define develop identity admin manage salon today vibetest vibecode"
 
 jobs:
+  # Pre-flight check: TypeScript compilation for all frontends
+  # Catches type errors in ~30s instead of waiting for Docker builds
+  typecheck:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false  # Check ALL apps, don't stop on first failure
+      matrix:
+        app:
+          - { name: admin, path: apps/admin/frontend }
+          - { name: define, path: apps/define/frontend }
+          - { name: develop, path: apps/develop/frontend }
+          - { name: identity, path: apps/identity/frontend }
+          - { name: manage, path: apps/manage/frontend }
+          - { name: salon, path: apps/salon/frontend }
+          - { name: today, path: apps/today/frontend }
+          - { name: vibetest, path: apps/vibetest/frontend }
+          - { name: vibecode, path: apps/vibecode/packages/client }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.app.path }}/package-lock.json
+      - name: Install dependencies
+        working-directory: ${{ matrix.app.path }}
+        run: npm ci --ignore-scripts
+      - name: TypeScript check
+        working-directory: ${{ matrix.app.path }}
+        run: npx tsc --noEmit
+        continue-on-error: false
+
   deploy:
+    needs: typecheck  # Only deploy if all type checks pass
     runs-on: ubuntu-latest
     outputs:
       deploy_color: ${{ steps.deploy.outputs.deploy_color }}
