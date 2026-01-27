@@ -6,17 +6,22 @@ on:
       - main
   workflow_dispatch:
     inputs:
-      services:
-        description: 'Services to deploy (comma-separated, or "all")'
+      skip_visual_verification:
+        description: 'Skip visual verification (emergency deploy)'
         required: false
-        default: 'all'
+        default: 'false'
+        type: boolean
 
 env:
   DEPLOY_PATH: /opt/expertly-develop
+  SITES: "define develop identity admin manage salon today vibetest vibecode"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      deploy_color: ${{ steps.deploy.outputs.deploy_color }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -28,29 +33,67 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to server
+      - name: Deploy to inactive environment
+        id: deploy
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH' 2>&1 | tee build.log
             set -e
-            cd ${{ env.DEPLOY_PATH }}
+            cd /opt/expertly-develop
 
-            echo "=== Pulling latest changes ==="
+            # Initialize state file if needed
+            STATE_FILE="/opt/deployment-state.json"
+            if [ ! -f "$STATE_FILE" ]; then
+                echo '{"active": "blue", "last_deploy": ""}' > "$STATE_FILE"
+            fi
+
+            # Get current and target colors
+            CURRENT=$(jq -r '.active' "$STATE_FILE")
+            if [ "$CURRENT" = "blue" ]; then
+                TARGET="green"
+            else
+                TARGET="blue"
+            fi
+
+            echo "DEPLOY_COLOR=$TARGET" >> /tmp/deploy_output
+            echo "Current active: $CURRENT, deploying to: $TARGET"
+
+            # Pull latest code
             git pull origin main
 
-            echo "=== Building and deploying all services ==="
+            # Set build variables
             export GIT_COMMIT=$(git rev-parse --short HEAD)
             export BUILD_TIMESTAMP=$(date +%s)
 
-            # Build and restart all services
-            docker compose -f docker-compose.prod.yml build --parallel
-            docker compose -f docker-compose.prod.yml up -d
+            # Build and deploy to target color
+            echo "=== Building $TARGET deployment ==="
+            COMPOSE_PROJECT_NAME="expertly-${TARGET}" \
+                docker compose -f docker-compose.prod.yml build --parallel
 
-            echo "=== Cleaning up old images ==="
-            docker image prune -f
+            echo "=== Starting $TARGET containers ==="
+            COMPOSE_PROJECT_NAME="expertly-${TARGET}" \
+                docker compose -f docker-compose.prod.yml up -d
 
-            echo "=== Deployment complete ==="
-            docker compose -f docker-compose.prod.yml ps
+            echo "=== Waiting for containers to be ready ==="
+            sleep 15
+
+            # Basic health check
+            echo "=== Running health checks ==="
+            for service in define-backend develop-backend identity-backend manage-backend vibetest-backend salon-backend today-backend; do
+                container="expertly-${TARGET}-${service}-1"
+                if docker ps --filter "name=$container" --filter "status=running" -q | grep -q .; then
+                    echo "✓ $container is running"
+                else
+                    echo "✗ $container not running"
+                    exit 1
+                fi
+            done
+
+            echo "=== Deployment to $TARGET complete ==="
           ENDSSH
+
+          # Extract deploy color from output
+          DEPLOY_COLOR=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "cat /tmp/deploy_output | grep DEPLOY_COLOR | cut -d= -f2")
+          echo "deploy_color=$DEPLOY_COLOR" >> $GITHUB_OUTPUT
 
       - name: Upload build log on failure
         if: failure()
@@ -60,13 +103,166 @@ jobs:
           path: build.log
           retention-days: 7
 
-      - name: Verify deployment
-        run: |
-          echo "Waiting for services to start..."
-          sleep 10
+  visual-verification:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.skip_visual_verification != 'true' }}
 
-          # Check key endpoints
-          for site in define identity manage develop admin vibetest salon today vibecode; do
+    steps:
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright
+          npx playwright install chromium
+
+      - name: Take screenshots and verify
+        id: visual
+        run: |
+          mkdir -p screenshots
+
+          FAILED=0
+          for site in define develop identity admin manage salon today vibetest vibecode; do
+            echo "Checking $site..."
+
+            # Take screenshot
+            npx playwright screenshot --wait-for-timeout=5000 \
+              "https://${site}.ai.devintensive.com" \
+              "screenshots/${site}.png" 2>/dev/null || true
+
+            # Check if screenshot exists and has content (not blank)
+            if [ -f "screenshots/${site}.png" ]; then
+              # Get file size - blank pages are usually very small
+              SIZE=$(stat -f%z "screenshots/${site}.png" 2>/dev/null || stat -c%s "screenshots/${site}.png" 2>/dev/null)
+              if [ "$SIZE" -gt 10000 ]; then
+                echo "✓ $site - screenshot captured (${SIZE} bytes)"
+              else
+                echo "⚠ $site - screenshot too small, may be blank (${SIZE} bytes)"
+                FAILED=1
+              fi
+            else
+              echo "✗ $site - failed to capture screenshot"
+              FAILED=1
+            fi
+          done
+
+          echo "verification_failed=$FAILED" >> $GITHUB_OUTPUT
+
+      - name: Upload screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-verification-screenshots
+          path: screenshots/
+          retention-days: 7
+
+      - name: Fail if verification failed
+        if: steps.visual.outputs.verification_failed == '1'
+        run: |
+          echo "Visual verification failed! Check screenshots artifact."
+          exit 1
+
+  switch-traffic:
+    needs: [deploy, visual-verification]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Switch traffic to new deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+
+            STATE_FILE="/opt/deployment-state.json"
+            TRAEFIK_DYNAMIC="/opt/traefik/dynamic"
+
+            # Get target color (the one we just deployed to)
+            CURRENT=$(jq -r '.active' "$STATE_FILE")
+            if [ "$CURRENT" = "blue" ]; then
+                TARGET="green"
+                OLD="blue"
+            else
+                TARGET="blue"
+                OLD="green"
+            fi
+
+            echo "=== Switching traffic from $OLD to $TARGET ==="
+
+            # Update Traefik routing to point to new containers
+            # Since we're using Docker provider with labels, containers are auto-discovered
+            # We just need to stop the old containers
+
+            # Update state file
+            jq --arg color "$TARGET" --arg time "$(date -Iseconds)" \
+                '.active = $color | .last_deploy = $time' "$STATE_FILE" > "${STATE_FILE}.tmp"
+            mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+            echo "=== Waiting for traffic to drain from old deployment ==="
+            sleep 10
+
+            echo "=== Stopping old $OLD deployment ==="
+            cd /opt/expertly-develop
+            COMPOSE_PROJECT_NAME="expertly-${OLD}" \
+                docker compose -f docker-compose.prod.yml down --remove-orphans || true
+
+            echo "=== Cleaning up old images ==="
+            docker image prune -f
+
+            echo "=== Blue/green deployment complete ==="
+            echo "Active: $TARGET"
+          ENDSSH
+
+      - name: Final verification
+        run: |
+          echo "Verifying all sites respond..."
+          sleep 5
+          for site in define develop identity admin manage salon today vibetest vibecode; do
             status=$(curl -s -o /dev/null -w "%{http_code}" "https://${site}.ai.devintensive.com/" || echo "000")
             echo "${site}: HTTP ${status}"
           done
+
+  rollback-on-failure:
+    needs: [deploy, visual-verification]
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Rollback - stop failed deployment
+        run: |
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+            set -e
+
+            STATE_FILE="/opt/deployment-state.json"
+
+            # Get the color we deployed to (which failed)
+            CURRENT=$(jq -r '.active' "$STATE_FILE")
+            if [ "$CURRENT" = "blue" ]; then
+                FAILED="green"
+            else
+                FAILED="blue"
+            fi
+
+            echo "=== Rolling back - stopping failed $FAILED deployment ==="
+            cd /opt/expertly-develop
+
+            COMPOSE_PROJECT_NAME="expertly-${FAILED}" \
+                docker compose -f docker-compose.prod.yml down --remove-orphans || true
+
+            echo "=== Rollback complete - $CURRENT still active ==="
+          ENDSSH
