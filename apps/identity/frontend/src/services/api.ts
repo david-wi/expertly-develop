@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const API_BASE = '/api/v1'
+// Use VITE_API_URL in production, fallback to relative path for local dev
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/v1`
+  : '/api/v1'
 const ORG_STORAGE_KEY = 'expertly-identity-org-id'
 
 const api = axios.create({
