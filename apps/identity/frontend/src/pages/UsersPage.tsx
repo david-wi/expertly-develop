@@ -375,7 +375,7 @@ export default function UsersPage() {
                       onClick={() => handleRegenerateApiKey(user)}
                       className="text-gray-600 hover:text-gray-800 text-sm"
                     >
-                      Key
+                      API Key
                     </button>
                     <button
                       onClick={() => openEditModal(user)}
