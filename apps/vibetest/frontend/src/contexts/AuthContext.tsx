@@ -9,8 +9,6 @@ import {
 import { authApi, tokenStorage } from '../api/client'
 import { User } from '../types'
 
-const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
-
 interface AuthContextType {
   user: User | null
   isLoading: boolean
