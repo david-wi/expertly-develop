@@ -14,7 +14,7 @@ COPY packages/client/package*.json ./packages/client/
 COPY packages/agent/package*.json ./packages/agent/
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -38,7 +38,7 @@ COPY package*.json ./
 COPY packages/server/package*.json ./packages/server/
 
 # Install production dependencies only
-RUN npm ci --omit=dev --workspace=@expertly-vibecode/server
+RUN npm install --omit=dev --workspace=@expertly-vibecode/server
 
 # Copy built server
 COPY --from=builder /app/packages/server/dist ./packages/server/dist
