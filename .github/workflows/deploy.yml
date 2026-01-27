@@ -30,7 +30,7 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH' 2>&1 | tee build.log
             set -e
             cd ${{ env.DEPLOY_PATH }}
 
@@ -51,6 +51,14 @@ jobs:
             echo "=== Deployment complete ==="
             docker compose -f docker-compose.prod.yml ps
           ENDSSH
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: build.log
+          retention-days: 7
 
       - name: Verify deployment
         run: |
