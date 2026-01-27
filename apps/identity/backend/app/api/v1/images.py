@@ -1,5 +1,9 @@
 """Image generation API endpoints."""
 
+import uuid
+from pathlib import Path
+
+import httpx
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from openai import OpenAI
@@ -32,6 +36,22 @@ def get_openai_client() -> OpenAI:
             detail="OpenAI API key not configured",
         )
     return OpenAI(api_key=settings.openai_api_key)
+
+
+async def download_and_save_image(image_url: str) -> str:
+    """Download image from URL and save locally, returning the local URL."""
+    uploads_dir = Path(settings.uploads_dir)
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = f"{uuid.uuid4()}.png"
+    filepath = uploads_dir / filename
+
+    async with httpx.AsyncClient() as client:
+        response = await client.get(image_url)
+        response.raise_for_status()
+        filepath.write_bytes(response.content)
+
+    return f"{settings.uploads_base_url}/{filename}"
 
 
 @router.post("/generate-avatar", response_model=GenerateAvatarResponse)
@@ -67,9 +87,15 @@ NOT a photograph - stylized vector art illustration."""
             n=1,
         )
 
-        image_url = response.data[0].url
-        return GenerateAvatarResponse(url=image_url)
+        openai_url = response.data[0].url
+        local_url = await download_and_save_image(openai_url)
+        return GenerateAvatarResponse(url=local_url)
 
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to download generated image: {str(e)}",
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

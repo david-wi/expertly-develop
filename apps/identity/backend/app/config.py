@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     # Frontend URL for password reset links
     identity_frontend_url: str = "https://identity.ai.devintensive.com"
 
+    # Uploads
+    uploads_dir: str = "/app/uploads"
+    uploads_base_url: str = "https://identity-api.ai.devintensive.com/uploads"
+
     # Resend email API
     resend_api_key: str = ""
     email_from_address: str = "donotreply@expertly.com"
