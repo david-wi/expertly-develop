@@ -3,6 +3,7 @@ import {
   Users,
   UsersRound,
   Building2,
+  KeyRound,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
 
@@ -10,6 +11,7 @@ const navigation = [
   { name: 'Users & Bots', href: '/users', icon: Users },
   { name: 'Teams', href: '/teams', icon: UsersRound },
   { name: 'Organizations', href: '/organizations', icon: Building2 },
+  { name: 'Change Password', href: '/change-password', icon: KeyRound },
 ]
 
 export default function Layout() {

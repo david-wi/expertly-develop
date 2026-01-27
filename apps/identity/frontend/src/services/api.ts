@@ -204,6 +204,25 @@ export interface ValidateResponse {
   expires_at: string | null
 }
 
+// Magic Code types
+export interface MagicCodeResponse {
+  message: string
+  expires_in_minutes: number
+}
+
+// Password types
+export interface ChangePasswordResponse {
+  message: string
+}
+
+export interface ForgotPasswordResponse {
+  message: string
+}
+
+export interface ResetPasswordResponse {
+  message: string
+}
+
 // Auth API
 export const authApi = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
@@ -223,6 +242,36 @@ export const authApi = {
   me: async (sessionToken: string): Promise<AuthUser> => {
     const { data } = await api.get('/auth/me', {
       headers: { 'X-Session-Token': sessionToken },
+    })
+    return data
+  },
+
+  // Magic code (passwordless login)
+  requestMagicCode: async (email: string): Promise<MagicCodeResponse> => {
+    const { data } = await api.post('/auth/magic-code/request', { email })
+    return data
+  },
+  verifyMagicCode: async (email: string, code: string): Promise<LoginResponse> => {
+    const { data } = await api.post('/auth/magic-code/verify', { email, code })
+    return data
+  },
+
+  // Password management
+  changePassword: async (currentPassword: string, newPassword: string): Promise<ChangePasswordResponse> => {
+    const { data } = await api.post('/auth/password/change', {
+      current_password: currentPassword,
+      new_password: newPassword,
+    })
+    return data
+  },
+  forgotPassword: async (email: string): Promise<ForgotPasswordResponse> => {
+    const { data } = await api.post('/auth/password/forgot', { email })
+    return data
+  },
+  resetPassword: async (token: string, newPassword: string): Promise<ResetPasswordResponse> => {
+    const { data } = await api.post('/auth/password/reset', {
+      token,
+      new_password: newPassword,
     })
     return data
   },

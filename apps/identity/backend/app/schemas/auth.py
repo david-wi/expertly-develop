@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 
 class LoginRequest(BaseModel):
@@ -49,6 +49,68 @@ class SessionInfo(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# =====================
+# Magic Code (Passwordless Login)
+# =====================
+
+class MagicCodeRequest(BaseModel):
+    """Request a magic code for passwordless login."""
+    email: EmailStr
+
+
+class MagicCodeResponse(BaseModel):
+    """Response after requesting a magic code."""
+    message: str
+    expires_in_minutes: int = 15
+
+
+class MagicCodeVerifyRequest(BaseModel):
+    """Verify a magic code to complete login."""
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6)
+
+
+# =====================
+# Password Management
+# =====================
+
+class ChangePasswordRequest(BaseModel):
+    """Change password for logged-in user."""
+    current_password: str
+    new_password: str
+
+
+class ChangePasswordResponse(BaseModel):
+    """Response after changing password."""
+    message: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    """Request a password reset."""
+    email: EmailStr
+
+
+class ForgotPasswordResponse(BaseModel):
+    """Response after requesting password reset."""
+    message: str
+
+
+class ResetPasswordRequest(BaseModel):
+    """Reset password using a token."""
+    token: str
+    new_password: str
+
+
+class ResetPasswordResponse(BaseModel):
+    """Response after resetting password."""
+    message: str
+
+
+class PasswordValidationError(BaseModel):
+    """Password validation error details."""
+    errors: List[str]
 
 
 # Update forward references

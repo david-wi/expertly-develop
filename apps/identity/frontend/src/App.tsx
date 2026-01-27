@@ -5,6 +5,10 @@ import TeamsPage from './pages/TeamsPage'
 import OrganizationsPage from './pages/OrganizationsPage'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
+import MagicCodePage from './pages/MagicCodePage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
+import ChangePasswordPage from './pages/ChangePasswordPage'
 
 export default function App() {
   return (
@@ -12,6 +16,9 @@ export default function App() {
       {/* Public routes (no layout) */}
       <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/magic-code" element={<MagicCodePage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
       {/* App routes */}
       <Route path="/" element={<Layout />}>
@@ -19,6 +26,7 @@ export default function App() {
         <Route path="users" element={<UsersPage />} />
         <Route path="teams" element={<TeamsPage />} />
         <Route path="organizations" element={<OrganizationsPage />} />
+        <Route path="change-password" element={<ChangePasswordPage />} />
       </Route>
     </Routes>
   )

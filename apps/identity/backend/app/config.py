@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     session_expiry_days: int = 30
     session_secret: str = "change-me-in-production"
 
+    # Frontend URL for password reset links
+    identity_frontend_url: str = "https://identity.ai.devintensive.com"
+
     class Config:
         env_file = ".env"
 

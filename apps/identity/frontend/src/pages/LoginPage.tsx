@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Lock, Mail, AlertCircle, Loader2 } from 'lucide-react'
 import { authApi, setOrganizationId } from '../services/api'
 
@@ -38,6 +38,11 @@ export default function LoginPage() {
       setLoading(false)
     }
   }
+
+  // Build magic code link with return_url if present
+  const magicCodeLink = returnUrl
+    ? `/magic-code?return_url=${encodeURIComponent(returnUrl)}`
+    : '/magic-code'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -81,9 +86,17 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-2">
-                Password
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+                  Password
+                </label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                 <input
@@ -114,6 +127,20 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Magic code option */}
+          <div className="mt-6 pt-6 border-t border-slate-700">
+            <p className="text-center text-sm text-slate-400 mb-3">
+              Expertly or WebIntensive employee?
+            </p>
+            <Link
+              to={magicCodeLink}
+              className="w-full py-3 px-4 bg-slate-700/50 text-white font-medium rounded-lg hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-800 transition-all flex items-center justify-center gap-2"
+            >
+              <Mail className="w-5 h-5" />
+              Sign in with email code
+            </Link>
+          </div>
 
           {/* Return URL info */}
           {returnUrl && (
