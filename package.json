@@ -13,6 +13,12 @@
     "dev:manage": "cd apps/manage && docker-compose up",
     "dev:qa": "cd apps/qa && docker-compose up",
     "dev:salon": "cd apps/salon && docker-compose up",
-    "dev:today": "cd apps/today && docker-compose up"
+    "dev:today": "cd apps/today && docker-compose up",
+    "prepare": "husky",
+    "typecheck:ui": "cd packages/ui && npx tsc --noEmit"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7"
   }
 }

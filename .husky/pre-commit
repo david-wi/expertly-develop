@@ -1,0 +1,3 @@
+# Monorepo: typecheck enforced via CI + branch protection
+# Full builds are too slow for pre-commit; CI runs tsc on all apps
+exit 0
