@@ -143,6 +143,38 @@ export const api = {
     request<Task>(`/api/v1/recurring-tasks/${id}/trigger`, {
       method: 'POST',
     }),
+
+  // Playbooks
+  getPlaybooks: (params?: { scope_type?: string; active_only?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.scope_type) searchParams.set('scope_type', params.scope_type)
+    if (params?.active_only !== undefined) searchParams.set('active_only', String(params.active_only))
+    const query = searchParams.toString()
+    return request<Playbook[]>(`/api/v1/playbooks${query ? `?${query}` : ''}`)
+  },
+  getPlaybook: (id: string) => request<Playbook>(`/api/v1/playbooks/${id}`),
+  createPlaybook: (data: CreatePlaybookRequest) =>
+    request<Playbook>('/api/v1/playbooks', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updatePlaybook: (id: string, data: UpdatePlaybookRequest) =>
+    request<Playbook>(`/api/v1/playbooks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deletePlaybook: (id: string) =>
+    request<void>(`/api/v1/playbooks/${id}`, {
+      method: 'DELETE',
+    }),
+  duplicatePlaybook: (id: string, newName?: string) => {
+    const query = newName ? `?new_name=${encodeURIComponent(newName)}` : ''
+    return request<Playbook>(`/api/v1/playbooks/${id}/duplicate${query}`, {
+      method: 'POST',
+    })
+  },
+  getPlaybookHistory: (id: string) =>
+    request<PlaybookHistoryEntry[]>(`/api/v1/playbooks/${id}/history`),
 }
 
 // Types
@@ -336,4 +368,44 @@ export interface UpdateRecurringTaskRequest {
   is_active?: boolean
   input_data?: Record<string, unknown>
   max_retries?: number
+}
+
+export type ScopeType = 'user' | 'team' | 'organization'
+
+export interface PlaybookHistoryEntry {
+  version: number
+  name: string
+  description?: string
+  changed_at: string
+  changed_by?: string
+}
+
+export interface Playbook {
+  id: string
+  organization_id: string
+  name: string
+  description?: string
+  scope_type: ScopeType
+  scope_id?: string
+  version: number
+  history: PlaybookHistoryEntry[]
+  is_active: boolean
+  created_at: string
+  updated_at: string
+  created_by?: string
+}
+
+export interface CreatePlaybookRequest {
+  name: string
+  description?: string
+  scope_type?: ScopeType
+  scope_id?: string
+}
+
+export interface UpdatePlaybookRequest {
+  name?: string
+  description?: string
+  scope_type?: ScopeType
+  scope_id?: string
+  is_active?: boolean
 }
