@@ -7,12 +7,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy identity-client package first
+COPY packages/identity-client /tmp/identity-client
+
 # Copy requirements and install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/define/backend/requirements.txt .
+RUN pip install --no-cache-dir /tmp/identity-client && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /tmp/identity-client
 
 # Copy application code
-COPY app/ app/
+COPY apps/define/backend/app/ app/
 
 # Create data directory for SQLite
 RUN mkdir -p /app/data /app/uploads

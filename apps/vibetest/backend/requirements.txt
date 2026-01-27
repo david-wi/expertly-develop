@@ -31,8 +31,6 @@ babel==2.16.0
 # Utilities
 httpx==0.27.0
 
-# Identity client (local package)
--e ../../packages/identity-client
 python-dateutil==2.9.0
 pillow==10.4.0
 

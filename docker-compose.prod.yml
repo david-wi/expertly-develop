@@ -26,7 +26,9 @@ services:
   # EXPERTLY DEVELOP
   # ===================
   develop-backend:
-    build: ./apps/develop/backend
+    build:
+      context: .
+      dockerfile: ./apps/develop/backend/Dockerfile
     environment:
       - MONGODB_URL=mongodb://mongo:27017
       - MONGODB_DATABASE=expertly_develop
@@ -169,6 +171,8 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS:-donotreply@expertly.com}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Expertly}
+    volumes:
+      - identity_uploads:/app/uploads
     depends_on:
       - identity-db
       - app-redis
@@ -228,7 +232,9 @@ services:
   # EXPERTLY DEFINE
   # ===================
   define-backend:
-    build: ./apps/define/backend
+    build:
+      context: .
+      dockerfile: ./apps/define/backend/Dockerfile
     environment:
       - SKIP_AUTH=${SKIP_AUTH:-false}
       - LOG_LEVEL=INFO
@@ -284,7 +290,9 @@ services:
   # EXPERTLY MANAGE
   # ===================
   manage-backend:
-    build: ./apps/manage/backend
+    build:
+      context: .
+      dockerfile: ./apps/manage/backend/Dockerfile
     environment:
       - MONGODB_URL=mongodb://mongo:27017
       - MONGODB_DATABASE=expertly_manage
@@ -333,7 +341,9 @@ services:
   # EXPERTLY VIBETEST
   # ===================
   vibetest-backend:
-    build: ./apps/vibetest/backend
+    build:
+      context: .
+      dockerfile: ./apps/vibetest/backend/Dockerfile
     environment:
       - DATABASE_URL=postgresql://vibetest:vibetest@vibetest-db:5432/vibetest
       - SECRET_KEY=${VIBETEST_SECRET_KEY:-super-secret-key-change-in-production}
@@ -392,7 +402,9 @@ services:
   # EXPERTLY SALON
   # ===================
   salon-backend:
-    build: ./apps/salon/backend
+    build:
+      context: .
+      dockerfile: ./apps/salon/backend/Dockerfile
     environment:
       - MONGODB_URL=mongodb://mongo:27017
       - MONGODB_DATABASE=expertly_salon
@@ -442,7 +454,9 @@ services:
   # EXPERTLY TODAY
   # ===================
   today-backend:
-    build: ./apps/today/backend
+    build:
+      context: .
+      dockerfile: ./apps/today/backend/Dockerfile
     environment:
       - DATABASE_URL=postgresql+asyncpg://today:today@today-db:5432/expertly_today
     depends_on:
@@ -569,6 +583,7 @@ volumes:
   define_data:
   define_uploads:
   identity_postgres_data:
+  identity_uploads:
   mongo_data:
   vibetest_postgres_data:
   redis_data:

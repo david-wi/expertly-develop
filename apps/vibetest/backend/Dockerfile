@@ -27,15 +27,22 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
+# Copy identity-client package first
+COPY packages/identity-client /tmp/identity-client
+
 # Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY apps/vibetest/backend/requirements.txt .
+RUN pip install --no-cache-dir /tmp/identity-client && \
+    pip install --no-cache-dir -r requirements.txt && \
+    rm -rf /tmp/identity-client
 
 # Install Playwright browsers (deps already installed above)
 RUN playwright install chromium
 
 # Copy application code
-COPY . .
+COPY apps/vibetest/backend/app/ app/
+COPY apps/vibetest/backend/alembic/ alembic/
+COPY apps/vibetest/backend/alembic.ini .
 
 # Create data directories
 RUN mkdir -p /app/data/artifacts
