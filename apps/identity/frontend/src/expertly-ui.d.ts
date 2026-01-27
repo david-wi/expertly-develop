@@ -1,42 +1,28 @@
-// Type declarations for Module Federation remote: expertly_ui
+/**
+ * AUTO-GENERATED - DO NOT EDIT DIRECTLY
+ *
+ * This file is synced from packages/ui/src/types/module-federation.d.ts
+ * To update, modify the source file and run:
+ *   node packages/ui/scripts/sync-types.js
+ */
+
+/**
+ * Type declarations for Module Federation remote: expertly_ui
+ *
+ * IMPORTANT: This is the canonical type declaration for the expertly_ui module.
+ * Apps should copy this file to their src/ directory as expertly-ui.d.ts
+ *
+ * When updating types in this file, run:
+ *   node scripts/sync-types.js
+ * to propagate changes to all apps.
+ */
+
 declare module 'expertly_ui/index' {
-  export {
-    Sidebar,
-    MainLayout,
-    MainContent,
-    ExpertlyLogo,
-    EXPERTLY_PRODUCTS,
-    SUPPORTED_LANGUAGES,
-    violetPalette,
-    type NavItem,
-    type ExpertlyProduct,
-    type SidebarProps,
-    type SupportedLanguage,
-    type LanguageOption,
-  } from '@expertly/ui'
+  import type { FC, ReactNode, ComponentType, Context } from 'react'
 
-  export {
-    ThemeProvider,
-    ThemeContext,
-    useTheme,
-    ThemeSwitcher,
-    themes,
-    themeList,
-    getTheme,
-    getThemeColors,
-    type ThemeContextValue,
-    type ThemeId,
-    type ThemeMode,
-    type Theme,
-    type ThemeColors,
-  } from '@expertly/ui'
-
-  export { formatBuildTimestamp } from '@expertly/ui'
-}
-
-// Keep @expertly/ui types for local development
-declare module '@expertly/ui' {
-  import type { ReactNode, ComponentType } from 'react'
+  // ==========================================================================
+  // Navigation Types
+  // ==========================================================================
 
   export interface NavItem {
     name: string
@@ -51,6 +37,22 @@ declare module '@expertly/ui' {
     icon: string
     description: string
   }
+
+  // ==========================================================================
+  // Language Types
+  // ==========================================================================
+
+  export type SupportedLanguage = 'en' | 'es'
+
+  export interface LanguageOption {
+    code: SupportedLanguage
+    flag: string
+    name: string
+  }
+
+  // ==========================================================================
+  // Sidebar Types
+  // ==========================================================================
 
   export interface SidebarProps {
     productCode: string
@@ -81,13 +83,9 @@ declare module '@expertly/ui' {
     }
   }
 
-  export type SupportedLanguage = 'en' | 'es'
-
-  export interface LanguageOption {
-    code: SupportedLanguage
-    flag: string
-    name: string
-  }
+  // ==========================================================================
+  // Theme Types
+  // ==========================================================================
 
   export type ThemeId = 'violet' | 'blue' | 'green' | 'orange' | 'red' | 'pink' | 'cyan'
   export type ThemeMode = 'light' | 'dark'
@@ -120,21 +118,34 @@ declare module '@expertly/ui' {
     toggleMode: () => void
   }
 
+  // ==========================================================================
+  // Exported Constants
+  // ==========================================================================
+
   export const EXPERTLY_PRODUCTS: ExpertlyProduct[]
   export const SUPPORTED_LANGUAGES: LanguageOption[]
   export const violetPalette: ThemeColors
   export const themes: Record<ThemeId, Theme>
   export const themeList: Theme[]
 
+  // ==========================================================================
+  // Exported Components
+  // ==========================================================================
+
   export function Sidebar(props: SidebarProps): JSX.Element
   export function MainLayout(props: { children: ReactNode }): JSX.Element
   export function MainContent(props: { children: ReactNode }): JSX.Element
   export function ExpertlyLogo(props: { className?: string }): JSX.Element
-  export function ThemeProvider(props: { children: ReactNode }): JSX.Element
+  export function ThemeProvider(props: { children: ReactNode; defaultTheme?: ThemeId; defaultMode?: ThemeMode }): JSX.Element
   export function ThemeSwitcher(): JSX.Element
+  export const ThemeContext: Context<ThemeContextValue | null>
+
+  // ==========================================================================
+  // Exported Functions
+  // ==========================================================================
+
   export function useTheme(): ThemeContextValue
   export function getTheme(id: ThemeId): Theme
   export function getThemeColors(id: ThemeId): ThemeColors
   export function formatBuildTimestamp(timestamp: string | undefined): string | null
-  export const ThemeContext: React.Context<ThemeContextValue | null>
 }

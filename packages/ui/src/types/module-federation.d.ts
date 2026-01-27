@@ -1,12 +1,4 @@
 /**
- * AUTO-GENERATED - DO NOT EDIT DIRECTLY
- *
- * This file is synced from packages/ui/src/types/module-federation.d.ts
- * To update, modify the source file and run:
- *   node packages/ui/scripts/sync-types.js
- */
-
-/**
  * Type declarations for Module Federation remote: expertly_ui
  *
  * IMPORTANT: This is the canonical type declaration for the expertly_ui module.
