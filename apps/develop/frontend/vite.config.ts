@@ -13,7 +13,7 @@ export default defineConfig({
       name: 'expertly_develop',
       remotes: {
         expertly_ui: `${UI_REMOTE_URL}/assets/remoteEntry.js`,
-      } as Record<string, unknown>,
+      } as const as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       shared: {
         react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
@@ -33,7 +33,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-      } as Record<string, unknown>,
+      } as const as any,
     },
   },
 })

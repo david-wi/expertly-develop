@@ -11,11 +11,11 @@ export default defineConfig({
       name: 'expertly_vibecode',
       remotes: {
         expertly_ui: `${UI_REMOTE_URL}/remoteEntry.js`,
-      } as Record<string, unknown>,
+      } as const as any,
       shared: {
         react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
         'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
-      } as Record<string, unknown>,
+      } as const as any,
     }),
   ],
   build: {
@@ -30,7 +30,7 @@ export default defineConfig({
       '/ws': {
         target: 'ws://localhost:3001',
         ws: true,
-      } as Record<string, unknown>,
+      } as const as any,
     },
   },
 });

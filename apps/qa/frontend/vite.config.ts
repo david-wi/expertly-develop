@@ -7,17 +7,17 @@ const UI_REMOTE_URL = process.env.VITE_UI_REMOTE_URL || 'https://ui.ai.devintens
 export default defineConfig({
   plugins: [
     react(),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     federation({
       name: 'expertly_qa',
       remotes: {
         expertly_ui: `${UI_REMOTE_URL}/assets/remoteEntry.js`,
-      } as Record<string, unknown>,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      },
       shared: {
         react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
         'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
-      } as any,
-    }),
+      },
+    } as any),
   ],
   server: {
     port: 5173,
@@ -25,7 +25,7 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-      } as Record<string, unknown>,
+      } as const as any,
     },
   },
   build: {
