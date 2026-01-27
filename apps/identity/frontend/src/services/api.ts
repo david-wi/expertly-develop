@@ -8,6 +8,7 @@ const ORG_STORAGE_KEY = 'expertly-identity-org-id'
 
 const api = axios.create({
   baseURL: API_BASE,
+  withCredentials: true, // Required for cross-origin cookies to be set/sent
 })
 
 // Add organization header to all requests
