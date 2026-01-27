@@ -69,7 +69,7 @@ jobs:
           fi
 
           echo "Running Claude Code to analyze and fix..."
-          claude --model opus --print "The CI build/deploy workflow failed for the expertly-develop monorepo.
+          claude --model opus --dangerously-skip-permissions --print "The CI build/deploy workflow failed for the expertly-develop monorepo.
 
           Error log (last 300 lines):
           \`\`\`
