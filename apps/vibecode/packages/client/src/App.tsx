@@ -4,20 +4,24 @@ import { useWebSocket } from './hooks/useWebSocket';
 import Dashboard from './components/Dashboard';
 import { Sidebar } from './components/Sidebar';
 import ConnectionStatus from './components/ConnectionStatus';
+import DownloadBanner from './components/DownloadBanner';
 import LandingPage from './pages/LandingPage';
 import DownloadPage from './pages/DownloadPage';
 import { ExternalLink } from 'lucide-react';
 
 function MainApp() {
-  const { connected } = useDashboardStore();
+  const { connected, serverConfig } = useDashboardStore();
   const ws = useWebSocket();
 
   return (
-    <div className="h-screen flex bg-gray-100">
-      <Sidebar ws={ws} />
-      <main className="flex-1 ml-72 overflow-hidden">
-        <Dashboard ws={ws} />
-      </main>
+    <div className="h-screen flex flex-col bg-gray-100">
+      <DownloadBanner hasAgent={serverConfig.hasLocalAgent} />
+      <div className="flex-1 flex overflow-hidden">
+        <Sidebar ws={ws} />
+        <main className="flex-1 ml-72 overflow-hidden">
+          <Dashboard ws={ws} />
+        </main>
+      </div>
       <ConnectionStatus connected={connected} />
 
       {/* Fixed bottom-right link to marketing page */}

@@ -30,3 +30,6 @@ coverage/
 # Misc
 *.tgz
 .cache/
+
+# Downloads (large binaries served directly)
+packages/server/downloads/

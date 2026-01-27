@@ -30,6 +30,36 @@ app.use((_, res, next) => {
   next();
 });
 
+// Serve downloads directory for agent binaries
+const downloadsDir = path.resolve(__dirname, '../downloads');
+app.use('/downloads', express.static(downloadsDir, {
+  setHeaders: (res, filePath) => {
+    // Set content-disposition for binary downloads
+    if (filePath.endsWith('.dmg') || filePath.endsWith('.exe') || filePath.endsWith('.AppImage') || filePath.endsWith('.deb')) {
+      res.setHeader('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
+    }
+  }
+}));
+
+// List available downloads endpoint
+app.get('/api/downloads', async (_, res) => {
+  try {
+    const fs = await import('fs/promises');
+    const files = await fs.readdir(downloadsDir).catch(() => []);
+    const downloads = await Promise.all(
+      files
+        .filter(f => !f.startsWith('.'))
+        .map(async (file) => {
+          const stats = await fs.stat(path.join(downloadsDir, file)).catch(() => null);
+          return stats ? { name: file, size: stats.size } : null;
+        })
+    );
+    res.json({ downloads: downloads.filter(Boolean) });
+  } catch {
+    res.json({ downloads: [] });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (_, res) => {
   res.json({ status: 'ok', sessions: sessionManager.getSessionCount() });

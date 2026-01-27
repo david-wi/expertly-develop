@@ -51,6 +51,7 @@ interface Platform {
     arch: string;
     url: string;
     size?: string;
+    available?: boolean;
   }[];
 }
 
@@ -62,14 +63,15 @@ const platforms: Platform[] = [
       {
         label: 'Apple Silicon',
         arch: 'aarch64',
-        url: 'https://github.com/david-wi/expertly-develop/releases/latest/download/Vibecode.Agent_aarch64.dmg',
-        size: '~18 MB',
+        url: '/downloads/Vibecode-Agent_aarch64.dmg',
+        size: '~42 MB',
       },
       {
         label: 'Intel',
         arch: 'x64',
-        url: 'https://github.com/david-wi/expertly-develop/releases/latest/download/Vibecode.Agent_x64.dmg',
-        size: '~20 MB',
+        url: '/downloads/Vibecode-Agent_x64.dmg',
+        size: '~44 MB',
+        available: false,
       },
     ],
   },
@@ -80,8 +82,9 @@ const platforms: Platform[] = [
       {
         label: 'Windows (64-bit)',
         arch: 'x64',
-        url: 'https://github.com/david-wi/expertly-develop/releases/latest/download/Vibecode.Agent_x64-setup.exe',
+        url: '/downloads/Vibecode-Agent_x64-setup.exe',
         size: '~15 MB',
+        available: false,
       },
     ],
   },
@@ -92,14 +95,16 @@ const platforms: Platform[] = [
       {
         label: 'AppImage',
         arch: 'x64',
-        url: 'https://github.com/david-wi/expertly-develop/releases/latest/download/Vibecode.Agent_amd64.AppImage',
+        url: '/downloads/Vibecode-Agent_amd64.AppImage',
         size: '~90 MB',
+        available: false,
       },
       {
         label: 'Debian/Ubuntu',
         arch: 'x64',
-        url: 'https://github.com/david-wi/expertly-develop/releases/latest/download/Vibecode.Agent_amd64.deb',
+        url: '/downloads/Vibecode-Agent_amd64.deb',
         size: '~10 MB',
+        available: false,
       },
     ],
   },
@@ -179,38 +184,46 @@ export default function DownloadPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {platform.downloads.map((download) => (
-                    <a
-                      key={download.arch}
-                      href={download.url}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-brand-50 hover:border-brand-200 border border-transparent transition-colors group"
-                    >
-                      <div>
-                        <div className="font-medium text-gray-900 group-hover:text-brand-700">
-                          {download.label}
+                  {platform.downloads.map((download) => {
+                    const isAvailable = download.available !== false;
+                    return isAvailable ? (
+                      <a
+                        key={download.arch}
+                        href={download.url}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-brand-50 hover:border-brand-200 border border-transparent transition-colors group"
+                      >
+                        <div>
+                          <div className="font-medium text-gray-900 group-hover:text-brand-700">
+                            {download.label}
+                          </div>
+                          {download.size && (
+                            <div className="text-sm text-gray-500">{download.size}</div>
+                          )}
                         </div>
-                        {download.size && (
-                          <div className="text-sm text-gray-500">{download.size}</div>
-                        )}
+                        <Download className="w-5 h-5 text-gray-400 group-hover:text-brand-600" />
+                      </a>
+                    ) : (
+                      <div
+                        key={download.arch}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-transparent opacity-60"
+                      >
+                        <div>
+                          <div className="font-medium text-gray-500">
+                            {download.label}
+                          </div>
+                          <div className="text-sm text-gray-400">Coming soon</div>
+                        </div>
+                        <Download className="w-5 h-5 text-gray-300" />
                       </div>
-                      <Download className="w-5 h-5 text-gray-400 group-hover:text-brand-600" />
-                    </a>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}
           </div>
 
           <p className="text-center text-gray-500 text-sm mt-8">
-            All downloads are from{' '}
-            <a
-              href="https://github.com/david-wi/expertly-develop/releases"
-              className="text-brand-600 hover:underline"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              GitHub Releases
-            </a>
+            macOS Apple Silicon available now. Other platforms coming soon.
           </p>
         </div>
       </div>
