@@ -14,8 +14,8 @@ export default defineConfig({
       } as const as any,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       shared: {
-        react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
-        'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0' },
+        react: { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
+        'react-dom': { singleton: true, requiredVersion: '^18.0.0 || ^19.0.0', eager: true },
       } as any,
     }),
   ],
