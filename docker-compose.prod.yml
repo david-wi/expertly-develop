@@ -165,13 +165,10 @@ services:
       - AUTH_COOKIE_DOMAIN=.ai.devintensive.com
       - SESSION_EXPIRY_DAYS=30
       - SESSION_SECRET=${SESSION_SECRET:-change-me-in-production}
-      # Gmail SMTP (use App Password, not regular password)
-      - SMTP_HOST=${SMTP_HOST:-}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - SMTP_USER=${SMTP_USER:-}
-      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
-      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
-      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-Expertly}
+      # Resend email API
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS:-donotreply@expertly.com}
+      - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Expertly}
     depends_on:
       - identity-db
       - app-redis

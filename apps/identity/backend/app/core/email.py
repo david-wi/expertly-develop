@@ -2,10 +2,8 @@
 
 import logging
 from typing import Optional
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
-import aiosmtplib
+import httpx
 
 from app.config import get_settings
 
@@ -19,46 +17,46 @@ async def send_email(
     text_content: Optional[str] = None,
 ) -> bool:
     """
-    Send an email via SMTP.
+    Send an email via Resend API.
 
     Returns True if successful, False otherwise.
-    Falls back to logging if SMTP is not configured.
+    Falls back to logging if Resend is not configured.
     """
     settings = get_settings()
 
-    # Check if SMTP is configured
-    if not settings.smtp_host or not settings.smtp_user or not settings.smtp_password:
+    # Check if Resend is configured
+    if not settings.resend_api_key:
         # Fall back to logging
         logger.info(f"EMAIL TO: {to_email}")
         logger.info(f"SUBJECT: {subject}")
         logger.info(f"CONTENT: {text_content or html_content[:500]}...")
-        logger.warning("SMTP not configured - email logged but not sent")
+        logger.warning("Resend API key not configured - email logged but not sent")
         return True
 
     try:
-        # Build the message
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email or settings.smtp_user}>"
-        msg["To"] = to_email
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.resend.com/emails",
+                headers={
+                    "Authorization": f"Bearer {settings.resend_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "from": f"{settings.email_from_name} <{settings.email_from_address}>",
+                    "to": to_email,
+                    "subject": subject,
+                    "html": html_content,
+                    "text": text_content,
+                },
+                timeout=30.0,
+            )
 
-        # Add text and HTML parts
-        if text_content:
-            msg.attach(MIMEText(text_content, "plain"))
-        msg.attach(MIMEText(html_content, "html"))
-
-        # Send via SMTP
-        await aiosmtplib.send(
-            msg,
-            hostname=settings.smtp_host,
-            port=settings.smtp_port,
-            username=settings.smtp_user,
-            password=settings.smtp_password,
-            start_tls=True,  # Use STARTTLS (required for Gmail on port 587)
-        )
-
-        logger.info(f"Email sent successfully to {to_email}")
-        return True
+            if response.status_code == 200:
+                logger.info(f"Email sent successfully to {to_email}")
+                return True
+            else:
+                logger.error(f"Resend API error: {response.status_code} - {response.text}")
+                return False
 
     except Exception as e:
         logger.error(f"Failed to send email to {to_email}: {e}")
