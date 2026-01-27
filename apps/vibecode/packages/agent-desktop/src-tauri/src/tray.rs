@@ -55,12 +55,8 @@ fn get_icon_for_status(status: ConnectionStatus) -> Image<'static> {
     };
 
     let rgba = generate_icon(r, g, b);
-    // Use from_bytes which returns Result<Image<'static>, _>
-    // The bytes are copied/owned by the Image
-    Image::from_bytes(&rgba).unwrap_or_else(|_| {
-        // Fallback - shouldn't happen with valid RGBA data
-        panic!("Failed to create tray icon")
-    })
+    // Use new_owned for raw RGBA pixel data with explicit dimensions
+    Image::new_owned(rgba, 16, 16)
 }
 
 /// Create the system tray icon and menu
