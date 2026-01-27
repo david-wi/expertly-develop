@@ -224,8 +224,8 @@ export function Sidebar({
                     }`}
                     onClick={() => setShowProductSwitcher(false)}
                   >
-                    <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-                      <span className="text-white">{product.icon}</span>
+                    <div className="w-8 h-8 border-2 border-violet-500 rounded-lg flex items-center justify-center">
+                      <span>{product.icon}</span>
                     </div>
                     <div>
                       <p className="font-medium">{product.name}</p>
