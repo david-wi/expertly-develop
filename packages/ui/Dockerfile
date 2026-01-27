@@ -42,6 +42,14 @@ RUN echo 'server { \
     root /usr/share/nginx/html; \
     index index.html; \
     \
+    # Serve remoteEntry.js from assets folder at root URL \
+    location = /remoteEntry.js { \
+        alias /usr/share/nginx/html/assets/remoteEntry.js; \
+        add_header Access-Control-Allow-Origin * always; \
+        add_header Access-Control-Allow-Methods "GET, OPTIONS" always; \
+        add_header Cache-Control "no-cache" always; \
+    } \
+    \
     location / { \
         # Handle OPTIONS preflight requests \
         if ($request_method = OPTIONS) { \
