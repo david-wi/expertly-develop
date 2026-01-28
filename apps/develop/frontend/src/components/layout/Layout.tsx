@@ -30,7 +30,8 @@ export default function Layout() {
     window.location.reload()
   }
 
-  const currentTenantId = localStorage.getItem(TENANT_STORAGE_KEY) || currentUser?.tenant?.id || null
+  // Tenant ID comes from localStorage (set when user switches organizations)
+  const currentTenantId = localStorage.getItem(TENANT_STORAGE_KEY) || currentUser?.organization_id || null
 
   return (
     <div className="min-h-screen bg-theme-bg">
