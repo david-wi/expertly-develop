@@ -27,6 +27,9 @@ class Product(Base):
     jira_story_drafts: Mapped[List["JiraStoryDraft"]] = relationship(
         "JiraStoryDraft", back_populates="product", cascade="all, delete-orphan"
     )
+    artifacts: Mapped[List["Artifact"]] = relationship(
+        "Artifact", back_populates="product", cascade="all, delete-orphan"
+    )
 
 
 # Import for type hints
@@ -34,3 +37,4 @@ from app.models.requirement import Requirement
 from app.models.release_snapshot import ReleaseSnapshot
 from app.models.jira_settings import JiraSettings
 from app.models.jira_story_draft import JiraStoryDraft
+from app.models.artifact import Artifact
