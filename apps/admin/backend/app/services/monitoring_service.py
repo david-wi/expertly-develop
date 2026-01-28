@@ -21,7 +21,7 @@ MONITORED_SERVICES: list[ServiceConfig] = [
     ServiceConfig(name="Admin", url="https://admin.ai.devintensive.com", health_endpoint="/api/health"),
     ServiceConfig(name="Admin API", url="https://admin-api.ai.devintensive.com", health_endpoint="/health"),
     ServiceConfig(name="Develop", url="https://develop.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Develop API", url="https://develop-api.ai.devintensive.com", health_endpoint="/api/v1/health"),
+    # Develop API not exposed via Traefik yet
     ServiceConfig(name="Define", url="https://define.ai.devintensive.com", health_endpoint="/"),
     ServiceConfig(name="Identity", url="https://identity.ai.devintensive.com", health_endpoint="/"),
     ServiceConfig(name="Identity API", url="https://identity-api.ai.devintensive.com", health_endpoint="/health"),
