@@ -27,6 +27,10 @@ class PlaybookStep(BaseModel):
     order: int
     title: str
     description: Optional[str] = None  # Markdown content
+    when_to_perform: Optional[str] = None  # When/conditions for this step
+
+    # Parallel execution - steps with same parallel_group run together
+    parallel_group: Optional[str] = None
 
     # Nested playbook (optional) - use another playbook for this step
     nested_playbook_id: Optional[str] = None
@@ -49,6 +53,8 @@ class PlaybookStepCreate(BaseModel):
     order: Optional[int] = None  # Optional - will be assigned based on position
     title: str
     description: Optional[str] = None
+    when_to_perform: Optional[str] = None
+    parallel_group: Optional[str] = None
     nested_playbook_id: Optional[str] = None
     assignee_type: AssigneeType = AssigneeType.ANYONE
     assignee_id: Optional[str] = None
@@ -64,6 +70,7 @@ class PlaybookHistoryEntry(BaseModel):
     version: int
     name: str
     description: Optional[str] = None
+    inputs_template: Optional[str] = None  # Template for required inputs
     steps: list[PlaybookStep] = Field(default_factory=list)  # Snapshot of steps
     changed_at: datetime = Field(default_factory=utc_now)
     changed_by: Optional[str] = None  # User ID who made the change
@@ -87,6 +94,7 @@ class Playbook(BaseModel):
     # Core fields
     name: str
     description: Optional[str] = None
+    inputs_template: Optional[str] = None  # What information to provide when invoking
 
     # Steps - the ordered list of steps in this playbook
     steps: list[PlaybookStep] = Field(default_factory=list)
@@ -117,6 +125,7 @@ class PlaybookCreate(BaseModel):
     """Schema for creating a playbook."""
     name: str
     description: Optional[str] = None
+    inputs_template: Optional[str] = None
     steps: list[PlaybookStepCreate] = Field(default_factory=list)
     scope_type: ScopeType = ScopeType.ORGANIZATION
     scope_id: Optional[str] = None  # User or Team ID
@@ -126,6 +135,7 @@ class PlaybookUpdate(BaseModel):
     """Schema for updating a playbook."""
     name: Optional[str] = None
     description: Optional[str] = None
+    inputs_template: Optional[str] = None
     steps: Optional[list[PlaybookStepCreate]] = None
     scope_type: Optional[ScopeType] = None
     scope_id: Optional[str] = None

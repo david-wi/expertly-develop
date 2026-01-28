@@ -19,6 +19,8 @@ interface StepFormData {
   id: string
   title: string
   description: string
+  when_to_perform: string
+  parallel_group: string
   nested_playbook_id: string
   assignee_type: AssigneeType
   assignee_id: string
@@ -34,6 +36,8 @@ function createEmptyStep(): StepFormData {
     id: generateId(),
     title: '',
     description: '',
+    when_to_perform: '',
+    parallel_group: '',
     nested_playbook_id: '',
     assignee_type: 'anyone',
     assignee_id: '',
@@ -51,6 +55,8 @@ function stepFormToCreate(step: StepFormData, order: number): PlaybookStepCreate
     order,
     title: step.title,
     description: step.description || undefined,
+    when_to_perform: step.when_to_perform || undefined,
+    parallel_group: step.parallel_group || undefined,
     nested_playbook_id: step.nested_playbook_id || undefined,
     assignee_type: step.assignee_type,
     assignee_id: step.assignee_type !== 'anyone' ? step.assignee_id || undefined : undefined,
@@ -67,6 +73,8 @@ function playbookStepToForm(step: PlaybookStep): StepFormData {
     id: step.id,
     title: step.title,
     description: step.description || '',
+    when_to_perform: step.when_to_perform || '',
+    parallel_group: step.parallel_group || '',
     nested_playbook_id: step.nested_playbook_id || '',
     assignee_type: step.assignee_type,
     assignee_id: step.assignee_id || '',
@@ -88,6 +96,11 @@ interface StepEditorProps {
   onMoveUp: () => void
   onMoveDown: () => void
   onDelete: () => void
+  onDragStart: (index: number) => void
+  onDragOver: (e: React.DragEvent, index: number) => void
+  onDragEnd: () => void
+  isDragging: boolean
+  isDragOver: boolean
   users: User[]
   teams: Team[]
   queues: Queue[]
@@ -105,14 +118,17 @@ function StepEditor({
   onMoveUp,
   onMoveDown,
   onDelete,
+  onDragStart,
+  onDragOver,
+  onDragEnd,
+  isDragging,
+  isDragOver,
   users,
   teams,
   queues,
   playbooks,
   currentPlaybookId,
 }: StepEditorProps) {
-  const [showPreview, setShowPreview] = useState(false)
-
   const updateField = <K extends keyof StepFormData>(field: K, value: StepFormData[K]) => {
     onChange({ ...step, [field]: value })
   }
@@ -120,33 +136,65 @@ function StepEditor({
   // Filter out current playbook from nested options
   const availablePlaybooks = playbooks.filter(p => p.id !== currentPlaybookId)
 
+  // Get assignee label for collapsed view
+  const getAssigneeLabel = () => {
+    if (step.assignee_type === 'user' && step.assignee_id) {
+      const user = users.find(u => u.id === step.assignee_id)
+      return user?.name || 'User'
+    }
+    if (step.assignee_type === 'team' && step.assignee_id) {
+      const team = teams.find(t => t.id === step.assignee_id)
+      return team?.name || 'Team'
+    }
+    return 'Anyone'
+  }
+
   return (
-    <div className="border rounded-lg bg-white shadow-sm">
-      {/* Header - always visible */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-t-lg border-b">
-        <div className="flex items-center space-x-3">
-          <span className="flex items-center justify-center w-7 h-7 bg-blue-100 text-blue-700 text-sm font-medium rounded-full">
-            {index + 1}
-          </span>
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="text-left flex-1"
+    <div
+      className={`border rounded-lg bg-white shadow-sm transition-all ${
+        isDragging ? 'opacity-50 scale-95' : ''
+      } ${isDragOver ? 'border-blue-400 border-2' : ''}`}
+      draggable
+      onDragStart={() => onDragStart(index)}
+      onDragOver={(e) => onDragOver(e, index)}
+      onDragEnd={onDragEnd}
+    >
+      {/* Header - always visible, inline editing */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-t-lg border-b cursor-grab active:cursor-grabbing">
+        <span className="flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex-shrink-0">
+          {index + 1}
+        </span>
+        <input
+          type="text"
+          value={step.title}
+          onChange={(e) => updateField('title', e.target.value)}
+          className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-medium text-gray-900 placeholder-gray-400 px-1 py-0.5"
+          placeholder="Step title..."
+        />
+        {step.description && !expanded && (
+          <span
+            className="text-gray-400 cursor-help"
+            title={step.description}
           >
-            <span className="font-medium text-gray-900">
-              {step.title || 'Untitled Step'}
-            </span>
-          </button>
-        </div>
-        <div className="flex items-center space-x-2">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </span>
+        )}
+        {!expanded && (
+          <span className="text-xs text-gray-400 hidden sm:inline">
+            {getAssigneeLabel()}
+          </span>
+        )}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
             type="button"
             onClick={onMoveUp}
             disabled={index === 0}
-            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
             title="Move up"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
             </svg>
           </button>
@@ -154,10 +202,10 @@ function StepEditor({
             type="button"
             onClick={onMoveDown}
             disabled={index === totalSteps - 1}
-            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
             title="Move down"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
@@ -165,237 +213,184 @@ function StepEditor({
             type="button"
             onClick={onToggleExpand}
             className="p-1 text-gray-400 hover:text-gray-600"
+            title={expanded ? 'Collapse' : 'Expand'}
           >
-            <svg className={`w-5 h-5 transform transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
           </button>
           <button
             type="button"
             onClick={onDelete}
-            className="p-1 text-red-400 hover:text-red-600"
+            className="p-1 text-gray-400 hover:text-red-600"
             title="Delete step"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
       </div>
 
-      {/* Expanded content */}
+      {/* Expanded content - compact layout */}
       {expanded && (
-        <div className="p-4 space-y-4">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Step Title
-            </label>
-            <input
-              type="text"
-              value={step.title}
-              onChange={(e) => updateField('title', e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="Give this step a short name"
-            />
-          </div>
-
-          {/* Description with Markdown preview */}
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Instructions
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowPreview(!showPreview)}
-                className="text-xs text-blue-600 hover:text-blue-800"
-              >
-                {showPreview ? 'Edit' : 'Preview'}
-              </button>
-            </div>
-            {showPreview ? (
-              <div className="border rounded-md p-3 bg-gray-50 min-h-[100px] whitespace-pre-wrap text-sm text-gray-700">
-                {step.description || <span className="text-gray-400 italic">No instructions provided</span>}
-              </div>
-            ) : (
+        <div className="p-3 space-y-3 text-sm">
+          {/* Description and When to Perform - side by side on larger screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Instructions</label>
               <textarea
                 value={step.description}
                 onChange={(e) => updateField('description', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                rows={4}
-                placeholder="What needs to be done? (Supports Markdown)"
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                rows={2}
+                placeholder="What needs to be done?"
               />
-            )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">When to Perform</label>
+              <textarea
+                value={step.when_to_perform}
+                onChange={(e) => updateField('when_to_perform', e.target.value)}
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                rows={2}
+                placeholder="Conditions or timing (optional)"
+              />
+            </div>
           </div>
 
-          {/* Nested Playbook */}
-          <div className="bg-gray-50 rounded-md p-3">
-            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
-              <input
-                type="checkbox"
-                checked={!!step.nested_playbook_id}
-                onChange={(e) => updateField('nested_playbook_id', e.target.checked ? '' : '')}
-                className="rounded border-gray-300"
-                disabled
-              />
-              <span>Use another playbook for this step</span>
-            </label>
-            <select
-              value={step.nested_playbook_id}
-              onChange={(e) => updateField('nested_playbook_id', e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-            >
-              <option value="">None - use instructions above</option>
-              {availablePlaybooks.map((pb) => (
-                <option key={pb.id} value={pb.id}>
-                  {pb.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Assignment section */}
-          <div className="border-t pt-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-3">Who works on this?</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-gray-600 mb-1">Assign to</label>
-                <select
-                  value={step.assignee_type}
-                  onChange={(e) => {
-                    updateField('assignee_type', e.target.value as AssigneeType)
-                    updateField('assignee_id', '')
-                  }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                >
-                  <option value="anyone">Anyone in the organization</option>
-                  <option value="user">Specific person</option>
-                  <option value="team">Team members</option>
-                </select>
-              </div>
+          {/* Two-column layout for assignment and options */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Assignment */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-500">Assign to</label>
+              <select
+                value={step.assignee_type}
+                onChange={(e) => {
+                  updateField('assignee_type', e.target.value as AssigneeType)
+                  updateField('assignee_id', '')
+                }}
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+              >
+                <option value="anyone">Anyone</option>
+                <option value="user">Specific person</option>
+                <option value="team">Team</option>
+              </select>
               {step.assignee_type === 'user' && (
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Select person</label>
-                  <select
-                    value={step.assignee_id}
-                    onChange={(e) => updateField('assignee_id', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                  >
-                    <option value="">Choose a person...</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={step.assignee_id}
+                  onChange={(e) => updateField('assignee_id', e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                >
+                  <option value="">Select person...</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
               )}
               {step.assignee_type === 'team' && (
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Select team</label>
-                  <select
-                    value={step.assignee_id}
-                    onChange={(e) => updateField('assignee_id', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                  >
-                    <option value="">Choose a team...</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={step.assignee_id}
+                  onChange={(e) => updateField('assignee_id', e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                >
+                  <option value="">Select team...</option>
+                  {teams.map((t) => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
               )}
             </div>
 
-            {/* Queue override */}
-            <div className="mt-3">
-              <label className="block text-sm text-gray-600 mb-1">Submit to queue (optional)</label>
+            {/* Queue, parallel group, and nested playbook */}
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-gray-500">Queue</label>
               <select
                 value={step.queue_id}
                 onChange={(e) => updateField('queue_id', e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
               >
-                <option value="">Use assignee's default queue</option>
+                <option value="">Default queue</option>
                 {queues.map((q) => (
                   <option key={q.id} value={q.id}>{q.purpose}</option>
                 ))}
               </select>
+              <label className="block text-xs font-medium text-gray-500">Parallel Group</label>
+              <input
+                type="text"
+                value={step.parallel_group}
+                onChange={(e) => updateField('parallel_group', e.target.value)}
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                placeholder="Steps with same group run in parallel"
+              />
+              {availablePlaybooks.length > 0 && (
+                <>
+                  <label className="block text-xs font-medium text-gray-500">Nested Playbook</label>
+                  <select
+                    value={step.nested_playbook_id}
+                    onChange={(e) => updateField('nested_playbook_id', e.target.value)}
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                  >
+                    <option value="">None</option>
+                    {availablePlaybooks.map((pb) => (
+                      <option key={pb.id} value={pb.id}>{pb.name}</option>
+                    ))}
+                  </select>
+                </>
+              )}
             </div>
           </div>
 
-          {/* Approval section */}
-          <div className="border-t pt-4">
-            <label className="flex items-center space-x-2 mb-3">
+          {/* Approval - compact toggle */}
+          <div className="border-t pt-2">
+            <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={step.approval_required}
                 onChange={(e) => updateField('approval_required', e.target.checked)}
-                className="rounded border-gray-300"
+                className="rounded border-gray-300 text-blue-600"
               />
-              <span className="text-sm font-medium text-gray-900">Requires approval before continuing</span>
+              <span className="text-xs font-medium text-gray-700">Requires approval</span>
             </label>
 
             {step.approval_required && (
-              <div className="pl-6 space-y-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm text-gray-600 mb-1">Who can approve?</label>
-                    <select
-                      value={step.approver_type}
-                      onChange={(e) => {
-                        updateField('approver_type', e.target.value as AssigneeType)
-                        updateField('approver_id', '')
-                      }}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    >
-                      <option value="anyone">Anyone in the organization</option>
-                      <option value="user">Specific person</option>
-                      <option value="team">Team members</option>
-                    </select>
-                  </div>
-                  {step.approver_type === 'user' && (
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Select approver</label>
-                      <select
-                        value={step.approver_id}
-                        onChange={(e) => updateField('approver_id', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      >
-                        <option value="">Choose a person...</option>
-                        {users.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                  {step.approver_type === 'team' && (
-                    <div>
-                      <label className="block text-sm text-gray-600 mb-1">Select approver team</label>
-                      <select
-                        value={step.approver_id}
-                        onChange={(e) => updateField('approver_id', e.target.value)}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                      >
-                        <option value="">Choose a team...</option>
-                        {teams.map((t) => (
-                          <option key={t.id} value={t.id}>{t.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-1">Approval queue (optional)</label>
+              <div className="mt-2 pl-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <select
+                  value={step.approver_type}
+                  onChange={(e) => {
+                    updateField('approver_type', e.target.value as AssigneeType)
+                    updateField('approver_id', '')
+                  }}
+                  className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+                >
+                  <option value="anyone">Anyone can approve</option>
+                  <option value="user">Specific approver</option>
+                  <option value="team">Team approves</option>
+                </select>
+                {step.approver_type === 'user' && (
                   <select
-                    value={step.approver_queue_id}
-                    onChange={(e) => updateField('approver_queue_id', e.target.value)}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    value={step.approver_id}
+                    onChange={(e) => updateField('approver_id', e.target.value)}
+                    className="border border-gray-300 rounded px-2 py-1.5 text-sm"
                   >
-                    <option value="">Use approver's default queue</option>
-                    {queues.map((q) => (
-                      <option key={q.id} value={q.id}>{q.purpose}</option>
+                    <option value="">Select approver...</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
                     ))}
                   </select>
-                </div>
+                )}
+                {step.approver_type === 'team' && (
+                  <select
+                    value={step.approver_id}
+                    onChange={(e) => updateField('approver_id', e.target.value)}
+                    className="border border-gray-300 rounded px-2 py-1.5 text-sm"
+                  >
+                    <option value="">Select team...</option>
+                    {teams.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                )}
               </div>
             )}
           </div>
@@ -425,11 +420,13 @@ export default function Playbooks() {
   const [formData, setFormData] = useState<{
     name: string
     description: string
+    inputs_template: string
     scope_type: ScopeType
     scope_id: string
   }>({
     name: '',
     description: '',
+    inputs_template: '',
     scope_type: 'user',
     scope_id: '',
   })
@@ -437,6 +434,10 @@ export default function Playbooks() {
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Drag-and-drop state
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
   useEffect(() => {
     loadData()
@@ -521,6 +522,7 @@ export default function Playbooks() {
       const newPlaybook: CreatePlaybookRequest = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
+        inputs_template: formData.inputs_template.trim() || undefined,
         scope_type: formData.scope_type,
         scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
       }
@@ -554,6 +556,7 @@ export default function Playbooks() {
       await api.updatePlaybook(editingPlaybook.id, {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
+        inputs_template: formData.inputs_template.trim() || undefined,
         steps: steps.map((s, idx) => stepFormToCreate(s, idx + 1)),
         scope_type: formData.scope_type,
         scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
@@ -612,6 +615,7 @@ export default function Playbooks() {
     setFormData({
       name: playbook.name,
       description: playbook.description || '',
+      inputs_template: playbook.inputs_template || '',
       scope_type: playbook.scope_type,
       scope_id: playbook.scope_id || '',
     })
@@ -634,6 +638,7 @@ export default function Playbooks() {
     setFormData({
       name: '',
       description: '',
+      inputs_template: '',
       scope_type: 'user',
       scope_id: '',
     })
@@ -663,6 +668,29 @@ export default function Playbooks() {
     const targetIndex = direction === 'up' ? index - 1 : index + 1
     ;[newSteps[index], newSteps[targetIndex]] = [newSteps[targetIndex], newSteps[index]]
     setSteps(newSteps)
+  }
+
+  // Drag-and-drop handlers
+  const handleDragStart = (index: number) => {
+    setDragIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (dragIndex !== null && dragIndex !== index) {
+      setDragOverIndex(index)
+    }
+  }
+
+  const handleDragEnd = () => {
+    if (dragIndex !== null && dragOverIndex !== null && dragIndex !== dragOverIndex) {
+      const newSteps = [...steps]
+      const [draggedStep] = newSteps.splice(dragIndex, 1)
+      newSteps.splice(dragOverIndex, 0, draggedStep)
+      setSteps(newSteps)
+    }
+    setDragIndex(null)
+    setDragOverIndex(null)
   }
 
   const toggleStepExpand = (stepId: string) => {
@@ -809,6 +837,18 @@ export default function Playbooks() {
                   placeholder="Brief description of this playbook"
                 />
               </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Required Information
+                </label>
+                <textarea
+                  value={formData.inputs_template}
+                  onChange={(e) => setFormData({ ...formData, inputs_template: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  rows={2}
+                  placeholder="What information should be provided when starting this playbook? (e.g., Customer name, Order ID, Issue description)"
+                />
+              </div>
             </div>
           </div>
 
@@ -837,7 +877,7 @@ export default function Playbooks() {
                 </button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {steps.map((step, index) => (
                   <StepEditor
                     key={step.id}
@@ -850,6 +890,11 @@ export default function Playbooks() {
                     onMoveUp={() => moveStep(index, 'up')}
                     onMoveDown={() => moveStep(index, 'down')}
                     onDelete={() => deleteStep(index)}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDragEnd={handleDragEnd}
+                    isDragging={dragIndex === index}
+                    isDragOver={dragOverIndex === index}
                     users={users}
                     teams={teams}
                     queues={queues}
@@ -928,19 +973,19 @@ export default function Playbooks() {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Playbook
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                   Scope
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-14">
                   Steps
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-20">
+                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
                   Version
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                   Updated
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-40">
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
                   Actions
                 </th>
               </tr>
@@ -950,7 +995,12 @@ export default function Playbooks() {
                 <tr key={playbook.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div>
-                      <p className="font-medium text-gray-900">{playbook.name}</p>
+                      <button
+                        onClick={() => openEditor(playbook)}
+                        className="font-medium text-gray-900 hover:text-blue-600 text-left"
+                      >
+                        {playbook.name}
+                      </button>
                       {playbook.description && (
                         <p className="text-xs text-gray-500 truncate max-w-md">
                           {playbook.description}
@@ -969,36 +1019,50 @@ export default function Playbooks() {
                   <td className="px-4 py-3 text-center">
                     <span className="text-sm text-gray-600">v{playbook.version}</span>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span className="text-sm text-gray-500">{formatDate(playbook.updated_at)}</span>
                   </td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    {playbook.history.length > 0 && (
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end space-x-1">
+                      {playbook.history.length > 0 && (
+                        <button
+                          onClick={() => openHistoryModal(playbook)}
+                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                          title="View history"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      )}
                       <button
-                        onClick={() => openHistoryModal(playbook)}
-                        className="text-gray-600 hover:text-gray-800 text-sm"
+                        onClick={() => handleDuplicate(playbook)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        title="Duplicate playbook"
                       >
-                        History
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleDuplicate(playbook)}
-                      className="text-gray-600 hover:text-gray-800 text-sm"
-                    >
-                      Copy
-                    </button>
-                    <button
-                      onClick={() => openEditor(playbook)}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => openDeleteConfirm(playbook)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Delete
-                    </button>
+                      <button
+                        onClick={() => openEditor(playbook)}
+                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Edit playbook"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => openDeleteConfirm(playbook)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                        title="Delete playbook"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

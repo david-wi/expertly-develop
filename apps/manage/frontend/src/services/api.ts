@@ -388,6 +388,8 @@ export interface PlaybookStep {
   order: number
   title: string
   description?: string
+  when_to_perform?: string
+  parallel_group?: string
   nested_playbook_id?: string
   assignee_type: AssigneeType
   assignee_id?: string
@@ -403,6 +405,8 @@ export interface PlaybookStepCreate {
   order?: number
   title: string
   description?: string
+  when_to_perform?: string
+  parallel_group?: string
   nested_playbook_id?: string
   assignee_type?: AssigneeType
   assignee_id?: string
@@ -417,6 +421,7 @@ export interface PlaybookHistoryEntry {
   version: number
   name: string
   description?: string
+  inputs_template?: string
   steps: PlaybookStep[]
   changed_at: string
   changed_by?: string
@@ -427,6 +432,7 @@ export interface Playbook {
   organization_id: string
   name: string
   description?: string
+  inputs_template?: string
   steps: PlaybookStep[]
   scope_type: ScopeType
   scope_id?: string
@@ -441,6 +447,7 @@ export interface Playbook {
 export interface CreatePlaybookRequest {
   name: string
   description?: string
+  inputs_template?: string
   steps?: PlaybookStepCreate[]
   scope_type?: ScopeType
   scope_id?: string
@@ -449,6 +456,7 @@ export interface CreatePlaybookRequest {
 export interface UpdatePlaybookRequest {
   name?: string
   description?: string
+  inputs_template?: string
   steps?: PlaybookStepCreate[]
   scope_type?: ScopeType
   scope_id?: string
