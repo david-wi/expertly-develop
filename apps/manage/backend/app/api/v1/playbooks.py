@@ -240,6 +240,7 @@ async def update_playbook(
         version=current.get("version", 1),
         name=current["name"],
         description=current.get("description"),
+        inputs_template=current.get("inputs_template"),
         steps=[PlaybookStep(**s) for s in current.get("steps", [])],
         changed_at=datetime.now(timezone.utc),
         changed_by=str(current_user.id)
@@ -374,6 +375,7 @@ async def duplicate_playbook(
         organization_id=current_user.organization_id,
         name=new_name or f"{original['name']} (Copy)",
         description=original.get("description"),
+        inputs_template=original.get("inputs_template"),
         steps=copied_steps,
         scope_type=original.get("scope_type", ScopeType.ORGANIZATION),
         scope_id=original.get("scope_id"),
