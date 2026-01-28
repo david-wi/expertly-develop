@@ -215,7 +215,8 @@ describe('Playbooks', () => {
         expect(screen.getByText('Test Playbook')).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByText('Edit'))
+      // Click the playbook name to open editor (or use edit button with title)
+      fireEvent.click(screen.getByText('Test Playbook'))
 
       await waitFor(() => {
         expect(screen.getByText('Edit Playbook')).toBeInTheDocument()
@@ -228,12 +229,12 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Edit'))
+        fireEvent.click(screen.getByText('Playbook with Steps'))
       })
 
       await waitFor(() => {
-        expect(screen.getByText('First Step')).toBeInTheDocument()
-        expect(screen.getByText('Second Step')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('First Step')).toBeInTheDocument()
+        expect(screen.getByDisplayValue('Second Step')).toBeInTheDocument()
       })
     })
 
@@ -241,14 +242,15 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Edit'))
+        fireEvent.click(screen.getByText('Test Playbook'))
       })
 
       await waitFor(() => {
         fireEvent.click(screen.getByText('Add your first step'))
       })
 
-      expect(screen.getByText('Untitled Step')).toBeInTheDocument()
+      // New step has placeholder in input
+      expect(screen.getByPlaceholderText('Step title...')).toBeInTheDocument()
     })
 
     it('shows step editor fields when expanded', async () => {
@@ -257,19 +259,19 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Edit'))
+        fireEvent.click(screen.getByText('Playbook with Steps'))
       })
 
-      // Click on a step to expand it (the step header has the title)
+      // Click on expand button for a step
       await waitFor(() => {
-        const stepHeader = screen.getByText('First Step')
-        fireEvent.click(stepHeader)
+        const expandButtons = screen.getAllByTitle('Expand')
+        fireEvent.click(expandButtons[0])
       })
 
       await waitFor(() => {
-        expect(screen.getByText('Step Title')).toBeInTheDocument()
         expect(screen.getByText('Instructions')).toBeInTheDocument()
-        expect(screen.getByText('Who works on this?')).toBeInTheDocument()
+        expect(screen.getByText('When to Perform')).toBeInTheDocument()
+        expect(screen.getByText('Assign to')).toBeInTheDocument()
       })
     })
 
@@ -279,7 +281,7 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Edit'))
+        fireEvent.click(screen.getByText('Test Playbook'))
       })
 
       await waitFor(() => {
@@ -295,7 +297,7 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Edit'))
+        fireEvent.click(screen.getByText('Test Playbook'))
       })
 
       await waitFor(() => {
@@ -318,8 +320,10 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Delete'))
+        expect(screen.getByText('Test Playbook')).toBeInTheDocument()
       })
+
+      fireEvent.click(screen.getByTitle('Delete playbook'))
 
       expect(screen.getByText('Delete Playbook?')).toBeInTheDocument()
     })
@@ -330,8 +334,10 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Delete'))
+        expect(screen.getByText('Test Playbook')).toBeInTheDocument()
       })
+
+      fireEvent.click(screen.getByTitle('Delete playbook'))
 
       // Find the Delete button in the modal
       const deleteButtons = screen.getAllByRole('button', { name: /Delete/ })
@@ -354,8 +360,10 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Copy'))
+        expect(screen.getByText('Test Playbook')).toBeInTheDocument()
       })
+
+      fireEvent.click(screen.getByTitle('Duplicate playbook'))
 
       await waitFor(() => {
         expect(api.duplicatePlaybook).toHaveBeenCalledWith('pb-1')
@@ -382,7 +390,7 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        expect(screen.getByText('History')).toBeInTheDocument()
+        expect(screen.getByTitle('View history')).toBeInTheDocument()
       })
     })
 
@@ -393,7 +401,7 @@ describe('Playbooks', () => {
         expect(screen.getByText('Test Playbook')).toBeInTheDocument()
       })
 
-      expect(screen.queryByText('History')).not.toBeInTheDocument()
+      expect(screen.queryByTitle('View history')).not.toBeInTheDocument()
     })
 
     it('opens history modal on click', async () => {
@@ -415,8 +423,10 @@ describe('Playbooks', () => {
       render(<Playbooks />)
 
       await waitFor(() => {
-        fireEvent.click(screen.getByText('History'))
+        expect(screen.getByTitle('View history')).toBeInTheDocument()
       })
+
+      fireEvent.click(screen.getByTitle('View history'))
 
       expect(screen.getByText('Version History: Test Playbook')).toBeInTheDocument()
       expect(screen.getByText('v2 (current)')).toBeInTheDocument()
@@ -438,7 +448,7 @@ describe('Step Reordering', () => {
     render(<Playbooks />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('Edit'))
+      fireEvent.click(screen.getByText('Playbook with Steps'))
     })
 
     // The first move up button should be disabled
@@ -450,7 +460,7 @@ describe('Step Reordering', () => {
     render(<Playbooks />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('Edit'))
+      fireEvent.click(screen.getByText('Playbook with Steps'))
     })
 
     // The last move down button should be disabled
