@@ -44,10 +44,10 @@ async def client(test_db) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-async def auth_headers(client: AsyncClient, test_db) -> dict:
-    """Create authenticated user and return auth headers."""
+async def test_user(test_db) -> dict:
+    """Create a test user and salon in the database."""
     from bson import ObjectId
-    from app.core.security import get_password_hash, create_access_token
+    from app.core.security import get_password_hash
 
     # Create test salon
     salon_id = ObjectId()
@@ -61,7 +61,7 @@ async def auth_headers(client: AsyncClient, test_db) -> dict:
 
     # Create test user
     user_id = ObjectId()
-    await test_db.users.insert_one({
+    user = {
         "_id": user_id,
         "email": "test@example.com",
         "password_hash": get_password_hash("testpassword"),
@@ -70,7 +70,31 @@ async def auth_headers(client: AsyncClient, test_db) -> dict:
         "salon_id": salon_id,
         "role": "owner",
         "is_active": True,
-    })
+    }
+    await test_db.users.insert_one(user)
 
-    token = create_access_token({"sub": str(user_id), "salon_id": str(salon_id)})
-    return {"Authorization": f"Bearer {token}"}
+    return user
+
+
+@pytest.fixture
+async def authenticated_client(client: AsyncClient, test_user: dict) -> AsyncClient:
+    """Create an authenticated test client by overriding the auth dependency."""
+    from app.main import app
+    from app.core.security import get_current_user
+
+    # Override the authentication dependency to return our test user
+    async def mock_get_current_user():
+        return test_user
+
+    app.dependency_overrides[get_current_user] = mock_get_current_user
+
+    yield client
+
+    # Clean up override
+    app.dependency_overrides.pop(get_current_user, None)
+
+
+@pytest.fixture
+async def auth_headers(authenticated_client: AsyncClient, test_user: dict) -> dict:
+    """Return empty headers - auth is handled by dependency override."""
+    return {}
