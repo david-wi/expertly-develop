@@ -91,9 +91,9 @@ jobs:
             COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
                 docker compose -f docker-compose.prod.yml build mongo ui
 
-            echo "=== Starting mongo ==="
+            echo "=== Starting mongo and UI ==="
             COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                docker compose -f docker-compose.prod.yml up -d mongo
+                docker compose -f docker-compose.prod.yml up -d mongo ui
 
             echo "=== Shared infrastructure ready ==="
           ENDSSH
