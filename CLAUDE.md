@@ -16,6 +16,36 @@ This project uses the standard `.claude/` directory structure for docs, planning
 - **Deployment**: GitHub Actions (auto-deploys on push to main)
 - **Server Path**: /opt/expertly-develop
 
+## Git Workflow - REQUIRED
+
+**Direct pushes to main are blocked.** All changes must go through PRs with passing checks.
+
+### Standard Workflow for Code Changes
+
+```bash
+# 1. Create branch and commit
+git checkout -b feature/description
+git add <files>
+git commit -m "Description"
+
+# 2. Push and create PR with automerge
+git push -u origin HEAD
+gh pr create --fill
+gh pr merge --auto --squash
+
+# 3. Wait for checks to pass (REQUIRED - do not skip)
+gh pr checks --watch
+
+# 4. If checks fail, fix and push again
+# 5. Once merged, clean up
+git checkout main && git pull && git branch -d feature/description
+```
+
+### Why Wait for Checks?
+- 9 typecheck jobs must pass before merge
+- If you don't wait, failed PRs sit unnoticed
+- Always verify the PR actually merged before moving on
+
 ## Deployed Services Checklist
 
 **IMPORTANT: After any deployment, verify ALL services are working:**
