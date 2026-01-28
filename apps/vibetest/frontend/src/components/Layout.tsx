@@ -8,7 +8,6 @@ import {
   Menu,
   X,
   LogOut,
-  Building2,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
@@ -40,6 +39,15 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/login')
   }
 
+  // Format user for sidebar - VibeTest uses its own auth context
+  const sidebarUser = user
+    ? {
+        name: user.full_name,
+        role: user.role,
+        organization: user.organization?.name,
+      }
+    : undefined
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
@@ -60,7 +68,7 @@ export default function Layout({ children }: LayoutProps) {
           productName="VibeTest"
           navigation={navItems}
           currentPath={location.pathname}
-          user={user ? { name: user.full_name, role: user.role } : undefined}
+          user={sidebarUser}
           currentLanguage={i18n.language as SupportedLanguage}
           onLanguageChange={handleLanguageChange}
           buildInfo={
@@ -72,12 +80,6 @@ export default function Layout({ children }: LayoutProps) {
           }
           bottomSection={
             <div className="p-4 space-y-2">
-              {user && (
-                <div className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600">
-                  <Building2 className="w-4 h-4" />
-                  <span className="truncate">{user.organization.name}</span>
-                </div>
-              )}
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
