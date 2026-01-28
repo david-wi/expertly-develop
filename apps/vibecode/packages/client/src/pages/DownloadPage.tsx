@@ -64,7 +64,7 @@ const platforms: Platform[] = [
         label: 'Apple Silicon',
         arch: 'aarch64',
         url: '/downloads/Vibecode-Agent_aarch64.dmg',
-        size: '~42 MB',
+        size: '~6.4 MB',
       },
       {
         label: 'Intel',
