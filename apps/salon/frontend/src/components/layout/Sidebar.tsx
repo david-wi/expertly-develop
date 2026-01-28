@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar,
@@ -11,8 +12,9 @@ import {
   Gift,
   Globe,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, type CurrentUser } from 'expertly_ui/index';
 import { useAuthStore } from '../../stores/authStore';
+import { auth, salon } from '../../services/api';
 
 const navItems = [
   { name: 'Calendar', href: '/', icon: Calendar },
@@ -28,15 +30,24 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { user, salon, logout } = useAuthStore();
+  const { logout } = useAuthStore();
 
-  // Show user name with salon as organization
-  const sidebarUser = user
-    ? {
-        name: user.name,
-        organization: salon?.name,
-      }
-    : undefined;
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
+    const [user, salonData] = await Promise.all([
+      auth.me(),
+      salon.getCurrent().catch(() => null),
+    ]);
+    return {
+      id: user.id,
+      name: `${user.first_name} ${user.last_name}`,
+      email: user.email,
+      role: user.role,
+      organization_id: user.salon_id,
+      organization_name: salonData?.name || null,
+    };
+  }, []);
+  const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
   return (
     <SharedSidebar
