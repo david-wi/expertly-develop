@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ChevronRight,
   ChevronDown,
@@ -29,9 +30,11 @@ import {
   FileText,
   Search,
   ArrowLeft,
+  Paperclip,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
+import { ArtifactList } from '@/components/artifacts'
 
 interface TreeNode extends Requirement {
   children: TreeNode[]
@@ -270,211 +273,230 @@ export default function ProductDetail() {
             Products
           </Link>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">{product.name}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">{product.name}</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tree sidebar */}
-          <Card className="lg:col-span-1">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Product map</CardTitle>
-                <div className="flex gap-1">
-                  <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                      <form onSubmit={createRequirement}>
-                        <DialogHeader>
-                          <DialogTitle>Add Requirement</DialogTitle>
-                          <DialogDescription>
-                            Create a new requirement for {product.name}.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1 block">
-                              Title
-                            </label>
-                            <Input
-                              placeholder="e.g., Version History"
-                              value={newReq.title}
-                              onChange={(e) => setNewReq({ ...newReq, title: e.target.value })}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1 block">
-                              What this does
-                            </label>
-                            <Textarea
-                              placeholder="Users can view, compare, and restore previous versions..."
-                              value={newReq.what_this_does}
-                              onChange={(e) => setNewReq({ ...newReq, what_this_does: e.target.value })}
-                              rows={2}
-                            />
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium text-gray-700 mb-1 block">
-                              Why this exists
-                            </label>
-                            <Textarea
-                              placeholder="This helps people understand changes over time..."
-                              value={newReq.why_this_exists}
-                              onChange={(e) => setNewReq({ ...newReq, why_this_exists: e.target.value })}
-                              rows={2}
-                            />
-                          </div>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                Status
-                              </label>
-                              <Select
-                                value={newReq.status}
-                                onValueChange={(value) => setNewReq({ ...newReq, status: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="draft">Draft</SelectItem>
-                                  <SelectItem value="ready_to_build">Ready to Build</SelectItem>
-                                  <SelectItem value="implemented">Implemented</SelectItem>
-                                  <SelectItem value="verified">Verified</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                Priority
-                              </label>
-                              <Select
-                                value={newReq.priority}
-                                onValueChange={(value) => setNewReq({ ...newReq, priority: value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="critical">Critical</SelectItem>
-                                  <SelectItem value="high">High</SelectItem>
-                                  <SelectItem value="medium">Medium</SelectItem>
-                                  <SelectItem value="low">Low</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                          {requirements.length > 0 && (
-                            <div>
-                              <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                Parent (optional)
-                              </label>
-                              <Select
-                                value={newReq.parent_id || 'none'}
-                                onValueChange={(value) => setNewReq({ ...newReq, parent_id: value === 'none' ? '' : value })}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="None (root level)" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="none">None (root level)</SelectItem>
-                                  {requirements.map((req) => (
-                                    <SelectItem key={req.id} value={req.id}>
-                                      {req.title}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          )}
-                        </div>
-                        <DialogFooter>
-                          <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                            Cancel
-                          </Button>
-                          <Button type="submit" disabled={creating || !newReq.title.trim()}>
-                            {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            Create
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="relative mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search..."
-                  className="pl-9"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              {tree.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">
-                  No requirements yet. Add one to get started.
-                </p>
-              ) : (
-                <div className="space-y-1">
-                  {tree.map((node) => (
-                    <RequirementTreeItem
-                      key={node.id}
-                      node={node}
-                      level={0}
-                      selectedId={selectedId}
-                      onSelect={setSelectedId}
-                      onToggle={handleToggle}
-                    />
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <Tabs defaultValue="requirements">
+          <TabsList>
+            <TabsTrigger value="requirements" className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Requirements
+            </TabsTrigger>
+            <TabsTrigger value="artifacts" className="flex items-center gap-2">
+              <Paperclip className="h-4 w-4" />
+              Artifacts
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Detail panel */}
-          <Card className="lg:col-span-2">
-            {selectedRequirement ? (
-              <>
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="text-xs">
-                      {selectedRequirement.stable_key}
-                    </Badge>
-                    <Badge variant={priorityColors[selectedRequirement.priority]}>
-                      {selectedRequirement.priority}
-                    </Badge>
-                  </div>
-                  <CardTitle>{selectedRequirement.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <p className="text-gray-600">
-                      {selectedRequirement.what_this_does || 'No description yet.'}
-                    </p>
-                    <div className="flex gap-2">
-                      <Link to={`/requirements/${selectedRequirement.id}`}>
-                        <Button>Open requirement</Button>
-                      </Link>
+          <TabsContent value="requirements">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Tree sidebar */}
+              <Card className="lg:col-span-1">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-lg">Product map</CardTitle>
+                    <div className="flex gap-1">
+                      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                          <form onSubmit={createRequirement}>
+                            <DialogHeader>
+                              <DialogTitle>Add Requirement</DialogTitle>
+                              <DialogDescription>
+                                Create a new requirement for {product.name}.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                  Title
+                                </label>
+                                <Input
+                                  placeholder="e.g., Version History"
+                                  value={newReq.title}
+                                  onChange={(e) => setNewReq({ ...newReq, title: e.target.value })}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                  What this does
+                                </label>
+                                <Textarea
+                                  placeholder="Users can view, compare, and restore previous versions..."
+                                  value={newReq.what_this_does}
+                                  onChange={(e) => setNewReq({ ...newReq, what_this_does: e.target.value })}
+                                  rows={2}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                  Why this exists
+                                </label>
+                                <Textarea
+                                  placeholder="This helps people understand changes over time..."
+                                  value={newReq.why_this_exists}
+                                  onChange={(e) => setNewReq({ ...newReq, why_this_exists: e.target.value })}
+                                  rows={2}
+                                />
+                              </div>
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Status
+                                  </label>
+                                  <Select
+                                    value={newReq.status}
+                                    onValueChange={(value) => setNewReq({ ...newReq, status: value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="draft">Draft</SelectItem>
+                                      <SelectItem value="ready_to_build">Ready to Build</SelectItem>
+                                      <SelectItem value="implemented">Implemented</SelectItem>
+                                      <SelectItem value="verified">Verified</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Priority
+                                  </label>
+                                  <Select
+                                    value={newReq.priority}
+                                    onValueChange={(value) => setNewReq({ ...newReq, priority: value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="critical">Critical</SelectItem>
+                                      <SelectItem value="high">High</SelectItem>
+                                      <SelectItem value="medium">Medium</SelectItem>
+                                      <SelectItem value="low">Low</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                              {requirements.length > 0 && (
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Parent (optional)
+                                  </label>
+                                  <Select
+                                    value={newReq.parent_id || 'none'}
+                                    onValueChange={(value) => setNewReq({ ...newReq, parent_id: value === 'none' ? '' : value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="None (root level)" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">None (root level)</SelectItem>
+                                      {requirements.map((req) => (
+                                        <SelectItem key={req.id} value={req.id}>
+                                          {req.title}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              )}
+                            </div>
+                            <DialogFooter>
+                              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button type="submit" disabled={creating || !newReq.title.trim()}>
+                                {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                Create
+                              </Button>
+                            </DialogFooter>
+                          </form>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search..."
+                      className="pl-9"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  {tree.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No requirements yet. Add one to get started.
+                    </p>
+                  ) : (
+                    <div className="space-y-1">
+                      {tree.map((node) => (
+                        <RequirementTreeItem
+                          key={node.id}
+                          node={node}
+                          level={0}
+                          selectedId={selectedId}
+                          onSelect={setSelectedId}
+                          onToggle={handleToggle}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
-              </>
-            ) : (
-              <CardContent className="py-24 text-center">
-                <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">
-                  Select a requirement from the tree to view details
-                </p>
-              </CardContent>
-            )}
-          </Card>
-        </div>
+              </Card>
+
+              {/* Detail panel */}
+              <Card className="lg:col-span-2">
+                {selectedRequirement ? (
+                  <>
+                    <CardHeader>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline" className="text-xs">
+                          {selectedRequirement.stable_key}
+                        </Badge>
+                        <Badge variant={priorityColors[selectedRequirement.priority]}>
+                          {selectedRequirement.priority}
+                        </Badge>
+                      </div>
+                      <CardTitle>{selectedRequirement.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <p className="text-gray-600">
+                          {selectedRequirement.what_this_does || 'No description yet.'}
+                        </p>
+                        <div className="flex gap-2">
+                          <Link to={`/requirements/${selectedRequirement.id}`}>
+                            <Button>Open requirement</Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </>
+                ) : (
+                  <CardContent className="py-24 text-center">
+                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">
+                      Select a requirement from the tree to view details
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="artifacts">
+            <ArtifactList productId={id!} />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   )

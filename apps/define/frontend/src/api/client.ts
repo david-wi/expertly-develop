@@ -121,6 +121,39 @@ export interface ParsedRequirement {
   parent_ref: string | null
 }
 
+export interface Artifact {
+  id: string
+  product_id: string
+  name: string
+  description: string | null
+  original_filename: string
+  mime_type: string
+  current_version: number
+  status: string
+  created_at: string
+  updated_at: string
+  created_by: string | null
+}
+
+export interface ArtifactVersion {
+  id: string
+  artifact_id: string
+  version_number: number
+  original_storage_path: string
+  markdown_storage_path: string | null
+  markdown_content: string | null
+  size_bytes: number
+  conversion_status: string
+  conversion_error: string | null
+  change_summary: string | null
+  changed_by: string | null
+  created_at: string
+}
+
+export interface ArtifactWithVersions extends Artifact {
+  versions: ArtifactVersion[]
+}
+
 // Products API
 export const productsApi = {
   list: () => api.get<Product[]>('/products').then((r) => r.data),
@@ -246,6 +279,56 @@ export const aiApi = {
     target_parent_id?: string
     product_name: string
   }) => api.post<{ requirements: ParsedRequirement[] }>('/ai/parse-requirements', data).then((r) => r.data),
+}
+
+// Artifacts API
+export const artifactsApi = {
+  list: (productId: string) =>
+    api.get<Artifact[]>('/artifacts', { params: { product_id: productId } }).then((r) => r.data),
+
+  get: (id: string) =>
+    api.get<ArtifactWithVersions>(`/artifacts/${id}`).then((r) => r.data),
+
+  upload: (productId: string, name: string, file: File, description?: string) => {
+    const formData = new FormData()
+    formData.append('product_id', productId)
+    formData.append('name', name)
+    formData.append('file', file)
+    if (description) {
+      formData.append('description', description)
+    }
+    return api.post<Artifact>('/artifacts', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
+
+  update: (id: string, data: { name?: string; description?: string; status?: string }) =>
+    api.patch<Artifact>(`/artifacts/${id}`, data).then((r) => r.data),
+
+  delete: (id: string) => api.delete(`/artifacts/${id}`),
+
+  uploadVersion: (artifactId: string, file: File, changeSummary?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (changeSummary) {
+      formData.append('change_summary', changeSummary)
+    }
+    return api.post<ArtifactVersion>(`/artifacts/${artifactId}/versions`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
+
+  downloadOriginalUrl: (artifactId: string, versionId: string) =>
+    `/api/v1/artifacts/${artifactId}/versions/${versionId}/original`,
+
+  getMarkdown: (artifactId: string, versionId: string) =>
+    api.get<string>(`/artifacts/${artifactId}/versions/${versionId}/markdown`, {
+      responseType: 'text',
+      transformResponse: [(data) => data],
+    }).then((r) => r.data),
+
+  reconvert: (artifactId: string, versionId: string) =>
+    api.post<ArtifactVersion>(`/artifacts/${artifactId}/versions/${versionId}/reconvert`).then((r) => r.data),
 }
 
 export default api
