@@ -46,7 +46,7 @@ describe('Dashboard', () => {
       {
         id: 'job-1',
         job_type: 'walkthrough',
-        status: 'completed',
+        status: 'completed' as const,
         progress: 100,
         current_step: null,
         created_at: '2024-01-01T00:00:00Z',
@@ -62,7 +62,7 @@ describe('Dashboard', () => {
       {
         id: 'job-2',
         job_type: 'generate_report',
-        status: 'running',
+        status: 'running' as const,
         progress: 50,
         current_step: 'Processing',
         created_at: '2024-01-01T00:00:00Z',

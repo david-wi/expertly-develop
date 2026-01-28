@@ -42,7 +42,7 @@ export const formatBuildTimestamp = (ts: string | undefined): string | null => {
   return ts ? `Build: ${ts}` : null
 }
 
-export const useCurrentUser = (fetchFn: () => Promise<unknown>) => {
+export const useCurrentUser = (_fetchFn: () => Promise<unknown>) => {
   // Return mock user data for tests
   return {
     user: {
