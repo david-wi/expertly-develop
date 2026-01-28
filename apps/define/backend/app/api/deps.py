@@ -42,6 +42,7 @@ class CurrentUser(BaseModel):
     name: str
     email: str
     organization_id: Optional[str] = None
+    organization_name: Optional[str] = None
 
 
 async def get_current_user(request: Request) -> CurrentUser:
@@ -67,4 +68,5 @@ async def get_current_user(request: Request) -> CurrentUser:
         name=identity_user.name,
         email=identity_user.email or "",
         organization_id=str(identity_user.organization_id) if identity_user.organization_id else None,
+        organization_name=identity_user.organization_name,
     )

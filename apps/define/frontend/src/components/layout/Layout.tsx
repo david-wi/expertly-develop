@@ -44,7 +44,7 @@ export default function Layout() {
             {children}
           </Link>
         )}
-        user={currentUser ? { name: currentUser.name } : undefined}
+        user={currentUser ? { name: currentUser.name, organization: currentUser.organization_name || undefined } : undefined}
       />
 
       <MainContent>

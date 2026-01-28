@@ -204,6 +204,7 @@ export interface CurrentUser {
   name: string
   email: string
   organization_id: string | null
+  organization_name: string | null
 }
 
 export const usersApi = {

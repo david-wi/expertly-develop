@@ -46,7 +46,7 @@ export default function Dashboard() {
       <div className="mb-2">
         <span className="text-sm text-gray-500">ExpertlyAI</span>
       </div>
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Today</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-8">Dashboard</h1>
 
       {products.length === 0 ? (
         <Card className="mb-8">
