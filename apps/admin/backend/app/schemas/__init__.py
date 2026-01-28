@@ -15,6 +15,15 @@ from app.schemas.theme import (
     ThemeBorderColors,
     PublicThemeResponse,
 )
+from app.schemas.error_log import (
+    ErrorLogCreate,
+    ErrorLogUpdate,
+    ErrorLogResponse,
+    ErrorLogListResponse,
+    ErrorStatsResponse,
+    ErrorSeverity,
+    ErrorStatus,
+)
 
 __all__ = [
     "ThemeCreate",
@@ -30,4 +39,11 @@ __all__ = [
     "ThemeTextColors",
     "ThemeBorderColors",
     "PublicThemeResponse",
+    "ErrorLogCreate",
+    "ErrorLogUpdate",
+    "ErrorLogResponse",
+    "ErrorLogListResponse",
+    "ErrorStatsResponse",
+    "ErrorSeverity",
+    "ErrorStatus",
 ]

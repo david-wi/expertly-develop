@@ -10,6 +10,13 @@ import type {
   MonitoringResponse,
   HealthHistoryResponse,
 } from '@/types/monitoring'
+import type {
+  ErrorLog,
+  ErrorLogListResponse,
+  ErrorStatsResponse,
+  ErrorLogUpdate,
+  ErrorLogFilters,
+} from '@/types/error_logs'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -115,6 +122,36 @@ export const monitoringApi = {
     const response = await api.get<HealthHistoryResponse>(`/monitoring/history/${encodeURIComponent(serviceName)}`, {
       params: { limit },
     })
+    return response.data
+  },
+}
+
+// Error Logs API
+export const errorLogsApi = {
+  list: async (filters: ErrorLogFilters = {}): Promise<ErrorLogListResponse> => {
+    const response = await api.get<ErrorLogListResponse>('/error-logs', {
+      params: filters,
+    })
+    return response.data
+  },
+
+  get: async (id: string): Promise<ErrorLog> => {
+    const response = await api.get<ErrorLog>(`/error-logs/${id}`)
+    return response.data
+  },
+
+  update: async (id: string, data: ErrorLogUpdate): Promise<ErrorLog> => {
+    const response = await api.patch<ErrorLog>(`/error-logs/${id}`, data)
+    return response.data
+  },
+
+  getStats: async (): Promise<ErrorStatsResponse> => {
+    const response = await api.get<ErrorStatsResponse>('/error-logs/stats')
+    return response.data
+  },
+
+  getApps: async (): Promise<string[]> => {
+    const response = await api.get<string[]>('/error-logs/apps')
     return response.data
   },
 }

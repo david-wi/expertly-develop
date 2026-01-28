@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType } from '../services/api'
 import { useAppStore } from '../stores/appStore'
+import { createErrorLogger } from '../utils/errorLogger'
+
+const logger = createErrorLogger('Playbooks')
 
 // Generate a simple UUID for step IDs
 function generateId(): string {
@@ -433,6 +436,7 @@ export default function Playbooks() {
   const [steps, setSteps] = useState<StepFormData[]>([])
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -458,6 +462,7 @@ export default function Playbooks() {
 
   const loadData = async () => {
     setLoading(true)
+    setError(null)
     try {
       const [playbooksData, usersData, teamsData, queuesData] = await Promise.all([
         api.getPlaybooks(),
@@ -469,8 +474,10 @@ export default function Playbooks() {
       setUsers(usersData)
       setTeams(teamsData)
       setQueues(queuesData)
-    } catch (error) {
-      console.error('Failed to load data:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load data'
+      setError(message)
+      logger.error(err, { action: 'loadData' })
     } finally {
       setLoading(false)
     }
@@ -509,6 +516,7 @@ export default function Playbooks() {
     if (!formData.name.trim()) return
 
     setSaving(true)
+    setError(null)
     try {
       const newPlaybook: CreatePlaybookRequest = {
         name: formData.name.trim(),
@@ -520,8 +528,10 @@ export default function Playbooks() {
       await loadData()
       setShowCreateModal(false)
       resetForm()
-    } catch (error) {
-      console.error('Failed to create playbook:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create playbook'
+      setError(message)
+      logger.error(err, { action: 'createPlaybook', additionalContext: { name: formData.name } })
     } finally {
       setSaving(false)
     }
@@ -534,11 +544,12 @@ export default function Playbooks() {
     // Validate that all steps have titles
     const invalidSteps = steps.filter(s => !s.title.trim())
     if (invalidSteps.length > 0) {
-      alert('All steps must have a title')
+      setError('All steps must have a title')
       return
     }
 
     setSaving(true)
+    setError(null)
     try {
       await api.updatePlaybook(editingPlaybook.id, {
         name: formData.name.trim(),
@@ -551,9 +562,10 @@ export default function Playbooks() {
       setIsEditing(false)
       setEditingPlaybook(null)
       resetForm()
-    } catch (error) {
-      console.error('Failed to update playbook:', error)
-      alert(error instanceof Error ? error.message : 'Failed to save playbook')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save playbook'
+      setError(message)
+      logger.error(err, { action: 'updatePlaybook', additionalContext: { playbookId: editingPlaybook.id, name: formData.name } })
     } finally {
       setSaving(false)
     }
@@ -563,24 +575,30 @@ export default function Playbooks() {
     if (!selectedPlaybook) return
 
     setSaving(true)
+    setError(null)
     try {
       await api.deletePlaybook(selectedPlaybook.id)
       await loadData()
       setShowDeleteConfirm(false)
       setSelectedPlaybook(null)
-    } catch (error) {
-      console.error('Failed to delete playbook:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to delete playbook'
+      setError(message)
+      logger.error(err, { action: 'deletePlaybook', additionalContext: { playbookId: selectedPlaybook.id, name: selectedPlaybook.name } })
     } finally {
       setSaving(false)
     }
   }
 
   const handleDuplicate = async (playbook: Playbook) => {
+    setError(null)
     try {
       await api.duplicatePlaybook(playbook.id)
       await loadData()
-    } catch (error) {
-      console.error('Failed to duplicate playbook:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to duplicate playbook'
+      setError(message)
+      logger.error(err, { action: 'duplicatePlaybook', additionalContext: { playbookId: playbook.id, name: playbook.name } })
     }
   }
 
@@ -669,6 +687,29 @@ export default function Playbooks() {
   if (isEditing && editingPlaybook) {
     return (
       <div className="space-y-4">
+        {/* Error banner */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start justify-between">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium text-red-800">Error</p>
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
@@ -834,6 +875,29 @@ export default function Playbooks() {
   // List view
   return (
     <div className="space-y-4">
+      {/* Error banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start justify-between">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-red-800">Error</p>
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Playbooks</h2>
         <div className="flex items-center space-x-3">

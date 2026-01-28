@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Palette, Activity } from 'lucide-react'
+import { LayoutDashboard, Palette, Activity, AlertTriangle } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
 import { usersApi, CurrentUser } from '@/services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Themes', href: '/themes', icon: Palette },
+  { name: 'Error Logs', href: '/error-logs', icon: AlertTriangle },
   { name: 'Monitoring', href: '/monitoring', icon: Activity },
 ]
 
