@@ -94,6 +94,9 @@ export default function LandingPage() {
               Queue-Driven Task Management,{' '}
               <span className="text-primary-600">Simplified</span>
             </h1>
+            <p className="mt-3 text-lg font-medium text-primary-600 italic">
+              Your organization on autopilot
+            </p>
             <p className="mt-6 text-xl text-gray-600 leading-relaxed">
               Stop chasing tasks across spreadsheets and chat threads.
               Expertly Manage brings order to chaos with intelligent task queues
