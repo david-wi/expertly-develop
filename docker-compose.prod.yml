@@ -97,7 +97,9 @@ services:
   # EXPERTLY ADMIN
   # ===================
   admin-backend:
-    build: ./apps/admin/backend
+    build:
+      context: .
+      dockerfile: ./apps/admin/backend/Dockerfile
     environment:
       - DATABASE_URL=postgresql+asyncpg://admin:admin@admin-db:5432/expertly_admin
       - ENVIRONMENT=production
