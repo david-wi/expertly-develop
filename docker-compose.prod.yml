@@ -80,6 +80,7 @@ services:
         VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - develop-backend
+      - ui
     networks:
       - traefik
       - default
@@ -132,6 +133,7 @@ services:
         VITE_API_URL: https://admin-api.ai.devintensive.com/api
     depends_on:
       - admin-backend
+      - ui
     networks:
       - traefik
       - default
@@ -205,6 +207,7 @@ services:
         VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - identity-backend
+      - ui
     networks:
       - traefik
       - default
@@ -275,6 +278,7 @@ services:
         VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - define-backend
+      - ui
     networks:
       - traefik
       - default
@@ -326,6 +330,7 @@ services:
         VITE_API_URL: ""
     depends_on:
       - manage-backend
+      - ui
     networks:
       - traefik
       - default
@@ -375,6 +380,7 @@ services:
       dockerfile: ./apps/vibetest/frontend/Dockerfile
     depends_on:
       - vibetest-backend
+      - ui
     networks:
       - traefik
       - default
@@ -439,6 +445,7 @@ services:
         VITE_API_URL: https://salon-api.ai.devintensive.com/api/v1
     depends_on:
       - salon-backend
+      - ui
     networks:
       - traefik
       - default
@@ -489,6 +496,7 @@ services:
         VITE_API_URL: https://today-api.ai.devintensive.com/api
     depends_on:
       - today-backend
+      - ui
     networks:
       - traefik
       - default

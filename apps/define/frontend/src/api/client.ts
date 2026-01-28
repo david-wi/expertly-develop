@@ -3,12 +3,24 @@ import axios from 'axios'
 // Identity service URL for authentication
 const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
 
+// Storage key for tenant ID override
+export const TENANT_STORAGE_KEY = 'expertly-tenant-id'
+
 const api = axios.create({
   baseURL: '/api/v1',
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true, // Send cookies with requests
+})
+
+// Add interceptor to include X-Tenant-Id header from localStorage
+api.interceptors.request.use((config) => {
+  const tenantId = localStorage.getItem(TENANT_STORAGE_KEY)
+  if (tenantId) {
+    config.headers['X-Tenant-Id'] = tenantId
+  }
+  return config
 })
 
 // Redirect to Identity login on 401 errors
@@ -209,6 +221,20 @@ export interface CurrentUser {
 
 export const usersApi = {
   me: () => api.get<CurrentUser>('/users/me').then((r) => r.data),
+}
+
+// Organization types
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+}
+
+export const organizationsApi = {
+  list: async () => {
+    const { data } = await api.get<{ items: Organization[]; total: number }>('/organizations')
+    return data
+  },
 }
 
 // AI API
