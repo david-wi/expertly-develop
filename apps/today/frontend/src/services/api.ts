@@ -312,6 +312,17 @@ class ApiService {
   }
 
   // Users
+  async getCurrentUser(): Promise<{
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+    timezone: string;
+  }> {
+    const { data } = await this.client.get('/users/me');
+    return data;
+  }
+
   async getUsers(): Promise<Array<{
     id: string;
     email: string;

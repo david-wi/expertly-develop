@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -11,7 +12,8 @@ import {
   Archive,
   Settings,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index';
+import { api } from '../../services/api';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -29,13 +31,17 @@ const navigation = [
 export function Sidebar() {
   const location = useLocation();
 
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(() => api.getCurrentUser(), []);
+  const { sidebarUser } = useCurrentUser(fetchCurrentUser);
+
   return (
     <SharedSidebar
       productCode="today"
       productName="Today"
       navigation={navigation}
       currentPath={location.pathname}
-      user={{ name: 'Claude', role: 'AI Assistant' }}
+      user={sidebarUser}
       buildInfo={
         formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
           <span className="text-[10px] text-gray-400 block text-right">

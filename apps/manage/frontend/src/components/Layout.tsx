@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -9,9 +9,9 @@ import {
   Users2,
   BookOpen,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
-import { useAppStore } from '../stores/appStore'
+import { api } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -26,11 +26,10 @@ const navigation = [
 export default function Layout() {
   const location = useLocation()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
-  const { user, fetchUser } = useAppStore()
 
-  useEffect(() => {
-    fetchUser()
-  }, [fetchUser])
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(() => api.getCurrentUser(), [])
+  const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   const handleViewChange = (newState: ViewAsState) => {
     setViewAs(newState)
@@ -60,7 +59,7 @@ export default function Layout() {
             {children}
           </Link>
         )}
-        user={user ? { name: user.name } : undefined}
+        user={sidebarUser}
       />
       <MainContent>
         <Outlet context={{ viewAs }} />

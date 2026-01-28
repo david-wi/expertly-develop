@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity, AlertTriangle } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
-import { usersApi, CurrentUser } from '@/services/api'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { usersApi } from '@/services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -13,11 +13,10 @@ const navigation = [
 
 export function Layout() {
   const location = useLocation()
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
 
-  useEffect(() => {
-    usersApi.me().then(setCurrentUser).catch(console.error)
-  }, [])
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(() => usersApi.me(), [])
+  const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -38,7 +37,7 @@ export function Layout() {
             {children}
           </Link>
         )}
-        user={currentUser ? { name: currentUser.name } : undefined}
+        user={sidebarUser}
       />
 
       {/* Main content */}

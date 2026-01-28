@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   User,
@@ -7,8 +7,8 @@ import {
   Building2,
   KeyRound,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
-import { authApi, AuthUser, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [
   { name: 'Users', href: '/users', icon: User },
@@ -20,28 +20,28 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getOrganizationId())
 
-  useEffect(() => {
-    // Fetch current user
-    const fetchUser = async () => {
-      try {
-        // Try to get user from session cookie (no token needed with withCredentials)
-        const user = await authApi.me('')
-        setCurrentUser(user)
-        // If user has an organization and none is selected, select it
-        if (user.organization_id && !selectedOrgId) {
-          setSelectedOrgId(user.organization_id)
-          setOrganizationId(user.organization_id)
-        }
-      } catch {
-        // Not logged in or error - ignore
-      }
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(async () => {
+    const user = await authApi.me('')
+    // If user has an organization and none is selected, select it
+    if (user.organization_id && !selectedOrgId) {
+      setSelectedOrgId(user.organization_id)
+      setOrganizationId(user.organization_id)
     }
-    fetchUser()
-  }, [])
+    // Transform AuthUser to CurrentUser format
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email || '',
+      role: user.role,
+      organization_id: user.organization_id,
+      organization_name: user.organization_name,
+    }
+  }, [selectedOrgId])
+  const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   useEffect(() => {
     // Fetch organizations
@@ -59,7 +59,7 @@ export default function Layout() {
       }
     }
     fetchOrgs()
-  }, [])
+  }, [selectedOrgId])
 
   const handleOrgChange = (orgId: string) => {
     setSelectedOrgId(orgId)
@@ -70,6 +70,14 @@ export default function Layout() {
 
   const selectedOrg = organizations.find(o => o.id === selectedOrgId)
 
+  // Merge organization name from selected org if not in user data
+  const userWithOrg = sidebarUser
+    ? {
+        ...sidebarUser,
+        organization: sidebarUser.organization || selectedOrg?.name,
+      }
+    : undefined
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar
@@ -77,10 +85,7 @@ export default function Layout() {
         productName="Identity"
         navigation={navigation}
         currentPath={location.pathname}
-        user={currentUser ? {
-          name: currentUser.name,
-          organization: currentUser.organization_name || selectedOrg?.name,
-        } : undefined}
+        user={userWithOrg}
         orgSwitcher={organizations.length > 0 ? (
           <select
             value={selectedOrgId || ''}
