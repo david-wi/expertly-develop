@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Palette, Activity, AlertTriangle } from 'lucide-react'
+import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
 import { usersApi } from '@/services/api'
 
@@ -9,6 +9,7 @@ const navigation = [
   { name: 'Themes', href: '/themes', icon: Palette },
   { name: 'Error Logs', href: '/error-logs', icon: AlertTriangle },
   { name: 'Monitoring', href: '/monitoring', icon: Activity },
+  { name: 'Live Monitor', href: '/monitor', icon: Radio },
 ]
 
 export function Layout() {

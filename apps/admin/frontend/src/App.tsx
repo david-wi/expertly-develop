@@ -5,6 +5,7 @@ import { Themes } from './pages/Themes'
 import { ThemeDetail } from './pages/ThemeDetail'
 import { ThemeCreate } from './pages/ThemeCreate'
 import { Monitoring } from './pages/Monitoring'
+import { Monitor } from './pages/Monitor'
 import { ErrorLogs } from './pages/ErrorLogs'
 import LandingPage from './pages/LandingPage'
 
@@ -22,6 +23,7 @@ function App() {
         <Route path="/themes/:id" element={<ThemeDetail />} />
         <Route path="/error-logs" element={<ErrorLogs />} />
         <Route path="/monitoring" element={<Monitoring />} />
+        <Route path="/monitor" element={<Monitor />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
