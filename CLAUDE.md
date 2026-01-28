@@ -74,38 +74,78 @@ See `apps/future/` directory for planned services that are not yet implemented:
 
 ## Deployment Notes
 
-- **GitHub Actions** deploys automatically on push to main branch
+- **GitHub Actions** deploys automatically on push to main branch using **blue-green deployment**
 - Workflow: `.github/workflows/deploy.yml`
 - Traefik routes traffic via Docker labels in `docker-compose.prod.yml`
-- Container naming: `expertly-develop-{service}-1`
+- Container naming: `expertly-{blue|green}-{service}-1` (NOT `expertly-develop-*`)
 - Server path: `/opt/expertly-develop`
-- Manual deploy: `ssh root@152.42.152.243 "cd /opt/expertly-develop && git pull && docker compose -f docker-compose.prod.yml up -d --build"`
+- Deployment state: `/opt/deployment-state.json` (shows `{"active": "blue"}` or `{"active": "green"}`)
 
-## Manual Docker Operations - IMPORTANT
+## Manual Docker Operations - CRITICAL
 
-**NEVER start individual services without ensuring all services are running.**
+**The deployment uses blue-green deployment. Manual commands MUST use the correct project name.**
 
-Running `docker compose up -d service-name` will ONLY start that service. Other stopped services will remain stopped, causing outages.
+### Why This Matters
 
-### Correct way to start/restart services:
+The CI/CD creates containers named `expertly-green-*` or `expertly-blue-*`. If you run manual commands without specifying the project name, Docker Compose creates competing `expertly-develop-*` containers. The next CI/CD deployment will stop these "legacy" containers, causing unexpected outages.
+
+### Check Current Active Deployment
+```bash
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cat /opt/deployment-state.json"
+```
+This shows `{"active": "blue"}` or `{"active": "green"}`.
+
+### Correct Manual Commands
+
+**ALWAYS use the active color from deployment-state.json:**
 
 ```bash
-# ALWAYS use this command - brings up ALL services
-ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cd /opt/expertly-develop && docker compose -f docker-compose.prod.yml up -d"
+# For green deployment (if active is "green"):
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 \
+  "cd /opt/expertly-develop && COMPOSE_PROJECT_NAME=expertly-green docker compose -f docker-compose.prod.yml up -d"
 
-# To rebuild a specific service while keeping others running:
-ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cd /opt/expertly-develop && docker compose -f docker-compose.prod.yml up -d --build service-name"
+# For blue deployment (if active is "blue"):
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 \
+  "cd /opt/expertly-develop && COMPOSE_PROJECT_NAME=expertly-blue docker compose -f docker-compose.prod.yml up -d"
 ```
 
-### WRONG - Do NOT do this:
+### One-Liner to Auto-Detect Active Color
 ```bash
-# This will ONLY start identity services, leaving other stopped services down!
-docker compose -f docker-compose.prod.yml up -d identity-backend identity-frontend
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 'cd /opt/expertly-develop && COMPOSE_PROJECT_NAME="expertly-$(cat /opt/deployment-state.json | python3 -c "import sys,json; print(json.load(sys.stdin)[\"active\"])")" docker compose -f docker-compose.prod.yml up -d'
+```
+
+### To Rebuild a Specific Service
+```bash
+# Replace COLOR with the active color (green or blue)
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 \
+  "cd /opt/expertly-develop && COMPOSE_PROJECT_NAME=expertly-COLOR docker compose -f docker-compose.prod.yml up -d --build service-name"
+```
+
+### NEVER DO THIS
+```bash
+# WRONG - Creates competing "expertly-develop-*" containers that get killed by CI/CD:
+docker compose -f docker-compose.prod.yml up -d
+
+# WRONG - Same problem without project name:
+ssh root@152.42.152.243 "cd /opt/expertly-develop && docker compose -f docker-compose.prod.yml up -d --build"
+```
+
+### Troubleshooting Container Conflicts
+
+If you see both `expertly-develop-*` AND `expertly-{blue|green}-*` containers:
+```bash
+# 1. Check what containers exist
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 "docker ps --format '{{.Names}}' | grep expertly | sort"
+
+# 2. Remove the legacy expertly-develop-* containers
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cd /opt/expertly-develop && docker compose -f docker-compose.prod.yml down --remove-orphans"
+
+# 3. Verify only blue/green containers remain and services work
 ```
 
 ### After ANY manual docker operation:
 1. Run the health check for ALL services (see checklist above)
-2. If any service returns 404, run the full `docker compose up -d` command
+2. If any service returns 404, check which containers are running and ensure correct project name is used
 
 ## Environment Variables
 
