@@ -23,7 +23,7 @@ vi.mock('date-fns', () => ({
 
 // Mock window.confirm
 const mockConfirm = vi.fn()
-global.confirm = mockConfirm
+;(globalThis as { confirm?: typeof window.confirm }).confirm = mockConfirm
 
 describe('ArtifactsPage', () => {
   const mockArtifacts = {

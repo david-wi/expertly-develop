@@ -40,8 +40,8 @@ describe('authStore', () => {
     const mockMe = vi.mocked(auth.me)
     const mockGetCurrent = vi.mocked(salon.getCurrent)
 
-    const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' }
-    const mockSalon = { id: '1', name: 'Test Salon' }
+    const mockUser = { id: '1', email: 'test@example.com', name: 'Test User' } as any
+    const mockSalon = { id: '1', name: 'Test Salon' } as any
 
     mockMe.mockResolvedValue(mockUser)
     mockGetCurrent.mockResolvedValue(mockSalon)
@@ -77,8 +77,8 @@ describe('authStore', () => {
     const mockMe = vi.mocked(auth.me)
     const mockGetCurrent = vi.mocked(salon.getCurrent)
 
-    const mockUser = { id: '1', email: 'user@example.com', name: 'User' }
-    const mockSalon = { id: '1', name: 'Salon' }
+    const mockUser = { id: '1', email: 'user@example.com', name: 'User' } as any
+    const mockSalon = { id: '1', name: 'Salon' } as any
 
     mockMe.mockResolvedValue(mockUser)
     mockGetCurrent.mockResolvedValue(mockSalon)
@@ -96,7 +96,7 @@ describe('authStore', () => {
     const { salon } = await import('../services/api')
     const mockGetCurrent = vi.mocked(salon.getCurrent)
 
-    const mockSalon = { id: '1', name: 'Test Salon', address: '123 Main St' }
+    const mockSalon = { id: '1', name: 'Test Salon', address: '123 Main St' } as any
     mockGetCurrent.mockResolvedValue(mockSalon)
 
     await act(async () => {

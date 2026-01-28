@@ -31,8 +31,11 @@ const navigation = [
 export function Sidebar() {
   const location = useLocation();
 
-  // Use shared hook for consistent user fetching
-  const fetchCurrentUser = useCallback(() => api.getCurrentUser(), []);
+  // Use shared hook for consistent user fetching - ensure name is never null for CurrentUser type
+  const fetchCurrentUser = useCallback(async () => {
+    const user = await api.getCurrentUser();
+    return { ...user, name: user.name ?? user.email };
+  }, []);
   const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
   return (
