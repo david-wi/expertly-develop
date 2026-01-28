@@ -117,8 +117,17 @@ describe('LoginPage', () => {
     const { authApi, setOrganizationId } = await import('../services/api')
     const mockLogin = vi.mocked(authApi.login)
     mockLogin.mockResolvedValue({
-      user: { organization_id: 'org-123', email: 'test@example.com' },
-      access_token: 'token-123',
+      user: {
+        id: 'user-123',
+        name: 'Test User',
+        email: 'test@example.com',
+        organization_id: 'org-123',
+        organization_name: 'Test Org',
+        role: 'member',
+        avatar_url: null,
+      },
+      session_token: 'token-123',
+      expires_at: '2026-12-31T00:00:00Z',
     })
 
     const user = userEvent.setup()
