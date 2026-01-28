@@ -1,18 +1,10 @@
 import '@testing-library/jest-dom'
-import { afterEach, beforeEach, vi } from 'vitest'
+import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 // Cleanup after each test
 afterEach(() => {
   cleanup()
-})
-
-// Mock fetch globally
-global.fetch = vi.fn()
-
-// Reset mocks before each test
-beforeEach(() => {
-  vi.resetAllMocks()
 })
 
 // Mock localStorage
@@ -23,3 +15,12 @@ const localStorageMock = {
   clear: vi.fn(),
 }
 vi.stubGlobal('localStorage', localStorageMock)
+
+// Mock import.meta.env
+vi.stubGlobal('import', {
+  meta: {
+    env: {
+      VITE_API_URL: 'http://localhost:8000/api',
+    },
+  },
+})

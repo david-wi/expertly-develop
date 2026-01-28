@@ -1,3 +1,2 @@
-# Monorepo: typecheck enforced via CI + branch protection
-# Full builds are too slow for pre-commit; CI runs tsc on all apps
-exit 0
+# Run lint-staged for targeted testing
+npx lint-staged
