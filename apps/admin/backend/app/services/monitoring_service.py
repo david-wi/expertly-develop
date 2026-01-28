@@ -26,10 +26,10 @@ MONITORED_SERVICES: list[ServiceConfig] = [
     ServiceConfig(name="Identity", url="https://identity.ai.devintensive.com", health_endpoint="/"),
     ServiceConfig(name="Identity API", url="https://identity-api.ai.devintensive.com", health_endpoint="/health"),
     ServiceConfig(name="Manage", url="https://manage.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Manage API", url="https://manage-api.ai.devintensive.com", health_endpoint="/health"),
+    # Manage API not exposed via Traefik yet
     ServiceConfig(name="Vibetest", url="https://vibetest.ai.devintensive.com", health_endpoint="/"),
     ServiceConfig(name="Salon", url="https://salon.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Salon API", url="https://salon-api.ai.devintensive.com", health_endpoint="/health"),
+    # Salon API not exposed via Traefik yet
     ServiceConfig(name="Today", url="https://today.ai.devintensive.com", health_endpoint="/"),
     ServiceConfig(name="Today API", url="https://today-api.ai.devintensive.com", health_endpoint="/health"),
     ServiceConfig(name="Vibecode", url="https://vibecode.ai.devintensive.com", health_endpoint="/health"),
