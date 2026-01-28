@@ -250,15 +250,18 @@ jobs:
             echo "$SUCCESS_COUNT of 9 apps built successfully"
             echo "Services to deploy: $SERVICES"
 
-            echo "=== Starting containers for successful builds ==="
+            # CRITICAL: Start ALL services, not just rebuilt ones
+            # This ensures that when we switch traffic and stop the old deployment,
+            # all services remain available (using existing images for non-rebuilt services)
+            echo "=== Starting ALL containers for new deployment ==="
             COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                docker compose -f docker-compose.prod.yml up -d $SERVICES
+                docker compose -f docker-compose.prod.yml up -d
 
             echo "=== Waiting for containers to be ready ==="
             sleep 15
 
-            # Health check for deployed backend services
-            echo "=== Running health checks ==="
+            # Health check for ALL backend services (since we start all containers)
+            echo "=== Running health checks for ALL services ==="
             check_container() {
               container="expertly-${TARGET}-$1-1"
               if docker ps --filter "name=$container" --filter "status=running" -q | grep -q .; then
@@ -271,17 +274,20 @@ jobs:
             }
 
             FAILED=0
-            [ -f "$BUILD_RESULTS/define" ] && [ "$(cat $BUILD_RESULTS/define)" = "success" ] && { check_container "define-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/develop" ] && [ "$(cat $BUILD_RESULTS/develop)" = "success" ] && { check_container "develop-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/identity" ] && [ "$(cat $BUILD_RESULTS/identity)" = "success" ] && { check_container "identity-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/manage" ] && [ "$(cat $BUILD_RESULTS/manage)" = "success" ] && { check_container "manage-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/salon" ] && [ "$(cat $BUILD_RESULTS/salon)" = "success" ] && { check_container "salon-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/today" ] && [ "$(cat $BUILD_RESULTS/today)" = "success" ] && { check_container "today-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/vibetest" ] && [ "$(cat $BUILD_RESULTS/vibetest)" = "success" ] && { check_container "vibetest-backend" || FAILED=1; }
-            [ -f "$BUILD_RESULTS/vibecode" ] && [ "$(cat $BUILD_RESULTS/vibecode)" = "success" ] && { check_container "vibecode-server" || FAILED=1; }
+            check_container "define-backend" || FAILED=1
+            check_container "develop-backend" || FAILED=1
+            check_container "identity-backend" || FAILED=1
+            check_container "manage-backend" || FAILED=1
+            check_container "salon-backend" || FAILED=1
+            check_container "today-backend" || FAILED=1
+            check_container "vibetest-backend" || FAILED=1
+            check_container "vibecode" || FAILED=1
 
             if [ $FAILED -eq 1 ]; then
-              echo "::error::Some containers failed health check"
+              echo "::error::Some containers failed health check - aborting to prevent partial deployment"
+              echo "Stopping failed deployment..."
+              COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
+                  docker compose -f docker-compose.prod.yml down --remove-orphans || true
               exit 1
             fi
 
