@@ -7,7 +7,7 @@ import {
   Building2,
   KeyRound,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, CurrentUser } from 'expertly_ui/index'
 import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [
@@ -24,7 +24,7 @@ export default function Layout() {
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getOrganizationId())
 
   // Use shared hook for consistent user fetching
-  const fetchCurrentUser = useCallback(async () => {
+  const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
     const user = await authApi.me('')
     // If user has an organization and none is selected, select it
     if (user.organization_id && !selectedOrgId) {

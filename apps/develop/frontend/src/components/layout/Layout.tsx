@@ -7,9 +7,9 @@ import {
   FileBox,
   Play,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, CurrentUser } from 'expertly_ui/index'
 import OrganizationSwitcher from './OrganizationSwitcher'
-import { usersApi, TENANT_STORAGE_KEY } from '../../api/client'
+import { usersApi, TENANT_STORAGE_KEY, CurrentUser as DevelopUser } from '../../api/client'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -22,8 +22,18 @@ const navigation = [
 export default function Layout() {
   const location = useLocation()
 
-  // Use shared hook for consistent user fetching
-  const fetchCurrentUser = useCallback(() => usersApi.me(), [])
+  // Adapt Develop's user type to the shared hook's type
+  const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
+    const user = await usersApi.me()
+    return {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      organization_id: user.tenant.id,
+      organization_name: user.tenant.name,
+    }
+  }, [])
   const { user: currentUser, sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   const handleOrgSwitch = () => {
