@@ -46,7 +46,7 @@ describe('dashboardStore', () => {
       expect(state.widgets).toHaveLength(1)
       expect(state.widgets[0].type).toBe('session')
       expect(state.widgets[0].minimized).toBe(false)
-      expect(state.widgets[0].showStreaming).toBe(true)
+      expect(state.widgets[0].showStreaming).toBe(false)
     })
 
     it('removeWidget removes a widget by id', () => {
@@ -118,13 +118,13 @@ describe('dashboardStore', () => {
       })
 
       const widgetId = useDashboardStore.getState().widgets[0].id
-      expect(useDashboardStore.getState().widgets[0].showStreaming).toBe(true)
+      expect(useDashboardStore.getState().widgets[0].showStreaming).toBe(false)
 
       act(() => {
         useDashboardStore.getState().toggleShowStreaming(widgetId)
       })
 
-      expect(useDashboardStore.getState().widgets[0].showStreaming).toBe(false)
+      expect(useDashboardStore.getState().widgets[0].showStreaming).toBe(true)
     })
   })
 

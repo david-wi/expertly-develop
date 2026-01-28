@@ -7,6 +7,9 @@ afterEach(() => {
   cleanup()
 })
 
+// Mock Element.scrollIntoView
+Element.prototype.scrollIntoView = vi.fn()
+
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
