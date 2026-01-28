@@ -28,7 +28,15 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
-  const { salon, logout } = useAuthStore();
+  const { user, salon, logout } = useAuthStore();
+
+  // Show user name with salon as organization
+  const sidebarUser = user
+    ? {
+        name: user.name,
+        organization: salon?.name,
+      }
+    : undefined;
 
   return (
     <SharedSidebar
@@ -36,7 +44,7 @@ export function Sidebar() {
       productName="Salon"
       navigation={navItems}
       currentPath={location.pathname}
-      user={salon ? { name: salon.name } : undefined}
+      user={sidebarUser}
       buildInfo={
         formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
           <span className="text-[10px] text-gray-400 block text-right">

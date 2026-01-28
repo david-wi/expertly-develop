@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -7,9 +7,9 @@ import {
   FileBox,
   Play,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
 import OrganizationSwitcher from './OrganizationSwitcher'
-import { usersApi, CurrentUser, TENANT_STORAGE_KEY } from '../../api/client'
+import { usersApi, TENANT_STORAGE_KEY } from '../../api/client'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -21,28 +21,16 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null)
-  const [refreshKey, setRefreshKey] = useState(0)
 
-  const fetchCurrentUser = useCallback(async () => {
-    try {
-      const user = await usersApi.me()
-      setCurrentUser(user)
-    } catch (error) {
-      console.error('Failed to fetch current user:', error)
-    }
-  }, [])
-
-  useEffect(() => {
-    fetchCurrentUser()
-  }, [fetchCurrentUser, refreshKey])
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(() => usersApi.me(), [])
+  const { user: currentUser, sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   const handleOrgSwitch = () => {
-    setRefreshKey((k) => k + 1)
     window.location.reload()
   }
 
-  const currentTenantId = localStorage.getItem(TENANT_STORAGE_KEY) || currentUser?.tenant.id || null
+  const currentTenantId = localStorage.getItem(TENANT_STORAGE_KEY) || currentUser?.tenant?.id || null
 
   return (
     <div className="min-h-screen bg-theme-bg">
@@ -51,10 +39,7 @@ export default function Layout() {
         productName="Develop"
         navigation={navigation}
         currentPath={location.pathname}
-        user={currentUser ? {
-          name: currentUser.name,
-          role: currentUser.role,
-        } : undefined}
+        user={sidebarUser}
         orgSwitcher={
           <OrganizationSwitcher
             currentTenantId={currentTenantId}

@@ -76,6 +76,25 @@ declare module 'expertly_ui/index' {
   }
 
   // ==========================================================================
+  // Current User Types (for sidebar user display)
+  // ==========================================================================
+
+  export interface CurrentUser {
+    id: string
+    name: string
+    email: string
+    role?: string
+    organization_id?: string | null
+    organization_name?: string | null
+  }
+
+  export interface SidebarUser {
+    name: string
+    role?: string
+    organization?: string
+  }
+
+  // ==========================================================================
   // Theme Types
   // ==========================================================================
 
@@ -140,4 +159,13 @@ declare module 'expertly_ui/index' {
   export function getTheme(id: ThemeId): Theme
   export function getThemeColors(id: ThemeId): ThemeColors
   export function formatBuildTimestamp(timestamp: string | undefined): string | null
+
+  // Current user hook for consistent user display in sidebar
+  export function useCurrentUser(fetchFn: () => Promise<CurrentUser>): {
+    user: CurrentUser | null
+    sidebarUser: SidebarUser | undefined
+    loading: boolean
+    error: Error | null
+    refetch: () => Promise<void>
+  }
 }
