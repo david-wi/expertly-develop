@@ -584,9 +584,17 @@ volumes:
   artifacts_data:
   define_data:
   define_uploads:
+  # Shared volumes - external to prevent blue/green prefixing
+  # These persist across deployments so sessions survive blue-green switches
   identity_postgres_data:
+    external: true
+    name: shared_identity_postgres_data
   identity_uploads:
   mongo_data:
+    external: true
+    name: shared_mongo_data
   vibetest_postgres_data:
   redis_data:
+    external: true
+    name: shared_redis_data
   today_postgres_data:
