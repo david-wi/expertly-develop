@@ -81,6 +81,32 @@ See `apps/future/` directory for planned services that are not yet implemented:
 - Server path: `/opt/expertly-develop`
 - Manual deploy: `ssh root@152.42.152.243 "cd /opt/expertly-develop && git pull && docker compose -f docker-compose.prod.yml up -d --build"`
 
+## Manual Docker Operations - IMPORTANT
+
+**NEVER start individual services without ensuring all services are running.**
+
+Running `docker compose up -d service-name` will ONLY start that service. Other stopped services will remain stopped, causing outages.
+
+### Correct way to start/restart services:
+
+```bash
+# ALWAYS use this command - brings up ALL services
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cd /opt/expertly-develop && docker compose -f docker-compose.prod.yml up -d"
+
+# To rebuild a specific service while keeping others running:
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cd /opt/expertly-develop && docker compose -f docker-compose.prod.yml up -d --build service-name"
+```
+
+### WRONG - Do NOT do this:
+```bash
+# This will ONLY start identity services, leaving other stopped services down!
+docker compose -f docker-compose.prod.yml up -d identity-backend identity-frontend
+```
+
+### After ANY manual docker operation:
+1. Run the health check for ALL services (see checklist above)
+2. If any service returns 404, run the full `docker compose up -d` command
+
 ## Environment Variables
 
 Define requires:
