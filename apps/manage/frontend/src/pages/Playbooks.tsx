@@ -1,9 +1,13 @@
-import { useEffect, useState } from 'react'
-import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType } from '../services/api'
+import { useEffect, useState, useCallback } from 'react'
+import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { createErrorLogger } from '../utils/errorLogger'
 
 const logger = createErrorLogger('Playbooks')
+
+// Local storage key for recent parent history
+const RECENT_PARENTS_KEY = 'playbook-recent-parents'
+const MAX_RECENT = 5
 
 // Generate a simple UUID for step IDs
 function generateId(): string {
@@ -84,6 +88,111 @@ function playbookStepToForm(step: PlaybookStep): StepFormData {
     approver_id: step.approver_id || '',
     approver_queue_id: step.approver_queue_id || '',
   }
+}
+
+// Helper functions for recent parent tracking
+function getRecentParents(): (string | null)[] {
+  try {
+    const stored = localStorage.getItem(RECENT_PARENTS_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
+function recordParentUsage(parentId: string | null) {
+  try {
+    const recent = getRecentParents()
+    const newRecent = [parentId, ...recent.filter(p => p !== parentId)].slice(0, MAX_RECENT)
+    localStorage.setItem(RECENT_PARENTS_KEY, JSON.stringify(newRecent))
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
+function getSuggestedParent(): string | null {
+  const recent = getRecentParents()
+  if (recent.length === 0) return null
+
+  // Count occurrences
+  const counts: Record<string, number> = {}
+  for (const p of recent) {
+    const key = p ?? '__null__'
+    counts[key] = (counts[key] || 0) + 1
+  }
+
+  // Find most common
+  let maxCount = 0
+  let suggested: string | null = null
+  for (const [key, count] of Object.entries(counts)) {
+    if (count > maxCount) {
+      maxCount = count
+      suggested = key === '__null__' ? null : key
+    }
+  }
+  return suggested
+}
+
+// Tree node structure for rendering
+interface TreeNode {
+  playbook: Playbook
+  children: TreeNode[]
+  depth: number
+}
+
+// Build tree structure from flat list
+function buildTree(playbooks: Playbook[]): TreeNode[] {
+  const map = new Map<string, TreeNode>()
+  const roots: TreeNode[] = []
+
+  // Create nodes for all playbooks
+  for (const pb of playbooks) {
+    map.set(pb.id, { playbook: pb, children: [], depth: 0 })
+  }
+
+  // Build tree structure
+  for (const pb of playbooks) {
+    const node = map.get(pb.id)!
+    if (pb.parent_id && map.has(pb.parent_id)) {
+      const parent = map.get(pb.parent_id)!
+      node.depth = parent.depth + 1
+      parent.children.push(node)
+    } else {
+      roots.push(node)
+    }
+  }
+
+  // Sort children by order_index
+  const sortChildren = (nodes: TreeNode[]) => {
+    nodes.sort((a, b) => a.playbook.order_index - b.playbook.order_index)
+    for (const node of nodes) {
+      sortChildren(node.children)
+    }
+  }
+  sortChildren(roots)
+
+  return roots
+}
+
+// Flatten tree for rendering while preserving hierarchy
+function flattenTree(nodes: TreeNode[]): TreeNode[] {
+  const result: TreeNode[] = []
+  const flatten = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      result.push(node)
+      flatten(node.children)
+    }
+  }
+  flatten(nodes)
+  return result
+}
+
+// Drop position types
+type DropPosition = 'before' | 'after' | 'inside'
+
+interface DropTarget {
+  targetId: string
+  position: DropPosition
 }
 
 interface StepEditorProps {
@@ -400,6 +509,197 @@ function StepEditor({
   )
 }
 
+// Tree item component for playbook list
+interface PlaybookTreeItemProps {
+  node: TreeNode
+  isExpanded: boolean
+  onToggleExpand: () => void
+  onEdit: (playbook: Playbook) => void
+  onDelete: (playbook: Playbook) => void
+  onDuplicate: (playbook: Playbook) => void
+  onHistory: (playbook: Playbook) => void
+  onDragStart: (e: React.DragEvent, playbookId: string) => void
+  onDragOver: (e: React.DragEvent, playbookId: string) => void
+  onDragLeave: (e: React.DragEvent) => void
+  onDrop: (e: React.DragEvent, playbookId: string) => void
+  dropTarget: DropTarget | null
+  isDragging: boolean
+  hasChildren: boolean
+  getScopeLabel: (playbook: Playbook) => string
+  getScopeBadgeColor: (scopeType: ScopeType) => string
+  formatDate: (dateString: string) => string
+}
+
+function PlaybookTreeItem({
+  node,
+  isExpanded,
+  onToggleExpand,
+  onEdit,
+  onDelete,
+  onDuplicate,
+  onHistory,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  dropTarget,
+  isDragging,
+  hasChildren,
+  getScopeLabel,
+  getScopeBadgeColor,
+  formatDate,
+}: PlaybookTreeItemProps) {
+  const { playbook, depth } = node
+  const isGroup = playbook.item_type === 'group'
+  const showChevron = isGroup || hasChildren
+
+  const isDropTarget = dropTarget?.targetId === playbook.id
+  const dropPosition = isDropTarget ? dropTarget.position : null
+
+  return (
+    <div
+      className={`relative ${isDragging ? 'opacity-50' : ''}`}
+      draggable
+      onDragStart={(e) => onDragStart(e, playbook.id)}
+      onDragOver={(e) => onDragOver(e, playbook.id)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => onDrop(e, playbook.id)}
+    >
+      {/* Drop indicator - before */}
+      {dropPosition === 'before' && (
+        <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-500 z-10" style={{ marginLeft: depth * 24 }} />
+      )}
+
+      <div
+        className={`flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-grab active:cursor-grabbing border-b border-gray-100 ${
+          dropPosition === 'inside' ? 'bg-blue-50 ring-2 ring-blue-300 ring-inset' : ''
+        }`}
+        style={{ paddingLeft: 12 + depth * 24 }}
+      >
+        {/* Expand/collapse button */}
+        {showChevron ? (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleExpand()
+            }}
+            className="p-0.5 text-gray-400 hover:text-gray-600 flex-shrink-0"
+          >
+            <svg
+              className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        ) : (
+          <span className="w-5 flex-shrink-0" />
+        )}
+
+        {/* Icon */}
+        {isGroup ? (
+          <svg className="w-5 h-5 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z" />
+          </svg>
+        ) : (
+          <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        )}
+
+        {/* Name */}
+        <button
+          onClick={() => isGroup ? onToggleExpand() : onEdit(playbook)}
+          className="flex-1 text-left font-medium text-gray-900 hover:text-blue-600 truncate"
+        >
+          {playbook.name}
+        </button>
+
+        {/* Scope badge */}
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getScopeBadgeColor(playbook.scope_type)} flex-shrink-0`}>
+          {getScopeLabel(playbook)}
+        </span>
+
+        {/* Steps count (for playbooks only) */}
+        {!isGroup && (
+          <span className="text-xs text-gray-400 w-12 text-center flex-shrink-0">
+            {playbook.steps?.length || 0} steps
+          </span>
+        )}
+
+        {/* Updated date */}
+        <span className="text-xs text-gray-400 w-20 flex-shrink-0 hidden sm:block">
+          {formatDate(playbook.updated_at)}
+        </span>
+
+        {/* Actions */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {!isGroup && playbook.history.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onHistory(playbook)
+              }}
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              title="View history"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDuplicate(playbook)
+            }}
+            className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            title="Duplicate"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
+          {!isGroup && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit(playbook)
+              }}
+              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+              title="Edit"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(playbook)
+            }}
+            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            title="Delete"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Drop indicator - after */}
+      {dropPosition === 'after' && (
+        <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-blue-500 z-10" style={{ marginLeft: depth * 24 }} />
+      )}
+    </div>
+  )
+}
+
 export default function Playbooks() {
   const { user } = useAppStore()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
@@ -411,6 +711,7 @@ export default function Playbooks() {
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showHistoryModal, setShowHistoryModal] = useState(false)
 
@@ -423,19 +724,29 @@ export default function Playbooks() {
     inputs_template: string
     scope_type: ScopeType
     scope_id: string
+    parent_id: string
   }>({
     name: '',
     description: '',
     inputs_template: '',
     scope_type: 'user',
     scope_id: '',
+    parent_id: '',
   })
   const [steps, setSteps] = useState<StepFormData[]>([])
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Drag-and-drop state
+  // Tree state
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null)
+
+  // Group form state
+  const [groupName, setGroupName] = useState('')
+
+  // Drag-and-drop state for steps
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
@@ -452,6 +763,7 @@ export default function Playbooks() {
           setEditingPlaybook(null)
         } else {
           setShowCreateModal(false)
+          setShowCreateGroupModal(false)
           setShowDeleteConfirm(false)
           setShowHistoryModal(false)
         }
@@ -460,6 +772,173 @@ export default function Playbooks() {
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isEditing])
+
+  // Build tree structure
+  const treeNodes = buildTree(playbooks)
+  const flatNodes = flattenTree(treeNodes)
+
+  // Get all groups for location dropdown
+  const groupPlaybooks = playbooks.filter(p => p.item_type === 'group')
+
+  // Check if a playbook has children
+  const hasChildren = useCallback((playbookId: string) => {
+    return playbooks.some(p => p.parent_id === playbookId)
+  }, [playbooks])
+
+  // Check if a playbook is a descendant of another
+  const isDescendant = useCallback((childId: string, parentId: string): boolean => {
+    const child = playbooks.find(p => p.id === childId)
+    if (!child || !child.parent_id) return false
+    if (child.parent_id === parentId) return true
+    return isDescendant(child.parent_id, parentId)
+  }, [playbooks])
+
+  // Tree drag-drop handlers
+  const handleTreeDragStart = useCallback((e: React.DragEvent, playbookId: string) => {
+    e.dataTransfer.setData('text/plain', playbookId)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggedId(playbookId)
+  }, [])
+
+  const handleTreeDragOver = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!draggedId || draggedId === targetId) {
+      setDropTarget(null)
+      return
+    }
+
+    // Can't drop on a descendant
+    if (isDescendant(targetId, draggedId)) {
+      setDropTarget(null)
+      return
+    }
+
+    const target = playbooks.find(p => p.id === targetId)
+    if (!target) {
+      setDropTarget(null)
+      return
+    }
+
+    const rect = e.currentTarget.getBoundingClientRect()
+    const y = e.clientY - rect.top
+    const height = rect.height
+
+    let position: DropPosition
+    if (target.item_type === 'group') {
+      // For groups: top 25% = before, bottom 25% = after, middle 50% = inside
+      if (y < height * 0.25) {
+        position = 'before'
+      } else if (y > height * 0.75) {
+        position = 'after'
+      } else {
+        position = 'inside'
+      }
+    } else {
+      // For playbooks: top 33% = before, bottom 33% = after, middle 33% = inside (nest under)
+      if (y < height * 0.33) {
+        position = 'before'
+      } else if (y > height * 0.66) {
+        position = 'after'
+      } else {
+        position = 'inside'
+      }
+    }
+
+    setDropTarget({ targetId, position })
+  }, [draggedId, playbooks, isDescendant])
+
+  const handleTreeDragLeave = useCallback((e: React.DragEvent) => {
+    // Only clear if leaving the container entirely
+    const relatedTarget = e.relatedTarget as HTMLElement
+    if (!e.currentTarget.contains(relatedTarget)) {
+      setDropTarget(null)
+    }
+  }, [])
+
+  const handleTreeDrop = useCallback(async (e: React.DragEvent, targetId: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    if (!draggedId || !dropTarget) {
+      setDraggedId(null)
+      setDropTarget(null)
+      return
+    }
+
+    const target = playbooks.find(p => p.id === targetId)
+    const dragged = playbooks.find(p => p.id === draggedId)
+    if (!target || !dragged) {
+      setDraggedId(null)
+      setDropTarget(null)
+      return
+    }
+
+    // Calculate new parent and order
+    let newParentId: string | null
+    let siblings: Playbook[]
+
+    if (dropTarget.position === 'inside') {
+      // Drop inside the target
+      newParentId = targetId
+      siblings = playbooks.filter(p => p.parent_id === targetId && p.id !== draggedId)
+      // Expand the target so the dropped item is visible
+      setExpandedIds(prev => new Set([...prev, targetId]))
+    } else {
+      // Drop before or after the target
+      newParentId = target.parent_id || null
+      siblings = playbooks.filter(p => (p.parent_id || null) === newParentId && p.id !== draggedId)
+    }
+
+    // Sort siblings by order_index
+    siblings.sort((a, b) => a.order_index - b.order_index)
+
+    // Calculate new order
+    const reorderItems: PlaybookReorderItem[] = []
+
+    if (dropTarget.position === 'inside') {
+      // Add dragged item at the end
+      const newOrder = siblings.length
+      reorderItems.push({ id: draggedId, parent_id: newParentId, order_index: newOrder })
+    } else {
+      // Find target index
+      const targetIndex = siblings.findIndex(s => s.id === targetId)
+      const insertIndex = dropTarget.position === 'before' ? targetIndex : targetIndex + 1
+
+      // Rebuild order for all siblings
+      let order = 0
+      for (let i = 0; i < siblings.length; i++) {
+        if (i === insertIndex) {
+          reorderItems.push({ id: draggedId, parent_id: newParentId, order_index: order++ })
+        }
+        reorderItems.push({ id: siblings[i].id, parent_id: siblings[i].parent_id || null, order_index: order++ })
+      }
+
+      // If inserting at end
+      if (insertIndex >= siblings.length) {
+        reorderItems.push({ id: draggedId, parent_id: newParentId, order_index: order++ })
+      }
+    }
+
+    setDraggedId(null)
+    setDropTarget(null)
+
+    // Call API to update
+    try {
+      await api.reorderPlaybooks(reorderItems)
+      await loadData()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to reorder playbooks'
+      setError(message)
+      logger.error(err, { action: 'reorderPlaybooks' })
+    }
+  }, [draggedId, dropTarget, playbooks])
+
+  const handleTreeDragEnd = useCallback(() => {
+    setDraggedId(null)
+    setDropTarget(null)
+  }, [])
 
   const loadData = async () => {
     setLoading(true)
@@ -519,14 +998,18 @@ export default function Playbooks() {
     setSaving(true)
     setError(null)
     try {
+      const parentId = formData.parent_id || null
       const newPlaybook: CreatePlaybookRequest = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
         inputs_template: formData.inputs_template.trim() || undefined,
         scope_type: formData.scope_type,
         scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
+        item_type: 'playbook',
+        parent_id: parentId,
       }
       await api.createPlaybook(newPlaybook)
+      recordParentUsage(parentId)
       await loadData()
       setShowCreateModal(false)
       resetForm()
@@ -534,6 +1017,31 @@ export default function Playbooks() {
       const message = err instanceof Error ? err.message : 'Failed to create playbook'
       setError(message)
       logger.error(err, { action: 'createPlaybook', additionalContext: { name: formData.name } })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!groupName.trim()) return
+
+    setSaving(true)
+    setError(null)
+    try {
+      const newGroup: CreatePlaybookRequest = {
+        name: groupName.trim(),
+        scope_type: 'organization',
+        item_type: 'group',
+      }
+      await api.createPlaybook(newGroup)
+      await loadData()
+      setShowCreateGroupModal(false)
+      setGroupName('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to create group'
+      setError(message)
+      logger.error(err, { action: 'createGroup', additionalContext: { name: groupName } })
     } finally {
       setSaving(false)
     }
@@ -607,7 +1115,17 @@ export default function Playbooks() {
 
   const openCreateModal = () => {
     resetForm()
+    // Set suggested parent based on recent usage
+    const suggested = getSuggestedParent()
+    if (suggested && playbooks.some(p => p.id === suggested)) {
+      setFormData(prev => ({ ...prev, parent_id: suggested }))
+    }
     setShowCreateModal(true)
+  }
+
+  const openCreateGroupModal = () => {
+    setGroupName('')
+    setShowCreateGroupModal(true)
   }
 
   const openEditor = (playbook: Playbook) => {
@@ -618,6 +1136,7 @@ export default function Playbooks() {
       inputs_template: playbook.inputs_template || '',
       scope_type: playbook.scope_type,
       scope_id: playbook.scope_id || '',
+      parent_id: playbook.parent_id || '',
     })
     setSteps(playbook.steps.map(playbookStepToForm))
     setExpandedSteps(new Set())
@@ -641,9 +1160,22 @@ export default function Playbooks() {
       inputs_template: '',
       scope_type: 'user',
       scope_id: '',
+      parent_id: '',
     })
     setSteps([])
     setExpandedSteps(new Set())
+  }
+
+  const toggleExpand = (playbookId: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(playbookId)) {
+        next.delete(playbookId)
+      } else {
+        next.add(playbookId)
+      }
+      return next
+    })
   }
 
   const addStep = () => {
@@ -954,6 +1486,12 @@ export default function Playbooks() {
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
+            onClick={openCreateGroupModal}
+            className="text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100 border border-gray-300 transition-colors"
+          >
+            New Group
+          </button>
+          <button
             onClick={openCreateModal}
             className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
           >
@@ -962,119 +1500,56 @@ export default function Playbooks() {
         </div>
       </div>
 
-      {/* Playbooks List */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      {/* Playbooks Tree View */}
+      <div
+        className="bg-white shadow rounded-lg overflow-hidden"
+        onDragEnd={handleTreeDragEnd}
+      >
         {loading ? (
           <div className="p-4 text-gray-500">Loading...</div>
+        ) : flatNodes.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            No playbooks found. Create one to get started.
+          </div>
         ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Playbook
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                  Scope
-                </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-14">
-                  Steps
-                </th>
-                <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 uppercase tracking-wider w-16">
-                  Version
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Updated
-                </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {playbooks.map((playbook) => (
-                <tr key={playbook.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div>
-                      <button
-                        onClick={() => openEditor(playbook)}
-                        className="font-medium text-gray-900 hover:text-blue-600 text-left"
-                      >
-                        {playbook.name}
-                      </button>
-                      {playbook.description && (
-                        <p className="text-xs text-gray-500 truncate max-w-md">
-                          {playbook.description}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getScopeBadgeColor(playbook.scope_type)}`}>
-                      {getScopeLabel(playbook)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-sm text-gray-600">{playbook.steps?.length || 0}</span>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="text-sm text-gray-600">v{playbook.version}</span>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className="text-sm text-gray-500">{formatDate(playbook.updated_at)}</span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end space-x-1">
-                      {playbook.history.length > 0 && (
-                        <button
-                          onClick={() => openHistoryModal(playbook)}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          title="View history"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDuplicate(playbook)}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                        title="Duplicate playbook"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openEditor(playbook)}
-                        className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="Edit playbook"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => openDeleteConfirm(playbook)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete playbook"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {playbooks.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No playbooks found. Create one to get started.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+          <div className="divide-y divide-gray-100">
+            {flatNodes.map((node) => {
+              // Skip children of collapsed parents
+              let parent: Playbook | undefined = node.playbook.parent_id ? playbooks.find(p => p.id === node.playbook.parent_id) : undefined
+              let isHidden = false
+              while (parent) {
+                if (!expandedIds.has(parent.id)) {
+                  isHidden = true
+                  break
+                }
+                parent = parent.parent_id ? playbooks.find(p => p.id === parent!.parent_id) : undefined
+              }
+              if (isHidden) return null
+
+              return (
+                <PlaybookTreeItem
+                  key={node.playbook.id}
+                  node={node}
+                  isExpanded={expandedIds.has(node.playbook.id)}
+                  onToggleExpand={() => toggleExpand(node.playbook.id)}
+                  onEdit={openEditor}
+                  onDelete={openDeleteConfirm}
+                  onDuplicate={handleDuplicate}
+                  onHistory={openHistoryModal}
+                  onDragStart={handleTreeDragStart}
+                  onDragOver={handleTreeDragOver}
+                  onDragLeave={handleTreeDragLeave}
+                  onDrop={handleTreeDrop}
+                  dropTarget={dropTarget}
+                  isDragging={draggedId === node.playbook.id}
+                  hasChildren={hasChildren(node.playbook.id)}
+                  getScopeLabel={getScopeLabel}
+                  getScopeBadgeColor={getScopeBadgeColor}
+                  formatDate={formatDate}
+                />
+              )
+            })}
+          </div>
         )}
       </div>
 
@@ -1109,6 +1584,28 @@ export default function Playbooks() {
                   placeholder="Brief description of this playbook"
                 />
               </div>
+              {groupPlaybooks.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <select
+                    value={formData.parent_id}
+                    onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  >
+                    <option value="">Top Level</option>
+                    {groupPlaybooks.map((group) => {
+                      const isSuggested = getSuggestedParent() === group.id
+                      return (
+                        <option key={group.id} value={group.id}>
+                          {group.name}{isSuggested ? ' (Suggested)' : ''}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Visibility
@@ -1147,6 +1644,47 @@ export default function Playbooks() {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+                >
+                  {saving ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showCreateGroupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Group</h3>
+            <form onSubmit={handleCreateGroup} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Group Name
+                </label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="e.g., Customer Success, Engineering"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateGroupModal(false)}
                   className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
                 >
                   Cancel

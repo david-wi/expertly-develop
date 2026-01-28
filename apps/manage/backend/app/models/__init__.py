@@ -12,7 +12,8 @@ from app.models.project import Project, ProjectCreate, ProjectUpdate, ProjectSta
 from app.models.sop import SOP, SOPCreate, SOPUpdate, SOPType, SOPStep
 from app.models.playbook import (
     Playbook, PlaybookCreate, PlaybookUpdate, PlaybookHistoryEntry,
-    PlaybookStep, PlaybookStepCreate, AssigneeType
+    PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookItemType,
+    PlaybookReorderItem, PlaybookReorderRequest
 )
 
 __all__ = [
@@ -65,4 +66,7 @@ __all__ = [
     "PlaybookStep",
     "PlaybookStepCreate",
     "AssigneeType",
+    "PlaybookItemType",
+    "PlaybookReorderItem",
+    "PlaybookReorderRequest",
 ]

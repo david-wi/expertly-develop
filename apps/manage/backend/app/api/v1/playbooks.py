@@ -8,6 +8,7 @@ from app.models import (
     Playbook, PlaybookCreate, PlaybookUpdate, PlaybookHistoryEntry,
     PlaybookStep, PlaybookStepCreate, User, ScopeType
 )
+from app.models.playbook import PlaybookItemType, PlaybookReorderRequest
 from app.api.deps import get_current_user
 
 router = APIRouter()
@@ -27,6 +28,10 @@ def serialize_playbook(playbook: dict) -> dict:
         result["created_by"] = str(playbook["created_by"])
     # Steps are already serializable
     result["steps"] = playbook.get("steps", [])
+    # Lazy migration: provide defaults for hierarchy fields
+    result["item_type"] = playbook.get("item_type", "playbook")
+    result["parent_id"] = playbook.get("parent_id", None)
+    result["order_index"] = playbook.get("order_index", 0)
     return result
 
 
@@ -119,8 +124,9 @@ async def list_playbooks(
     if scope_type:
         query["scope_type"] = scope_type
 
-    cursor = db.playbooks.find(query).sort("name", 1)
-    playbooks = await cursor.to_list(100)
+    # Sort by order_index for hierarchy, then by name as fallback
+    cursor = db.playbooks.find(query).sort([("order_index", 1), ("name", 1)])
+    playbooks = await cursor.to_list(500)
 
     # Filter to only accessible playbooks
     accessible = []
@@ -158,7 +164,7 @@ async def create_playbook(
     data: PlaybookCreate,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Create a new playbook."""
+    """Create a new playbook or group."""
     db = get_database()
 
     # Validate scope_id if provided
@@ -172,12 +178,31 @@ async def create_playbook(
     if data.scope_type == ScopeType.USER:
         scope_id = current_user.id
 
-    # Process and validate steps
-    steps = process_steps(data.steps) if data.steps else []
+    # Validate parent_id if provided
+    parent_id = None
+    if data.parent_id:
+        parent = await db.playbooks.find_one({
+            "_id": data.parent_id,
+            "organization_id": current_user.organization_id
+        })
+        if not parent:
+            raise HTTPException(status_code=400, detail="Parent playbook/group not found")
+        parent_id = data.parent_id
 
-    # Validate nested playbook references (use empty string for new playbook ID)
-    if steps:
-        # For new playbooks, we just need to validate that nested refs exist and don't have circular refs
+    # Calculate order_index - append to end of siblings
+    sibling_query = {
+        "organization_id": current_user.organization_id,
+        "parent_id": parent_id,
+        "is_active": True
+    }
+    sibling_count = await db.playbooks.count_documents(sibling_query)
+    order_index = sibling_count
+
+    # Skip step processing for groups
+    steps = []
+    if data.item_type == PlaybookItemType.PLAYBOOK and data.steps:
+        steps = process_steps(data.steps)
+        # Validate nested playbook references
         for step in steps:
             if step.get("nested_playbook_id"):
                 nested = await db.playbooks.find_one({"_id": step["nested_playbook_id"]})
@@ -202,7 +227,10 @@ async def create_playbook(
         steps=[PlaybookStep(**s) for s in steps],
         scope_type=data.scope_type,
         scope_id=scope_id,
-        created_by=str(current_user.id)
+        created_by=str(current_user.id),
+        item_type=data.item_type,
+        parent_id=parent_id,
+        order_index=order_index
     )
 
     await db.playbooks.insert_one(playbook.model_dump_mongo())
@@ -407,3 +435,94 @@ async def get_playbook_history(
         raise HTTPException(status_code=403, detail="Access denied to this playbook")
 
     return playbook.get("history", [])
+
+
+async def would_create_cycle(
+    db,
+    organization_id,
+    item_id: str,
+    new_parent_id: str | None
+) -> bool:
+    """Check if setting new_parent_id would create a cycle in the hierarchy."""
+    if new_parent_id is None:
+        return False
+    if item_id == new_parent_id:
+        return True
+
+    # Walk up the hierarchy from new_parent_id
+    current_id = new_parent_id
+    visited = {item_id}  # Include item_id to detect cycles
+
+    while current_id:
+        if current_id in visited:
+            return True
+        visited.add(current_id)
+
+        parent = await db.playbooks.find_one({
+            "_id": current_id,
+            "organization_id": organization_id
+        })
+        if not parent:
+            break
+        current_id = parent.get("parent_id")
+
+    return False
+
+
+@router.post("/reorder")
+async def reorder_playbooks(
+    data: PlaybookReorderRequest,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Bulk update parent_id and order_index for playbooks."""
+    db = get_database()
+
+    # Validate all items exist and belong to user's organization
+    item_ids = [item.id for item in data.items]
+    existing = await db.playbooks.find({
+        "_id": {"$in": item_ids},
+        "organization_id": current_user.organization_id
+    }).to_list(500)
+
+    existing_ids = {pb["_id"] for pb in existing}
+    missing = set(item_ids) - existing_ids
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Playbooks not found: {', '.join(missing)}"
+        )
+
+    # Check for circular references
+    for item in data.items:
+        if item.parent_id:
+            # Validate parent exists
+            parent = await db.playbooks.find_one({
+                "_id": item.parent_id,
+                "organization_id": current_user.organization_id
+            })
+            if not parent:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Parent {item.parent_id} not found"
+                )
+
+            # Check for cycles
+            if await would_create_cycle(db, current_user.organization_id, item.id, item.parent_id):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Moving {item.id} under {item.parent_id} would create a cycle"
+                )
+
+    # Perform updates
+    now = datetime.now(timezone.utc)
+    for item in data.items:
+        await db.playbooks.update_one(
+            {"_id": item.id},
+            {"$set": {
+                "parent_id": item.parent_id,
+                "order_index": item.order_index,
+                "updated_at": now
+            }}
+        )
+
+    return {"success": True}
