@@ -14,6 +14,12 @@ def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+class PlaybookItemType(str, Enum):
+    """Type of item in the playbook hierarchy."""
+    PLAYBOOK = "playbook"
+    GROUP = "group"
+
+
 class AssigneeType(str, Enum):
     """Who can be assigned to or approve a step."""
     USER = "user"      # Specific person
@@ -110,6 +116,11 @@ class Playbook(BaseModel):
     # Status
     is_active: bool = True
 
+    # Hierarchy fields
+    item_type: PlaybookItemType = PlaybookItemType.PLAYBOOK
+    parent_id: Optional[str] = None  # ID of parent playbook/group
+    order_index: int = 0  # Position among siblings
+
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -129,6 +140,8 @@ class PlaybookCreate(BaseModel):
     steps: list[PlaybookStepCreate] = Field(default_factory=list)
     scope_type: ScopeType = ScopeType.ORGANIZATION
     scope_id: Optional[str] = None  # User or Team ID
+    item_type: PlaybookItemType = PlaybookItemType.PLAYBOOK
+    parent_id: Optional[str] = None
 
 
 class PlaybookUpdate(BaseModel):
@@ -140,3 +153,16 @@ class PlaybookUpdate(BaseModel):
     scope_type: Optional[ScopeType] = None
     scope_id: Optional[str] = None
     is_active: Optional[bool] = None
+    parent_id: Optional[str] = None
+
+
+class PlaybookReorderItem(BaseModel):
+    """Schema for a single item in a reorder request."""
+    id: str
+    parent_id: Optional[str] = None
+    order_index: int
+
+
+class PlaybookReorderRequest(BaseModel):
+    """Schema for bulk reordering playbooks."""
+    items: list[PlaybookReorderItem]

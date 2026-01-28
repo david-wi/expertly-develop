@@ -184,6 +184,11 @@ export const api = {
   },
   getPlaybookHistory: (id: string) =>
     request<PlaybookHistoryEntry[]>(`/api/v1/playbooks/${id}/history`),
+  reorderPlaybooks: (items: PlaybookReorderItem[]) =>
+    request<{ success: boolean }>('/api/v1/playbooks/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }),
 }
 
 // Types
@@ -383,6 +388,8 @@ export type ScopeType = 'user' | 'team' | 'organization'
 
 export type AssigneeType = 'user' | 'team' | 'anyone'
 
+export type PlaybookItemType = 'playbook' | 'group'
+
 export interface PlaybookStep {
   id: string
   order: number
@@ -442,6 +449,9 @@ export interface Playbook {
   created_at: string
   updated_at: string
   created_by?: string
+  item_type: PlaybookItemType
+  parent_id?: string | null
+  order_index: number
 }
 
 export interface CreatePlaybookRequest {
@@ -451,6 +461,8 @@ export interface CreatePlaybookRequest {
   steps?: PlaybookStepCreate[]
   scope_type?: ScopeType
   scope_id?: string
+  item_type?: PlaybookItemType
+  parent_id?: string | null
 }
 
 export interface UpdatePlaybookRequest {
@@ -461,4 +473,11 @@ export interface UpdatePlaybookRequest {
   scope_type?: ScopeType
   scope_id?: string
   is_active?: boolean
+  parent_id?: string | null
+}
+
+export interface PlaybookReorderItem {
+  id: string
+  parent_id: string | null
+  order_index: number
 }
