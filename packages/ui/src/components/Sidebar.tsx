@@ -20,14 +20,14 @@ export interface ExpertlyProduct {
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
-  { name: 'Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: '📋', description: 'Requirements management' },
-  { name: 'Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: '🛠️', description: 'Visual walkthroughs' },
-  { name: 'Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: '🔐', description: 'Users & authentication' },
-  { name: 'Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: '📊', description: 'Task management' },
-  { name: 'Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: '💇', description: 'Salon management' },
-  { name: 'Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: '📅', description: 'Daily workflow' },
-  { name: 'VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '💻', description: 'AI coding assistant' },
-  { name: 'VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'AI testing platform' },
+  { name: 'Expertly Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: '📋', description: 'Requirements management' },
+  { name: 'Expertly Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: '🛠️', description: 'Visual walkthroughs' },
+  { name: 'Expertly Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: '🔐', description: 'Users & authentication' },
+  { name: 'Expertly Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: '📊', description: 'Task management' },
+  { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: '💇', description: 'Salon management' },
+  { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: '📅', description: 'Daily workflow' },
+  { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '💻', description: 'AI coding assistant' },
+  { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'AI testing platform' },
 ]
 
 export type SupportedLanguage = 'en' | 'es'
