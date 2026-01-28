@@ -225,6 +225,20 @@ export default function DownloadPage() {
           <p className="text-center text-gray-500 text-sm mt-8">
             macOS Apple Silicon available now. Other platforms coming soon.
           </p>
+
+          {/* macOS Gatekeeper note */}
+          <div className="max-w-2xl mx-auto mt-8 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <h4 className="font-medium text-amber-800 mb-2">macOS Security Note</h4>
+            <p className="text-sm text-amber-700 mb-2">
+              If macOS shows "app is damaged" or "can't be opened", run this command in Terminal:
+            </p>
+            <code className="block bg-amber-100 p-2 rounded text-xs text-amber-900 font-mono">
+              xattr -cr ~/Downloads/Vibecode-Agent_aarch64.dmg
+            </code>
+            <p className="text-xs text-amber-600 mt-2">
+              This removes the quarantine flag that macOS applies to downloaded files.
+            </p>
+          </div>
         </div>
       </div>
 
