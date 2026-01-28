@@ -92,6 +92,8 @@ export interface SidebarProps {
     /** Minutes to wait before showing update alert (default: 10) */
     safeMinutes?: number
   }
+  /** Custom content rendered below navigation (e.g., widgets, agent status for Vibecode) */
+  children?: ReactNode
 }
 
 export function Sidebar({
@@ -109,6 +111,7 @@ export function Sidebar({
   showThemeSwitcher = true,
   renderLink,
   versionCheck,
+  children,
 }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
@@ -247,38 +250,46 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Navigation */}
-      <nav className="px-3 py-2 flex-1 min-h-0 overflow-y-auto">
-        <ul className="space-y-1">
-          {navigation.map((item) => {
-            const fullHref = basePath + item.href
-            const isActive = currentPath === fullHref ||
-              (item.href !== '/' && currentPath.startsWith(fullHref))
+      {/* Navigation and Custom Content - scrollable area */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {/* Navigation */}
+        {navigation.length > 0 && (
+          <nav className="px-3 py-2">
+            <ul className="space-y-1">
+              {navigation.map((item) => {
+                const fullHref = basePath + item.href
+                const isActive = currentPath === fullHref ||
+                  (item.href !== '/' && currentPath.startsWith(fullHref))
 
-            return (
-              <li key={item.name}>
-                {renderLink({
-                  href: fullHref,
-                  className: `
-                    flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
-                    transition-colors duration-150
-                    ${isActive
-                      ? `${activeBg} ${activeText}`
-                      : `${textSecondary} ${navHoverBg} hover:${textPrimary}`
-                    }
-                  `,
-                  children: (
-                    <>
-                      <item.icon className="w-5 h-5" />
-                      {item.name}
-                    </>
-                  ),
-                })}
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+                return (
+                  <li key={item.name}>
+                    {renderLink({
+                      href: fullHref,
+                      className: `
+                        flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+                        transition-colors duration-150
+                        ${isActive
+                          ? `${activeBg} ${activeText}`
+                          : `${textSecondary} ${navHoverBg} hover:${textPrimary}`
+                        }
+                      `,
+                      children: (
+                        <>
+                          <item.icon className="w-5 h-5" />
+                          {item.name}
+                        </>
+                      ),
+                    })}
+                  </li>
+                )
+              })}
+            </ul>
+          </nav>
+        )}
+
+        {/* Custom Content (children) */}
+        {children}
+      </div>
 
       {/* Build Info (optional - displayed above theme switcher line) */}
       {buildInfo && (

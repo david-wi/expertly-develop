@@ -2,6 +2,9 @@ import axios from 'axios'
 
 const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
 
+// Storage key for tenant ID override
+export const TENANT_STORAGE_KEY = 'expertly-tenant-id'
+
 const api = axios.create({
   baseURL: '/api/v1',
   headers: {
@@ -9,6 +12,15 @@ const api = axios.create({
   },
   // Include cookies for cross-origin requests (Identity session cookie)
   withCredentials: true,
+})
+
+// Add interceptor to include X-Tenant-Id header from localStorage
+api.interceptors.request.use((config) => {
+  const tenantId = localStorage.getItem(TENANT_STORAGE_KEY)
+  if (tenantId) {
+    config.headers['X-Tenant-Id'] = tenantId
+  }
+  return config
 })
 
 // Response interceptor - handle auth errors
@@ -172,6 +184,21 @@ export const quickStartApi = {
 export const healthApi = {
   check: () => api.get('/health').then(r => r.data),
   ready: () => api.get('/ready').then(r => r.data),
+}
+
+// Organization types
+export interface Organization {
+  id: string
+  name: string
+  slug: string
+}
+
+// Organizations
+export const organizationsApi = {
+  list: async () => {
+    const { data } = await api.get<{ items: Organization[]; total: number }>('/organizations')
+    return data
+  },
 }
 
 export default api

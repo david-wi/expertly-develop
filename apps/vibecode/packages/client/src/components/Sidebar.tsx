@@ -1,57 +1,159 @@
-import { useState } from 'react';
-import { ChevronDown, Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Download, ExternalLink, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Download, ExternalLink, MessageCircle, Building2, ChevronDown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDashboardStore } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
-import { EXPERTLY_PRODUCTS as SHARED_PRODUCTS } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar } from 'expertly_ui/index';
 
 // Try to launch the desktop agent via custom URL scheme
 const tryLaunchAgent = () => {
-  // Try to open the app via custom protocol
-  // This will do nothing if the app isn't installed
   window.location.href = 'vibecode://connect';
 };
 
-// Map shared products to include initials and mark current
-const EXPERTLY_PRODUCTS = SHARED_PRODUCTS.map(p => ({
-  ...p,
-  initials: p.name.slice(0, 2),
-  current: p.code === 'vibecode',
-}));
+// Storage key for tenant ID override
+const TENANT_STORAGE_KEY = 'expertly-tenant-id';
 
-// Expertly Logo SVG component
-function ExpertlyLogo({ className = 'w-8 h-8' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M14.8379 24.9606C16.6714 22.9391 17.9566 20.4822 18.571 17.8238L24.2667 20.4657C24.3728 20.4481 24.4733 20.4064 24.5606 20.3436C24.6478 20.2809 24.7194 20.1989 24.7698 20.104C24.8201 20.0091 24.8479 19.9039 24.8509 19.7965C24.8539 19.6892 24.832 19.5826 24.7871 19.485L19.4266 8.14301C19.3632 8.00575 19.2699 7.88442 19.1535 7.78793C19.037 7.69144 18.9004 7.62224 18.7537 7.58542C18.607 7.5486 18.4539 7.54509 18.3057 7.57515C18.1574 7.60521 18.0178 7.66808 17.897 7.75913L7.63363 15.6497C7.10981 16.0196 7.36125 16.9409 7.98285 16.92L14.0452 16.6931C14.0452 16.6931 13.2106 20.2912 8.35301 22.0047L8.27269 22.0326C2.61541 23.4285 -0.000202179 18.7452 -0.000202179 15.7509C-0.00718689 7.22169 7.2006 0.699166 15.1173 0.0570345C17.8181 -0.167956 20.5328 0.274916 23.0218 1.34656C25.5108 2.41821 27.6976 4.08568 29.3891 6.2018C31.0806 8.31791 32.2249 10.8176 32.7209 13.4803C33.2169 16.1429 33.0494 18.8867 32.2332 21.4693C31.4169 24.0519 29.9771 26.3941 28.0407 28.289C26.1043 30.184 23.7309 31.5734 21.13 32.3347C18.5291 33.096 15.7807 33.2058 13.1273 32.6544C10.4738 32.103 7.99705 30.9073 5.91549 29.1728C9.17716 28.7959 12.4772 27.6408 14.8379 24.9606Z" fill="url(#paint0_linear_vibecode)"/>
-      <defs>
-        <linearGradient id="paint0_linear_vibecode" x1="32.9998" y1="33" x2="-6.71734" y2="18.8377" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#9648FF"/>
-          <stop offset="1" stopColor="#2C62F9"/>
-        </linearGradient>
-      </defs>
-    </svg>
-  );
+// Organization type (simplified - no backend API for Vibecode yet)
+interface Organization {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 interface SidebarProps {
   ws: ReturnType<typeof useWebSocket>;
 }
 
-export function Sidebar({ ws }: SidebarProps) {
-  const [showProductSwitcher, setShowProductSwitcher] = useState(false);
-  const { widgets, sessions, chatConversations, serverConfig, connected, agents, addWidget, addChatWidget, removeWidget, clearDisconnectedSessions } = useDashboardStore();
+// Widgets Section Component
+function WidgetsSection() {
+  const { widgets, sessions, chatConversations, addWidget, addChatWidget, removeWidget } = useDashboardStore();
   const [showWidgetMenu, setShowWidgetMenu] = useState(false);
 
-  // Get the first agent's metrics (for now, just show one agent)
+  return (
+    <div className="p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-medium text-gray-500 uppercase">Widgets</h3>
+        <div className="relative">
+          <button
+            onClick={() => setShowWidgetMenu(!showWidgetMenu)}
+            className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-700"
+            title="Add widget"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+          {showWidgetMenu && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowWidgetMenu(false)}
+              />
+              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[160px]">
+                <button
+                  onClick={() => { addWidget('session'); setShowWidgetMenu(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <Terminal className="w-4 h-4 text-gray-500" />
+                  Session Widget
+                </button>
+                <button
+                  onClick={() => { addChatWidget(); setShowWidgetMenu(false); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                >
+                  <MessageCircle className="w-4 h-4 text-violet-500" />
+                  Chat Widget
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {widgets.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-4">No widgets yet</p>
+      ) : (
+        <ul className="space-y-1">
+          {widgets.map((widget) => {
+            // Handle chat widgets
+            if (widget.type === 'chat') {
+              const conversation = widget.conversationId ? chatConversations[widget.conversationId] : null;
+              const title = widget.customName || 'Chat';
+
+              return (
+                <li
+                  key={widget.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-violet-50 text-gray-700"
+                >
+                  <div
+                    className={cn(
+                      'w-2 h-2 rounded-full flex-shrink-0',
+                      !conversation ? 'bg-gray-400' :
+                      conversation.state === 'busy' ? 'bg-green-500 animate-pulse' :
+                      conversation.state === 'idle' ? 'bg-violet-500' :
+                      conversation.state === 'error' ? 'bg-red-500' :
+                      'bg-gray-400'
+                    )}
+                  />
+                  <MessageCircle className="w-3 h-3 text-violet-500 flex-shrink-0" />
+                  <span className="flex-1 truncate">{title}</span>
+                  <button
+                    onClick={() => removeWidget(widget.id)}
+                    className="p-1 hover:bg-violet-200 rounded text-gray-400 hover:text-gray-600"
+                    title="Remove widget"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </li>
+              );
+            }
+
+            // Handle session widgets
+            const session = widget.sessionId ? sessions[widget.sessionId] : null;
+            const title = widget.customName || session?.name || 'New Widget';
+            const isDisconnected = session?.state === 'disconnected';
+
+            return (
+              <li
+                key={widget.id}
+                className={cn(
+                  'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
+                  isDisconnected ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 text-gray-700'
+                )}
+              >
+                <div
+                  className={cn(
+                    'w-2 h-2 rounded-full flex-shrink-0',
+                    !session ? 'bg-gray-400' :
+                    session.state === 'busy' ? 'bg-green-500 animate-pulse' :
+                    session.state === 'idle' ? 'bg-blue-500' :
+                    session.state === 'error' ? 'bg-red-500' :
+                    'bg-gray-400'
+                  )}
+                />
+                <span className="flex-1 truncate">{title}</span>
+                <button
+                  onClick={() => removeWidget(widget.id)}
+                  className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600"
+                  title="Remove widget"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// Agent Status Component
+function AgentStatus() {
+  const { serverConfig, connected, agents, clearDisconnectedSessions } = useDashboardStore();
   const agent = agents[0];
   const metrics = agent?.metrics;
 
   const handleLaunchAgent = () => {
-    // Try to launch via custom protocol, then show download page
     tryLaunchAgent();
-    // After a short delay, if still no agent, suggest download
-    // The protocol handler will open the app if installed
   };
 
   const handleClearDisconnected = () => {
@@ -59,177 +161,7 @@ export function Sidebar({ ws }: SidebarProps) {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-lg flex flex-col">
-      {/* Logo / Product Switcher */}
-      <div className="relative">
-        <button
-          onClick={() => setShowProductSwitcher(!showProductSwitcher)}
-          className="w-full flex h-16 items-center justify-between gap-2 px-6 border-b hover:bg-gray-50 transition-colors"
-        >
-          <div className="flex items-center gap-3" title="The place to vibe code">
-            <ExpertlyLogo className="w-8 h-8" />
-            <span className="font-semibold text-gray-900">Expertly VibeCode</span>
-          </div>
-          <ChevronDown className={cn('w-4 h-4 text-gray-400 transition-transform', showProductSwitcher && 'rotate-180')} />
-        </button>
-
-        {/* Product Dropdown */}
-        {showProductSwitcher && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setShowProductSwitcher(false)}
-            />
-            <div className="absolute top-full left-0 right-0 bg-white border-b shadow-lg z-50">
-              <div className="p-2">
-                <p className="px-3 py-2 text-xs font-medium text-gray-500 uppercase">Switch Product</p>
-                {EXPERTLY_PRODUCTS.map((product) => (
-                  <a
-                    key={product.code}
-                    href={product.href}
-                    className={cn(
-                      'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
-                      product.current
-                        ? 'bg-violet-50 text-violet-900'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    )}
-                    onClick={() => setShowProductSwitcher(false)}
-                  >
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold"
-                      style={{ background: 'linear-gradient(135deg, #9648FF 0%, #2C62F9 100%)' }}
-                    >
-                      {product.initials}
-                    </div>
-                    <div>
-                      <p className="font-medium">Expertly {product.name}</p>
-                      <p className="text-xs text-gray-500">{product.description}</p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Widgets Section */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-500 uppercase">Widgets</h3>
-            <div className="relative">
-              <button
-                onClick={() => setShowWidgetMenu(!showWidgetMenu)}
-                className="p-1 hover:bg-gray-100 rounded text-gray-500 hover:text-gray-700"
-                title="Add widget"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              {showWidgetMenu && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowWidgetMenu(false)}
-                  />
-                  <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 py-1 min-w-[160px]">
-                    <button
-                      onClick={() => { addWidget('session'); setShowWidgetMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <Terminal className="w-4 h-4 text-gray-500" />
-                      Session Widget
-                    </button>
-                    <button
-                      onClick={() => { addChatWidget(); setShowWidgetMenu(false); }}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <MessageCircle className="w-4 h-4 text-violet-500" />
-                      Chat Widget
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-
-          {widgets.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">No widgets yet</p>
-          ) : (
-            <ul className="space-y-1">
-              {widgets.map((widget) => {
-                // Handle chat widgets
-                if (widget.type === 'chat') {
-                  const conversation = widget.conversationId ? chatConversations[widget.conversationId] : null;
-                  const title = widget.customName || 'Chat';
-
-                  return (
-                    <li
-                      key={widget.id}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-violet-50 text-gray-700"
-                    >
-                      <div
-                        className={cn(
-                          'w-2 h-2 rounded-full flex-shrink-0',
-                          !conversation ? 'bg-gray-400' :
-                          conversation.state === 'busy' ? 'bg-green-500 animate-pulse' :
-                          conversation.state === 'idle' ? 'bg-violet-500' :
-                          conversation.state === 'error' ? 'bg-red-500' :
-                          'bg-gray-400'
-                        )}
-                      />
-                      <MessageCircle className="w-3 h-3 text-violet-500 flex-shrink-0" />
-                      <span className="flex-1 truncate">{title}</span>
-                      <button
-                        onClick={() => removeWidget(widget.id)}
-                        className="p-1 hover:bg-violet-200 rounded text-gray-400 hover:text-gray-600"
-                        title="Remove widget"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </li>
-                  );
-                }
-
-                // Handle session widgets
-                const session = widget.sessionId ? sessions[widget.sessionId] : null;
-                const title = widget.customName || session?.name || 'New Widget';
-                const isDisconnected = session?.state === 'disconnected';
-
-                return (
-                  <li
-                    key={widget.id}
-                    className={cn(
-                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
-                      isDisconnected ? 'bg-gray-50 text-gray-400' : 'bg-gray-100 text-gray-700'
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        'w-2 h-2 rounded-full flex-shrink-0',
-                        !session ? 'bg-gray-400' :
-                        session.state === 'busy' ? 'bg-green-500 animate-pulse' :
-                        session.state === 'idle' ? 'bg-blue-500' :
-                        session.state === 'error' ? 'bg-red-500' :
-                        'bg-gray-400'
-                      )}
-                    />
-                    <span className="flex-1 truncate">{title}</span>
-                    <button
-                      onClick={() => removeWidget(widget.id)}
-                      className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600"
-                      title="Remove widget"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-      </div>
-
+    <>
       {/* Agent Status */}
       <div className="px-4 py-3 border-t bg-gray-50">
         <div className="flex items-center gap-2 text-sm mb-2">
@@ -250,7 +182,6 @@ export function Sidebar({ ws }: SidebarProps) {
 
         {agent && (
           <div className="space-y-1.5 text-xs">
-            {/* Host info */}
             <div className="text-gray-500 truncate" title={agent.workingDir}>
               {agent.systemInfo?.hostname || agent.platform} · {agent.workingDir}
             </div>
@@ -362,6 +293,147 @@ export function Sidebar({ ws }: SidebarProps) {
           Clear disconnected sessions
         </button>
       </div>
-    </aside>
+    </>
+  );
+}
+
+// Organization Switcher Component (placeholder - Vibecode doesn't have org API yet)
+function OrganizationSwitcher({ currentTenantId, onSwitch }: { currentTenantId: string | null; onSwitch: () => void }) {
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const currentOrg = organizations.find((org) => org.id === currentTenantId) || organizations[0];
+
+  useEffect(() => {
+    // Vibecode doesn't have its own organizations API yet
+    // For now, just show loading briefly then hide
+    const timer = setTimeout(() => {
+      setLoading(false);
+      // When Vibecode gets an organizations API, fetch here:
+      // const { items } = await organizationsApi.list();
+      // setOrganizations(items);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSelect = (org: Organization) => {
+    if (org.id === currentTenantId) {
+      setIsOpen(false);
+      return;
+    }
+
+    localStorage.setItem(TENANT_STORAGE_KEY, org.id);
+    setIsOpen(false);
+    onSwitch();
+  };
+
+  const handleClearOverride = () => {
+    localStorage.removeItem(TENANT_STORAGE_KEY);
+    setIsOpen(false);
+    onSwitch();
+  };
+
+  if (loading) {
+    return null;
+  }
+
+  if (organizations.length <= 1) {
+    return null;
+  }
+
+  const hasOverride = localStorage.getItem(TENANT_STORAGE_KEY) !== null;
+
+  return (
+    <div className="px-3 mb-4" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+      >
+        <div className="flex items-center gap-2 truncate">
+          <Building2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
+          <span className="truncate">{currentOrg?.name || 'Select Organization'}</span>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-3 right-3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+          {organizations.map((org) => (
+            <button
+              key={org.id}
+              onClick={() => handleSelect(org)}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 transition-colors ${
+                org.id === currentTenantId ? 'bg-violet-50 text-violet-700' : 'text-gray-600'
+              }`}
+            >
+              <Building2 className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{org.name}</span>
+              {org.id === currentTenantId && (
+                <span className="ml-auto text-xs text-violet-600">Current</span>
+              )}
+            </button>
+          ))}
+          {hasOverride && (
+            <>
+              <div className="border-t border-gray-200" />
+              <button
+                onClick={handleClearOverride}
+                className="w-full px-3 py-2 text-sm text-left text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                Reset to default
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function Sidebar({ ws }: SidebarProps) {
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(
+    localStorage.getItem(TENANT_STORAGE_KEY)
+  );
+
+  const handleOrgSwitch = () => {
+    setCurrentTenantId(localStorage.getItem(TENANT_STORAGE_KEY));
+    window.location.reload();
+  };
+
+  return (
+    <SharedSidebar
+      productCode="vibecode"
+      productName="VibeCode"
+      navigation={[]} // Vibecode has no standard navigation links
+      currentPath="/"
+      showThemeSwitcher={false}
+      orgSwitcher={
+        <OrganizationSwitcher
+          currentTenantId={currentTenantId}
+          onSwitch={handleOrgSwitch}
+        />
+      }
+      bottomSection={<AgentStatus />}
+      renderLink={({ href, className, children }) => (
+        <a href={href} className={className}>
+          {children}
+        </a>
+      )}
+    >
+      <WidgetsSection />
+    </SharedSidebar>
   );
 }

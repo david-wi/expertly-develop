@@ -7,7 +7,7 @@ import os
 
 from app.config import get_settings
 from app.database import init_db
-from app.api.v1 import products, requirements, releases, jira, uploads, ai, users
+from app.api.v1 import products, requirements, releases, jira, uploads, ai, users, organizations
 
 settings = get_settings()
 
@@ -64,6 +64,7 @@ app.include_router(jira.router, prefix="/api/v1/jira", tags=["jira"])
 app.include_router(uploads.router, prefix="/api/v1/uploads", tags=["uploads"])
 app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
+app.include_router(organizations.router, prefix="/api/v1/organizations", tags=["organizations"])
 
 
 @app.get("/health")

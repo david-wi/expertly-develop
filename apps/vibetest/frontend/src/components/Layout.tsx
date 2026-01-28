@@ -12,7 +12,8 @@ import {
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
 import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, type CurrentUser } from 'expertly_ui/index'
-import { authApi } from '../api/client'
+import { authApi, TENANT_STORAGE_KEY } from '../api/client'
+import OrganizationSwitcher from './OrganizationSwitcher'
 
 interface LayoutProps {
   children: ReactNode
@@ -24,6 +25,9 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [currentTenantId, setCurrentTenantId] = useState<string | null>(
+    localStorage.getItem(TENANT_STORAGE_KEY)
+  )
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
@@ -54,6 +58,11 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/login')
   }
 
+  const handleOrgSwitch = () => {
+    setCurrentTenantId(localStorage.getItem(TENANT_STORAGE_KEY))
+    window.location.reload()
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar backdrop */}
@@ -75,6 +84,12 @@ export default function Layout({ children }: LayoutProps) {
           navigation={navItems}
           currentPath={location.pathname}
           user={sidebarUser}
+          orgSwitcher={
+            <OrganizationSwitcher
+              currentTenantId={currentTenantId}
+              onSwitch={handleOrgSwitch}
+            />
+          }
           currentLanguage={i18n.language as SupportedLanguage}
           onLanguageChange={handleLanguageChange}
           buildInfo={
