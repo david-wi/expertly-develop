@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react'
+import React, { ReactNode, useState, useCallback } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -11,7 +11,8 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp } from 'expertly_ui/index'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, type CurrentUser } from 'expertly_ui/index'
+import { authApi } from '../api/client'
 
 interface LayoutProps {
   children: ReactNode
@@ -21,8 +22,22 @@ export default function Layout({ children }: LayoutProps) {
   const { t, i18n } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Use shared hook for consistent user fetching
+  const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
+    const user = await authApi.me()
+    return {
+      id: user.id,
+      name: user.full_name,
+      email: user.email,
+      role: user.role,
+      organization_id: user.organization?.id || null,
+      organization_name: user.organization?.name || null,
+    }
+  }, [])
+  const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   const navItems = [
     { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
@@ -38,15 +53,6 @@ export default function Layout({ children }: LayoutProps) {
     logout()
     navigate('/login')
   }
-
-  // Format user for sidebar - VibeTest uses its own auth context
-  const sidebarUser = user
-    ? {
-        name: user.full_name,
-        role: user.role,
-        organization: user.organization?.name,
-      }
-    : undefined
 
   return (
     <div className="min-h-screen bg-gray-50">
