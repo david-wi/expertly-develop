@@ -189,6 +189,39 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ items }),
     }),
+
+  // Projects
+  getProjects: (params?: { status?: string; parent_project_id?: string; top_level_only?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.parent_project_id) searchParams.set('parent_project_id', params.parent_project_id)
+    if (params?.top_level_only !== undefined) searchParams.set('top_level_only', String(params.top_level_only))
+    const query = searchParams.toString()
+    return request<Project[]>(`/api/v1/projects${query ? `?${query}` : ''}`)
+  },
+  getProject: (id: string) => request<Project>(`/api/v1/projects/${id}`),
+  getProjectChildren: (id: string) => request<Project[]>(`/api/v1/projects/${id}/children`),
+  getProjectTasks: (id: string, params?: { status?: string; include_subtasks?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.include_subtasks !== undefined) searchParams.set('include_subtasks', String(params.include_subtasks))
+    const query = searchParams.toString()
+    return request<Task[]>(`/api/v1/projects/${id}/tasks${query ? `?${query}` : ''}`)
+  },
+  createProject: (data: CreateProjectRequest) =>
+    request<Project>('/api/v1/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateProject: (id: string, data: UpdateProjectRequest) =>
+    request<Project>(`/api/v1/projects/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteProject: (id: string) =>
+    request<void>(`/api/v1/projects/${id}`, {
+      method: 'DELETE',
+    }),
 }
 
 // Types
@@ -482,4 +515,38 @@ export interface PlaybookReorderItem {
   id: string
   parent_id: string | null
   order_index: number
+}
+
+// Project types
+export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'cancelled'
+
+export interface Project {
+  _id?: string
+  id: string
+  organization_id: string
+  name: string
+  description?: string
+  status: ProjectStatus
+  parent_project_id?: string | null
+  owner_user_id?: string
+  team_id?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface CreateProjectRequest {
+  name: string
+  description?: string
+  parent_project_id?: string | null
+  owner_user_id?: string
+  team_id?: string
+}
+
+export interface UpdateProjectRequest {
+  name?: string
+  description?: string
+  status?: ProjectStatus
+  parent_project_id?: string | null
+  owner_user_id?: string
+  team_id?: string
 }

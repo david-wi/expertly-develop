@@ -28,7 +28,7 @@ const DEFAULT_VERSION_URL = 'https://ui.ai.devintensive.com/version.json'
 
 export function VersionChecker({
   currentCommit,
-  currentBuildTime,
+  currentBuildTime: _currentBuildTime,
   versionUrl = DEFAULT_VERSION_URL,
   safeMinutes = DEFAULT_SAFE_MINUTES,
   checkIntervalMs = DEFAULT_CHECK_INTERVAL_MS,
