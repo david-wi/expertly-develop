@@ -32,6 +32,9 @@ def serialize_playbook(playbook: dict) -> dict:
     result["item_type"] = playbook.get("item_type", "playbook")
     result["parent_id"] = playbook.get("parent_id", None)
     result["order_index"] = playbook.get("order_index", 0)
+    # Instance tracking fields
+    result["instance_count"] = playbook.get("instance_count", 0)
+    result["last_instance_created_at"] = playbook.get("last_instance_created_at")
     return result
 
 

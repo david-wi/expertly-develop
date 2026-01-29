@@ -116,6 +116,10 @@ class Playbook(BaseModel):
     # Status
     is_active: bool = True
 
+    # Instance tracking
+    instance_count: int = 0  # Number of times this playbook has been instantiated
+    last_instance_created_at: Optional[datetime] = None  # When the last instance was created
+
     # Hierarchy fields
     item_type: PlaybookItemType = PlaybookItemType.PLAYBOOK
     parent_id: Optional[str] = None  # ID of parent playbook/group
