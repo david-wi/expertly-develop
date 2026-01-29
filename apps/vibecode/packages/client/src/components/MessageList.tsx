@@ -1,4 +1,4 @@
-import { useEffect, useRef, useMemo, useState } from 'react';
+import { useEffect, useRef, useMemo, useState, type JSX } from 'react';
 import { User, Bot, Wrench, AlertCircle, Loader2, X } from 'lucide-react';
 import type { ChatMessage, ImageAttachment } from '../store/dashboard-store';
 

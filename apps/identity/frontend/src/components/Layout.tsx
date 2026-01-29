@@ -6,7 +6,7 @@ import {
   Building2,
   KeyRound,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [

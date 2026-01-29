@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Modal, ModalFooter } from 'expertly_ui/index'
+import { Modal, ModalFooter } from '@expertly/ui'
 import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { createErrorLogger } from '../utils/errorLogger'

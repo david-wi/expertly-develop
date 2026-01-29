@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, ModalFooter } from 'expertly_ui/index'
+import { Modal, ModalFooter } from '@expertly/ui'
 import { useAppStore } from '../stores/appStore'
 
 const STATUS_COLORS: Record<string, string> = {

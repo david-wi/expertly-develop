@@ -4,6 +4,7 @@
   "workspaces": [
     "apps/*",
     "apps/*/frontend",
+    "apps/vibecode/packages/*",
     "packages/*"
   ],
   "scripts": {

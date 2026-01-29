@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from 'expertly_ui/index'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from '@expertly/ui'
 import { authApi, TENANT_STORAGE_KEY } from '../api/client'
 import OrganizationSwitcher from './OrganizationSwitcher'
 

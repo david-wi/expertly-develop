@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'expertly_ui/index': path.resolve(__dirname, './src/test/__mocks__/expertly_ui.ts'),
+      '@expertly/ui': path.resolve(__dirname, './src/test/__mocks__/expertly_ui.ts'),
     },
   },
   test: {

@@ -3,7 +3,7 @@ import { Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Downlo
 import { cn } from '../lib/utils';
 import { useDashboardStore } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
-import { Sidebar as SharedSidebar, createDefaultUserMenu } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, createDefaultUserMenu } from '@expertly/ui';
 
 // Try to launch the desktop agent via custom URL scheme
 const tryLaunchAgent = () => {

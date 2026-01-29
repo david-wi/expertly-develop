@@ -5,7 +5,7 @@ import {
   FolderTree,
   Package,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import { usersApi, TENANT_STORAGE_KEY } from '../../api/client'
 import OrganizationSwitcher from './OrganizationSwitcher'
 

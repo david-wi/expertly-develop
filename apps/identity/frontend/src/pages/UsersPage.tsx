@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Modal, ModalFooter } from 'expertly_ui/index'
+import { Modal, ModalFooter } from '@expertly/ui'
 import {
   usersApi,
   imagesApi,

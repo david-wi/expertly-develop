@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, ModalFooter } from 'expertly_ui/index'
+import { Modal, ModalFooter } from '@expertly/ui'
 import { teamsApi, usersApi, Team, TeamDetail, TeamMember, User, getOrganizationId } from '../services/api'
 
 export default function TeamsPage() {

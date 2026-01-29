@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
-import { ThemeProvider } from 'expertly_ui/index'
+import { ThemeProvider } from '@expertly/ui'
 import App from './App'
 import './index.css'
 

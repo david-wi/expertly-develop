@@ -25,7 +25,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './frontend/src'),
-      'expertly_ui/index': path.resolve(__dirname, './tests/mocks/expertly-ui.ts'),
+      '@expertly/ui': path.resolve(__dirname, './tests/mocks/expertly-ui.ts'),
     },
   },
   esbuild: {
