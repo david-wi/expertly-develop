@@ -16,9 +16,9 @@ COPY packages/ui ./packages/ui
 # Copy admin frontend package files
 COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
-# Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky, then rebuild native modules
-RUN npm install --workspace=apps/admin/frontend --ignore-scripts && \
+# Install all dependencies (needed for workspace package resolution)
+# Use HUSKY=0 to skip husky hooks, then add rollup for Alpine
+RUN HUSKY=0 npm ci && \
     npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Copy source code
