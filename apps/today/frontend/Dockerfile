@@ -8,17 +8,23 @@ ARG VITE_BUILD_TIMESTAMP
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 
-# Copy package files
-COPY apps/today/frontend/package*.json ./
+# Copy monorepo package files for workspace resolution
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm install
+# Copy the UI package (workspace dependency)
+COPY packages/ui ./packages/ui
 
-# Copy source and build with timestamp
-COPY apps/today/frontend .
+# Copy today frontend package files
+COPY apps/today/frontend/package*.json ./apps/today/frontend/
 
-# Copy shared UI package source for Tailwind to scan
-COPY packages/ui/src ./packages-ui-src
+# Install dependencies from monorepo root (resolves workspace packages)
+RUN npm install --workspace=apps/today/frontend
+
+# Copy source code
+COPY apps/today/frontend ./apps/today/frontend
+
+# Build the application with timestamp
+WORKDIR /app/apps/today/frontend
 RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production stage - nginx to serve static files
@@ -28,7 +34,7 @@ FROM nginx:alpine
 RUN apk add --no-cache curl bind-tools
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/today/frontend/dist /usr/share/nginx/html
 
 # Copy nginx config template
 COPY apps/today/frontend/nginx.conf /etc/nginx/templates/default.conf.template

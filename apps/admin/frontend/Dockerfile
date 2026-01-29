@@ -7,19 +7,27 @@ WORKDIR /app
 ARG VITE_API_URL
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 
-# Copy frontend package files and install deps
-COPY apps/admin/frontend/package.json apps/admin/frontend/package-lock.json* ./
-RUN npm install
+# Copy monorepo package files for workspace resolution
+COPY package.json package-lock.json ./
 
-# Copy frontend source code
-COPY apps/admin/frontend ./
+# Copy the UI package (workspace dependency)
+COPY packages/ui ./packages/ui
 
-# Copy shared UI package source for Tailwind to scan
-COPY packages/ui/src ./packages-ui-src
+# Copy admin frontend package files
+COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
+
+# Install dependencies from monorepo root (resolves workspace packages)
+RUN npm install --workspace=apps/admin/frontend
+
+# Copy source code
+COPY apps/admin/frontend ./apps/admin/frontend
 
 # Set environment variables for Vite build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
+
+# Build the application
+WORKDIR /app/apps/admin/frontend
 RUN npm run build
 
 # Production stage - nginx to serve static files
@@ -29,7 +37,7 @@ FROM nginx:alpine
 COPY apps/admin/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/admin/frontend/dist /usr/share/nginx/html
 
 EXPOSE 80
 
