@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Loader2, FileText } from 'lucide-react'
+import { Plus, Loader2, FileText, Link2 } from 'lucide-react'
 import { Artifact, ArtifactWithVersions, artifactsApi } from '@/api/client'
 import { ArtifactCard } from './ArtifactCard'
 import { ArtifactUploadDialog } from './ArtifactUploadDialog'
+import { ArtifactLinkDialog } from './ArtifactLinkDialog'
 import { ArtifactDetailDialog } from './ArtifactDetailDialog'
 
 interface ArtifactListProps {
@@ -14,6 +15,7 @@ export function ArtifactList({ productId }: ArtifactListProps) {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
   const [artifactDetails, setArtifactDetails] = useState<Map<string, ArtifactWithVersions>>(new Map())
@@ -66,20 +68,32 @@ export function ArtifactList({ productId }: ArtifactListProps) {
         <h3 className="text-lg font-medium text-gray-900">
           Artifacts ({artifacts.length})
         </h3>
-        <Button onClick={() => setUploadDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Upload Artifact
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setLinkDialogOpen(true)}>
+            <Link2 className="h-4 w-4 mr-2" />
+            Add Link
+          </Button>
+          <Button onClick={() => setUploadDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Upload File
+          </Button>
+        </div>
       </div>
 
       {artifacts.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-gray-50">
           <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <p className="text-gray-500 mb-4">No artifacts yet</p>
-          <Button onClick={() => setUploadDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Upload your first artifact
-          </Button>
+          <div className="flex items-center justify-center gap-2">
+            <Button variant="outline" onClick={() => setLinkDialogOpen(true)}>
+              <Link2 className="h-4 w-4 mr-2" />
+              Add Link
+            </Button>
+            <Button onClick={() => setUploadDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Upload File
+            </Button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -102,6 +116,13 @@ export function ArtifactList({ productId }: ArtifactListProps) {
         productId={productId}
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
+        onSuccess={fetchArtifacts}
+      />
+
+      <ArtifactLinkDialog
+        productId={productId}
+        open={linkDialogOpen}
+        onOpenChange={setLinkDialogOpen}
         onSuccess={fetchArtifacts}
       />
 

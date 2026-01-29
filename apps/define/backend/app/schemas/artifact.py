@@ -7,10 +7,17 @@ class ArtifactCreate(BaseModel):
     description: Optional[str] = None
 
 
+class ArtifactLinkCreate(BaseModel):
+    name: str
+    url: str
+    description: Optional[str] = None
+
+
 class ArtifactUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
+    url: Optional[str] = None
 
 
 class ArtifactVersionResponse(BaseModel):
@@ -36,8 +43,10 @@ class ArtifactResponse(BaseModel):
     product_id: str
     name: str
     description: Optional[str] = None
-    original_filename: str
-    mime_type: str
+    artifact_type: str = "file"
+    url: Optional[str] = None
+    original_filename: Optional[str] = None
+    mime_type: Optional[str] = None
     current_version: int
     status: str
     created_at: str
