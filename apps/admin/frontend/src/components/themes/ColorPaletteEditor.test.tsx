@@ -66,39 +66,43 @@ const mockColors: ThemeColors = {
 }
 
 describe('ColorPaletteEditor', () => {
+  const defaultProps = {
+    colors: mockColors,
+    onChange: vi.fn(),
+    activeMode: 'light' as const,
+    onModeChange: vi.fn(),
+  }
+
   it('renders with initial colors', () => {
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    render(<ColorPaletteEditor {...defaultProps} />)
 
     expect(screen.getByText('Color Palette')).toBeInTheDocument()
-    expect(screen.getByText('Primary Colors')).toBeInTheDocument()
+    expect(screen.getByText('Brand Color Scale')).toBeInTheDocument()
     expect(screen.getByText('Background Colors')).toBeInTheDocument()
     expect(screen.getByText('Text Colors')).toBeInTheDocument()
     expect(screen.getByText('Border Colors')).toBeInTheDocument()
   })
 
-  it('shows light mode by default', () => {
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+  it('shows light mode when activeMode is light', () => {
+    render(<ColorPaletteEditor {...defaultProps} activeMode="light" />)
 
     const lightButton = screen.getByRole('button', { name: /light/i })
     expect(lightButton.className).toContain('bg-white')
   })
 
-  it('can switch to dark mode', async () => {
+  it('calls onModeChange when dark mode is clicked', async () => {
     const user = userEvent.setup()
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    const onModeChange = vi.fn()
+    render(<ColorPaletteEditor {...defaultProps} onModeChange={onModeChange} />)
 
     const darkButton = screen.getByRole('button', { name: /dark/i })
     await user.click(darkButton)
 
-    expect(darkButton.className).toContain('bg-white')
+    expect(onModeChange).toHaveBeenCalledWith('dark')
   })
 
   it('shows all primary color shades', () => {
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    render(<ColorPaletteEditor {...defaultProps} />)
 
     const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900', '950']
     shades.forEach((shade) => {
@@ -107,8 +111,7 @@ describe('ColorPaletteEditor', () => {
   })
 
   it('shows background color inputs', () => {
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    render(<ColorPaletteEditor {...defaultProps} />)
 
     // Check for background color labels (there are 3)
     const defaultLabels = screen.getAllByText('Default')
@@ -118,8 +121,7 @@ describe('ColorPaletteEditor', () => {
   })
 
   it('shows text color inputs', () => {
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    render(<ColorPaletteEditor {...defaultProps} />)
 
     // Check for text color labels
     const primaryLabels = screen.getAllByText('Primary')
@@ -130,8 +132,7 @@ describe('ColorPaletteEditor', () => {
   })
 
   it('shows border color inputs', () => {
-    const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    render(<ColorPaletteEditor {...defaultProps} />)
 
     // Check for border color labels
     const defaultLabels = screen.getAllByText('Default')
@@ -142,7 +143,7 @@ describe('ColorPaletteEditor', () => {
   it('calls onChange when a color is updated via text input', async () => {
     const user = userEvent.setup()
     const onChange = vi.fn()
-    render(<ColorPaletteEditor colors={mockColors} onChange={onChange} />)
+    render(<ColorPaletteEditor {...defaultProps} onChange={onChange} />)
 
     // Find a text input and change it (the first text input should be for primary 50)
     const textInputs = screen.getAllByRole('textbox')

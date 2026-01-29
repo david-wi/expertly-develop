@@ -79,6 +79,7 @@ export function ThemeCreate() {
   const [isDefault, setIsDefault] = useState(false)
   const [colors, setColors] = useState<ThemeColors>(DEFAULT_COLORS)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('light')
 
   const createMutation = useMutation({
     mutationFn: (data: ThemeCreateInput) => themesApi.create(data),
@@ -237,13 +238,15 @@ export function ThemeCreate() {
             <ColorPaletteEditor
               colors={colors}
               onChange={setColors}
+              activeMode={previewMode}
+              onModeChange={setPreviewMode}
             />
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Preview */}
-            <ThemePreview colors={colors} />
+            <ThemePreview colors={colors} mode={previewMode} onModeChange={setPreviewMode} />
 
             {/* Submit button */}
             <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-6">
