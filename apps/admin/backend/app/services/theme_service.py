@@ -95,10 +95,13 @@ class ThemeService:
 
         await self.db.flush()
 
+        # Save ID before expiring (accessing attributes on expired object triggers sync refresh)
+        theme_id = theme.id
+
         # Expire and re-fetch with versions loaded to avoid lazy loading issues
         # (expiring is necessary because the session's identity map caches the object)
         self.db.expire(theme)
-        theme = await self.get_theme(theme.id)
+        theme = await self.get_theme(theme_id)
         return theme
 
     async def update_theme(
@@ -150,9 +153,12 @@ class ThemeService:
 
         await self.db.flush()
 
+        # Save ID before expiring (accessing attributes on expired object triggers sync refresh)
+        theme_id = theme.id
+
         # Expire and re-fetch with versions loaded to avoid lazy loading issues
         self.db.expire(theme)
-        theme = await self.get_theme(theme.id)
+        theme = await self.get_theme(theme_id)
         return theme
 
     async def delete_theme(self, theme_id: UUID) -> bool:
@@ -239,9 +245,12 @@ class ThemeService:
 
         await self.db.flush()
 
+        # Save ID before expiring (accessing attributes on expired object triggers sync refresh)
+        theme_id = theme.id
+
         # Expire and re-fetch with versions loaded to avoid lazy loading issues
         self.db.expire(theme)
-        theme = await self.get_theme(theme.id)
+        theme = await self.get_theme(theme_id)
         return theme
 
     async def get_active_themes_for_public(self) -> list[Theme]:
