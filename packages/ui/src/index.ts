@@ -48,6 +48,14 @@ export {
   type ThemeColors,
 } from './theme'
 
+// Modal component
+export {
+  Modal,
+  ModalFooter,
+  type ModalProps,
+  type ModalFooterProps,
+} from './components/Modal'
+
 // Primitive UI components
 export { Checkbox } from './primitives'
 
