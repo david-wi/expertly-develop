@@ -72,6 +72,8 @@ export interface SidebarProps {
     currentCommit?: string
     safeMinutes?: number
   }
+  /** Custom content rendered below navigation (e.g., widgets, agent status for Vibecode) */
+  children?: ReactNode
 }
 
 export interface MainLayoutProps {
