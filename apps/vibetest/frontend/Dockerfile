@@ -18,7 +18,8 @@ COPY packages/ui ./packages/ui
 COPY apps/vibetest/frontend/package*.json ./apps/vibetest/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-RUN npm install --workspace=apps/vibetest/frontend
+# Use --ignore-scripts to skip husky prepare script in Docker
+RUN npm install --workspace=apps/vibetest/frontend --ignore-scripts
 
 # Copy source code
 COPY apps/vibetest/frontend ./apps/vibetest/frontend
