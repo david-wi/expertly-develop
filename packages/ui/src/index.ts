@@ -47,3 +47,9 @@ export {
   type Theme,
   type ThemeColors,
 } from './theme'
+
+// Primitive UI components
+export { Checkbox } from './primitives'
+
+// Utilities
+export { cn } from './utils/cn'
