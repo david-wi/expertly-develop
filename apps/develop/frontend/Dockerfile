@@ -9,21 +9,29 @@ ARG VITE_BUILD_TIMESTAMP
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 ARG VITE_GIT_COMMIT
 
-# Copy frontend package files and install deps
-COPY apps/develop/frontend/package.json apps/develop/frontend/package-lock.json* ./
-RUN npm install
+# Copy monorepo package files for workspace resolution
+COPY package.json package-lock.json ./
 
-# Copy frontend source code
-COPY apps/develop/frontend ./
+# Copy the UI package (workspace dependency)
+COPY packages/ui ./packages/ui
 
-# Copy shared UI package source for Tailwind to scan
-COPY packages/ui/src ./packages-ui-src
+# Copy develop frontend package files
+COPY apps/develop/frontend/package*.json ./apps/develop/frontend/
+
+# Install dependencies from monorepo root (resolves workspace packages)
+RUN npm install --workspace=apps/develop/frontend
+
+# Copy source code
+COPY apps/develop/frontend ./apps/develop/frontend
 
 # Set environment variables for Vite build
 # UI components loaded via Module Federation from VITE_UI_REMOTE_URL
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 ENV VITE_GIT_COMMIT=$VITE_GIT_COMMIT
+
+# Build the application with timestamp
+WORKDIR /app/apps/develop/frontend
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
       export VITE_BUILD_TIMESTAMP=$(date +%s); \
     else \
@@ -41,7 +49,7 @@ FROM nginx:alpine
 COPY apps/develop/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/develop/frontend/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80

@@ -12,26 +12,30 @@ ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 
-# Copy package files
-COPY apps/manage/frontend/package*.json ./
+# Copy monorepo package files for workspace resolution
+COPY package.json package-lock.json ./
 
-# Install dependencies
-RUN npm install
+# Copy the UI package (workspace dependency)
+COPY packages/ui ./packages/ui
+
+# Copy manage frontend package files
+COPY apps/manage/frontend/package*.json ./apps/manage/frontend/
+
+# Install dependencies from monorepo root (resolves workspace packages)
+RUN npm install --workspace=apps/manage/frontend
 
 # Copy source code
-COPY apps/manage/frontend .
-
-# Copy shared UI package source for Tailwind to scan
-COPY packages/ui/src ./packages-ui-src
+COPY apps/manage/frontend ./apps/manage/frontend
 
 # Build the application with timestamp
+WORKDIR /app/apps/manage/frontend
 RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
 
 # Production stage
 FROM nginx:alpine
 
 # Copy built assets
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/apps/manage/frontend/dist /usr/share/nginx/html
 
 # Copy nginx configuration
 COPY apps/manage/frontend/nginx.conf /etc/nginx/conf.d/default.conf
