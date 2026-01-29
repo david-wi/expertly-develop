@@ -1,0 +1,10 @@
+# Remind to visually test frontend changes with Playwright
+if git diff-tree --no-commit-id --name-only -r HEAD | grep -qE '(frontend/|\.tsx$|\.css$|tailwind)'; then
+  echo ""
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "  Frontend changes detected - before closing:"
+  echo "  1. Push and wait for deployment to complete"
+  echo "  2. Visually verify with Playwright screenshots"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo ""
+fi
