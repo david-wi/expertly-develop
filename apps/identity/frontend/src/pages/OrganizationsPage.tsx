@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { organizationsApi, Organization, setOrganizationId, getOrganizationId } from '../services/api'
 
 export default function OrganizationsPage() {
@@ -17,16 +18,6 @@ export default function OrganizationsPage() {
     loadOrganizations()
   }, [])
 
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showCreateModal) {
-        setShowCreateModal(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal])
 
   const loadOrganizations = async () => {
     setLoading(true)
@@ -178,59 +169,60 @@ export default function OrganizationsPage() {
 
       {/* Create Organization Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create Organization</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => {
-                    const name = e.target.value
-                    setFormData({
-                      name,
-                      slug: formData.slug === generateSlug(formData.name) ? generateSlug(name) : formData.slug,
-                    })
-                  }}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Acme Inc"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
-                <input
-                  type="text"
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., acme-inc"
-                  pattern="[a-z0-9-]+"
-                  required
-                />
-                <p className="text-xs text-gray-500 mt-1">Lowercase letters, numbers, and hyphens only</p>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          title="Create Organization"
+        >
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => {
+                  const name = e.target.value
+                  setFormData({
+                    name,
+                    slug: formData.slug === generateSlug(formData.name) ? generateSlug(name) : formData.slug,
+                  })
+                }}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder="e.g., Acme Inc"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Slug</label>
+              <input
+                type="text"
+                value={formData.slug}
+                onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder="e.g., acme-inc"
+                pattern="[a-z0-9-]+"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">Lowercase letters, numbers, and hyphens only</p>
+            </div>
+            <ModalFooter>
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Creating...' : 'Create'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
     </div>
   )

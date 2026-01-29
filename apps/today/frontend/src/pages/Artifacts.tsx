@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Modal } from 'expertly_ui/index';
 import api from '../services/api';
 
 interface ArtifactFile {
@@ -49,17 +50,6 @@ export default function Artifacts() {
     queryFn: () => api.getArtifacts()
   });
 
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedFile) {
-        setSelectedFile(null);
-        setFileContent(null);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [selectedFile]);
 
   const loadFileContent = async (file: ArtifactFile) => {
     setSelectedFile(file);
@@ -106,37 +96,27 @@ export default function Artifacts() {
 
       {/* File Viewer Modal */}
       {selectedFile && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-              <div>
-                <h2 className="font-semibold text-lg">{selectedFile.name}</h2>
-                <p className="text-sm text-gray-500">
-                  {formatBytes(selectedFile.size)} | Modified {formatDate(selectedFile.modified_at)}
-                </p>
-              </div>
-              <button
-                onClick={closeViewer}
-                className="text-gray-500 hover:text-gray-700 p-2"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            <div className="flex-1 overflow-auto p-4">
-              {loadingContent ? (
-                <div className="animate-pulse">Loading content...</div>
-              ) : (
-                <pre className="text-sm font-mono whitespace-pre-wrap bg-gray-50 p-4 rounded overflow-x-auto">
-                  {typeof fileContent === 'string'
-                    ? fileContent
-                    : JSON.stringify(fileContent, null, 2)}
-                </pre>
-              )}
-            </div>
+        <Modal
+          isOpen={!!selectedFile}
+          onClose={closeViewer}
+          title={selectedFile.name}
+          size="full"
+        >
+          <p className="text-sm text-gray-500 -mt-2 mb-4">
+            {formatBytes(selectedFile.size)} | Modified {formatDate(selectedFile.modified_at)}
+          </p>
+          <div className="max-h-[60vh] overflow-auto">
+            {loadingContent ? (
+              <div className="animate-pulse">Loading content...</div>
+            ) : (
+              <pre className="text-sm font-mono whitespace-pre-wrap bg-gray-50 p-4 rounded overflow-x-auto">
+                {typeof fileContent === 'string'
+                  ? fileContent
+                  : JSON.stringify(fileContent, null, 2)}
+              </pre>
+            )}
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* Categories */}
