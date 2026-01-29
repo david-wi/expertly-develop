@@ -1,5 +1,5 @@
 /**
- * Mock implementation of expertly_ui/index for testing
+ * Mock implementation of @expertly/ui for testing
  * This file is used by vitest alias to replace the federated module
  */
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, ModalFooter } from 'expertly_ui/index'
+import { Modal, ModalFooter } from '@expertly/ui'
 import { api, User, CreateUserRequest, UpdateUserRequest } from '../services/api'
 
 type UserFilter = 'all' | 'human' | 'virtual'

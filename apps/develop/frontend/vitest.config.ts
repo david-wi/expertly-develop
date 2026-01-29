@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // Provide a mock alias for the federated UI module in tests
-      'expertly_ui/index': path.resolve(__dirname, 'src/test/__mocks__/expertly_ui.tsx'),
+      '@expertly/ui': path.resolve(__dirname, 'src/test/__mocks__/expertly_ui.tsx'),
     },
   },
   test: {

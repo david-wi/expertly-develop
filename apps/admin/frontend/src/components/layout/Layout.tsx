@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import { usersApi } from '@/services/api'
 
 const navigation = [

@@ -12,7 +12,7 @@ import {
   Archive,
   Settings,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui';
 import { api } from '../../services/api';
 
 const navigation = [

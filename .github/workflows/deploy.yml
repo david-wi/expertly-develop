@@ -101,11 +101,11 @@ jobs:
 
             echo "=== Building shared infrastructure (target: $SHARED_TARGET) ==="
             COMPOSE_PROJECT_NAME="expertly-${SHARED_TARGET}" DEPLOY_COLOR="-${SHARED_TARGET}" \
-                docker compose -f docker-compose.prod.yml build mongo ui
+                docker compose -f docker-compose.prod.yml build mongo
 
             echo "=== Starting shared infrastructure ==="
             COMPOSE_PROJECT_NAME="expertly-${SHARED_TARGET}" DEPLOY_COLOR="-${SHARED_TARGET}" \
-                docker compose -f docker-compose.prod.yml up -d mongo ui
+                docker compose -f docker-compose.prod.yml up -d mongo
 
             # Update shared state
             jq --arg color "$SHARED_TARGET" --arg time "$(date -Iseconds)" \

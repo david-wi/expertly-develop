@@ -11,7 +11,7 @@ import {
   BookOpen,
   Star,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import { api, Organization } from '../services/api'
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Modal } from 'expertly_ui/index';
+import { Modal } from '@expertly/ui';
 import api from '../services/api';
 
 interface ArtifactFile {

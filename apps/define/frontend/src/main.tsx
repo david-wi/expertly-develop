@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ThemeProvider } from 'expertly_ui/index'
+import { ThemeProvider } from '@expertly/ui'
 import App from './App'
 import './index.css'
 

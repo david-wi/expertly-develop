@@ -7,7 +7,7 @@ import {
   FileBox,
   Play,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import OrganizationSwitcher from './OrganizationSwitcher'
 import { usersApi, TENANT_STORAGE_KEY } from '../../api/client'
 

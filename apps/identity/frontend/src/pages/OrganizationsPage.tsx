@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, ModalFooter } from 'expertly_ui/index'
+import { Modal, ModalFooter } from '@expertly/ui'
 import { organizationsApi, Organization, setOrganizationId, getOrganizationId } from '../services/api'
 
 export default function OrganizationsPage() {

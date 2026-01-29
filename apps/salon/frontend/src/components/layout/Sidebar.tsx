@@ -11,7 +11,7 @@ import {
   Gift,
   Globe,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from '@expertly/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { auth, salon } from '../../services/api';
 
