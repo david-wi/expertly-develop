@@ -18,8 +18,8 @@ COPY packages/ui ./packages/ui
 COPY apps/identity/frontend/package*.json ./apps/identity/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky prepare script in Docker
-RUN npm install --workspace=apps/identity/frontend --ignore-scripts
+# Set HUSKY=0 to skip husky prepare script in Docker
+RUN HUSKY=0 npm install --workspace=apps/identity/frontend
 
 # Copy source code
 COPY apps/identity/frontend ./apps/identity/frontend
