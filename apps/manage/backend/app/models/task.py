@@ -110,6 +110,7 @@ class RecurringTask(MongoModel):
     title: str
     description: Optional[str] = None
     priority: int = 5
+    project_id: Optional[PyObjectId] = None
 
     # Recurrence settings
     recurrence_type: RecurrenceType = RecurrenceType.DAILY
@@ -140,6 +141,7 @@ class RecurringTaskCreate(BaseModel):
     title: str
     description: Optional[str] = None
     priority: int = 5
+    project_id: Optional[str] = None
     recurrence_type: RecurrenceType = RecurrenceType.DAILY
     cron_expression: Optional[str] = None
     interval: int = 1
@@ -158,6 +160,7 @@ class RecurringTaskUpdate(BaseModel):
     description: Optional[str] = None
     priority: Optional[int] = None
     queue_id: Optional[str] = None
+    project_id: Optional[str] = None
     recurrence_type: Optional[RecurrenceType] = None
     cron_expression: Optional[str] = None
     interval: Optional[int] = None

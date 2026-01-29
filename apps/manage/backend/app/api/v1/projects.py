@@ -87,6 +87,52 @@ async def get_project_children(
     return [serialize_project(p) for p in projects]
 
 
+@router.get("/{project_id}/recurring-tasks")
+async def get_project_recurring_tasks(
+    project_id: str,
+    is_active: bool | None = None,
+    current_user: User = Depends(get_current_user)
+) -> list[dict]:
+    """Get recurring tasks associated with a project."""
+    db = get_database()
+
+    if not ObjectId.is_valid(project_id):
+        raise HTTPException(status_code=400, detail="Invalid project ID")
+
+    # Verify project exists and user has access
+    project = await db.projects.find_one({
+        "_id": ObjectId(project_id),
+        "organization_id": current_user.organization_id
+    })
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    query = {
+        "organization_id": current_user.organization_id,
+        "project_id": ObjectId(project_id)
+    }
+
+    if is_active is not None:
+        query["is_active"] = is_active
+
+    cursor = db.recurring_tasks.find(query).sort("created_at", -1)
+    tasks = await cursor.to_list(100)
+
+    # Serialize recurring tasks
+    result = []
+    for task in tasks:
+        serialized = {
+            **task,
+            "_id": str(task["_id"]),
+            "organization_id": str(task["organization_id"]),
+            "queue_id": str(task["queue_id"]),
+            "project_id": str(task["project_id"]) if task.get("project_id") else None,
+        }
+        result.append(serialized)
+
+    return result
+
+
 @router.get("/{project_id}/tasks")
 async def get_project_tasks(
     project_id: str,

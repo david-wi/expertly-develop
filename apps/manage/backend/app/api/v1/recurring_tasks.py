@@ -71,12 +71,14 @@ def serialize_recurring_task(task: dict) -> dict:
         "_id": str(task["_id"]),
         "organization_id": str(task["organization_id"]),
         "queue_id": str(task["queue_id"]),
+        "project_id": str(task["project_id"]) if task.get("project_id") else None,
     }
 
 
 @router.get("")
 async def list_recurring_tasks(
     queue_id: str | None = None,
+    project_id: str | None = None,
     is_active: bool | None = None,
     current_user: User = Depends(get_current_user)
 ) -> list[dict]:
@@ -89,6 +91,11 @@ async def list_recurring_tasks(
         if not ObjectId.is_valid(queue_id):
             raise HTTPException(status_code=400, detail="Invalid queue_id")
         query["queue_id"] = ObjectId(queue_id)
+
+    if project_id:
+        if not ObjectId.is_valid(project_id):
+            raise HTTPException(status_code=400, detail="Invalid project_id")
+        query["project_id"] = ObjectId(project_id)
 
     if is_active is not None:
         query["is_active"] = is_active
@@ -143,12 +150,26 @@ async def create_recurring_task(
 
     start_date = data.start_date or datetime.now(timezone.utc)
 
+    # Validate project_id if provided
+    project_id = None
+    if data.project_id:
+        if not ObjectId.is_valid(data.project_id):
+            raise HTTPException(status_code=400, detail="Invalid project_id")
+        project = await db.projects.find_one({
+            "_id": ObjectId(data.project_id),
+            "organization_id": current_user.organization_id
+        })
+        if not project:
+            raise HTTPException(status_code=404, detail="Project not found")
+        project_id = ObjectId(data.project_id)
+
     recurring_task = RecurringTask(
         organization_id=current_user.organization_id,
         queue_id=ObjectId(data.queue_id),
         title=data.title,
         description=data.description,
         priority=data.priority,
+        project_id=project_id,
         recurrence_type=data.recurrence_type,
         cron_expression=data.cron_expression,
         interval=data.interval,
@@ -197,6 +218,15 @@ async def update_recurring_task(
         if not ObjectId.is_valid(update_data["queue_id"]):
             raise HTTPException(status_code=400, detail="Invalid queue_id")
         update_data["queue_id"] = ObjectId(update_data["queue_id"])
+
+    # Convert project_id to ObjectId
+    if "project_id" in update_data:
+        if update_data["project_id"]:
+            if not ObjectId.is_valid(update_data["project_id"]):
+                raise HTTPException(status_code=400, detail="Invalid project_id")
+            update_data["project_id"] = ObjectId(update_data["project_id"])
+        else:
+            update_data["project_id"] = None
 
     result = await db.recurring_tasks.find_one_and_update(
         {"_id": ObjectId(recurring_task_id), "organization_id": current_user.organization_id},

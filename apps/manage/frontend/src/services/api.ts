@@ -126,9 +126,10 @@ export const api = {
     }),
 
   // Recurring Tasks
-  getRecurringTasks: (params?: { queue_id?: string; is_active?: boolean }) => {
+  getRecurringTasks: (params?: { queue_id?: string; project_id?: string; is_active?: boolean }) => {
     const searchParams = new URLSearchParams()
     if (params?.queue_id) searchParams.set('queue_id', params.queue_id)
+    if (params?.project_id) searchParams.set('project_id', params.project_id)
     if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active))
     const query = searchParams.toString()
     return request<RecurringTask[]>(`/api/v1/recurring-tasks${query ? `?${query}` : ''}`)
@@ -207,6 +208,12 @@ export const api = {
     if (params?.include_subtasks !== undefined) searchParams.set('include_subtasks', String(params.include_subtasks))
     const query = searchParams.toString()
     return request<Task[]>(`/api/v1/projects/${id}/tasks${query ? `?${query}` : ''}`)
+  },
+  getProjectRecurringTasks: (id: string, params?: { is_active?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active))
+    const query = searchParams.toString()
+    return request<RecurringTask[]>(`/api/v1/projects/${id}/recurring-tasks${query ? `?${query}` : ''}`)
   },
   createProject: (data: CreateProjectRequest) =>
     request<Project>('/api/v1/projects', {
@@ -291,6 +298,7 @@ export interface CreateTaskRequest {
   title: string
   description?: string
   priority?: number
+  project_id?: string
 }
 
 export interface CreateQueueRequest {
@@ -363,6 +371,7 @@ export interface RecurringTask {
   id: string
   organization_id: string
   queue_id: string
+  project_id?: string | null
   title: string
   description?: string
   priority: number
@@ -388,6 +397,7 @@ export interface CreateRecurringTaskRequest {
   title: string
   description?: string
   priority?: number
+  project_id?: string
   recurrence_type?: RecurrenceType
   cron_expression?: string
   interval?: number
@@ -405,6 +415,7 @@ export interface UpdateRecurringTaskRequest {
   description?: string
   priority?: number
   queue_id?: string
+  project_id?: string | null
   recurrence_type?: RecurrenceType
   cron_expression?: string
   interval?: number
