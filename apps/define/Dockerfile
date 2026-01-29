@@ -11,6 +11,7 @@ COPY apps/define/package.json apps/define/package-lock.json ./
 # Copy the shared packages (exclude build configs that have external deps)
 COPY packages/ui/src ./packages/ui/src
 COPY packages/ui/package.json ./packages/ui/package.json
+COPY packages/ui/tailwind.preset.js ./packages/ui/tailwind.preset.js
 COPY packages/auth ./packages/auth
 
 # Update package.json to use local paths for shared packages
