@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { api, User, CreateUserRequest, UpdateUserRequest } from '../services/api'
 
 type UserFilter = 'all' | 'human' | 'virtual'
@@ -40,21 +41,6 @@ export default function Users() {
   useEffect(() => {
     loadUsers()
   }, [filter])
-
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showCreateModal) setShowCreateModal(false)
-        if (showEditModal) setShowEditModal(false)
-        if (showDeleteConfirm) setShowDeleteConfirm(false)
-        if (showApiKeyModal) setShowApiKeyModal(false)
-        if (showAppearanceModal) setShowAppearanceModal(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal, showEditModal, showDeleteConfirm, showApiKeyModal, showAppearanceModal])
 
   const loadUsers = async () => {
     setLoading(true)
@@ -408,11 +394,12 @@ export default function Users() {
       </div>
 
       {/* Create User Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add New User</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Add New User"
+      >
+        <form onSubmit={handleCreate} className="space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
                 <div className="flex rounded-md overflow-hidden border border-gray-300">
@@ -575,33 +562,32 @@ export default function Users() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Edit User Modal */}
-      {showEditModal && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit User</h3>
-            <form onSubmit={handleEdit} className="space-y-4">
+      <Modal
+        isOpen={showEditModal && !!selectedUser}
+        onClose={() => setShowEditModal(false)}
+        title="Edit User"
+      >
+        <form onSubmit={handleEdit} className="space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
@@ -677,7 +663,7 @@ export default function Users() {
                       </button>
                     </div>
                   )}
-                  {selectedUser.user_type === 'virtual' ? (
+                  {selectedUser?.user_type === 'virtual' ? (
                     <button
                       type="button"
                       onClick={generateBotAvatar}
@@ -707,7 +693,7 @@ export default function Users() {
               </div>
 
               {/* Bot-specific config */}
-              {selectedUser.user_type === 'virtual' && (
+              {selectedUser?.user_type === 'virtual' && (
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Bot Configuration</h4>
                   <div>
@@ -733,125 +719,130 @@ export default function Users() {
                 </div>
               )}
 
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowEditModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedUser && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete User?</h3>
-            <p className="text-gray-500 mb-4">
-              Are you sure you want to delete "{selectedUser.name}"? This will also delete their
-              personal queues. This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm && !!selectedUser}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete User?"
+        size="sm"
+      >
+        <p className="text-gray-500 mb-4">
+          Are you sure you want to delete "{selectedUser?.name}"? This will also delete their
+          personal queues. This action cannot be undone.
+        </p>
+        <ModalFooter>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={saving}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Deleting...' : 'Delete'}
+          </button>
+        </ModalFooter>
+      </Modal>
 
       {/* API Key Modal */}
-      {showApiKeyModal && newApiKey && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">API Key</h3>
-            <p className="text-gray-500 mb-4">
-              Save this API key now. You won't be able to see it again.
-            </p>
-            <div className="bg-gray-100 rounded-md p-3 font-mono text-sm break-all mb-4">
-              {newApiKey}
-            </div>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(newApiKey)
-                alert('Copied to clipboard!')
-              }}
-              className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors mb-3"
-            >
-              Copy to Clipboard
-            </button>
-            <button
-              onClick={() => {
-                setShowApiKeyModal(false)
-                setNewApiKey(null)
-                setSelectedUser(null)
-              }}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Done
-            </button>
-          </div>
+      <Modal
+        isOpen={showApiKeyModal && !!newApiKey}
+        onClose={() => {
+          setShowApiKeyModal(false)
+          setNewApiKey(null)
+          setSelectedUser(null)
+        }}
+        title="API Key"
+      >
+        <p className="text-gray-500 mb-4">
+          Save this API key now. You won't be able to see it again.
+        </p>
+        <div className="bg-gray-100 rounded-md p-3 font-mono text-sm break-all mb-4">
+          {newApiKey}
         </div>
-      )}
+        <button
+          onClick={() => {
+            if (newApiKey) {
+              navigator.clipboard.writeText(newApiKey)
+              alert('Copied to clipboard!')
+            }
+          }}
+          className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors mb-3"
+        >
+          Copy to Clipboard
+        </button>
+        <button
+          onClick={() => {
+            setShowApiKeyModal(false)
+            setNewApiKey(null)
+            setSelectedUser(null)
+          }}
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+        >
+          Done
+        </button>
+      </Modal>
 
       {/* Appearance Description Modal */}
-      {showAppearanceModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Describe Your Appearance</h3>
-            <p className="text-gray-500 mb-4 text-sm">
-              Describe what you look like and we'll generate a stylized avatar illustration.
-            </p>
-            <textarea
-              value={appearanceDescription}
-              onChange={(e) => setAppearanceDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
-              rows={4}
-              placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
-            />
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => {
-                  setShowAppearanceModal(false)
-                  setAppearanceDescription('')
-                }}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={generateHumanAvatar}
-                disabled={generatingAvatar || !appearanceDescription.trim()}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {generatingAvatar ? 'Generating...' : 'Generate Avatar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showAppearanceModal}
+        onClose={() => {
+          setShowAppearanceModal(false)
+          setAppearanceDescription('')
+        }}
+        title="Describe Your Appearance"
+      >
+        <p className="text-gray-500 mb-4 text-sm">
+          Describe what you look like and we'll generate a stylized avatar illustration.
+        </p>
+        <textarea
+          value={appearanceDescription}
+          onChange={(e) => setAppearanceDescription(e.target.value)}
+          className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
+          rows={4}
+          placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
+        />
+        <ModalFooter>
+          <button
+            onClick={() => {
+              setShowAppearanceModal(false)
+              setAppearanceDescription('')
+            }}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={generateHumanAvatar}
+            disabled={generatingAvatar || !appearanceDescription.trim()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {generatingAvatar ? 'Generating...' : 'Generate Avatar'}
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
