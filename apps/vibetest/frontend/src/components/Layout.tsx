@@ -109,7 +109,7 @@ export default function Layout({ children }: LayoutProps) {
           renderLink={(props) => (
             <Link
               to={props.href}
-              onClick={(e) => {
+              onClick={() => {
                 props.onClick?.()
                 setSidebarOpen(false)
               }}
