@@ -94,8 +94,9 @@ class ThemeService:
         self.db.add(version)
 
         await self.db.flush()
-        await self.db.refresh(theme)
 
+        # Re-fetch with versions loaded to avoid lazy loading issues
+        theme = await self.get_theme(theme.id)
         return theme
 
     async def update_theme(
@@ -146,8 +147,9 @@ class ThemeService:
             self.db.add(version)
 
         await self.db.flush()
-        await self.db.refresh(theme)
 
+        # Re-fetch with versions loaded to avoid lazy loading issues
+        theme = await self.get_theme(theme.id)
         return theme
 
     async def delete_theme(self, theme_id: UUID) -> bool:
@@ -233,8 +235,9 @@ class ThemeService:
         self.db.add(version)
 
         await self.db.flush()
-        await self.db.refresh(theme)
 
+        # Re-fetch with versions loaded to avoid lazy loading issues
+        theme = await self.get_theme(theme.id)
         return theme
 
     async def get_active_themes_for_public(self) -> list[Theme]:
