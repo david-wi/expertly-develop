@@ -10,7 +10,7 @@ router = APIRouter()
 
 def serialize_project(project: dict) -> dict:
     """Convert ObjectIds to strings in project document."""
-    result = {**project, "_id": str(project["_id"])}
+    result = {**project, "_id": str(project["_id"]), "id": str(project["_id"])}
     for field in ["organization_id", "parent_project_id", "owner_user_id", "team_id"]:
         if project.get(field):
             result[field] = str(project[field])
