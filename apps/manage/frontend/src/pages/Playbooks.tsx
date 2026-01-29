@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { createErrorLogger } from '../utils/errorLogger'
@@ -754,24 +755,6 @@ export default function Playbooks() {
     loadData()
   }, [])
 
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (isEditing) {
-          setIsEditing(false)
-          setEditingPlaybook(null)
-        } else {
-          setShowCreateModal(false)
-          setShowCreateGroupModal(false)
-          setShowDeleteConfirm(false)
-          setShowHistoryModal(false)
-        }
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [isEditing])
 
   // Build tree structure
   const treeNodes = buildTree(playbooks)
@@ -1554,219 +1537,217 @@ export default function Playbooks() {
       </div>
 
       {/* Create Playbook Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Playbook</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Customer Onboarding, Bug Triage"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={2}
-                  placeholder="Brief description of this playbook"
-                />
-              </div>
-              {groupPlaybooks.length > 0 && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location
-                  </label>
-                  <select
-                    value={formData.parent_id}
-                    onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Top Level</option>
-                    {groupPlaybooks.map((group) => {
-                      const isSuggested = getSuggestedParent() === group.id
-                      return (
-                        <option key={group.id} value={group.id}>
-                          {group.name}{isSuggested ? ' (Suggested)' : ''}
-                        </option>
-                      )
-                    })}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Visibility
-                </label>
-                <select
-                  value={formData.scope_type}
-                  onChange={(e) => setFormData({ ...formData, scope_type: e.target.value as ScopeType, scope_id: '' })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="user">Private (just me)</option>
-                  <option value="team">Team</option>
-                  <option value="organization">Everyone</option>
-                </select>
-              </div>
-              {formData.scope_type === 'team' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Select Team
-                  </label>
-                  <select
-                    value={formData.scope_id}
-                    onChange={(e) => setFormData({ ...formData, scope_id: e.target.value })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    required
-                  >
-                    <option value="">Choose a team...</option>
-                    {teams.map((team) => (
-                      <option key={team.id} value={team.id}>
-                        {team.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Playbook"
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Name
+            </label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="e.g., Customer Onboarding, Bug Triage"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={2}
+              placeholder="Brief description of this playbook"
+            />
+          </div>
+          {groupPlaybooks.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Location
+              </label>
+              <select
+                value={formData.parent_id}
+                onChange={(e) => setFormData({ ...formData, parent_id: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+              >
+                <option value="">Top Level</option>
+                {groupPlaybooks.map((group) => {
+                  const isSuggested = getSuggestedParent() === group.id
+                  return (
+                    <option key={group.id} value={group.id}>
+                      {group.name}{isSuggested ? ' (Suggested)' : ''}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Visibility
+            </label>
+            <select
+              value={formData.scope_type}
+              onChange={(e) => setFormData({ ...formData, scope_type: e.target.value as ScopeType, scope_id: '' })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            >
+              <option value="user">Private (just me)</option>
+              <option value="team">Team</option>
+              <option value="organization">Everyone</option>
+            </select>
+          </div>
+          {formData.scope_type === 'team' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Select Team
+              </label>
+              <select
+                value={formData.scope_id}
+                onChange={(e) => setFormData({ ...formData, scope_id: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                required
+              >
+                <option value="">Choose a team...</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Create Group Modal */}
-      {showCreateGroupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Group</h3>
-            <form onSubmit={handleCreateGroup} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Group Name
-                </label>
-                <input
-                  type="text"
-                  value={groupName}
-                  onChange={(e) => setGroupName(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Customer Success, Engineering"
-                  required
-                  autoFocus
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateGroupModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreateGroupModal}
+        onClose={() => setShowCreateGroupModal(false)}
+        title="Create New Group"
+        size="sm"
+      >
+        <form onSubmit={handleCreateGroup} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Group Name
+            </label>
+            <input
+              type="text"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="e.g., Customer Success, Engineering"
+              required
+              autoFocus
+            />
           </div>
-        </div>
-      )}
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateGroupModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedPlaybook && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Playbook?</h3>
-            <p className="text-gray-500 mb-4">
-              Are you sure you want to delete "{selectedPlaybook.name}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm && !!selectedPlaybook}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Playbook?"
+        size="sm"
+      >
+        <p className="text-gray-500 mb-4">
+          Are you sure you want to delete "{selectedPlaybook?.name}"? This action cannot be undone.
+        </p>
+        <ModalFooter>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={saving}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Deleting...' : 'Delete'}
+          </button>
+        </ModalFooter>
+      </Modal>
 
       {/* History Modal */}
-      {showHistoryModal && selectedPlaybook && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Version History: {selectedPlaybook.name}
-            </h3>
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {/* Current version */}
-              <div className="border-l-4 border-blue-500 pl-3 py-1">
-                <p className="font-medium text-gray-900">
-                  v{selectedPlaybook.version} (current)
-                </p>
-                <p className="text-sm text-gray-500">{selectedPlaybook.name}</p>
-                <p className="text-xs text-gray-400">{selectedPlaybook.steps?.length || 0} steps</p>
-              </div>
-              {/* Historical versions */}
-              {selectedPlaybook.history.slice().reverse().map((entry, idx) => (
-                <div key={idx} className="border-l-4 border-gray-300 pl-3 py-1">
-                  <p className="font-medium text-gray-700">v{entry.version}</p>
-                  <p className="text-sm text-gray-500">{entry.name}</p>
-                  <p className="text-xs text-gray-400">
-                    {entry.steps?.length || 0} steps - {formatDate(entry.changed_at)}
-                  </p>
-                </div>
-              ))}
+      <Modal
+        isOpen={showHistoryModal && !!selectedPlaybook}
+        onClose={() => setShowHistoryModal(false)}
+        title={`Version History: ${selectedPlaybook?.name || ''}`}
+      >
+        <div className="space-y-3 max-h-64 overflow-y-auto">
+          {/* Current version */}
+          {selectedPlaybook && (
+            <div className="border-l-4 border-blue-500 pl-3 py-1">
+              <p className="font-medium text-gray-900">
+                v{selectedPlaybook.version} (current)
+              </p>
+              <p className="text-sm text-gray-500">{selectedPlaybook.name}</p>
+              <p className="text-xs text-gray-400">{selectedPlaybook.steps?.length || 0} steps</p>
             </div>
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Close
-              </button>
+          )}
+          {/* Historical versions */}
+          {selectedPlaybook?.history.slice().reverse().map((entry, idx) => (
+            <div key={idx} className="border-l-4 border-gray-300 pl-3 py-1">
+              <p className="font-medium text-gray-700">v{entry.version}</p>
+              <p className="text-sm text-gray-500">{entry.name}</p>
+              <p className="text-xs text-gray-400">
+                {entry.steps?.length || 0} steps - {formatDate(entry.changed_at)}
+              </p>
             </div>
-          </div>
+          ))}
         </div>
-      )}
+        <ModalFooter>
+          <button
+            onClick={() => setShowHistoryModal(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Close
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
