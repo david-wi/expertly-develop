@@ -365,7 +365,12 @@ export default function Projects() {
                   <tr key={projectId} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div style={{ paddingLeft: node.depth * 24 }}>
-                        <p className="font-medium text-gray-900">{project.name}</p>
+                        <Link
+                          to={`/projects/${projectId}`}
+                          className="font-medium text-blue-600 hover:text-blue-800"
+                        >
+                          {project.name}
+                        </Link>
                         {project.description && (
                           <p className="text-xs text-gray-500 truncate max-w-xs">
                             {project.description}

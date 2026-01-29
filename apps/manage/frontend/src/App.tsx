@@ -3,6 +3,7 @@ import Dashboard from './pages/Dashboard'
 import Tasks from './pages/Tasks'
 import Queues from './pages/Queues'
 import Projects from './pages/Projects'
+import ProjectDetail from './pages/ProjectDetail'
 import Playbooks from './pages/Playbooks'
 import Users from './pages/Users'
 import Teams from './pages/Teams'
@@ -21,6 +22,7 @@ function App() {
           <Route path="tasks" element={<Tasks />} />
           <Route path="queues" element={<Queues />} />
           <Route path="projects" element={<Projects />} />
+          <Route path="projects/:id" element={<ProjectDetail />} />
           <Route path="playbooks" element={<Playbooks />} />
           <Route path="users" element={<Users />} />
           <Route path="teams" element={<Teams />} />
