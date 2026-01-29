@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { Task } from '../services/api'
-import { Trophy, Calendar, TrendingUp, Users, User } from 'lucide-react'
+import { Trophy, Star, TrendingUp, Users, User } from 'lucide-react'
 
 type TimeFilter = 'today' | 'week' | 'month'
 type GroupBy = 'none' | 'user' | 'queue'
@@ -125,7 +125,7 @@ export default function Wins() {
                 }).length}
               </p>
             </div>
-            <Calendar className="h-8 w-8 text-gray-300" />
+            <Star className="h-8 w-8 text-gray-300" />
           </div>
         </div>
         <div
