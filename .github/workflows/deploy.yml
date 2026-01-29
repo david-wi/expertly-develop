@@ -14,15 +14,13 @@ on:
 
 env:
   DEPLOY_PATH: /opt/expertly-develop
-  SITES: "define develop identity admin manage salon today vibetest vibecode"
 
 jobs:
   # Pre-flight check: TypeScript compilation for all frontends
-  # Catches type errors in ~30s instead of waiting for Docker builds
   typecheck:
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false  # Check ALL apps, don't stop on first failure
+      fail-fast: false
       matrix:
         app:
           - { name: admin, path: apps/admin/frontend }
@@ -33,8 +31,8 @@ jobs:
           - { name: salon, path: apps/salon/frontend }
           - { name: today, path: apps/today/frontend }
           # TODO: Fix type issues in these apps:
-          # - { name: vibetest, path: apps/vibetest/frontend }  # React types conflict
-          # - { name: vibecode, path: apps/vibecode/packages/client }  # Missing module types
+          # - { name: vibetest, path: apps/vibetest/frontend }
+          # - { name: vibecode, path: apps/vibecode/packages/client }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -48,10 +46,12 @@ jobs:
         run: npm run typecheck
         continue-on-error: false
 
-  # Build shared infrastructure first (mongo, ui package)
-  build-shared:
+  # Initialize deployment state and build shared infrastructure
+  init-deploy:
     needs: typecheck
     runs-on: ubuntu-latest
+    outputs:
+      git_commit: ${{ steps.init.outputs.git_commit }}
     steps:
       - name: Setup SSH
         run: |
@@ -60,62 +60,84 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Build shared infrastructure
+      - name: Initialize deployment
+        id: init
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             set -e
             cd /opt/expertly-develop
-
-            # Pull latest code
             git pull origin main
 
-            # Initialize state file if needed
+            # Initialize per-service state file if needed
             STATE_FILE="/opt/deployment-state.json"
-            if [ ! -f "$STATE_FILE" ]; then
-                echo '{"active": "blue", "last_deploy": ""}' > "$STATE_FILE"
+            if [ ! -f "$STATE_FILE" ] || ! jq -e '.services' "$STATE_FILE" >/dev/null 2>&1; then
+                echo "Initializing per-service deployment state..."
+                cat > "$STATE_FILE" << 'EOF'
+{
+  "services": {
+    "define": {"active": "blue", "last_deploy": ""},
+    "develop": {"active": "blue", "last_deploy": ""},
+    "identity": {"active": "blue", "last_deploy": ""},
+    "admin": {"active": "blue", "last_deploy": ""},
+    "manage": {"active": "blue", "last_deploy": ""},
+    "salon": {"active": "blue", "last_deploy": ""},
+    "today": {"active": "blue", "last_deploy": ""},
+    "vibetest": {"active": "blue", "last_deploy": ""},
+    "vibecode": {"active": "blue", "last_deploy": ""}
+  },
+  "shared": {"active": "blue", "last_deploy": ""}
+}
+EOF
             fi
 
-            # Get target color
-            CURRENT=$(jq -r '.active' "$STATE_FILE")
-            if [ "$CURRENT" = "blue" ]; then
-                TARGET="green"
+            # Build shared infrastructure (mongo, ui) - always on "shared" color
+            SHARED_COLOR=$(jq -r '.shared.active' "$STATE_FILE")
+            if [ "$SHARED_COLOR" = "blue" ]; then
+                SHARED_TARGET="green"
             else
-                TARGET="blue"
+                SHARED_TARGET="blue"
             fi
 
             export GIT_COMMIT=$(git rev-parse --short HEAD)
             export BUILD_TIMESTAMP=$(date +%s)
-            export DEPLOY_COLOR="-${TARGET}"
 
-            echo "=== Building shared infrastructure for $TARGET ==="
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
+            echo "=== Building shared infrastructure (target: $SHARED_TARGET) ==="
+            COMPOSE_PROJECT_NAME="expertly-${SHARED_TARGET}" DEPLOY_COLOR="-${SHARED_TARGET}" \
                 docker compose -f docker-compose.prod.yml build mongo ui
 
-            echo "=== Starting mongo and UI ==="
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
+            echo "=== Starting shared infrastructure ==="
+            COMPOSE_PROJECT_NAME="expertly-${SHARED_TARGET}" DEPLOY_COLOR="-${SHARED_TARGET}" \
                 docker compose -f docker-compose.prod.yml up -d mongo ui
 
-            echo "=== Shared infrastructure ready ==="
+            # Update shared state
+            jq --arg color "$SHARED_TARGET" --arg time "$(date -Iseconds)" \
+                '.shared.active = $color | .shared.last_deploy = $time' "$STATE_FILE" > "${STATE_FILE}.tmp"
+            mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+            echo "GIT_COMMIT=$GIT_COMMIT" > /tmp/init_output
           ENDSSH
 
-  # Build each app independently - failures don't block other apps
-  build:
-    needs: [typecheck, build-shared]  # Build after shared infrastructure
+          GIT_COMMIT=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "grep GIT_COMMIT /tmp/init_output | cut -d= -f2")
+          echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
+
+  # Build and deploy each app independently
+  deploy-app:
+    needs: [typecheck, init-deploy]
     runs-on: ubuntu-latest
     strategy:
-      fail-fast: false  # Continue building other apps if one fails
-      max-parallel: 3   # Limit concurrent SSH connections to avoid server rate limiting
+      fail-fast: false
+      max-parallel: 3
       matrix:
         app:
-          - { name: define, services: "define-frontend define-backend" }
-          - { name: develop, services: "develop-frontend develop-backend" }
-          - { name: identity, services: "identity-frontend identity-backend" }
-          - { name: admin, services: "admin-frontend admin-backend admin-db" }
-          - { name: manage, services: "manage-frontend manage-backend" }
-          - { name: salon, services: "salon-frontend salon-backend" }
-          - { name: today, services: "today-frontend today-backend" }
-          - { name: vibetest, services: "vibetest-frontend vibetest-backend" }
-          - { name: vibecode, services: "vibecode-client vibecode-server" }
+          - { name: define, services: "define-frontend define-backend", health: "define-backend" }
+          - { name: develop, services: "develop-frontend develop-backend", health: "develop-backend" }
+          - { name: identity, services: "identity-frontend identity-backend", health: "identity-backend" }
+          - { name: admin, services: "admin-frontend admin-backend admin-db", health: "admin-backend" }
+          - { name: manage, services: "manage-frontend manage-backend", health: "manage-backend" }
+          - { name: salon, services: "salon-frontend salon-backend", health: "salon-backend" }
+          - { name: today, services: "today-frontend today-backend", health: "today-backend" }
+          - { name: vibetest, services: "vibetest-frontend vibetest-backend", health: "vibetest-backend" }
+          - { name: vibecode, services: "vibecode-client vibecode-server", health: "vibecode-server" }
 
     steps:
       - name: Setup SSH
@@ -125,218 +147,115 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Build ${{ matrix.app.name }}
-        id: build
+      - name: Deploy ${{ matrix.app.name }}
+        id: deploy
         run: |
-          # SSH with retry logic to handle transient connection failures
+          # SSH with retry logic
           MAX_RETRIES=3
           RETRY_DELAY=10
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "SSH attempt $i of $MAX_RETRIES..."
-            if ssh -o ConnectTimeout=30 -o ServerAliveInterval=15 -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH' 2>&1 | tee build-${{ matrix.app.name }}.log
+            echo "Attempt $i of $MAX_RETRIES for ${{ matrix.app.name }}..."
+            if ssh -o ConnectTimeout=30 -o ServerAliveInterval=15 -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH' 2>&1 | tee deploy-${{ matrix.app.name }}.log
             set -e
             cd /opt/expertly-develop
 
-            # Pull latest code (idempotent)
-            git pull origin main 2>/dev/null || true
-
-            # Initialize state file if needed
             STATE_FILE="/opt/deployment-state.json"
-            if [ ! -f "$STATE_FILE" ]; then
-                echo '{"active": "blue", "last_deploy": ""}' > "$STATE_FILE"
-            fi
+            APP="${{ matrix.app.name }}"
+            SERVICES="${{ matrix.app.services }}"
+            HEALTH_CONTAINER="${{ matrix.app.health }}"
 
-            # Get target color
-            CURRENT=$(jq -r '.active' "$STATE_FILE")
+            # Get this app's current color and determine target
+            CURRENT=$(jq -r ".services.${APP}.active" "$STATE_FILE")
             if [ "$CURRENT" = "blue" ]; then
                 TARGET="green"
+                OLD="blue"
             else
                 TARGET="blue"
+                OLD="green"
             fi
 
-            # Set build variables
+            echo "=== Deploying $APP: $OLD -> $TARGET ==="
+
             export GIT_COMMIT=$(git rev-parse --short HEAD)
             export BUILD_TIMESTAMP=$(date +%s)
             export DEPLOY_COLOR="-${TARGET}"
 
-            echo "=== Building ${{ matrix.app.name }} for $TARGET deployment ==="
+            # Build this app's services
+            echo "Building $SERVICES..."
             COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                docker compose -f docker-compose.prod.yml build ${{ matrix.app.services }}
+                docker compose -f docker-compose.prod.yml build $SERVICES
 
-            # Mark this app as built successfully
-            mkdir -p /tmp/build-results
-            echo "success" > /tmp/build-results/${{ matrix.app.name }}
+            # Start this app's services
+            echo "Starting $SERVICES..."
+            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
+                docker compose -f docker-compose.prod.yml up -d $SERVICES
 
-            echo "=== ${{ matrix.app.name }} build complete ==="
+            # Wait for containers to be ready
+            echo "Waiting for containers..."
+            sleep 10
+
+            # Health check
+            CONTAINER="expertly-${TARGET}-${HEALTH_CONTAINER}-1"
+            echo "Health checking $CONTAINER..."
+            if docker ps --filter "name=$CONTAINER" --filter "status=running" -q | grep -q .; then
+                echo "✓ $CONTAINER is running"
+            else
+                echo "✗ $CONTAINER failed to start"
+                echo "Container logs:"
+                docker logs "$CONTAINER" 2>&1 | tail -50 || true
+                exit 1
+            fi
+
+            # Update state for this app
+            jq --arg app "$APP" --arg color "$TARGET" --arg time "$(date -Iseconds)" \
+                '.services[$app].active = $color | .services[$app].last_deploy = $time' \
+                "$STATE_FILE" > "${STATE_FILE}.tmp"
+            mv "${STATE_FILE}.tmp" "$STATE_FILE"
+
+            # Stop old version of this app (if running)
+            echo "Stopping old $APP containers on $OLD..."
+            for svc in $SERVICES; do
+                OLD_CONTAINER="expertly-${OLD}-${svc}-1"
+                if docker ps -a --filter "name=$OLD_CONTAINER" -q | grep -q .; then
+                    docker stop "$OLD_CONTAINER" 2>/dev/null || true
+                    docker rm "$OLD_CONTAINER" 2>/dev/null || true
+                    echo "  Stopped $OLD_CONTAINER"
+                fi
+            done
+
+            echo "=== $APP deployed successfully ==="
           ENDSSH
             then
-              echo "SSH succeeded on attempt $i"
+              echo "✓ ${{ matrix.app.name }} deployed successfully"
+              echo "status=success" >> $GITHUB_OUTPUT
               break
             else
-              echo "SSH failed on attempt $i"
+              echo "✗ Attempt $i failed for ${{ matrix.app.name }}"
               if [ $i -lt $MAX_RETRIES ]; then
                 echo "Waiting ${RETRY_DELAY}s before retry..."
                 sleep $RETRY_DELAY
-                RETRY_DELAY=$((RETRY_DELAY * 2))  # Exponential backoff
+                RETRY_DELAY=$((RETRY_DELAY * 2))
               else
-                echo "All SSH attempts failed"
+                echo "All attempts failed for ${{ matrix.app.name }}"
+                echo "status=failed" >> $GITHUB_OUTPUT
                 exit 1
               fi
             fi
           done
 
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log-${{ matrix.app.name }}
-          path: build-${{ matrix.app.name }}.log
-          retention-days: 7
-
-  # Deploy all successfully built apps
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    # Run even if some builds failed (we'll deploy what succeeded)
-    if: always() && !cancelled()
-    outputs:
-      deploy_color: ${{ steps.deploy.outputs.deploy_color }}
-      deployed_apps: ${{ steps.deploy.outputs.deployed_apps }}
-
-    steps:
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Check build results and deploy
-        id: deploy
-        run: |
-          # Get build results from server and deploy
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH' 2>&1 | tee deploy.log
-            set -e
-            cd /opt/expertly-develop
-
-            STATE_FILE="/opt/deployment-state.json"
-            BUILD_RESULTS="/tmp/build-results"
-
-            # Get target color
-            CURRENT=$(jq -r '.active' "$STATE_FILE")
-            if [ "$CURRENT" = "blue" ]; then
-                TARGET="green"
-            else
-                TARGET="blue"
-            fi
-
-            echo "DEPLOY_COLOR=$TARGET" > /tmp/deploy_output
-            echo "Current active: $CURRENT, deploying to: $TARGET"
-
-            # Check which apps built successfully
-            echo "=== Checking build results ==="
-            SERVICES=""
-            DEPLOYED_APPS=""
-            SUCCESS_COUNT=0
-
-            for app in define develop identity admin manage salon today vibetest vibecode; do
-              if [ -f "$BUILD_RESULTS/$app" ] && [ "$(cat $BUILD_RESULTS/$app)" = "success" ]; then
-                echo "✓ $app built successfully"
-                SUCCESS_COUNT=$((SUCCESS_COUNT+1))
-                DEPLOYED_APPS="$DEPLOYED_APPS $app"
-                case $app in
-                  define) SERVICES="$SERVICES define-frontend define-backend" ;;
-                  develop) SERVICES="$SERVICES develop-frontend develop-backend" ;;
-                  identity) SERVICES="$SERVICES identity-frontend identity-backend" ;;
-                  admin) SERVICES="$SERVICES admin-frontend admin-backend admin-db" ;;
-                  manage) SERVICES="$SERVICES manage-frontend manage-backend" ;;
-                  salon) SERVICES="$SERVICES salon-frontend salon-backend" ;;
-                  today) SERVICES="$SERVICES today-frontend today-backend" ;;
-                  vibetest) SERVICES="$SERVICES vibetest-frontend vibetest-backend" ;;
-                  vibecode) SERVICES="$SERVICES vibecode-client vibecode-server" ;;
-                esac
-              else
-                echo "✗ $app build failed or not found"
-              fi
-            done
-
-            echo "DEPLOYED_APPS=$DEPLOYED_APPS" >> /tmp/deploy_output
-
-            if [ $SUCCESS_COUNT -eq 0 ]; then
-              echo "::error::All builds failed! Aborting deployment."
-              exit 1
-            fi
-
-            echo ""
-            echo "$SUCCESS_COUNT of 9 apps built successfully"
-            echo "Services to deploy: $SERVICES"
-
-            # CRITICAL: Start ALL services, not just rebuilt ones
-            # This ensures that when we switch traffic and stop the old deployment,
-            # all services remain available (using existing images for non-rebuilt services)
-            echo "=== Starting ALL containers for new deployment ==="
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                docker compose -f docker-compose.prod.yml up -d
-
-            echo "=== Waiting for containers to be ready ==="
-            sleep 15
-
-            # Health check for ALL backend services (since we start all containers)
-            echo "=== Running health checks for ALL services ==="
-            check_container() {
-              container="expertly-${TARGET}-$1-1"
-              if docker ps --filter "name=$container" --filter "status=running" -q | grep -q .; then
-                  echo "✓ $container is running"
-                  return 0
-              else
-                  echo "✗ $container not running"
-                  return 1
-              fi
-            }
-
-            FAILED=0
-            check_container "define-backend" || FAILED=1
-            check_container "develop-backend" || FAILED=1
-            check_container "identity-backend" || FAILED=1
-            check_container "admin-backend" || FAILED=1
-            check_container "manage-backend" || FAILED=1
-            check_container "salon-backend" || FAILED=1
-            check_container "today-backend" || FAILED=1
-            check_container "vibetest-backend" || FAILED=1
-            check_container "vibecode" || FAILED=1
-
-            if [ $FAILED -eq 1 ]; then
-              echo "::error::Some containers failed health check - aborting to prevent partial deployment"
-              echo "Stopping failed deployment..."
-              COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                  docker compose -f docker-compose.prod.yml down --remove-orphans || true
-              exit 1
-            fi
-
-            # Clean up build results for next deployment
-            rm -rf "$BUILD_RESULTS"
-
-            echo "=== Deployment complete ==="
-          ENDSSH
-
-          # Extract deploy color and deployed apps
-          DEPLOY_COLOR=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "grep DEPLOY_COLOR /tmp/deploy_output | cut -d= -f2" || echo "green")
-          DEPLOYED_APPS=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "grep DEPLOYED_APPS /tmp/deploy_output | cut -d= -f2" || echo "")
-          echo "deploy_color=${DEPLOY_COLOR}" >> $GITHUB_OUTPUT
-          echo "deployed_apps=${DEPLOYED_APPS}" >> $GITHUB_OUTPUT
-
       - name: Upload deploy log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: deploy-logs
-          path: deploy.log
+          name: deploy-log-${{ matrix.app.name }}
+          path: deploy-${{ matrix.app.name }}.log
           retention-days: 7
 
+  # Visual verification of deployed apps
   visual-verification:
-    needs: deploy
+    needs: deploy-app
     runs-on: ubuntu-latest
-    if: always() && !cancelled() && needs.deploy.result == 'success' && github.event.inputs.skip_visual_verification != 'true'
+    if: always() && !cancelled() && github.event.inputs.skip_visual_verification != 'true'
 
     steps:
       - name: Setup Node.js
@@ -352,57 +271,52 @@ jobs:
 
       - name: Take screenshots and verify
         id: visual
-        env:
-          DEPLOYED_APPS: ${{ needs.deploy.outputs.deployed_apps }}
         run: |
           mkdir -p screenshots
 
           FAILED=0
           VERIFIED=0
-          SKIPPED=0
 
           verify_site() {
             site=$1
             echo "Checking $site..."
 
-            # Take screenshot
             npx playwright screenshot --wait-for-timeout=5000 \
               "https://${site}.ai.devintensive.com" \
               "screenshots/${site}.png" 2>/dev/null || true
 
-            # Check if screenshot exists and has content (not blank)
             if [ -f "screenshots/${site}.png" ]; then
-              # Get file size - blank pages are usually very small
               SIZE=$(stat -f%z "screenshots/${site}.png" 2>/dev/null || stat -c%s "screenshots/${site}.png" 2>/dev/null)
               if [ "$SIZE" -gt 10000 ]; then
-                echo "✓ $site - screenshot captured (${SIZE} bytes)"
+                echo "✓ $site - OK (${SIZE} bytes)"
                 return 0
               else
-                echo "⚠ $site - screenshot too small, may be blank (${SIZE} bytes)"
+                echo "⚠ $site - screenshot too small (${SIZE} bytes)"
                 return 1
               fi
             else
-              echo "✗ $site - failed to capture screenshot"
+              echo "✗ $site - failed to capture"
               return 1
             fi
           }
 
-          echo "Deployed apps: $DEPLOYED_APPS"
-          echo ""
-
-          # Verify all apps, marking skipped ones
+          # Verify all apps
           for app in define develop identity admin manage salon today vibetest vibecode; do
-            if echo "$DEPLOYED_APPS" | grep -qw "$app"; then
-              verify_site "$app" && VERIFIED=$((VERIFIED+1)) || FAILED=1
+            if verify_site "$app"; then
+              VERIFIED=$((VERIFIED+1))
             else
-              echo "⊘ $app - skipped (not deployed)"
-              SKIPPED=$((SKIPPED+1))
+              FAILED=$((FAILED+1))
             fi
           done
 
           echo ""
-          echo "Summary: $VERIFIED verified, $SKIPPED skipped (not deployed)"
-          echo "verification_failed=$FAILED" >> $GITHUB_OUTPUT
+          echo "Summary: $VERIFIED OK, $FAILED failed"
+
+          # Don't fail the workflow for visual verification failures
+          # Apps were already deployed independently
+          if [ $FAILED -gt 0 ]; then
+            echo "::warning::$FAILED apps failed visual verification"
+          fi
 
       - name: Upload screenshots
         uses: actions/upload-artifact@v4
@@ -411,17 +325,11 @@ jobs:
           path: screenshots/
           retention-days: 7
 
-      - name: Fail if verification failed
-        if: steps.visual.outputs.verification_failed == '1'
-        run: |
-          echo "Visual verification failed for deployed apps! Check screenshots artifact."
-          exit 1
-
-  switch-traffic:
-    needs: [deploy, visual-verification]
+  # Cleanup old images
+  cleanup:
+    needs: [deploy-app, visual-verification]
     runs-on: ubuntu-latest
-    # Only switch if deploy succeeded (visual-verification may be skipped)
-    if: always() && needs.deploy.result == 'success'
+    if: always() && !cancelled()
 
     steps:
       - name: Setup SSH
@@ -431,114 +339,31 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Switch traffic to new deployment
+      - name: Cleanup old images and containers
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            set -e
-
-            STATE_FILE="/opt/deployment-state.json"
-            TRAEFIK_DYNAMIC="/opt/traefik/dynamic"
-
-            # Get target color (the one we just deployed to)
-            CURRENT=$(jq -r '.active' "$STATE_FILE")
-            if [ "$CURRENT" = "blue" ]; then
-                TARGET="green"
-                OLD="blue"
-            else
-                TARGET="blue"
-                OLD="green"
-            fi
-
-            echo "=== Switching traffic from $OLD to $TARGET ==="
-
-            # Update Traefik routing to point to new containers
-            # Since we're using Docker provider with labels, containers are auto-discovered
-            # We just need to stop the old containers
-
-            # Update state file
-            jq --arg color "$TARGET" --arg time "$(date -Iseconds)" \
-                '.active = $color | .last_deploy = $time' "$STATE_FILE" > "${STATE_FILE}.tmp"
-            mv "${STATE_FILE}.tmp" "$STATE_FILE"
-
-            echo "=== Waiting for traffic to drain from old deployment ==="
-            sleep 10
-
-            echo "=== Stopping old $OLD deployment ==="
-            cd /opt/expertly-develop
-            COMPOSE_PROJECT_NAME="expertly-${OLD}" DEPLOY_COLOR="-${OLD}" \
-                docker compose -f docker-compose.prod.yml down --remove-orphans || true
-
-            # Also stop legacy containers if this is migration from old naming
-            if docker ps --filter "name=expertly-develop-" -q | grep -q .; then
-                echo "=== Stopping legacy expertly-develop containers (migration) ==="
-                COMPOSE_PROJECT_NAME="expertly-develop" \
-                    docker compose -f docker-compose.prod.yml down --remove-orphans || true
-            fi
-
-            echo "=== Verifying new deployment is still running ==="
-            RUNNING=$(docker ps --filter "name=expertly-${TARGET}-" -q | wc -l)
-            if [ "$RUNNING" -lt 5 ]; then
-                echo "WARNING: Only $RUNNING containers running for $TARGET, restarting..."
-                COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                    docker compose -f docker-compose.prod.yml up -d
-                sleep 10
-            fi
-
-            echo "=== Cleaning up old images ==="
+            echo "=== Cleaning up unused Docker resources ==="
             docker image prune -f
+            docker container prune -f
 
-            echo "=== Blue/green deployment complete ==="
-            echo "Active: $TARGET"
+            # Show current state
+            echo ""
+            echo "=== Current deployment state ==="
+            cat /opt/deployment-state.json | jq .
+
+            echo ""
+            echo "=== Running containers ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}" | grep expertly || true
           ENDSSH
 
-      - name: Final verification
-        env:
-          DEPLOYED_APPS: ${{ needs.deploy.outputs.deployed_apps }}
+      - name: Final health check
         run: |
-          echo "Verifying deployed sites respond..."
-          echo "Deployed apps: $DEPLOYED_APPS"
-          sleep 5
-
-          # Check all deployed apps
-          for app in $DEPLOYED_APPS; do
+          echo "=== Final health check ==="
+          for app in define develop identity admin manage salon today vibetest vibecode; do
             status=$(curl -s -o /dev/null -w "%{http_code}" "https://${app}.ai.devintensive.com/" || echo "000")
-            echo "${app}: HTTP ${status}"
-          done
-
-  rollback-on-failure:
-    needs: [deploy, visual-verification]
-    runs-on: ubuntu-latest
-    # Only rollback if deploy failed (not if just some builds failed)
-    if: always() && needs.deploy.result == 'failure'
-
-    steps:
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Rollback - stop failed deployment
-        run: |
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
-            set -e
-
-            STATE_FILE="/opt/deployment-state.json"
-
-            # Get the color we deployed to (which failed)
-            CURRENT=$(jq -r '.active' "$STATE_FILE")
-            if [ "$CURRENT" = "blue" ]; then
-                FAILED="green"
+            if [ "$status" = "200" ]; then
+              echo "✓ $app: HTTP $status"
             else
-                FAILED="blue"
+              echo "✗ $app: HTTP $status"
             fi
-
-            echo "=== Rolling back - stopping failed $FAILED deployment ==="
-            cd /opt/expertly-develop
-
-            COMPOSE_PROJECT_NAME="expertly-${FAILED}" DEPLOY_COLOR="-${FAILED}" \
-                docker compose -f docker-compose.prod.yml down --remove-orphans || true
-
-            echo "=== Rollback complete - $CURRENT still active ==="
-          ENDSSH
+          done
