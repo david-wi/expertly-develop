@@ -260,8 +260,9 @@ export function Sidebar({
             <ul className="space-y-1">
               {navigation.map((item) => {
                 const fullHref = basePath + item.href
+                // Match exact path or nested paths (with trailing slash to avoid partial matches like /monitor matching /monitoring)
                 const isActive = currentPath === fullHref ||
-                  (item.href !== '/' && currentPath.startsWith(fullHref))
+                  (item.href !== '/' && currentPath.startsWith(fullHref + '/'))
 
                 return (
                   <li key={item.name}>
