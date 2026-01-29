@@ -53,8 +53,7 @@ describe('Layout', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Users')).toBeInTheDocument()
-    expect(screen.getByText('Bots')).toBeInTheDocument()
+    expect(screen.getByText('Users and Bots')).toBeInTheDocument()
     expect(screen.getByText('Teams')).toBeInTheDocument()
     expect(screen.getByText('Organizations')).toBeInTheDocument()
     expect(screen.getByText('Change Password')).toBeInTheDocument()

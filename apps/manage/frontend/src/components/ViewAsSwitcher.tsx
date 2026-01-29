@@ -52,7 +52,7 @@ export default function ViewAsSwitcher({ onViewChange }: ViewAsSwitcherProps) {
     const fetchData = async () => {
       try {
         const [usersData, teamsData] = await Promise.all([
-          api.getUsers('human'),
+          api.getUsers(),
           api.getTeams(),
         ])
         setUsers(usersData)
@@ -161,7 +161,7 @@ export default function ViewAsSwitcher({ onViewChange }: ViewAsSwitcherProps) {
         >
           <div className="flex items-center gap-2">
             <User className="w-4 h-4" />
-            <span>View as User</span>
+            <span>View as User or Bot</span>
           </div>
           <ChevronDown className={`w-4 h-4 transition-transform ${isUserDropdownOpen ? 'rotate-180' : ''}`} />
         </button>

@@ -68,11 +68,11 @@ describe('ViewAsSwitcher', () => {
     expect(document.querySelector('.animate-pulse')).toBeInTheDocument()
   })
 
-  it('renders View as User button', async () => {
+  it('renders View as User or Bot button', async () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      expect(screen.getByText('View as User')).toBeInTheDocument()
+      expect(screen.getByText('View as User or Bot')).toBeInTheDocument()
     })
   })
 
@@ -88,7 +88,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     expect(screen.getByText('Test User')).toBeInTheDocument()
@@ -110,7 +110,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     expect(screen.getByText('Test User')).toBeInTheDocument()
@@ -125,7 +125,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher onViewChange={mockOnViewChange} />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     fireEvent.click(screen.getByText('Test User'))
@@ -196,7 +196,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     expect(screen.getByText('Test User')).toBeInTheDocument()
@@ -216,7 +216,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     expect(screen.getByText('No users found')).toBeInTheDocument()
@@ -238,7 +238,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     const avatar = document.querySelector('img[src="https://example.com/avatar.png"]')
@@ -249,7 +249,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     // Test User should show 'T' initial
@@ -264,7 +264,7 @@ describe('ViewAsSwitcher', () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      fireEvent.click(screen.getByText('View as User'))
+      fireEvent.click(screen.getByText('View as User or Bot'))
     })
 
     // The selected user button should have primary colors
@@ -289,11 +289,11 @@ describe('ViewAsSwitcher', () => {
     expect(selectedButton).toBeDefined()
   })
 
-  it('calls getUsers with human filter', async () => {
+  it('calls getUsers without filter to include bots', async () => {
     render(<ViewAsSwitcher />)
 
     await waitFor(() => {
-      expect(api.getUsers).toHaveBeenCalledWith('human')
+      expect(api.getUsers).toHaveBeenCalledWith()
     })
   })
 })
