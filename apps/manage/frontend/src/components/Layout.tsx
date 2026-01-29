@@ -8,7 +8,7 @@ import {
   Users,
   Users2,
   BookOpen,
-  Sparkles,
+  Star,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -22,7 +22,7 @@ const navigation = [
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Teams', href: '/teams', icon: Users2 },
-  { name: 'Wins', href: '/wins', icon: Sparkles, spacerBefore: true },
+  { name: 'Wins', href: '/wins', icon: Star, spacerBefore: true },
 ]
 
 export default function Layout() {
