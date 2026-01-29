@@ -18,9 +18,9 @@ COPY packages/ui ./packages/ui
 COPY apps/vibetest/frontend/package*.json ./apps/vibetest/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky, then rebuild native modules
+# Use --ignore-scripts to skip husky, then install rollup's platform-specific module
 RUN npm install --workspace=apps/vibetest/frontend --ignore-scripts && \
-    npm rebuild
+    npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Copy source code
 COPY apps/vibetest/frontend ./apps/vibetest/frontend
