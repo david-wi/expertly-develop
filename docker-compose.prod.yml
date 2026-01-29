@@ -105,6 +105,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://admin:admin@admin-db:5432/expertly_admin
       - ENVIRONMENT=production
       - DEBUG=false
+    volumes:
+      - ./config:/app/config:ro
     depends_on:
       - admin-db
     networks:
