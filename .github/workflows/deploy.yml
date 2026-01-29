@@ -84,34 +84,54 @@ jobs:
                     vibetest: {active: "blue", last_deploy: ""},
                     vibecode: {active: "blue", last_deploy: ""}
                   },
-                  shared: {active: "blue", last_deploy: ""}
+                  shared: {active: "running", last_deploy: ""}
                 }' > "$STATE_FILE"
             fi
 
-            # Build shared infrastructure (mongo, ui) - always on "shared" color
-            SHARED_COLOR=$(jq -r '.shared.active' "$STATE_FILE")
-            if [ "$SHARED_COLOR" = "blue" ]; then
-                SHARED_TARGET="green"
+            # Ensure shared network exists
+            echo "=== Setting up shared infrastructure network ==="
+            docker network inspect expertly-shared >/dev/null 2>&1 || \
+                docker network create expertly-shared
+
+            # Ensure shared volumes exist
+            docker volume inspect shared_mongo_data >/dev/null 2>&1 || \
+                docker volume create shared_mongo_data
+            docker volume inspect shared_redis_data >/dev/null 2>&1 || \
+                docker volume create shared_redis_data
+            docker volume inspect shared_identity_postgres_data >/dev/null 2>&1 || \
+                docker volume create shared_identity_postgres_data
+
+            # Start shared infrastructure (mongo, redis) - single instance, no blue/green
+            echo "=== Starting shared infrastructure (mongo, redis) ==="
+            docker compose -f docker-compose.shared.yml up -d
+
+            # Wait for shared services to be healthy
+            echo "Waiting for shared services..."
+            sleep 5
+
+            # Verify shared services are running
+            if docker ps --filter "name=expertly-shared-mongo" --filter "status=running" -q | grep -q .; then
+                echo "✓ MongoDB is running"
             else
-                SHARED_TARGET="blue"
+                echo "✗ MongoDB failed to start"
+                docker logs expertly-shared-mongo 2>&1 | tail -20 || true
+                exit 1
             fi
 
-            export GIT_COMMIT=$(git rev-parse --short HEAD)
-            export BUILD_TIMESTAMP=$(date +%s)
-
-            echo "=== Building shared infrastructure (target: $SHARED_TARGET) ==="
-            COMPOSE_PROJECT_NAME="expertly-${SHARED_TARGET}" DEPLOY_COLOR="-${SHARED_TARGET}" \
-                docker compose -f docker-compose.prod.yml build mongo
-
-            echo "=== Starting shared infrastructure ==="
-            COMPOSE_PROJECT_NAME="expertly-${SHARED_TARGET}" DEPLOY_COLOR="-${SHARED_TARGET}" \
-                docker compose -f docker-compose.prod.yml up -d mongo
+            if docker ps --filter "name=expertly-shared-redis" --filter "status=running" -q | grep -q .; then
+                echo "✓ Redis is running"
+            else
+                echo "✗ Redis failed to start"
+                docker logs expertly-shared-redis 2>&1 | tail -20 || true
+                exit 1
+            fi
 
             # Update shared state
-            jq --arg color "$SHARED_TARGET" --arg time "$(date -Iseconds)" \
-                '.shared.active = $color | .shared.last_deploy = $time' "$STATE_FILE" > "${STATE_FILE}.tmp"
+            jq --arg time "$(date -Iseconds)" \
+                '.shared.active = "running" | .shared.last_deploy = $time' "$STATE_FILE" > "${STATE_FILE}.tmp"
             mv "${STATE_FILE}.tmp" "$STATE_FILE"
 
+            export GIT_COMMIT=$(git rev-parse --short HEAD)
             echo "GIT_COMMIT=$GIT_COMMIT" > /tmp/init_output
           ENDSSH
 
@@ -341,6 +361,18 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             echo "=== Cleaning up unused Docker resources ==="
+
+            # Remove old per-color mongo/redis containers (now using shared infrastructure)
+            for color in blue green; do
+                for old_container in "expertly-${color}-mongo-1" "expertly-${color}-app-redis-1" "expertly-develop-mongo-1"; do
+                    if docker ps -a --filter "name=$old_container" -q | grep -q .; then
+                        echo "Removing legacy container: $old_container"
+                        docker stop "$old_container" 2>/dev/null || true
+                        docker rm "$old_container" 2>/dev/null || true
+                    fi
+                done
+            done
+
             docker image prune -f
             docker container prune -f
 
