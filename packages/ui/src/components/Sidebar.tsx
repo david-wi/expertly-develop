@@ -9,6 +9,8 @@ export interface NavItem {
   name: string
   href: string
   icon: ComponentType<{ className?: string }>
+  /** If true, renders a spacer/divider before this item */
+  spacerBefore?: boolean
 }
 
 export interface ExpertlyProduct {
@@ -263,6 +265,7 @@ export function Sidebar({
 
                 return (
                   <li key={item.name}>
+                    {item.spacerBefore && <div className="my-2" />}
                     {renderLink({
                       href: fullHref,
                       className: `
