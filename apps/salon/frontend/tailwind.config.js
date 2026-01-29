@@ -85,6 +85,29 @@ export default {
           800: '#632A2A',
           900: '#421D1D',
         },
+        // Theme colors using CSS variables
+        'theme-bg': 'var(--theme-bg-default)',
+        'theme-bg-surface': 'var(--theme-bg-surface)',
+        'theme-bg-elevated': 'var(--theme-bg-elevated)',
+        'theme-text-primary': 'var(--theme-text-primary)',
+        'theme-text-secondary': 'var(--theme-text-secondary)',
+        'theme-text-muted': 'var(--theme-text-muted)',
+        'theme-border': 'var(--theme-border-default)',
+        'theme-border-subtle': 'var(--theme-border-subtle)',
+      },
+      backgroundColor: {
+        'theme-bg': 'var(--theme-bg-default)',
+        'theme-bg-surface': 'var(--theme-bg-surface)',
+        'theme-bg-elevated': 'var(--theme-bg-elevated)',
+      },
+      textColor: {
+        'theme-text-primary': 'var(--theme-text-primary)',
+        'theme-text-secondary': 'var(--theme-text-secondary)',
+        'theme-text-muted': 'var(--theme-text-muted)',
+      },
+      borderColor: {
+        'theme-border': 'var(--theme-border-default)',
+        'theme-border-subtle': 'var(--theme-border-subtle)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
