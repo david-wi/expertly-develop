@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { teamsApi, usersApi, Team, TeamDetail, TeamMember, User, getOrganizationId } from '../services/api'
 
 export default function TeamsPage() {
@@ -26,19 +27,6 @@ export default function TeamsPage() {
     }
   }, [orgId])
 
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showCreateModal) setShowCreateModal(false)
-        if (showEditModal) setShowEditModal(false)
-        if (showDeleteConfirm) setShowDeleteConfirm(false)
-        if (showAddMemberModal) setShowAddMemberModal(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal, showEditModal, showDeleteConfirm, showAddMemberModal])
 
   const loadData = async () => {
     setLoading(true)
@@ -329,169 +317,177 @@ export default function TeamsPage() {
 
       {/* Create Team Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create Team</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Engineering"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                  placeholder="What does this team do?"
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Team Modal */}
-      {showEditModal && selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Team</h3>
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                />
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Team?</h3>
-            <p className="text-gray-500 mb-4">
-              Are you sure you want to delete "{selectedTeam.name}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
+        <Modal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          title="Create Team"
+        >
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder="e.g., Engineering"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                rows={3}
+                placeholder="What does this team do?"
+              />
+            </div>
+            <ModalFooter>
               <button
-                onClick={() => setShowDeleteConfirm(false)}
+                type="button"
+                onClick={() => setShowCreateModal(false)}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={handleDelete}
+                type="submit"
                 disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
               >
-                {saving ? 'Deleting...' : 'Delete'}
+                {saving ? 'Creating...' : 'Create'}
               </button>
+            </ModalFooter>
+          </form>
+        </Modal>
+      )}
+
+      {/* Edit Team Modal */}
+      {showEditModal && selectedTeam && (
+        <Modal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          title="Edit Team"
+        >
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                required
+              />
             </div>
-          </div>
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                rows={3}
+              />
+            </div>
+            <ModalFooter>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Confirmation */}
+      {showDeleteConfirm && selectedTeam && (
+        <Modal
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          title="Delete Team?"
+          size="sm"
+        >
+          <p className="text-gray-500 mb-4">
+            Are you sure you want to delete "{selectedTeam.name}"? This action cannot be undone.
+          </p>
+          <ModalFooter>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={saving}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Deleting...' : 'Delete'}
+            </button>
+          </ModalFooter>
+        </Modal>
       )}
 
       {/* Add Member Modal */}
       {showAddMemberModal && selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Add Team Member</h3>
-            <form onSubmit={handleAddMember} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
-                <select
-                  value={selectedUserId}
-                  onChange={(e) => setSelectedUserId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                >
-                  <option value="">Choose a user...</option>
-                  {availableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.name} ({user.user_type === 'bot' ? 'Bot' : 'Human'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddMemberModal(false)
-                    setSelectedUserId('')
-                  }}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving || !selectedUserId}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Adding...' : 'Add'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <Modal
+          isOpen={showAddMemberModal}
+          onClose={() => {
+            setShowAddMemberModal(false)
+            setSelectedUserId('')
+          }}
+          title="Add Team Member"
+        >
+          <form onSubmit={handleAddMember} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Select User</label>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                required
+              >
+                <option value="">Choose a user...</option>
+                {availableUsers.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} ({user.user_type === 'bot' ? 'Bot' : 'Human'})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <ModalFooter>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddMemberModal(false)
+                  setSelectedUserId('')
+                }}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !selectedUserId}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Adding...' : 'Add'}
+              </button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
     </div>
   )
