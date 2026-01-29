@@ -16,12 +16,12 @@ import { api } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Tasks', href: '/tasks', icon: ListTodo },
-  { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
+  { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
-  { name: 'Users', href: '/users', icon: Users },
+  { name: 'Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Teams', href: '/teams', icon: Users2 },
+  { name: 'Users', href: '/users', icon: Users },
   { name: 'Wins', href: '/wins', icon: Star, spacerBefore: true },
 ]
 
