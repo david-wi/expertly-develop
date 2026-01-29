@@ -446,6 +446,8 @@ export interface Playbook {
   version: number
   history: PlaybookHistoryEntry[]
   is_active: boolean
+  instance_count: number
+  last_instance_created_at?: string | null
   created_at: string
   updated_at: string
   created_by?: string
