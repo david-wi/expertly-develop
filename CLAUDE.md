@@ -80,6 +80,16 @@ curl -s -o /dev/null -w "demos: %{http_code}\n" https://demos.ai.devintensive.co
 | Vibetest | `apps/vibetest` | https://vibetest.ai.devintensive.com | Vibe testing platform |
 | Vibecode | `apps/vibecode` | https://vibecode.ai.devintensive.com | Vibe coding platform |
 
+## Adding New Apps - CHECKLIST
+
+**When adding a new app to the monorepo, update these files:**
+
+1. **`docker-compose.prod.yml`** - Add frontend, backend, and database services with Traefik labels
+2. **`config/monitored-services.json`** - Add frontend and API entries for admin monitoring page
+3. **`.github/workflows/typecheck.yml`** - Add typecheck job for the new frontend (if applicable)
+4. **This file (`CLAUDE.md`)** - Add to "Apps in This Monorepo" table and health check curl commands
+5. **`/Users/david/CLAUDE.md`** - Add to "Deployed Apps" list
+
 ## Other Deployed Services (Not in Monorepo)
 
 | Service | URL | Notes |
