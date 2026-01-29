@@ -1,0 +1,46 @@
+# Shared infrastructure services
+# These run independently of blue-green deployments
+# Start with: docker compose -f docker-compose.shared.yml up -d
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: expertly-shared-mongo
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - expertly-shared
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: expertly-shared-redis
+    command: redis-server --appendonly yes --protected-mode no
+    volumes:
+      - redis_data:/data
+    networks:
+      - expertly-shared
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  expertly-shared:
+    name: expertly-shared
+    driver: bridge
+
+volumes:
+  mongo_data:
+    external: true
+    name: shared_mongo_data
+  redis_data:
+    external: true
+    name: shared_redis_data
