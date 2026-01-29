@@ -4,32 +4,39 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Accept build args
-ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 ARG VITE_IDENTITY_URL=https://identity.ai.devintensive.com
 ARG VITE_BUILD_TIMESTAMP
 ARG VITE_GIT_COMMIT
 
-# Copy frontend package files and install deps
-COPY apps/define/frontend/package.json apps/define/frontend/package-lock.json* ./
-RUN npm install
+# Copy monorepo package files for workspace resolution
+COPY package.json package-lock.json ./
 
-# Copy frontend source code
-COPY apps/define/frontend ./
+# Copy the UI package (workspace dependency)
+COPY packages/ui ./packages/ui
 
-# Copy shared UI package source for Tailwind to scan
-COPY packages/ui/src ./packages-ui-src
+# Copy define frontend package files
+COPY apps/define/frontend/package*.json ./apps/define/frontend/
+
+# Install dependencies from monorepo root (resolves workspace packages)
+# Use --ignore-scripts to skip husky, then rebuild native modules
+RUN npm install --workspace=apps/define/frontend --ignore-scripts && \
+    npm install @rollup/rollup-linux-x64-musl --save-optional
+
+# Copy source code
+COPY apps/define/frontend ./apps/define/frontend
 
 # Set environment variables for Vite build
-ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
 ENV VITE_GIT_COMMIT=$VITE_GIT_COMMIT
+
+# Build the application with timestamp
+WORKDIR /app/apps/define/frontend
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
       export VITE_BUILD_TIMESTAMP=$(date +%s); \
     else \
       export VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP; \
     fi && \
     echo "Build timestamp: $VITE_BUILD_TIMESTAMP" && \
-    echo "UI Remote URL: $VITE_UI_REMOTE_URL" && \
     echo "Identity URL: $VITE_IDENTITY_URL" && \
     echo "Git commit: $VITE_GIT_COMMIT" && \
     VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP npm run build
@@ -41,7 +48,7 @@ FROM nginx:alpine
 COPY apps/define/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built files
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/define/frontend/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80
