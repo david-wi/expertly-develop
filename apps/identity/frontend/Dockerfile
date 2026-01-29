@@ -20,7 +20,7 @@ COPY apps/identity/frontend/package*.json ./apps/identity/frontend/
 # Install dependencies from monorepo root (resolves workspace packages)
 # Use --ignore-scripts to skip husky, then rebuild native modules
 RUN npm install --workspace=apps/identity/frontend --ignore-scripts && \
-    npm rebuild
+    npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Copy source code
 COPY apps/identity/frontend ./apps/identity/frontend

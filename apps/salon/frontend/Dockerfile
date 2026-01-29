@@ -22,7 +22,7 @@ COPY apps/salon/frontend/package*.json ./apps/salon/frontend/
 # Install dependencies from monorepo root (resolves workspace packages)
 # Use --ignore-scripts to skip husky, then rebuild native modules
 RUN npm install --workspace=apps/salon/frontend --ignore-scripts && \
-    npm rebuild
+    npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Copy source code
 COPY apps/salon/frontend ./apps/salon/frontend

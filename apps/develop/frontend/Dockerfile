@@ -21,7 +21,7 @@ COPY apps/develop/frontend/package*.json ./apps/develop/frontend/
 # Install dependencies from monorepo root (resolves workspace packages)
 # Use --ignore-scripts to skip husky, then rebuild native modules
 RUN npm install --workspace=apps/develop/frontend --ignore-scripts && \
-    npm rebuild
+    npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Copy source code
 COPY apps/develop/frontend ./apps/develop/frontend
