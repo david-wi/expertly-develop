@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Download, ExternalLink, MessageCircle, Building2, ChevronDown } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDashboardStore } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
-import { Sidebar as SharedSidebar } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, createDefaultUserMenu } from 'expertly_ui/index';
 
 // Try to launch the desktop agent via custom URL scheme
 const tryLaunchAgent = () => {
@@ -413,6 +413,18 @@ export function Sidebar({ ws }: SidebarProps) {
     window.location.reload();
   };
 
+  const handleLogout = useCallback(() => {
+    // Redirect to identity login
+    window.location.href = 'https://identity.ai.devintensive.com/login';
+  }, []);
+
+  // Create user menu config
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: handleLogout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+  }), [handleLogout]);
+
   return (
     <SharedSidebar
       productCode="vibecode"
@@ -427,8 +439,9 @@ export function Sidebar({ ws }: SidebarProps) {
         />
       }
       bottomSection={<AgentStatus />}
-      renderLink={({ href, className, children }) => (
-        <a href={href} className={className}>
+      userMenu={userMenu}
+      renderLink={({ href, className, children, onClick }) => (
+        <a href={href} className={className} onClick={onClick}>
           {children}
         </a>
       )}

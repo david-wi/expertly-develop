@@ -73,6 +73,8 @@ declare module 'expertly_ui/index' {
       currentCommit?: string
       safeMinutes?: number
     }
+    /** User menu configuration for dropdown menu in user section */
+    userMenu?: UserMenuConfig
     /** Custom content rendered below navigation (e.g., widgets, agent status for Vibecode) */
     children?: ReactNode
   }
@@ -142,6 +144,40 @@ declare module 'expertly_ui/index' {
   export const themeList: Theme[]
 
   // ==========================================================================
+  // User Menu Types
+  // ==========================================================================
+
+  export interface UserMenuItem {
+    id: string
+    label: string
+    icon?: ComponentType<{ className?: string }>
+    type: 'link' | 'callback' | 'divider'
+    href?: string
+    external?: boolean  // Opens in new tab, bypasses renderLink
+    onClick?: () => void
+  }
+
+  export interface UserMenuSection {
+    title?: string
+    items: UserMenuItem[]
+  }
+
+  export interface UserMenuConfig {
+    sections: UserMenuSection[]
+    versionInfo?: {
+      buildTime?: string
+      commit?: string
+    }
+  }
+
+  export interface CreateDefaultUserMenuOptions {
+    onLogout: () => void
+    buildTimestamp?: string
+    gitCommit?: string
+    includeProfile?: boolean  // false for Identity app itself
+  }
+
+  // ==========================================================================
   // Modal Types
   // ==========================================================================
 
@@ -173,6 +209,7 @@ declare module 'expertly_ui/index' {
   export const ThemeContext: Context<ThemeContextValue | null>
   export function Modal(props: ModalProps): JSX.Element | null
   export function ModalFooter(props: ModalFooterProps): JSX.Element
+  export function UserMenu(props: { config: UserMenuConfig; isOpen: boolean; onClose: () => void; renderLink: SidebarProps['renderLink'] }): JSX.Element | null
 
   // ==========================================================================
   // Exported Functions
@@ -191,4 +228,7 @@ declare module 'expertly_ui/index' {
     error: Error | null
     refetch: () => Promise<void>
   }
+
+  // User menu helper function
+  export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): UserMenuConfig
 }

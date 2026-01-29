@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Calendar,
@@ -7,12 +7,11 @@ import {
   UserCircle,
   Settings,
   BarChart3,
-  LogOut,
   Clock,
   Gift,
   Globe,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, type CurrentUser } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from 'expertly_ui/index';
 import { useAuthStore } from '../../stores/authStore';
 import { auth, salon } from '../../services/api';
 
@@ -49,6 +48,13 @@ export function Sidebar() {
   }, []);
   const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
+  // Create user menu config
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: logout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+  }), [logout]);
+
   return (
     <SharedSidebar
       productCode="salon"
@@ -63,19 +69,9 @@ export function Sidebar() {
           </span>
         )
       }
-      bottomSection={
-        <div className="p-4">
-          <button
-            onClick={logout}
-            className="flex items-center gap-3 px-4 py-2.5 w-full rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </button>
-        </div>
-      }
-      renderLink={({ href, className, children }) => (
-        <Link to={href} className={className}>
+      userMenu={userMenu}
+      renderLink={({ href, className, children, onClick }) => (
+        <Link to={href} className={className} onClick={onClick}>
           {children}
         </Link>
       )}
