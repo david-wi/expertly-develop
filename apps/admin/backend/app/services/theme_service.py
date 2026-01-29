@@ -95,7 +95,9 @@ class ThemeService:
 
         await self.db.flush()
 
-        # Re-fetch with versions loaded to avoid lazy loading issues
+        # Expire and re-fetch with versions loaded to avoid lazy loading issues
+        # (expiring is necessary because the session's identity map caches the object)
+        self.db.expire(theme)
         theme = await self.get_theme(theme.id)
         return theme
 
@@ -148,7 +150,8 @@ class ThemeService:
 
         await self.db.flush()
 
-        # Re-fetch with versions loaded to avoid lazy loading issues
+        # Expire and re-fetch with versions loaded to avoid lazy loading issues
+        self.db.expire(theme)
         theme = await self.get_theme(theme.id)
         return theme
 
@@ -236,7 +239,8 @@ class ThemeService:
 
         await self.db.flush()
 
-        # Re-fetch with versions loaded to avoid lazy loading issues
+        # Expire and re-fetch with versions loaded to avoid lazy loading issues
+        self.db.expire(theme)
         theme = await self.get_theme(theme.id)
         return theme
 
