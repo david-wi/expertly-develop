@@ -17,8 +17,10 @@ class Artifact(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    original_filename: Mapped[str] = mapped_column(String, nullable=False)
-    mime_type: Mapped[str] = mapped_column(String, nullable=False)
+    artifact_type: Mapped[str] = mapped_column(String, nullable=False, default="file")  # "file" or "link"
+    url: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # For link artifacts
+    original_filename: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Nullable for links
+    mime_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)  # Nullable for links
     current_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     status: Mapped[str] = mapped_column(String, nullable=False, default="active")
     created_at: Mapped[str] = mapped_column(String, nullable=False)

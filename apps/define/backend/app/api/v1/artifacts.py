@@ -23,6 +23,7 @@ from app.models.artifact import Artifact
 from app.models.artifact_version import ArtifactVersion
 from app.schemas.artifact import (
     ArtifactCreate,
+    ArtifactLinkCreate,
     ArtifactUpdate,
     ArtifactResponse,
     ArtifactWithVersions,
@@ -181,6 +182,46 @@ async def upload_artifact(
     return artifact
 
 
+@router.post("/link", response_model=ArtifactResponse, status_code=201)
+def create_link_artifact(
+    product_id: str = Query(...),
+    data: ArtifactLinkCreate = ...,
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Create a new link artifact for a product."""
+    # Verify product exists
+    product = db.query(Product).filter(Product.id == product_id).first()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    now = datetime.utcnow().isoformat()
+    artifact_id = str(uuid4())
+
+    # Create artifact record (no file, no versions needed)
+    artifact = Artifact(
+        id=artifact_id,
+        product_id=product_id,
+        name=data.name,
+        description=data.description,
+        artifact_type="link",
+        url=data.url,
+        original_filename=None,
+        mime_type=None,
+        current_version=0,  # Links don't have versions
+        status="active",
+        created_at=now,
+        updated_at=now,
+        created_by=current_user.name,
+    )
+
+    db.add(artifact)
+    db.commit()
+    db.refresh(artifact)
+
+    return artifact
+
+
 @router.get("", response_model=List[ArtifactResponse])
 def list_artifacts(
     product_id: str = Query(...),
@@ -252,6 +293,8 @@ def update_artifact(
         if data.status not in ("active", "archived"):
             raise HTTPException(status_code=400, detail="Invalid status")
         artifact.status = data.status
+    if data.url is not None and artifact.artifact_type == "link":
+        artifact.url = data.url
 
     artifact.updated_at = datetime.utcnow().isoformat()
     db.commit()

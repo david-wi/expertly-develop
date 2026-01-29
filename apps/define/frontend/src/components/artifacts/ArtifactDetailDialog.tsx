@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Loader2, Upload, Trash2, Save, File } from 'lucide-react'
+import { Loader2, Upload, Trash2, Save, File, Link2, ExternalLink } from 'lucide-react'
 import { ArtifactWithVersions, artifactsApi } from '@/api/client'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { MarkdownViewer } from './MarkdownViewer'
@@ -43,7 +43,7 @@ export function ArtifactDetailDialog({
   const [selectedVersionId, setSelectedVersionId] = useState<string | null>(null)
   const [markdownContent, setMarkdownContent] = useState<string | null>(null)
   const [markdownLoading, setMarkdownLoading] = useState(false)
-  const [editForm, setEditForm] = useState({ name: '', description: '', status: '' })
+  const [editForm, setEditForm] = useState({ name: '', description: '', status: '', url: '' })
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [changeSummary, setChangeSummary] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -70,6 +70,7 @@ export function ArtifactDetailDialog({
         name: data.name,
         description: data.description || '',
         status: data.status,
+        url: data.url || '',
       })
       // Select latest version by default
       if (data.versions.length > 0) {
@@ -115,6 +116,7 @@ export function ArtifactDetailDialog({
         name: editForm.name,
         description: editForm.description || undefined,
         status: editForm.status,
+        url: artifact.artifact_type === 'link' ? editForm.url : undefined,
       })
       await fetchArtifact()
       onUpdate()
@@ -194,6 +196,17 @@ export function ArtifactDetailDialog({
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   />
                 </div>
+                {artifact.artifact_type === 'link' && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">URL</label>
+                    <Input
+                      type="url"
+                      value={editForm.url}
+                      onChange={(e) => setEditForm({ ...editForm, url: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
                   <Textarea
@@ -237,74 +250,107 @@ export function ArtifactDetailDialog({
                 </div>
               </div>
 
-              {/* Upload new version */}
-              <div className="border-t pt-4">
-                <h4 className="text-sm font-medium text-gray-700 mb-3">Upload New Version</h4>
-                <div className="space-y-2">
-                  <div
-                    className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-purple-300 transition-colors"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {uploadFile ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <File className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm text-gray-700 truncate">{uploadFile.name}</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" />
-                        <p className="text-xs text-gray-500">Click to select file</p>
-                      </>
-                    )}
+              {/* Upload new version - only for file artifacts */}
+              {artifact.artifact_type !== 'link' && (
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Upload New Version</h4>
+                  <div className="space-y-2">
+                    <div
+                      className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-purple-300 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      {uploadFile ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <File className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-gray-700 truncate">{uploadFile.name}</span>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+                          <p className="text-xs text-gray-500">Click to select file</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
+                    />
+                    <Input
+                      placeholder="Change summary (optional)"
+                      value={changeSummary}
+                      onChange={(e) => setChangeSummary(e.target.value)}
+                    />
+                    <Button
+                      onClick={handleUploadVersion}
+                      disabled={uploading || !uploadFile}
+                      size="sm"
+                      className="w-full"
+                    >
+                      {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Upload Version
+                    </Button>
                   </div>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                  />
-                  <Input
-                    placeholder="Change summary (optional)"
-                    value={changeSummary}
-                    onChange={(e) => setChangeSummary(e.target.value)}
-                  />
-                  <Button
-                    onClick={handleUploadVersion}
-                    disabled={uploading || !uploadFile}
-                    size="sm"
-                    className="w-full"
-                  >
-                    {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Upload Version
-                  </Button>
                 </div>
-              </div>
+              )}
 
-              {/* Version history */}
-              <div className="border-t pt-4">
-                <ArtifactVersionHistory
-                  artifactId={artifact.id}
-                  versions={artifact.versions}
-                  selectedVersionId={selectedVersionId}
-                  onSelectVersion={setSelectedVersionId}
-                  onReconvert={handleReconvert}
-                />
-              </div>
+              {/* Version history - only for file artifacts */}
+              {artifact.artifact_type !== 'link' && (
+                <div className="border-t pt-4">
+                  <ArtifactVersionHistory
+                    artifactId={artifact.id}
+                    versions={artifact.versions}
+                    selectedVersionId={selectedVersionId}
+                    onSelectVersion={setSelectedVersionId}
+                    onReconvert={handleReconvert}
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Right panel - Markdown preview */}
+            {/* Right panel - Markdown preview or Link preview */}
             <div className="col-span-2 overflow-y-auto border rounded-lg p-4 bg-white">
-              <h4 className="text-sm font-medium text-gray-700 mb-3">Markdown Preview</h4>
-              {markdownLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+              {artifact.artifact_type === 'link' ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <div className="p-4 bg-blue-50 rounded-full mb-4">
+                    <Link2 className="h-12 w-12 text-blue-600" />
+                  </div>
+                  <h4 className="text-lg font-medium text-gray-900 mb-2">{artifact.name}</h4>
+                  {artifact.description && (
+                    <p className="text-gray-600 text-center mb-4 max-w-md">{artifact.description}</p>
+                  )}
+                  <a
+                    href={artifact.url || '#'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 text-sm break-all max-w-md text-center mb-4"
+                  >
+                    {artifact.url}
+                  </a>
+                  <Button
+                    onClick={() => window.open(artifact.url || '#', '_blank', 'noopener,noreferrer')}
+                    className="mt-2"
+                  >
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Open Link
+                  </Button>
                 </div>
-              ) : markdownContent ? (
-                <MarkdownViewer content={markdownContent} />
               ) : (
-                <p className="text-gray-500 text-sm text-center py-12">
-                  Select a version to view its markdown content
-                </p>
+                <>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">Markdown Preview</h4>
+                  {markdownLoading ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                    </div>
+                  ) : markdownContent ? (
+                    <MarkdownViewer content={markdownContent} />
+                  ) : (
+                    <p className="text-gray-500 text-sm text-center py-12">
+                      Select a version to view its markdown content
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

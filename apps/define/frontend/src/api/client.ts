@@ -126,8 +126,10 @@ export interface Artifact {
   product_id: string
   name: string
   description: string | null
-  original_filename: string
-  mime_type: string
+  artifact_type: 'file' | 'link'
+  url: string | null
+  original_filename: string | null
+  mime_type: string | null
   current_version: number
   status: string
   created_at: string
@@ -302,7 +304,10 @@ export const artifactsApi = {
     }).then((r) => r.data)
   },
 
-  update: (id: string, data: { name?: string; description?: string; status?: string }) =>
+  createLink: (productId: string, name: string, url: string, description?: string) =>
+    api.post<Artifact>('/artifacts/link', { name, url, description }, { params: { product_id: productId } }).then((r) => r.data),
+
+  update: (id: string, data: { name?: string; description?: string; status?: string; url?: string }) =>
     api.patch<Artifact>(`/artifacts/${id}`, data).then((r) => r.data),
 
   delete: (id: string) => api.delete(`/artifacts/${id}`),
