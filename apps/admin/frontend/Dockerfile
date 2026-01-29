@@ -17,8 +17,9 @@ COPY packages/ui ./packages/ui
 COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Set HUSKY=0 to skip husky prepare script in Docker
-RUN HUSKY=0 npm install --workspace=apps/admin/frontend
+# Use --ignore-scripts to skip husky, then rebuild native modules
+RUN npm install --workspace=apps/admin/frontend --ignore-scripts && \
+    npm rebuild
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend

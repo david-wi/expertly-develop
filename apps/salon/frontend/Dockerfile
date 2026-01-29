@@ -20,8 +20,9 @@ COPY packages/ui ./packages/ui
 COPY apps/salon/frontend/package*.json ./apps/salon/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Set HUSKY=0 to skip husky prepare script in Docker
-RUN HUSKY=0 npm install --workspace=apps/salon/frontend
+# Use --ignore-scripts to skip husky, then rebuild native modules
+RUN npm install --workspace=apps/salon/frontend --ignore-scripts && \
+    npm rebuild
 
 # Copy source code
 COPY apps/salon/frontend ./apps/salon/frontend
