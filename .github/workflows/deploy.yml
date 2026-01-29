@@ -449,7 +449,17 @@ jobs:
             # Also stop legacy containers if this is migration from old naming
             if docker ps --filter "name=expertly-develop-" -q | grep -q .; then
                 echo "=== Stopping legacy expertly-develop containers (migration) ==="
-                docker compose -f docker-compose.prod.yml down --remove-orphans || true
+                COMPOSE_PROJECT_NAME="expertly-develop" \
+                    docker compose -f docker-compose.prod.yml down --remove-orphans || true
+            fi
+
+            echo "=== Verifying new deployment is still running ==="
+            RUNNING=$(docker ps --filter "name=expertly-${TARGET}-" -q | wc -l)
+            if [ "$RUNNING" -lt 5 ]; then
+                echo "WARNING: Only $RUNNING containers running for $TARGET, restarting..."
+                COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
+                    docker compose -f docker-compose.prod.yml up -d
+                sleep 10
             fi
 
             echo "=== Cleaning up old images ==="
