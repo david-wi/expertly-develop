@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '@expertly/ui';
 import { ChevronDown, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
