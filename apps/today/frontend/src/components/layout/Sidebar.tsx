@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -12,7 +12,7 @@ import {
   Archive,
   Settings,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index';
 import { api } from '../../services/api';
 
 const navigation = [
@@ -38,6 +38,18 @@ export function Sidebar() {
   }, []);
   const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
+  const handleLogout = useCallback(() => {
+    // Redirect to identity login
+    window.location.href = 'https://identity.ai.devintensive.com/login';
+  }, []);
+
+  // Create user menu config
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: handleLogout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+  }), [handleLogout]);
+
   return (
     <SharedSidebar
       productCode="today"
@@ -52,8 +64,9 @@ export function Sidebar() {
           </span>
         )
       }
-      renderLink={({ href, className, children }) => (
-        <Link to={href} className={className}>
+      userMenu={userMenu}
+      renderLink={({ href, className, children, onClick }) => (
+        <Link to={href} className={className} onClick={onClick}>
           {children}
         </Link>
       )}

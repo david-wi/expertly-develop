@@ -1,7 +1,7 @@
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
 import { usersApi } from '@/services/api'
 
 const navigation = [
@@ -19,6 +19,18 @@ export function Layout() {
   const fetchCurrentUser = useCallback(() => usersApi.me(), [])
   const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
+  const handleLogout = useCallback(() => {
+    // Redirect to identity login
+    window.location.href = 'https://identity.ai.devintensive.com/login'
+  }, [])
+
+  // Create user menu config
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: handleLogout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+  }), [handleLogout])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar
@@ -33,8 +45,9 @@ export function Layout() {
             </span>
           )
         }
-        renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
+        userMenu={userMenu}
+        renderLink={({ href, className, children, onClick }) => (
+          <Link to={href} className={className} onClick={onClick}>
             {children}
           </Link>
         )}

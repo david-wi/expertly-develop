@@ -61,3 +61,12 @@ export { Checkbox } from './primitives'
 
 // Utilities
 export { cn } from './utils/cn'
+
+// User menu for sidebar
+export {
+  UserMenu,
+  createDefaultUserMenu,
+  type UserMenuItem,
+  type UserMenuSection,
+  type UserMenuConfig,
+} from './components/UserMenu'

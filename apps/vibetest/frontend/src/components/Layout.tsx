@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useCallback } from 'react'
+import React, { ReactNode, useState, useCallback, useMemo } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -7,11 +7,10 @@ import {
   Zap,
   Menu,
   X,
-  LogOut,
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, type CurrentUser } from 'expertly_ui/index'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from 'expertly_ui/index'
 import { authApi, TENANT_STORAGE_KEY } from '../api/client'
 import OrganizationSwitcher from './OrganizationSwitcher'
 
@@ -53,15 +52,22 @@ export default function Layout({ children }: LayoutProps) {
     i18n.changeLanguage(lang)
   }
 
-  const handleLogout = () => {
+  const handleLogout = useCallback(() => {
     logout()
     navigate('/login')
-  }
+  }, [logout, navigate])
 
   const handleOrgSwitch = () => {
     setCurrentTenantId(localStorage.getItem(TENANT_STORAGE_KEY))
     window.location.reload()
   }
+
+  // Create user menu config
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: handleLogout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+  }), [handleLogout])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,21 +105,14 @@ export default function Layout({ children }: LayoutProps) {
               </span>
             )
           }
-          bottomSection={
-            <div className="p-4 space-y-2">
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-              >
-                <LogOut className="w-4 h-4" />
-                {t('auth.logout', 'Sign out')}
-              </button>
-            </div>
-          }
+          userMenu={userMenu}
           renderLink={(props) => (
             <Link
               to={props.href}
-              onClick={() => setSidebarOpen(false)}
+              onClick={(e) => {
+                props.onClick?.()
+                setSidebarOpen(false)
+              }}
               className={props.className}
             >
               {props.children as React.ReactNode}

@@ -1,11 +1,11 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useMemo } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   FolderTree,
   Package,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
 import { usersApi, TENANT_STORAGE_KEY } from '../../api/client'
 import OrganizationSwitcher from './OrganizationSwitcher'
 
@@ -31,6 +31,18 @@ export default function Layout() {
     window.location.reload()
   }
 
+  const handleLogout = useCallback(() => {
+    // Redirect to identity login
+    window.location.href = 'https://identity.ai.devintensive.com/login'
+  }, [])
+
+  // Create user menu config
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: handleLogout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+  }), [handleLogout])
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Sidebar
@@ -54,8 +66,9 @@ export default function Layout() {
         versionCheck={{
           currentCommit: import.meta.env.VITE_GIT_COMMIT,
         }}
-        renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
+        userMenu={userMenu}
+        renderLink={({ href, className, children, onClick }) => (
+          <Link to={href} className={className} onClick={onClick}>
             {children}
           </Link>
         )}

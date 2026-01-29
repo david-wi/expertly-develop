@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   User,
@@ -6,7 +6,7 @@ import {
   Building2,
   KeyRound,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from 'expertly_ui/index'
 import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [
@@ -66,6 +66,11 @@ export default function Layout() {
     window.location.reload()
   }
 
+  const handleLogout = useCallback(() => {
+    authApi.logout()
+    window.location.href = '/login'
+  }, [])
+
   const selectedOrg = organizations.find(o => o.id === selectedOrgId)
 
   // Merge organization name from selected org if not in user data
@@ -75,6 +80,14 @@ export default function Layout() {
         organization: sidebarUser.organization || selectedOrg?.name,
       }
     : undefined
+
+  // Create user menu config - no Profile link since this IS the identity app
+  const userMenu = useMemo(() => createDefaultUserMenu({
+    onLogout: handleLogout,
+    buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
+    gitCommit: import.meta.env.VITE_GIT_COMMIT,
+    includeProfile: false,
+  }), [handleLogout])
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,8 +120,9 @@ export default function Layout() {
         versionCheck={{
           currentCommit: import.meta.env.VITE_GIT_COMMIT,
         }}
-        renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
+        userMenu={userMenu}
+        renderLink={({ href, className, children, onClick }) => (
+          <Link to={href} className={className} onClick={onClick}>
             {children}
           </Link>
         )}

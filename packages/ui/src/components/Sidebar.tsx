@@ -1,9 +1,10 @@
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode, ComponentType } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { useTheme } from '../theme/useTheme'
 import { VersionChecker } from './VersionChecker'
+import { UserMenu, type UserMenuConfig } from './UserMenu'
 
 export interface NavItem {
   name: string
@@ -96,6 +97,8 @@ export interface SidebarProps {
   }
   /** Custom content rendered below navigation (e.g., widgets, agent status for Vibecode) */
   children?: ReactNode
+  /** User menu configuration - when provided, makes user section clickable */
+  userMenu?: UserMenuConfig
 }
 
 export function Sidebar({
@@ -114,9 +117,11 @@ export function Sidebar({
   renderLink,
   versionCheck,
   children,
+  userMenu,
 }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
 
   // Get current theme mode for styling
   let isDark = false
@@ -318,19 +323,46 @@ export function Sidebar({
 
       {/* User */}
       {user && (
-        <div className={`p-4 border-t ${borderColor} ${userBg} flex-shrink-0`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
-              <span className={`${avatarText} font-medium text-sm`}>
-                {user.name?.charAt(0) || 'U'}
-              </span>
+        <div className={`p-4 border-t ${borderColor} ${userBg} flex-shrink-0 relative`}>
+          {userMenu ? (
+            <>
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className={`w-full flex items-center gap-3 ${hoverBg} rounded-lg p-1 -m-1 transition-colors`}
+              >
+                <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                  <span className={`${avatarText} font-medium text-sm`}>
+                    {user.name?.charAt(0) || 'U'}
+                  </span>
+                </div>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
+                  {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
+                  {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
+                </div>
+                <ChevronUp className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
+              </button>
+              <UserMenu
+                config={userMenu}
+                isOpen={showUserMenu}
+                onClose={() => setShowUserMenu(false)}
+                renderLink={renderLink}
+              />
+            </>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
+                <span className={`${avatarText} font-medium text-sm`}>
+                  {user.name?.charAt(0) || 'U'}
+                </span>
+              </div>
+              <div className="min-w-0">
+                <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
+                {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
+                {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
-              {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
-              {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>
