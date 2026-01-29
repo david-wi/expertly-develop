@@ -1,17 +1,18 @@
 /** @type {import('tailwindcss').Config} */
+import uiPreset from '@expertly/ui/tailwind.preset'
+
 export default {
+  presets: [uiPreset],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    // Local dev: shared UI package
     "../../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
-    // Docker build: UI package copied to packages-ui-src
     "./packages-ui-src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
       colors: {
-        // Primary palette using CSS variables for theme support
+        // Primary palette using CSS variables for dynamic theme support
         primary: {
           50: 'var(--theme-primary-50)',
           100: 'var(--theme-primary-100)',
@@ -25,30 +26,9 @@ export default {
           900: 'var(--theme-primary-900)',
           950: 'var(--theme-primary-950)',
         },
-        // Theme colors using CSS variables
-        'theme-bg': 'var(--theme-bg-default)',
-        'theme-bg-surface': 'var(--theme-bg-surface)',
-        'theme-bg-elevated': 'var(--theme-bg-elevated)',
-        'theme-text-primary': 'var(--theme-text-primary)',
-        'theme-text-secondary': 'var(--theme-text-secondary)',
-        'theme-text-muted': 'var(--theme-text-muted)',
-        'theme-border': 'var(--theme-border-default)',
-        'theme-border-subtle': 'var(--theme-border-subtle)',
-      },
-      backgroundColor: {
-        'theme-bg': 'var(--theme-bg-default)',
-        'theme-bg-surface': 'var(--theme-bg-surface)',
-        'theme-bg-elevated': 'var(--theme-bg-elevated)',
       },
       textColor: {
         'theme-text': 'var(--theme-text-primary)',
-        'theme-text-primary': 'var(--theme-text-primary)',
-        'theme-text-secondary': 'var(--theme-text-secondary)',
-        'theme-text-muted': 'var(--theme-text-muted)',
-      },
-      borderColor: {
-        'theme-border': 'var(--theme-border-default)',
-        'theme-border-subtle': 'var(--theme-border-subtle)',
       },
     },
   },
