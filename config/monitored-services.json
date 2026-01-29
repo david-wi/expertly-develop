@@ -1,0 +1,24 @@
+{
+  "_comment": "Source of truth for services that should be monitored. Update when adding new apps.",
+  "services": [
+    {"name": "Admin", "url": "https://admin.ai.devintensive.com", "healthEndpoint": "/api/health"},
+    {"name": "Admin API", "url": "https://admin-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Define", "url": "https://define.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Define API", "url": "https://define-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Develop", "url": "https://develop.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Develop API", "url": "https://develop-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Identity", "url": "https://identity.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Identity API", "url": "https://identity-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Manage", "url": "https://manage.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Manage API", "url": "https://manage-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Salon", "url": "https://salon.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Salon API", "url": "https://salon-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Today", "url": "https://today.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Today API", "url": "https://today-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Vibecode", "url": "https://vibecode.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Vibetest", "url": "https://vibetest.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Vibetest API", "url": "https://vibetest.ai.devintensive.com", "healthEndpoint": "/api/health"},
+    {"name": "Chem", "url": "https://chem.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Chem API", "url": "https://chem-api.ai.devintensive.com", "healthEndpoint": "/health"}
+  ]
+}

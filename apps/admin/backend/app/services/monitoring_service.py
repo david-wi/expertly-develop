@@ -1,8 +1,10 @@
 """Service for monitoring health of deployed applications."""
 
 import asyncio
+import json
 import httpx
 from datetime import datetime, timezone, timedelta
+from pathlib import Path
 from typing import Optional
 from sqlalchemy import select, func, and_, Integer
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,24 +18,37 @@ from app.schemas.monitoring import (
 )
 
 
-# Define all services to monitor
-MONITORED_SERVICES: list[ServiceConfig] = [
-    ServiceConfig(name="Admin", url="https://admin.ai.devintensive.com", health_endpoint="/api/health"),
-    ServiceConfig(name="Admin API", url="https://admin-api.ai.devintensive.com", health_endpoint="/health"),
-    ServiceConfig(name="Develop", url="https://develop.ai.devintensive.com", health_endpoint="/"),
-    # Develop API not exposed via Traefik yet
-    ServiceConfig(name="Define", url="https://define.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Identity", url="https://identity.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Identity API", url="https://identity-api.ai.devintensive.com", health_endpoint="/health"),
-    ServiceConfig(name="Manage", url="https://manage.ai.devintensive.com", health_endpoint="/"),
-    # Manage API not exposed via Traefik yet
-    ServiceConfig(name="Vibetest", url="https://vibetest.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Salon", url="https://salon.ai.devintensive.com", health_endpoint="/"),
-    # Salon API not exposed via Traefik yet
-    ServiceConfig(name="Today", url="https://today.ai.devintensive.com", health_endpoint="/"),
-    ServiceConfig(name="Today API", url="https://today-api.ai.devintensive.com", health_endpoint="/health"),
-    ServiceConfig(name="Vibecode", url="https://vibecode.ai.devintensive.com", health_endpoint="/health"),
-]
+def load_monitored_services() -> list[ServiceConfig]:
+    """Load services from shared config file.
+
+    Config file location: /app/config/monitored-services.json (mounted in container)
+    Fallback for local dev: ../../../../config/monitored-services.json (relative to this file)
+    """
+    config_paths = [
+        Path("/app/config/monitored-services.json"),  # Production (mounted)
+        Path(__file__).parent.parent.parent.parent.parent.parent / "config" / "monitored-services.json",  # Local dev
+    ]
+
+    for config_path in config_paths:
+        if config_path.exists():
+            with open(config_path) as f:
+                data = json.load(f)
+                return [
+                    ServiceConfig(
+                        name=svc["name"],
+                        url=svc["url"],
+                        health_endpoint=svc["healthEndpoint"]
+                    )
+                    for svc in data["services"]
+                ]
+
+    raise FileNotFoundError(
+        f"Could not find monitored-services.json in any of: {[str(p) for p in config_paths]}"
+    )
+
+
+# Load services from shared config
+MONITORED_SERVICES: list[ServiceConfig] = load_monitored_services()
 
 
 async def check_service_health(
