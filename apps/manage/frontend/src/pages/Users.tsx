@@ -663,7 +663,7 @@ export default function Users() {
                       </button>
                     </div>
                   )}
-                  {selectedUser.user_type === 'virtual' ? (
+                  {selectedUser?.user_type === 'virtual' ? (
                     <button
                       type="button"
                       onClick={generateBotAvatar}
@@ -693,7 +693,7 @@ export default function Users() {
               </div>
 
               {/* Bot-specific config */}
-              {selectedUser.user_type === 'virtual' && (
+              {selectedUser?.user_type === 'virtual' && (
                 <div className="border-t pt-4 mt-4">
                   <h4 className="text-sm font-medium text-gray-900 mb-3">Bot Configuration</h4>
                   <div>
