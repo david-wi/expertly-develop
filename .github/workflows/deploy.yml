@@ -72,22 +72,20 @@ jobs:
             STATE_FILE="/opt/deployment-state.json"
             if [ ! -f "$STATE_FILE" ] || ! jq -e '.services' "$STATE_FILE" >/dev/null 2>&1; then
                 echo "Initializing per-service deployment state..."
-                cat > "$STATE_FILE" << 'EOF'
-{
-  "services": {
-    "define": {"active": "blue", "last_deploy": ""},
-    "develop": {"active": "blue", "last_deploy": ""},
-    "identity": {"active": "blue", "last_deploy": ""},
-    "admin": {"active": "blue", "last_deploy": ""},
-    "manage": {"active": "blue", "last_deploy": ""},
-    "salon": {"active": "blue", "last_deploy": ""},
-    "today": {"active": "blue", "last_deploy": ""},
-    "vibetest": {"active": "blue", "last_deploy": ""},
-    "vibecode": {"active": "blue", "last_deploy": ""}
-  },
-  "shared": {"active": "blue", "last_deploy": ""}
-}
-EOF
+                jq -n '{
+                  services: {
+                    define: {active: "blue", last_deploy: ""},
+                    develop: {active: "blue", last_deploy: ""},
+                    identity: {active: "blue", last_deploy: ""},
+                    admin: {active: "blue", last_deploy: ""},
+                    manage: {active: "blue", last_deploy: ""},
+                    salon: {active: "blue", last_deploy: ""},
+                    today: {active: "blue", last_deploy: ""},
+                    vibetest: {active: "blue", last_deploy: ""},
+                    vibecode: {active: "blue", last_deploy: ""}
+                  },
+                  shared: {active: "blue", last_deploy: ""}
+                }' > "$STATE_FILE"
             fi
 
             # Build shared infrastructure (mongo, ui) - always on "shared" color
