@@ -248,7 +248,6 @@ services:
       context: .
       dockerfile: ./apps/define/frontend/Dockerfile.prod
       args:
-        VITE_UI_REMOTE_URL: https://ui.ai.devintensive.com
         VITE_IDENTITY_URL: https://identity.ai.devintensive.com
         VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
         VITE_GIT_COMMIT: ${GIT_COMMIT:-}
