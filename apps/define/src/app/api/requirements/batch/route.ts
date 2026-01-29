@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
-import { requirements, requirementVersions, products } from '@/lib/db/schema';
+import { requirements, requirementVersions, products, attachments } from '@/lib/db/schema';
 import { eq, sql, and, isNull } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 interface BatchRequirement {
   tempId: string;
@@ -18,6 +20,12 @@ interface BatchRequirement {
   parentRef?: string; // Either existing requirement ID or another tempId
 }
 
+interface AttachmentFile {
+  name: string;
+  type: string;
+  content: string; // base64 for binary, text for text files
+}
+
 // Generate stable key for a product using its prefix
 async function generateStableKey(productId: string, productPrefix: string, offset: number = 0): Promise<string> {
   const result = await db
@@ -29,6 +37,20 @@ async function generateStableKey(productId: string, productPrefix: string, offse
   return `${productPrefix}-${String(count + 1).padStart(3, '0')}`;
 }
 
+// Get file extension from mime type
+function getExtFromMime(mimeType: string): string {
+  const map: Record<string, string> = {
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/gif': '.gif',
+    'image/webp': '.webp',
+    'application/pdf': '.pdf',
+    'text/plain': '.txt',
+    'text/markdown': '.md',
+  };
+  return map[mimeType] || '';
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify authentication
@@ -38,9 +60,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { productId, requirements: reqList } = body as {
+    const { productId, requirements: reqList, attachmentFiles } = body as {
       productId: string;
       requirements: BatchRequirement[];
+      attachmentFiles?: AttachmentFile[];
     };
 
     if (!productId || !reqList || !Array.isArray(reqList) || reqList.length === 0) {
@@ -78,6 +101,9 @@ export async function POST(request: NextRequest) {
     // Track created requirements for response
     const createdRequirements: any[] = [];
 
+    // Track the first (primary) requirement ID for attachments
+    let primaryRequirementId: string | null = null;
+
     // Process requirements in order (assumes parent refs come before children)
     for (let i = 0; i < reqList.length; i++) {
       const req = reqList[i];
@@ -85,6 +111,11 @@ export async function POST(request: NextRequest) {
       // Generate IDs
       const requirementId = uuidv4();
       tempIdMap.set(req.tempId, requirementId);
+
+      // Track the first requirement as the primary
+      if (i === 0) {
+        primaryRequirementId = requirementId;
+      }
 
       const stableKey = await generateStableKey(productId, productPrefix, i);
 
@@ -153,10 +184,63 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Return created requirements with ID mapping
+    // Handle file attachments if provided
+    const createdAttachments: any[] = [];
+    if (attachmentFiles && attachmentFiles.length > 0 && primaryRequirementId) {
+      // Create uploads directory if it doesn't exist
+      const uploadsDir = path.join(process.cwd(), 'data', 'uploads');
+      await mkdir(uploadsDir, { recursive: true });
+
+      for (const file of attachmentFiles) {
+        try {
+          const id = uuidv4();
+          const ext = path.extname(file.name) || getExtFromMime(file.type);
+          const filename = `${id}${ext}`;
+          const storagePath = path.join('uploads', filename);
+          const fullPath = path.join(process.cwd(), 'data', storagePath);
+
+          // Determine if content is base64 or text
+          let buffer: Buffer;
+          if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+            // Base64 encoded content
+            buffer = Buffer.from(file.content, 'base64');
+          } else {
+            // Text content
+            buffer = Buffer.from(file.content, 'utf-8');
+          }
+
+          // Write file to disk
+          await writeFile(fullPath, buffer);
+
+          // Save to database
+          await db.insert(attachments).values({
+            id,
+            requirementId: primaryRequirementId,
+            filename,
+            originalFilename: file.name,
+            mimeType: file.type,
+            sizeBytes: buffer.length,
+            storagePath,
+            createdAt: now,
+          });
+
+          createdAttachments.push({
+            id,
+            filename: file.name,
+            url: `/api/uploads/${id}`,
+          });
+        } catch (err) {
+          console.error('Error saving attachment:', err);
+          // Continue with other attachments even if one fails
+        }
+      }
+    }
+
+    // Return created requirements with ID mapping and attachment info
     return NextResponse.json({
       created: createdRequirements,
       idMapping: Object.fromEntries(tempIdMap),
+      attachments: createdAttachments,
     }, { status: 201 });
   } catch (error) {
     console.error('Error creating requirements batch:', error);

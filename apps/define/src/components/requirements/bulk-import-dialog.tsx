@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { RequirementSelector } from './requirement-selector';
 import {
   Loader2,
   Upload,
@@ -30,6 +31,11 @@ import {
   Sparkles,
   Check,
   AlertCircle,
+  Link,
+  CheckCircle,
+  XCircle,
+  Clock,
+  RotateCcw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -38,7 +44,11 @@ interface Requirement {
   stableKey: string;
   title: string;
   parentId: string | null;
+  whatThisDoes?: string;
+  whyThisExists?: string;
 }
+
+type ApprovalStatus = 'pending' | 'approved' | 'rejected';
 
 interface ParsedRequirement {
   tempId: string;
@@ -50,6 +60,7 @@ interface ParsedRequirement {
   priority: string;
   tags: string[];
   parentRef: string | null;
+  approvalStatus: ApprovalStatus;
 }
 
 interface FileItem {
@@ -57,6 +68,14 @@ interface FileItem {
   type: string;
   size: number;
   content: string; // base64 for images, text for others
+}
+
+interface FetchedUrl {
+  url: string;
+  title: string;
+  content: string;
+  fetching?: boolean;
+  error?: string;
 }
 
 interface BulkImportDialogProps {
@@ -102,6 +121,12 @@ export function BulkImportDialog({
   const [createProgress, setCreateProgress] = useState({ current: 0, total: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // New state for URLs and related requirements
+  const [contextUrls, setContextUrls] = useState<FetchedUrl[]>([]);
+  const [urlInput, setUrlInput] = useState('');
+  const [fetchingUrl, setFetchingUrl] = useState(false);
+  const [relatedRequirementIds, setRelatedRequirementIds] = useState<string[]>([]);
+
   const resetDialog = useCallback(() => {
     setStep('input');
     setDescription('');
@@ -114,6 +139,10 @@ export function BulkImportDialog({
     setExpandedItems(new Set());
     setEditingId(null);
     setCreateProgress({ current: 0, total: 0 });
+    setContextUrls([]);
+    setUrlInput('');
+    setFetchingUrl(false);
+    setRelatedRequirementIds([]);
   }, []);
 
   const handleClose = useCallback(
@@ -125,6 +154,47 @@ export function BulkImportDialog({
     },
     [onOpenChange, resetDialog]
   );
+
+  // URL fetching
+  const handleFetchUrl = async () => {
+    if (!urlInput.trim()) return;
+
+    setFetchingUrl(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/ai/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: urlInput.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!data.success) {
+        setError(data.error || 'Failed to fetch URL');
+        return;
+      }
+
+      setContextUrls((prev) => [
+        ...prev,
+        {
+          url: data.url,
+          title: data.title || data.url,
+          content: data.content || '',
+        },
+      ]);
+      setUrlInput('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch URL');
+    } finally {
+      setFetchingUrl(false);
+    }
+  };
+
+  const removeUrl = (index: number) => {
+    setContextUrls((prev) => prev.filter((_, i) => i !== index));
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
@@ -231,6 +301,13 @@ export function BulkImportDialog({
           })),
           targetParentId: targetParentId || null,
           productName,
+          // New context fields
+          contextUrls: contextUrls.map((u) => ({
+            url: u.url,
+            title: u.title,
+            content: u.content,
+          })),
+          relatedRequirementIds,
         }),
       });
 
@@ -240,11 +317,16 @@ export function BulkImportDialog({
       }
 
       const data = await response.json();
-      setParsedRequirements(data.requirements);
+      // Add approvalStatus to each requirement (default to pending)
+      const requirementsWithApproval = data.requirements.map((req: Omit<ParsedRequirement, 'approvalStatus'>) => ({
+        ...req,
+        approvalStatus: 'pending' as ApprovalStatus,
+      }));
+      setParsedRequirements(requirementsWithApproval);
       setStep('preview');
 
       // Expand all items by default
-      setExpandedItems(new Set(data.requirements.map((r: ParsedRequirement) => r.tempId)));
+      setExpandedItems(new Set(requirementsWithApproval.map((r: ParsedRequirement) => r.tempId)));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to generate requirements');
     } finally {
@@ -252,12 +334,49 @@ export function BulkImportDialog({
     }
   };
 
-  const handleCreateAll = async () => {
-    if (parsedRequirements.length === 0) return;
+  // Approval workflow functions
+  const approveRequirement = (tempId: string) => {
+    setParsedRequirements((prev) =>
+      prev.map((r) => (r.tempId === tempId ? { ...r, approvalStatus: 'approved' as ApprovalStatus } : r))
+    );
+  };
+
+  const rejectRequirement = (tempId: string) => {
+    setParsedRequirements((prev) =>
+      prev.map((r) => (r.tempId === tempId ? { ...r, approvalStatus: 'rejected' as ApprovalStatus } : r))
+    );
+  };
+
+  const setToPending = (tempId: string) => {
+    setParsedRequirements((prev) =>
+      prev.map((r) => (r.tempId === tempId ? { ...r, approvalStatus: 'pending' as ApprovalStatus } : r))
+    );
+  };
+
+  const approveAllPending = () => {
+    setParsedRequirements((prev) =>
+      prev.map((r) => (r.approvalStatus === 'pending' ? { ...r, approvalStatus: 'approved' as ApprovalStatus } : r))
+    );
+  };
+
+  const rejectAllPending = () => {
+    setParsedRequirements((prev) =>
+      prev.map((r) => (r.approvalStatus === 'pending' ? { ...r, approvalStatus: 'rejected' as ApprovalStatus } : r))
+    );
+  };
+
+  // Count requirements by status
+  const pendingCount = parsedRequirements.filter((r) => r.approvalStatus === 'pending').length;
+  const approvedCount = parsedRequirements.filter((r) => r.approvalStatus === 'approved').length;
+  const rejectedCount = parsedRequirements.filter((r) => r.approvalStatus === 'rejected').length;
+
+  const handleCreateApproved = async () => {
+    const approvedRequirements = parsedRequirements.filter((r) => r.approvalStatus === 'approved');
+    if (approvedRequirements.length === 0) return;
 
     setCreating(true);
     setStep('creating');
-    setCreateProgress({ current: 0, total: parsedRequirements.length });
+    setCreateProgress({ current: 0, total: approvedRequirements.length });
     setError('');
 
     try {
@@ -266,7 +385,7 @@ export function BulkImportDialog({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
-          requirements: parsedRequirements.map((req) => ({
+          requirements: approvedRequirements.map((req) => ({
             tempId: req.tempId,
             title: req.title,
             whatThisDoes: req.whatThisDoes,
@@ -277,6 +396,8 @@ export function BulkImportDialog({
             tags: req.tags,
             parentRef: req.parentRef || targetParentId || null,
           })),
+          // Pass files for attachment to the first created requirement
+          attachmentFiles: files.length > 0 ? files : undefined,
         }),
       });
 
@@ -286,7 +407,7 @@ export function BulkImportDialog({
       }
 
       const data = await response.json();
-      setCreateProgress({ current: data.created.length, total: parsedRequirements.length });
+      setCreateProgress({ current: data.created.length, total: approvedRequirements.length });
 
       // Success - close dialog and refresh
       setTimeout(() => {
@@ -378,11 +499,25 @@ export function BulkImportDialog({
     const isEditing = editingId === req.tempId;
     const children = childrenMap.get(req.tempId) || [];
 
+    // Approval status styling
+    const statusStyles = {
+      pending: 'border-l-4 border-l-amber-400',
+      approved: 'border-l-4 border-l-green-500 bg-green-50/50',
+      rejected: 'border-l-4 border-l-red-400 opacity-60',
+    };
+
+    const statusIcons = {
+      pending: <Clock className="h-4 w-4 text-amber-500" />,
+      approved: <CheckCircle className="h-4 w-4 text-green-600" />,
+      rejected: <XCircle className="h-4 w-4 text-red-500" />,
+    };
+
     return (
       <div key={req.tempId} className="border-b last:border-b-0">
         <div
           className={cn(
             'flex items-start gap-2 py-3 px-3 hover:bg-gray-50 transition-colors',
+            statusStyles[req.approvalStatus],
             isEditing && 'bg-purple-50'
           )}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
@@ -400,6 +535,9 @@ export function BulkImportDialog({
               <ChevronRight className="h-4 w-4 text-gray-500" />
             )}
           </button>
+
+          {/* Status icon */}
+          <div className="mt-1">{statusIcons[req.approvalStatus]}</div>
 
           <div className="flex-1 min-w-0">
             {isEditing ? (
@@ -457,23 +595,64 @@ export function BulkImportDialog({
                 onClick={() => setEditingId(req.tempId)}
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-medium text-gray-900 truncate">{req.title}</span>
+                  <span className={cn(
+                    'font-medium truncate',
+                    req.approvalStatus === 'rejected' ? 'text-gray-500' : 'text-gray-900'
+                  )}>
+                    {req.title}
+                  </span>
                   <Badge variant={priorityColors[req.priority] as any} className="text-xs">
                     {req.priority}
                   </Badge>
                 </div>
-                <p className="text-sm text-gray-600 line-clamp-2">{req.whatThisDoes}</p>
+                <p className={cn(
+                  'text-sm line-clamp-2',
+                  req.approvalStatus === 'rejected' ? 'text-gray-400' : 'text-gray-600'
+                )}>
+                  {req.whatThisDoes}
+                </p>
               </div>
             )}
           </div>
 
+          {/* Action buttons based on status */}
           {!isEditing && (
-            <button
-              className="p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
-              onClick={() => deleteRequirement(req.tempId)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-1">
+              {req.approvalStatus === 'pending' && (
+                <>
+                  <button
+                    className="p-1.5 rounded hover:bg-green-100 text-gray-400 hover:text-green-600 transition-colors"
+                    onClick={() => approveRequirement(req.tempId)}
+                    title="Approve"
+                  >
+                    <Check className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                    onClick={() => rejectRequirement(req.tempId)}
+                    title="Reject"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+              {(req.approvalStatus === 'approved' || req.approvalStatus === 'rejected') && (
+                <button
+                  className="p-1.5 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600 transition-colors"
+                  onClick={() => setToPending(req.tempId)}
+                  title="Undo"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              )}
+              <button
+                className="p-1.5 rounded hover:bg-red-100 text-gray-400 hover:text-red-600 transition-colors"
+                onClick={() => deleteRequirement(req.tempId)}
+                title="Delete"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           )}
         </div>
 
@@ -521,6 +700,77 @@ export function BulkImportDialog({
                   Be as detailed as you want. AI will parse this into structured requirements.
                 </p>
               </div>
+
+              {/* URL Context Section */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                  Add URLs for context (optional)
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="https://example.com/jira-ticket or any webpage"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleFetchUrl()}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleFetchUrl}
+                    disabled={fetchingUrl || !urlInput.trim()}
+                  >
+                    {fetchingUrl ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Link className="h-4 w-4" />
+                    )}
+                    <span className="ml-1">Fetch</span>
+                  </Button>
+                </div>
+                {contextUrls.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {contextUrls.map((urlItem, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-2 text-sm bg-blue-50 border border-blue-200 rounded px-2 py-1"
+                      >
+                        <Link className="h-3 w-3 text-blue-500 flex-shrink-0" />
+                        <span className="flex-1 truncate" title={urlItem.url}>
+                          {urlItem.title || urlItem.url}
+                        </span>
+                        <button
+                          className="p-0.5 hover:bg-blue-100 rounded"
+                          onClick={() => removeUrl(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Fetch content from Jira tickets, web pages, or documentation to provide context.
+                </p>
+              </div>
+
+              {/* Related Requirements Selector */}
+              {existingRequirements.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                    Related requirements for context (optional)
+                  </label>
+                  <RequirementSelector
+                    requirements={existingRequirements}
+                    selectedIds={relatedRequirementIds}
+                    onSelectionChange={setRelatedRequirementIds}
+                    placeholder="Select existing requirements for AI context"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    AI will use these requirements as context to ensure consistency.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -600,9 +850,49 @@ export function BulkImportDialog({
 
           {step === 'preview' && (
             <div className="py-4">
+              {/* Approval header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={approveAllPending}
+                    disabled={pendingCount === 0}
+                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                  >
+                    <Check className="h-4 w-4 mr-1" />
+                    Approve All ({pendingCount})
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={rejectAllPending}
+                    disabled={pendingCount === 0}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <X className="h-4 w-4 mr-1" />
+                    Reject All
+                  </Button>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3 text-amber-500" />
+                    {pendingCount} pending
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3 text-green-600" />
+                    {approvedCount} approved
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <XCircle className="h-3 w-3 text-red-500" />
+                    {rejectedCount} rejected
+                  </span>
+                </div>
+              </div>
+
               <div className="text-sm text-gray-600 mb-3">
                 {parsedRequirements.length} requirement{parsedRequirements.length !== 1 ? 's' : ''}{' '}
-                generated. Click to edit, then create all.
+                generated. Approve or reject each, then create approved items.
               </div>
               <div className="border rounded-lg overflow-hidden">
                 {(() => {
@@ -643,11 +933,11 @@ export function BulkImportDialog({
                 Back
               </Button>
               <Button
-                onClick={handleCreateAll}
-                disabled={creating || parsedRequirements.length === 0}
+                onClick={handleCreateApproved}
+                disabled={creating || approvedCount === 0}
               >
                 {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                Create All ({parsedRequirements.length})
+                Create Approved ({approvedCount})
               </Button>
             </>
           )}

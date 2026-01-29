@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
 import Anthropic from '@anthropic-ai/sdk';
+import { db } from '@/lib/db';
+import { requirements } from '@/lib/db/schema';
+import { inArray } from 'drizzle-orm';
 
 // Dynamic import for pdf-parse (it has issues with static imports in Next.js)
 async function extractPdfText(base64Content: string): Promise<string> {
@@ -26,6 +29,12 @@ interface FileContent {
   name: string;
   type: string;
   content: string; // base64 for images/PDFs, text for text files
+}
+
+interface ContextUrl {
+  url: string;
+  title: string;
+  content: string;
 }
 
 interface ParsedRequirement {
@@ -84,12 +93,16 @@ export async function POST(request: NextRequest) {
       existingRequirements,
       targetParentId,
       productName,
+      contextUrls,
+      relatedRequirementIds,
     } = body as {
       description: string;
       files?: FileContent[];
       existingRequirements: ExistingRequirement[];
       targetParentId?: string;
       productName: string;
+      contextUrls?: ContextUrl[];
+      relatedRequirementIds?: string[];
     };
 
     if (!description || !description.trim()) {
@@ -129,6 +142,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Build URL context section
+    let urlContext = '';
+    if (contextUrls && contextUrls.length > 0) {
+      urlContext = '\n\n--- External Context (from URLs) ---';
+      for (const urlItem of contextUrls) {
+        urlContext += `\n\n[${urlItem.title}] (${urlItem.url})\n${urlItem.content.substring(0, 3000)}`;
+        if (urlItem.content.length > 3000) {
+          urlContext += '\n... (content truncated)';
+        }
+      }
+    }
+
+    // Build related requirements context section
+    let relatedReqsContext = '';
+    if (relatedRequirementIds && relatedRequirementIds.length > 0) {
+      // Fetch full details of related requirements from database
+      const relatedReqs = await db
+        .select()
+        .from(requirements)
+        .where(inArray(requirements.id, relatedRequirementIds));
+
+      if (relatedReqs.length > 0) {
+        relatedReqsContext = '\n\n--- Related Requirements for Context ---';
+        relatedReqsContext += '\nUse these existing requirements as context to ensure consistency in terminology and avoid duplicating functionality:\n';
+
+        for (const req of relatedReqs) {
+          relatedReqsContext += `\n[${req.stableKey}] ${req.title}`;
+          if (req.whatThisDoes) {
+            relatedReqsContext += `\n  - What it does: ${req.whatThisDoes}`;
+          }
+          if (req.whyThisExists) {
+            relatedReqsContext += `\n  - Why it exists: ${req.whyThisExists}`;
+          }
+          if (req.acceptanceCriteria) {
+            relatedReqsContext += `\n  - Acceptance criteria: ${req.acceptanceCriteria.substring(0, 200)}`;
+            if (req.acceptanceCriteria.length > 200) {
+              relatedReqsContext += '...';
+            }
+          }
+          relatedReqsContext += '\n';
+        }
+      }
+    }
+
     // Build the system prompt
     const systemPrompt = `You are an expert requirements analyst. Your job is to parse user descriptions and create well-structured software requirements.
 
@@ -146,6 +203,12 @@ For hierarchical structure:
 - Create child requirements for sub-features
 - Use parentRef to link children to parents (either an existing ID or a tempId from another requirement you're creating)
 
+When provided with external context (URLs or related requirements):
+- Use the terminology and patterns from the context
+- Avoid duplicating existing functionality
+- Ensure new requirements complement rather than conflict with existing ones
+- Reference relevant context when it informs your decisions
+
 Respond ONLY with a valid JSON array of requirements. No explanation or markdown.`;
 
     const targetInfo = targetParentId
@@ -157,6 +220,8 @@ Respond ONLY with a valid JSON array of requirements. No explanation or markdown
 Existing requirements tree:
 ${treeText}
 ${targetInfo}
+${urlContext}
+${relatedReqsContext}
 
 User's description of new requirements:
 ${description}
