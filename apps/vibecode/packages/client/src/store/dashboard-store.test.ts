@@ -13,7 +13,7 @@ describe('dashboardStore', () => {
         remoteAvailable: false,
         hasLocalAgent: false,
       },
-      agents: {},
+      agents: [],
       sessions: {},
       widgets: [],
       layout: [],
