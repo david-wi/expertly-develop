@@ -109,7 +109,7 @@ jobs:
           - { name: define, services: "define-frontend define-backend" }
           - { name: develop, services: "develop-frontend develop-backend" }
           - { name: identity, services: "identity-frontend identity-backend" }
-          - { name: admin, services: "admin-frontend" }
+          - { name: admin, services: "admin-frontend admin-backend admin-db" }
           - { name: manage, services: "manage-frontend manage-backend" }
           - { name: salon, services: "salon-frontend salon-backend" }
           - { name: today, services: "today-frontend today-backend" }
@@ -227,7 +227,7 @@ jobs:
                   define) SERVICES="$SERVICES define-frontend define-backend" ;;
                   develop) SERVICES="$SERVICES develop-frontend develop-backend" ;;
                   identity) SERVICES="$SERVICES identity-frontend identity-backend" ;;
-                  admin) SERVICES="$SERVICES admin-frontend" ;;
+                  admin) SERVICES="$SERVICES admin-frontend admin-backend admin-db" ;;
                   manage) SERVICES="$SERVICES manage-frontend manage-backend" ;;
                   salon) SERVICES="$SERVICES salon-frontend salon-backend" ;;
                   today) SERVICES="$SERVICES today-frontend today-backend" ;;
@@ -277,6 +277,7 @@ jobs:
             check_container "define-backend" || FAILED=1
             check_container "develop-backend" || FAILED=1
             check_container "identity-backend" || FAILED=1
+            check_container "admin-backend" || FAILED=1
             check_container "manage-backend" || FAILED=1
             check_container "salon-backend" || FAILED=1
             check_container "today-backend" || FAILED=1
