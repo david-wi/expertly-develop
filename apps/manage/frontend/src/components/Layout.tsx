@@ -8,6 +8,7 @@ import {
   Users,
   Users2,
   BookOpen,
+  Trophy,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expertly_ui/index'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
+  { name: 'Wins', href: '/wins', icon: Trophy },
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Teams', href: '/teams', icon: Users2 },
 ]
