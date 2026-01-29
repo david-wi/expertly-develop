@@ -15,6 +15,10 @@ from app.models.playbook import (
     PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookItemType,
     PlaybookReorderItem, PlaybookReorderRequest
 )
+from app.models.backlog import (
+    BacklogItem, BacklogItemCreate, BacklogItemUpdate,
+    BacklogStatus, BacklogPriority, BacklogCategory
+)
 
 __all__ = [
     "PyObjectId",
@@ -69,4 +73,10 @@ __all__ = [
     "PlaybookItemType",
     "PlaybookReorderItem",
     "PlaybookReorderRequest",
+    "BacklogItem",
+    "BacklogItemCreate",
+    "BacklogItemUpdate",
+    "BacklogStatus",
+    "BacklogPriority",
+    "BacklogCategory",
 ]

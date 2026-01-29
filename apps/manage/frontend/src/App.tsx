@@ -9,6 +9,8 @@ import Users from './pages/Users'
 import Teams from './pages/Teams'
 import RecurringTasks from './pages/RecurringTasks'
 import Wins from './pages/Wins'
+import Backlog from './pages/Backlog'
+import IdeaBacklog from './pages/IdeaBacklog'
 import LandingPage from './pages/LandingPage'
 import Layout from './components/Layout'
 
@@ -28,6 +30,8 @@ function App() {
           <Route path="teams" element={<Teams />} />
           <Route path="recurring" element={<RecurringTasks />} />
           <Route path="wins" element={<Wins />} />
+          <Route path="backlog" element={<Backlog />} />
+          <Route path="idea-backlog" element={<IdeaBacklog />} />
         </Route>
       </Routes>
     </BrowserRouter>
