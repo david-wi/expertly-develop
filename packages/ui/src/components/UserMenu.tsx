@@ -1,14 +1,15 @@
-import { useRef, useEffect, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut } from 'lucide-react'
+import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
+import { ChevronRight, ChevronDown, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList } from 'lucide-react'
 
 export interface UserMenuItem {
   id: string
   label: string
   icon?: ComponentType<{ className?: string }>
-  type: 'link' | 'callback' | 'divider'
+  type: 'link' | 'callback' | 'divider' | 'submenu'
   href?: string
   external?: boolean  // Opens in new tab, bypasses renderLink
   onClick?: () => void
+  children?: UserMenuItem[]  // For submenu items
 }
 
 export interface UserMenuSection {
@@ -38,6 +39,19 @@ interface UserMenuProps {
 
 export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
+  const [expandedSubmenus, setExpandedSubmenus] = useState<Set<string>>(new Set())
+
+  const toggleSubmenu = (id: string) => {
+    setExpandedSubmenus(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   // Close on click outside
   useEffect(() => {
@@ -121,17 +135,93 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
               }
 
               const Icon = item.icon
+              const isSubmenu = item.type === 'submenu'
+              const isExpanded = expandedSubmenus.has(item.id)
+
               const itemContent = (
                 <>
                   {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
                   <span className="flex-1">{item.label}</span>
-                  {item.type === 'link' && (
-                    <ChevronRight className="w-4 h-4 text-[var(--theme-text-muted)]" />
+                  {isSubmenu && (
+                    isExpanded
+                      ? <ChevronDown className="w-4 h-4 text-[var(--theme-text-muted)]" />
+                      : <ChevronRight className="w-4 h-4 text-[var(--theme-text-muted)]" />
                   )}
                 </>
               )
 
               const itemClassName = `w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-elevated)] hover:text-[var(--theme-text-primary)] transition-colors`
+              const childItemClassName = `w-full flex items-center gap-2 pl-9 pr-3 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-elevated)] hover:text-[var(--theme-text-primary)] transition-colors`
+
+              if (isSubmenu) {
+                return (
+                  <div key={item.id}>
+                    <button
+                      onClick={() => toggleSubmenu(item.id)}
+                      className={itemClassName}
+                    >
+                      {itemContent}
+                    </button>
+                    {isExpanded && item.children && (
+                      <div className="bg-[var(--theme-bg-elevated)]">
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon
+                          const childContent = (
+                            <>
+                              {ChildIcon && <ChildIcon className="w-4 h-4 flex-shrink-0" />}
+                              <span className="flex-1">{child.label}</span>
+                            </>
+                          )
+
+                          if (child.type === 'link' && child.href) {
+                            if (child.external) {
+                              return (
+                                <a
+                                  key={child.id}
+                                  href={child.href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={childItemClassName}
+                                  onClick={onClose}
+                                >
+                                  {childContent}
+                                </a>
+                              )
+                            }
+                            return (
+                              <div key={child.id}>
+                                {renderLink({
+                                  href: child.href,
+                                  className: childItemClassName,
+                                  children: childContent,
+                                  onClick: onClose,
+                                })}
+                              </div>
+                            )
+                          }
+
+                          if (child.type === 'callback' && child.onClick) {
+                            return (
+                              <button
+                                key={child.id}
+                                onClick={() => {
+                                  child.onClick?.()
+                                  onClose()
+                                }}
+                                className={childItemClassName}
+                              >
+                                {childContent}
+                              </button>
+                            )
+                          }
+
+                          return null
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              }
 
               if (item.type === 'link' && item.href) {
                 if (item.external) {
@@ -212,25 +302,48 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
     })
   }
 
-  // Developer Tools section
+  // Developer Tools section (as expandable submenu)
   sections.push({
-    title: 'Developer Tools',
     items: [
       {
-        id: 'error-logs',
-        label: 'Error Logs',
-        icon: AlertTriangle,
-        type: 'link',
-        href: 'https://admin.ai.devintensive.com/error-logs',
-        external: true,
-      },
-      {
-        id: 'changelog',
-        label: 'Change Log',
-        icon: FileText,
-        type: 'link',
-        href: '/changelog',
-        external: false,
+        id: 'developer-tools',
+        label: 'Developer Tools',
+        icon: Wrench,
+        type: 'submenu',
+        children: [
+          {
+            id: 'error-logs',
+            label: 'Error Logs',
+            icon: AlertTriangle,
+            type: 'link',
+            href: 'https://admin.ai.devintensive.com/error-logs',
+            external: true,
+          },
+          {
+            id: 'changelog',
+            label: 'Change Log',
+            icon: FileText,
+            type: 'link',
+            href: '/changelog',
+            external: false,
+          },
+          {
+            id: 'backlog',
+            label: 'Backlog',
+            icon: ClipboardList,
+            type: 'link',
+            href: 'https://manage.ai.devintensive.com/backlog',
+            external: true,
+          },
+          {
+            id: 'idea-backlog',
+            label: 'Idea Backlog',
+            icon: Lightbulb,
+            type: 'link',
+            href: 'https://manage.ai.devintensive.com/idea-backlog',
+            external: true,
+          },
+        ],
       },
     ],
   })

@@ -29,6 +29,45 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   getHealth: () => request<{ status: string; database: string }>('/health'),
 
+  // Backlog
+  getBacklogItems: (params?: { category?: string; status?: string; priority?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.priority) searchParams.set('priority', params.priority)
+    const query = searchParams.toString()
+    return request<BacklogItem[]>(`/api/v1/backlog${query ? `?${query}` : ''}`)
+  },
+  getBacklogItem: (id: string) => request<BacklogItem>(`/api/v1/backlog/${id}`),
+  createBacklogItem: (data: CreateBacklogItemRequest) =>
+    request<BacklogItem>('/api/v1/backlog', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateBacklogItem: (id: string, data: UpdateBacklogItemRequest) =>
+    request<BacklogItem>(`/api/v1/backlog/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteBacklogItem: (id: string) =>
+    request<void>(`/api/v1/backlog/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Ideas (convenience methods)
+  getIdeas: (params?: { status?: string; priority?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.priority) searchParams.set('priority', params.priority)
+    const query = searchParams.toString()
+    return request<BacklogItem[]>(`/api/v1/backlog/ideas/list${query ? `?${query}` : ''}`)
+  },
+  createIdea: (data: CreateBacklogItemRequest) =>
+    request<BacklogItem>('/api/v1/backlog/ideas', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Images
   generateAvatar: (data: { user_type: string; description: string; name?: string }) =>
     request<{ url: string }>('/api/v1/images/generate-avatar', {
@@ -560,4 +599,42 @@ export interface UpdateProjectRequest {
   parent_project_id?: string | null
   owner_user_id?: string
   team_id?: string
+}
+
+// Backlog types
+export type BacklogStatus = 'new' | 'in_progress' | 'done' | 'archived'
+export type BacklogPriority = 'low' | 'medium' | 'high'
+export type BacklogCategory = 'backlog' | 'idea'
+
+export interface BacklogItem {
+  _id?: string
+  id: string
+  organization_id: string
+  title: string
+  description?: string
+  status: BacklogStatus
+  priority: BacklogPriority
+  category: BacklogCategory
+  tags: string[]
+  created_by?: string
+  created_at: string
+  updated_at?: string
+}
+
+export interface CreateBacklogItemRequest {
+  title: string
+  description?: string
+  status?: BacklogStatus
+  priority?: BacklogPriority
+  category?: BacklogCategory
+  tags?: string[]
+}
+
+export interface UpdateBacklogItemRequest {
+  title?: string
+  description?: string
+  status?: BacklogStatus
+  priority?: BacklogPriority
+  category?: BacklogCategory
+  tags?: string[]
 }

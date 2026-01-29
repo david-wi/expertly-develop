@@ -6,7 +6,7 @@ import logging
 from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection, check_database_connection
 from app.utils.seed import seed_database
-from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images
+from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images, backlog
 
 settings = get_settings()
 
@@ -69,6 +69,7 @@ app.include_router(playbooks.router, prefix="/api/v1/playbooks", tags=["playbook
 app.include_router(bot.router, prefix="/api/v1/bot", tags=["bot"])
 app.include_router(recurring_tasks.router, prefix="/api/v1/recurring-tasks", tags=["recurring-tasks"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["images"])
+app.include_router(backlog.router, prefix="/api/v1/backlog", tags=["backlog"])
 app.include_router(websocket.router, tags=["websocket"])
 
 
