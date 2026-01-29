@@ -6,6 +6,7 @@ import Playbooks from './pages/Playbooks'
 import Users from './pages/Users'
 import Teams from './pages/Teams'
 import RecurringTasks from './pages/RecurringTasks'
+import Wins from './pages/Wins'
 import LandingPage from './pages/LandingPage'
 import Layout from './components/Layout'
 
@@ -22,6 +23,7 @@ function App() {
           <Route path="users" element={<Users />} />
           <Route path="teams" element={<Teams />} />
           <Route path="recurring" element={<RecurringTasks />} />
+          <Route path="wins" element={<Wins />} />
         </Route>
       </Routes>
     </BrowserRouter>
