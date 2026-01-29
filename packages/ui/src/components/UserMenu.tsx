@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, type ComponentType, type ReactNode } from 'react'
+import { useRef, useEffect, type ComponentType, type ReactNode } from 'react'
 import { ChevronRight, User, AlertTriangle, FileText, LogOut } from 'lucide-react'
 
 export interface UserMenuItem {

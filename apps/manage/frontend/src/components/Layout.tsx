@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   ListTodo,
   Layers,
+  FolderKanban,
   RefreshCw,
   Users,
   Users2,
@@ -16,6 +17,7 @@ import { api, Organization } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
   { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
