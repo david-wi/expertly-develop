@@ -18,6 +18,16 @@
   --color-primary-800: #5b21b6;
   --color-primary-900: #4c1d95;
   --color-primary-950: #2e1065;
+
+  /* Theme colors using CSS variables for shared UI components */
+  --color-theme-bg: var(--theme-bg-default);
+  --color-theme-bg-surface: var(--theme-bg-surface);
+  --color-theme-bg-elevated: var(--theme-bg-elevated);
+  --color-theme-text-primary: var(--theme-text-primary);
+  --color-theme-text-secondary: var(--theme-text-secondary);
+  --color-theme-text-muted: var(--theme-text-muted);
+  --color-theme-border: var(--theme-border-default);
+  --color-theme-border-subtle: var(--theme-border-subtle);
 }
 
 /* Base styles */
