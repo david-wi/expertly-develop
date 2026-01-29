@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { api, Team, User, CreateTeamRequest } from '../services/api'
 
 export default function Teams() {
@@ -25,20 +26,6 @@ export default function Teams() {
   useEffect(() => {
     loadData()
   }, [])
-
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showCreateModal) setShowCreateModal(false)
-        if (showEditModal) setShowEditModal(false)
-        if (showDeleteConfirm) setShowDeleteConfirm(false)
-        if (showMembersModal) setShowMembersModal(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal, showEditModal, showDeleteConfirm, showMembersModal])
 
   const loadData = async () => {
     setLoading(true)
@@ -334,248 +321,246 @@ export default function Teams() {
       </div>
 
       {/* Create Team Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Team</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Marketing Team"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (responsibilities)
-                </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                  placeholder="Describe the team's responsibilities..."
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Team Lead</label>
-                <select
-                  value={formData.lead_id || ''}
-                  onChange={(e) => setFormData({ ...formData, lead_id: e.target.value || undefined })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="">No lead</option>
-                  {users.map((user) => (
-                    <option key={user._id || user.id} value={user._id || user.id}>
-                      {user.name} ({user.user_type === 'virtual' ? 'Bot' : 'Human'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Team"
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="e.g., Marketing Team"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (responsibilities)
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={3}
+              placeholder="Describe the team's responsibilities..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Team Lead</label>
+            <select
+              value={formData.lead_id || ''}
+              onChange={(e) => setFormData({ ...formData, lead_id: e.target.value || undefined })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            >
+              <option value="">No lead</option>
+              {users.map((user) => (
+                <option key={user._id || user.id} value={user._id || user.id}>
+                  {user.name} ({user.user_type === 'virtual' ? 'Bot' : 'Human'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Edit Team Modal */}
-      {showEditModal && selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Team</h3>
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (responsibilities)
-                </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Team Lead</label>
-                <select
-                  value={formData.lead_id || ''}
-                  onChange={(e) => setFormData({ ...formData, lead_id: e.target.value || undefined })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="">No lead</option>
-                  {users.map((user) => (
-                    <option key={user._id || user.id} value={user._id || user.id}>
-                      {user.name} ({user.user_type === 'virtual' ? 'Bot' : 'Human'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showEditModal && !!selectedTeam}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Team"
+      >
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              type="text"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (responsibilities)
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={3}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Team Lead</label>
+            <select
+              value={formData.lead_id || ''}
+              onChange={(e) => setFormData({ ...formData, lead_id: e.target.value || undefined })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+            >
+              <option value="">No lead</option>
+              {users.map((user) => (
+                <option key={user._id || user.id} value={user._id || user.id}>
+                  {user.name} ({user.user_type === 'virtual' ? 'Bot' : 'Human'})
+                </option>
+              ))}
+            </select>
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowEditModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Manage Members Modal */}
-      {showMembersModal && selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full p-6 max-h-[80vh] overflow-y-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">
-              Manage Members - {selectedTeam.name}
-            </h3>
-
-            {/* Current Members */}
-            <div className="mb-6">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
-                Current Members ({getTeamMembers(selectedTeam).length})
-              </h4>
-              <div className="space-y-2">
-                {getTeamMembers(selectedTeam).map((member) => (
-                  <div
-                    key={member._id || member.id}
-                    className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
-                  >
-                    <div className="flex items-center space-x-2">
-                      {getUserAvatar(member, 'md')}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {member.user_type === 'virtual' ? 'Bot' : 'Human'} - {member.email}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveMember(member._id || member.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                {getTeamMembers(selectedTeam).length === 0 && (
-                  <p className="text-sm text-gray-500 py-2">No members yet.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Add Members */}
-            <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">Add Members</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {getNonMembers(selectedTeam).map((user) => (
-                  <div
-                    key={user._id || user.id}
-                    className="flex items-center justify-between p-2 border rounded-md hover:bg-gray-50"
-                  >
-                    <div className="flex items-center space-x-2">
-                      {getUserAvatar(user, 'md')}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {user.user_type === 'virtual' ? 'Bot' : 'Human'} - {user.email}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleAddMember(user._id || user.id)}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
-                    >
-                      Add
-                    </button>
-                  </div>
-                ))}
-                {getNonMembers(selectedTeam).length === 0 && (
-                  <p className="text-sm text-gray-500 py-2">All users are already members.</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-4 mt-4 border-t">
-              <button
-                onClick={() => {
-                  setShowMembersModal(false)
-                  setSelectedTeam(null)
-                }}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+      <Modal
+        isOpen={showMembersModal && !!selectedTeam}
+        onClose={() => {
+          setShowMembersModal(false)
+          setSelectedTeam(null)
+        }}
+        title={`Manage Members - ${selectedTeam?.name || ''}`}
+        size="lg"
+      >
+        {/* Current Members */}
+        <div className="mb-6">
+          <h4 className="text-sm font-medium text-gray-700 mb-2">
+            Current Members ({selectedTeam ? getTeamMembers(selectedTeam).length : 0})
+          </h4>
+          <div className="space-y-2">
+            {selectedTeam && getTeamMembers(selectedTeam).map((member) => (
+              <div
+                key={member._id || member.id}
+                className="flex items-center justify-between p-2 bg-gray-50 rounded-md"
               >
-                Done
-              </button>
-            </div>
+                <div className="flex items-center space-x-2">
+                  {getUserAvatar(member, 'md')}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{member.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {member.user_type === 'virtual' ? 'Bot' : 'Human'} - {member.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemoveMember(member._id || member.id)}
+                  className="text-red-600 hover:text-red-800 text-sm"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            {selectedTeam && getTeamMembers(selectedTeam).length === 0 && (
+              <p className="text-sm text-gray-500 py-2">No members yet.</p>
+            )}
           </div>
         </div>
-      )}
+
+        {/* Add Members */}
+        <div>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Add Members</h4>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {selectedTeam && getNonMembers(selectedTeam).map((user) => (
+              <div
+                key={user._id || user.id}
+                className="flex items-center justify-between p-2 border rounded-md hover:bg-gray-50"
+              >
+                <div className="flex items-center space-x-2">
+                  {getUserAvatar(user, 'md')}
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <p className="text-xs text-gray-500">
+                      {user.user_type === 'virtual' ? 'Bot' : 'Human'} - {user.email}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleAddMember(user._id || user.id)}
+                  className="text-blue-600 hover:text-blue-800 text-sm"
+                >
+                  Add
+                </button>
+              </div>
+            ))}
+            {selectedTeam && getNonMembers(selectedTeam).length === 0 && (
+              <p className="text-sm text-gray-500 py-2">All users are already members.</p>
+            )}
+          </div>
+        </div>
+
+        <ModalFooter>
+          <button
+            onClick={() => {
+              setShowMembersModal(false)
+              setSelectedTeam(null)
+            }}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          >
+            Done
+          </button>
+        </ModalFooter>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedTeam && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Team?</h3>
-            <p className="text-gray-500 mb-4">
-              Are you sure you want to delete "{selectedTeam.name}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm && !!selectedTeam}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Team?"
+        size="sm"
+      >
+        <p className="text-gray-500 mb-4">
+          Are you sure you want to delete "{selectedTeam?.name}"? This action cannot be undone.
+        </p>
+        <ModalFooter>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={saving}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Deleting...' : 'Delete'}
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

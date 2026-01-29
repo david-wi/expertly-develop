@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import {
   api,
   RecurringTask,
@@ -39,19 +40,6 @@ export default function RecurringTasks() {
   useEffect(() => {
     loadData()
   }, [filter])
-
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showCreateModal) setShowCreateModal(false)
-        if (showEditModal) setShowEditModal(false)
-        if (showDeleteConfirm) setShowDeleteConfirm(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal, showEditModal, showDeleteConfirm])
 
   const loadData = async () => {
     setLoading(true)
@@ -373,367 +361,365 @@ export default function RecurringTasks() {
       </div>
 
       {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create Recurring Task</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create Recurring Task"
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
+            <select
+              value={formData.queue_id}
+              onChange={(e) => setFormData({ ...formData, queue_id: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              required
+            >
+              <option value="">Select a queue</option>
+              {queues.map((queue) => (
+                <option key={queue._id || queue.id} value={queue._id || queue.id}>
+                  {queue.purpose}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="e.g., Weekly Team Standup"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={2}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <input
+              type="number"
+              value={formData.priority}
+              onChange={(e) =>
+                setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              min={1}
+              max={10}
+            />
+            <p className="text-xs text-gray-500 mt-1">1 = highest, 10 = lowest</p>
+          </div>
+
+          {/* Recurrence Settings */}
+          <div className="border-t pt-4 mt-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Schedule</h4>
+            <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recurrence Type
+                </label>
                 <select
-                  value={formData.queue_id}
-                  onChange={(e) => setFormData({ ...formData, queue_id: e.target.value })}
+                  value={formData.recurrence_type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      recurrence_type: e.target.value as RecurrenceType,
+                    })
+                  }
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
                 >
-                  <option value="">Select a queue</option>
-                  {queues.map((queue) => (
-                    <option key={queue._id || queue.id} value={queue._id || queue.id}>
-                      {queue.purpose}
-                    </option>
-                  ))}
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Weekly Team Standup"
-                  required
-                />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
+                  Every
                 </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <input
-                  type="number"
-                  value={formData.priority}
-                  onChange={(e) =>
-                    setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  min={1}
-                  max={10}
-                />
-                <p className="text-xs text-gray-500 mt-1">1 = highest, 10 = lowest</p>
-              </div>
-
-              {/* Recurrence Settings */}
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Schedule</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Recurrence Type
-                    </label>
-                    <select
-                      value={formData.recurrence_type}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          recurrence_type: e.target.value as RecurrenceType,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Every
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="number"
-                        value={formData.interval}
-                        onChange={(e) =>
-                          setFormData({ ...formData, interval: parseInt(e.target.value) || 1 })
-                        }
-                        className="w-20 border border-gray-300 rounded-md px-3 py-2"
-                        min={1}
-                      />
-                      <span className="text-gray-700">
-                        {formData.recurrence_type === 'daily'
-                          ? 'day(s)'
-                          : formData.recurrence_type === 'weekly'
-                          ? 'week(s)'
-                          : 'month(s)'}
-                      </span>
-                    </div>
-                  </div>
-                  {formData.recurrence_type === 'weekly' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        On days
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {DAYS_OF_WEEK.map((day, index) => (
-                          <button
-                            key={day}
-                            type="button"
-                            onClick={() => toggleDayOfWeek(index)}
-                            className={`px-3 py-1 rounded-md text-sm ${
-                              formData.days_of_week?.includes(index)
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {formData.recurrence_type === 'monthly' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        On day of month
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.day_of_month}
-                        onChange={(e) =>
-                          setFormData({ ...formData, day_of_month: parseInt(e.target.value) || 1 })
-                        }
-                        className="w-20 border border-gray-300 rounded-md px-3 py-2"
-                        min={1}
-                        max={31}
-                      />
-                    </div>
-                  )}
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    value={formData.interval}
+                    onChange={(e) =>
+                      setFormData({ ...formData, interval: parseInt(e.target.value) || 1 })
+                    }
+                    className="w-20 border border-gray-300 rounded-md px-3 py-2"
+                    min={1}
+                  />
+                  <span className="text-gray-700">
+                    {formData.recurrence_type === 'daily'
+                      ? 'day(s)'
+                      : formData.recurrence_type === 'weekly'
+                      ? 'week(s)'
+                      : 'month(s)'}
+                  </span>
                 </div>
               </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
-      {showEditModal && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Recurring Task</h3>
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
-                <select
-                  value={formData.queue_id}
-                  onChange={(e) => setFormData({ ...formData, queue_id: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                >
-                  {queues.map((queue) => (
-                    <option key={queue._id || queue.id} value={queue._id || queue.id}>
-                      {queue.purpose}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={formData.description || ''}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={2}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                <input
-                  type="number"
-                  value={formData.priority}
-                  onChange={(e) =>
-                    setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })
-                  }
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  min={1}
-                  max={10}
-                />
-              </div>
-
-              {/* Recurrence Settings */}
-              <div className="border-t pt-4 mt-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Schedule</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Recurrence Type
-                    </label>
-                    <select
-                      value={formData.recurrence_type}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          recurrence_type: e.target.value as RecurrenceType,
-                        })
-                      }
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
+              {formData.recurrence_type === 'weekly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    On days
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_OF_WEEK.map((day, index) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDayOfWeek(index)}
+                        className={`px-3 py-1 rounded-md text-sm ${
+                          formData.days_of_week?.includes(index)
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Every
-                    </label>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="number"
-                        value={formData.interval}
-                        onChange={(e) =>
-                          setFormData({ ...formData, interval: parseInt(e.target.value) || 1 })
-                        }
-                        className="w-20 border border-gray-300 rounded-md px-3 py-2"
-                        min={1}
-                      />
-                      <span className="text-gray-700">
-                        {formData.recurrence_type === 'daily'
-                          ? 'day(s)'
-                          : formData.recurrence_type === 'weekly'
-                          ? 'week(s)'
-                          : 'month(s)'}
-                      </span>
-                    </div>
-                  </div>
-                  {formData.recurrence_type === 'weekly' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        On days
-                      </label>
-                      <div className="flex flex-wrap gap-2">
-                        {DAYS_OF_WEEK.map((day, index) => (
-                          <button
-                            key={day}
-                            type="button"
-                            onClick={() => toggleDayOfWeek(index)}
-                            className={`px-3 py-1 rounded-md text-sm ${
-                              formData.days_of_week?.includes(index)
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {formData.recurrence_type === 'monthly' && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        On day of month
-                      </label>
-                      <input
-                        type="number"
-                        value={formData.day_of_month}
-                        onChange={(e) =>
-                          setFormData({ ...formData, day_of_month: parseInt(e.target.value) || 1 })
-                        }
-                        className="w-20 border border-gray-300 rounded-md px-3 py-2"
-                        min={1}
-                        max={31}
-                      />
-                    </div>
-                  )}
                 </div>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation */}
-      {showDeleteConfirm && selectedTask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Recurring Task?</h3>
-            <p className="text-gray-500 mb-4">
-              Are you sure you want to delete "{selectedTask.title}"? This will not delete
-              already-created tasks.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Deleting...' : 'Delete'}
-              </button>
+              )}
+              {formData.recurrence_type === 'monthly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    On day of month
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.day_of_month}
+                    onChange={(e) =>
+                      setFormData({ ...formData, day_of_month: parseInt(e.target.value) || 1 })
+                    }
+                    className="w-20 border border-gray-300 rounded-md px-3 py-2"
+                    min={1}
+                    max={31}
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Edit Modal */}
+      <Modal
+        isOpen={showEditModal && !!selectedTask}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Recurring Task"
+      >
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
+            <select
+              value={formData.queue_id}
+              onChange={(e) => setFormData({ ...formData, queue_id: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              required
+            >
+              {queues.map((queue) => (
+                <option key={queue._id || queue.id} value={queue._id || queue.id}>
+                  {queue.purpose}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={formData.description || ''}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={2}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <input
+              type="number"
+              value={formData.priority}
+              onChange={(e) =>
+                setFormData({ ...formData, priority: parseInt(e.target.value) || 5 })
+              }
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              min={1}
+              max={10}
+            />
+          </div>
+
+          {/* Recurrence Settings */}
+          <div className="border-t pt-4 mt-4">
+            <h4 className="text-sm font-medium text-gray-900 mb-3">Schedule</h4>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Recurrence Type
+                </label>
+                <select
+                  value={formData.recurrence_type}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      recurrence_type: e.target.value as RecurrenceType,
+                    })
+                  }
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Every
+                </label>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="number"
+                    value={formData.interval}
+                    onChange={(e) =>
+                      setFormData({ ...formData, interval: parseInt(e.target.value) || 1 })
+                    }
+                    className="w-20 border border-gray-300 rounded-md px-3 py-2"
+                    min={1}
+                  />
+                  <span className="text-gray-700">
+                    {formData.recurrence_type === 'daily'
+                      ? 'day(s)'
+                      : formData.recurrence_type === 'weekly'
+                      ? 'week(s)'
+                      : 'month(s)'}
+                  </span>
+                </div>
+              </div>
+              {formData.recurrence_type === 'weekly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    On days
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {DAYS_OF_WEEK.map((day, index) => (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => toggleDayOfWeek(index)}
+                        className={`px-3 py-1 rounded-md text-sm ${
+                          formData.days_of_week?.includes(index)
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {formData.recurrence_type === 'monthly' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    On day of month
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.day_of_month}
+                    onChange={(e) =>
+                      setFormData({ ...formData, day_of_month: parseInt(e.target.value) || 1 })
+                    }
+                    className="w-20 border border-gray-300 rounded-md px-3 py-2"
+                    min={1}
+                    max={31}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowEditModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation */}
+      <Modal
+        isOpen={showDeleteConfirm && !!selectedTask}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Recurring Task?"
+        size="sm"
+      >
+        <p className="text-gray-500 mb-4">
+          Are you sure you want to delete "{selectedTask?.title}"? This will not delete
+          already-created tasks.
+        </p>
+        <ModalFooter>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={saving}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Deleting...' : 'Delete'}
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }

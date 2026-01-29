@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { useAppStore } from '../stores/appStore'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -20,17 +21,6 @@ export default function Tasks() {
     fetchQueues()
     fetchTasks()
   }, [fetchQueues, fetchTasks])
-
-  // Close modal on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && showCreateModal) {
-        setShowCreateModal(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal])
 
   const filteredTasks = tasks.filter((task) => {
     if (filterQueue && task.queue_id !== filterQueue) return false
@@ -144,69 +134,68 @@ export default function Tasks() {
       </div>
 
       {/* Create Task Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Task</h3>
-            <form onSubmit={handleCreateTask} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
-                <select
-                  value={newTask.queue_id}
-                  onChange={(e) => setNewTask({ ...newTask, queue_id: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                >
-                  <option value="">Select a queue</option>
-                  {queues.map((queue) => (
-                    <option key={queue._id || queue.id} value={queue._id || queue.id}>
-                      {queue.purpose}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input
-                  type="text"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="Task title"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={3}
-                  placeholder="Task description"
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Create Task
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Task"
+      >
+        <form onSubmit={handleCreateTask} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
+            <select
+              value={newTask.queue_id}
+              onChange={(e) => setNewTask({ ...newTask, queue_id: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              required
+            >
+              <option value="">Select a queue</option>
+              {queues.map((queue) => (
+                <option key={queue._id || queue.id} value={queue._id || queue.id}>
+                  {queue.purpose}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              value={newTask.title}
+              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="Task title"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={newTask.description}
+              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={3}
+              placeholder="Task description"
+            />
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Create Task
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
     </div>
   )
 }

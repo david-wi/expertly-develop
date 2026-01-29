@@ -140,6 +140,25 @@ declare module 'expertly_ui/index' {
   export const themeList: Theme[]
 
   // ==========================================================================
+  // Modal Types
+  // ==========================================================================
+
+  export interface ModalProps {
+    isOpen: boolean
+    onClose: () => void
+    title?: string
+    children: ReactNode
+    size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
+    showCloseButton?: boolean
+    className?: string
+  }
+
+  export interface ModalFooterProps {
+    children: ReactNode
+    className?: string
+  }
+
+  // ==========================================================================
   // Exported Components
   // ==========================================================================
 
@@ -150,6 +169,8 @@ declare module 'expertly_ui/index' {
   export function ThemeProvider(props: { children: ReactNode; defaultTheme?: ThemeId; defaultMode?: ThemeMode }): JSX.Element
   export function ThemeSwitcher(): JSX.Element
   export const ThemeContext: Context<ThemeContextValue | null>
+  export function Modal(props: ModalProps): JSX.Element | null
+  export function ModalFooter(props: ModalFooterProps): JSX.Element
 
   // ==========================================================================
   // Exported Functions

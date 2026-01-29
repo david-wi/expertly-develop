@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { Modal, ModalFooter } from 'expertly_ui/index'
 import { useAppStore } from '../stores/appStore'
 import { api, Queue, CreateQueueRequest } from '../services/api'
 
@@ -42,19 +43,6 @@ export default function Queues() {
       if (queue) setSelectedQueue(queue)
     }
   }, [searchParams, queues])
-
-  // Close modals on Escape key
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (showCreateModal) setShowCreateModal(false)
-        if (showEditModal) setShowEditModal(false)
-        if (showDeleteConfirm) setShowDeleteConfirm(false)
-      }
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [showCreateModal, showEditModal, showDeleteConfirm])
 
   const loadStats = async () => {
     setLoadingStats(true)
@@ -281,133 +269,131 @@ export default function Queues() {
       </div>
 
       {/* Create Queue Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Create New Queue</h3>
-            <form onSubmit={handleCreate} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Purpose
-                </label>
-                <input
-                  type="text"
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="e.g., Client Projects, Weekly Reviews"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={2}
-                  placeholder="Brief description of this queue"
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Creating...' : 'Create'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Create New Queue"
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Purpose
+            </label>
+            <input
+              type="text"
+              value={formData.purpose}
+              onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="e.g., Client Projects, Weekly Reviews"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={2}
+              placeholder="Brief description of this queue"
+            />
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Creating...' : 'Create'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Edit Queue Modal */}
-      {showEditModal && selectedQueue && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Queue</h3>
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Purpose
-                </label>
-                <input
-                  type="text"
-                  value={formData.purpose}
-                  onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description (optional)
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  rows={2}
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showEditModal && !!selectedQueue}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Queue"
+      >
+        <form onSubmit={handleEdit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Purpose
+            </label>
+            <input
+              type="text"
+              value={formData.purpose}
+              onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              required
+            />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={2}
+            />
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => setShowEditModal(false)}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+          </ModalFooter>
+        </form>
+      </Modal>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && selectedQueue && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Queue?</h3>
-            <p className="text-gray-500 mb-4">
-              Are you sure you want to delete "{selectedQueue.purpose}"? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={saving}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                {saving ? 'Deleting...' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        isOpen={showDeleteConfirm && !!selectedQueue}
+        onClose={() => setShowDeleteConfirm(false)}
+        title="Delete Queue?"
+        size="sm"
+      >
+        <p className="text-gray-500 mb-4">
+          Are you sure you want to delete "{selectedQueue?.purpose}"? This action cannot be undone.
+        </p>
+        <ModalFooter>
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDelete}
+            disabled={saving}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? 'Deleting...' : 'Delete'}
+          </button>
+        </ModalFooter>
+      </Modal>
     </div>
   )
 }
