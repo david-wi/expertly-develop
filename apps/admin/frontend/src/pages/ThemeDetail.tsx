@@ -18,6 +18,7 @@ export function ThemeDetail() {
   const [colors, setColors] = useState<ThemeColors | null>(null)
   const [changeSummary, setChangeSummary] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
+  const [previewMode, setPreviewMode] = useState<'light' | 'dark'>('light')
 
   const { data: theme, isLoading, error } = useQuery({
     queryKey: ['theme', id],
@@ -202,6 +203,8 @@ export function ThemeDetail() {
             <ColorPaletteEditor
               colors={colors}
               onChange={handleColorsChange}
+              activeMode={previewMode}
+              onModeChange={setPreviewMode}
             />
           )}
         </div>
@@ -209,7 +212,7 @@ export function ThemeDetail() {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Preview */}
-          {colors && <ThemePreview colors={colors} />}
+          {colors && <ThemePreview colors={colors} mode={previewMode} onModeChange={setPreviewMode} />}
 
           {/* Version history */}
           <VersionHistory themeId={id!} currentVersion={theme.current_version} />

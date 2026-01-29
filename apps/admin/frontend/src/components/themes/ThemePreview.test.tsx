@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '../../test/test-utils'
 import userEvent from '@testing-library/user-event'
 import { ThemePreview } from './ThemePreview'
@@ -66,52 +66,66 @@ const mockColors: ThemeColors = {
 }
 
 describe('ThemePreview', () => {
+  const defaultProps = {
+    colors: mockColors,
+    mode: 'light' as const,
+  }
+
   it('renders preview title', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     expect(screen.getByText('Preview')).toBeInTheDocument()
   })
 
-  it('renders light and dark mode toggle buttons', () => {
-    render(<ThemePreview colors={mockColors} />)
+  it('renders light and dark mode toggle buttons when onModeChange provided', () => {
+    render(<ThemePreview {...defaultProps} onModeChange={vi.fn()} />)
 
     expect(screen.getByRole('button', { name: /light/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /dark/i })).toBeInTheDocument()
   })
 
-  it('shows light mode by default', () => {
-    render(<ThemePreview colors={mockColors} />)
+  it('does not render mode toggle when onModeChange not provided', () => {
+    render(<ThemePreview {...defaultProps} />)
+
+    expect(screen.queryByRole('button', { name: /light/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /dark/i })).not.toBeInTheDocument()
+  })
+
+  it('shows light mode when mode is light', () => {
+    const onModeChange = vi.fn()
+    render(<ThemePreview {...defaultProps} mode="light" onModeChange={onModeChange} />)
 
     const lightButton = screen.getByRole('button', { name: /light/i })
     expect(lightButton.className).toContain('bg-white')
   })
 
-  it('can switch to dark mode', async () => {
+  it('calls onModeChange when dark mode is clicked', async () => {
     const user = userEvent.setup()
-    render(<ThemePreview colors={mockColors} />)
+    const onModeChange = vi.fn()
+    render(<ThemePreview {...defaultProps} onModeChange={onModeChange} />)
 
     const darkButton = screen.getByRole('button', { name: /dark/i })
     await user.click(darkButton)
 
-    expect(darkButton.className).toContain('bg-white')
+    expect(onModeChange).toHaveBeenCalledWith('dark')
   })
 
   it('renders sample card section', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     expect(screen.getByText('Sample Card')).toBeInTheDocument()
     expect(screen.getByText('This is how content looks with your theme colors.')).toBeInTheDocument()
   })
 
   it('renders primary and secondary buttons', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     expect(screen.getByRole('button', { name: 'Primary' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Secondary' })).toBeInTheDocument()
   })
 
   it('renders text samples', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     expect(screen.getByText('Primary text')).toBeInTheDocument()
     expect(screen.getByText('Secondary text')).toBeInTheDocument()
@@ -119,26 +133,22 @@ describe('ThemePreview', () => {
   })
 
   it('renders Expertly branding', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     expect(screen.getByText('E')).toBeInTheDocument()
     expect(screen.getByText('Expertly')).toBeInTheDocument()
   })
 
   it('applies light mode colors correctly', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} mode="light" />)
 
     // Check that the primary text has the light mode color
     const primaryText = screen.getByText('Primary text')
     expect(primaryText).toHaveStyle({ color: mockColors.light.text.primary })
   })
 
-  it('applies dark mode colors after toggle', async () => {
-    const user = userEvent.setup()
-    render(<ThemePreview colors={mockColors} />)
-
-    const darkButton = screen.getByRole('button', { name: /dark/i })
-    await user.click(darkButton)
+  it('applies dark mode colors when mode is dark', () => {
+    render(<ThemePreview {...defaultProps} mode="dark" />)
 
     // Check that the primary text has the dark mode color
     const primaryText = screen.getByText('Primary text')
@@ -146,7 +156,7 @@ describe('ThemePreview', () => {
   })
 
   it('renders color chips', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     // Should have 3 color chips (500, 600, 700)
     const colorChips = document.querySelectorAll('.flex.gap-1.pt-2 > div')
@@ -154,14 +164,14 @@ describe('ThemePreview', () => {
   })
 
   it('applies primary button color correctly', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     const primaryButton = screen.getByRole('button', { name: 'Primary' })
     expect(primaryButton).toHaveStyle({ backgroundColor: mockColors.light.primary['600'] })
   })
 
   it('applies secondary button colors correctly', () => {
-    render(<ThemePreview colors={mockColors} />)
+    render(<ThemePreview {...defaultProps} />)
 
     const secondaryButton = screen.getByRole('button', { name: 'Secondary' })
     expect(secondaryButton).toHaveStyle({

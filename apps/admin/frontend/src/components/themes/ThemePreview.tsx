@@ -1,13 +1,12 @@
-import { useState } from 'react'
 import type { ThemeColors } from '@/types/theme'
 
 interface ThemePreviewProps {
   colors: ThemeColors
+  mode: 'light' | 'dark'
+  onModeChange?: (mode: 'light' | 'dark') => void
 }
 
-export function ThemePreview({ colors }: ThemePreviewProps) {
-  const [mode, setMode] = useState<'light' | 'dark'>('light')
-
+export function ThemePreview({ colors, mode, onModeChange }: ThemePreviewProps) {
   const c = colors[mode]
 
   return (
@@ -16,28 +15,30 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
         <h2 className="text-lg font-semibold text-theme-text-primary">Preview</h2>
 
         {/* Mode toggle */}
-        <div className="flex items-center gap-1 p-1 bg-theme-bg rounded-lg">
-          <button
-            onClick={() => setMode('light')}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              mode === 'light'
-                ? 'bg-white shadow text-theme-text-primary dark:bg-gray-700'
-                : 'text-theme-text-muted'
-            }`}
-          >
-            Light
-          </button>
-          <button
-            onClick={() => setMode('dark')}
-            className={`px-2 py-1 text-xs rounded transition-colors ${
-              mode === 'dark'
-                ? 'bg-white shadow text-theme-text-primary dark:bg-gray-700'
-                : 'text-theme-text-muted'
-            }`}
-          >
-            Dark
-          </button>
-        </div>
+        {onModeChange && (
+          <div className="flex items-center gap-1 p-1 bg-theme-bg rounded-lg">
+            <button
+              onClick={() => onModeChange('light')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                mode === 'light'
+                  ? 'bg-white shadow text-theme-text-primary dark:bg-gray-700'
+                  : 'text-theme-text-muted'
+              }`}
+            >
+              Light
+            </button>
+            <button
+              onClick={() => onModeChange('dark')}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                mode === 'dark'
+                  ? 'bg-white shadow text-theme-text-primary dark:bg-gray-700'
+                  : 'text-theme-text-muted'
+              }`}
+            >
+              Dark
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Preview container */}
