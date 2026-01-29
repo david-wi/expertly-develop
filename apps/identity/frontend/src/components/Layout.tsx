@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   User,
-  Bot,
   UsersRound,
   Building2,
   KeyRound,
@@ -11,8 +10,7 @@ import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser } from 'expe
 import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [
-  { name: 'Users', href: '/users', icon: User },
-  { name: 'Bots', href: '/bots', icon: Bot },
+  { name: 'Users and Bots', href: '/users', icon: User },
   { name: 'Teams', href: '/teams', icon: UsersRound },
   { name: 'Organizations', href: '/organizations', icon: Building2 },
   { name: 'Change Password', href: '/change-password', icon: KeyRound },
