@@ -24,6 +24,18 @@ PROVIDERS_DATA = [
         "api_key_env_var": "OPENAI_API_KEY",
         "base_url": None,
     },
+    {
+        "name": "groq",
+        "display_name": "Groq",
+        "api_key_env_var": "GROQ_API_KEY",
+        "base_url": None,
+    },
+    {
+        "name": "google",
+        "display_name": "Google (Gemini)",
+        "api_key_env_var": "GOOGLE_API_KEY",
+        "base_url": None,
+    },
 ]
 
 # Model data - model_id is the actual API model identifier
@@ -62,6 +74,18 @@ MODELS_DATA = [
     # OpenAI Models
     {
         "provider_name": "openai",
+        "model_id": "gpt-5.2",
+        "display_name": "GPT-5.2",
+        "capabilities": ["text", "vision", "tools", "coding"],
+    },
+    {
+        "provider_name": "openai",
+        "model_id": "gpt-5.2-pro",
+        "display_name": "GPT-5.2 Pro (Thinking)",
+        "capabilities": ["text", "vision", "tools", "coding", "complex_reasoning"],
+    },
+    {
+        "provider_name": "openai",
         "model_id": "gpt-4o",
         "display_name": "GPT-4o",
         "capabilities": ["text", "vision", "tools"],
@@ -78,56 +102,89 @@ MODELS_DATA = [
         "display_name": "DALL-E 3",
         "capabilities": ["image_generation"],
     },
+    # Groq Models
+    {
+        "provider_name": "groq",
+        "model_id": "llama-3.3-70b-versatile",
+        "display_name": "Llama 3.3 70B Versatile",
+        "capabilities": ["text", "tools"],
+    },
+    {
+        "provider_name": "groq",
+        "model_id": "llama-3.1-8b-instant",
+        "display_name": "Llama 3.1 8B Instant",
+        "capabilities": ["text"],
+    },
+    {
+        "provider_name": "groq",
+        "model_id": "mixtral-8x7b-32768",
+        "display_name": "Mixtral 8x7B",
+        "capabilities": ["text"],
+    },
+    # Google Gemini Models
+    {
+        "provider_name": "google",
+        "model_id": "gemini-2.0-flash",
+        "display_name": "Gemini 2.0 Flash",
+        "capabilities": ["text", "vision", "tools"],
+    },
+    {
+        "provider_name": "google",
+        "model_id": "gemini-2.0-pro",
+        "display_name": "Gemini 2.0 Pro",
+        "capabilities": ["text", "vision", "tools", "complex_reasoning"],
+    },
 ]
 
 # Use case configurations - maps use cases to default models
+# Analytical tasks use gpt-5.2-pro (thinking), others use gpt-5.2 (instant)
 USE_CASES_DATA = [
     {
         "use_case": "coding",
         "description": "Code generation and editing, Claude Code-like functionality",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 8192,
         "temperature": 0.3,
     },
     {
         "use_case": "analysis_heavy",
         "description": "Complex analysis, research, deep reasoning tasks",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 8192,
         "temperature": 0.7,
     },
     {
         "use_case": "analysis_medium",
         "description": "Standard analysis tasks requiring good reasoning",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 4096,
         "temperature": 0.7,
     },
     {
         "use_case": "categorization",
         "description": "Classification, tagging, and categorization tasks",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2",  # Quick task - uses instant
         "max_tokens": 2048,
         "temperature": 0.3,
     },
     {
         "use_case": "summarization",
         "description": "Text summarization and condensing content",
-        "model_id": "claude-haiku-3-5-latest",
+        "model_id": "gpt-5.2",  # Quick task - uses instant
         "max_tokens": 4096,
         "temperature": 0.5,
     },
     {
         "use_case": "extraction_simple",
         "description": "Simple data extraction from text",
-        "model_id": "claude-haiku-3-5-latest",
+        "model_id": "gpt-5.2",  # Quick task - uses instant
         "max_tokens": 2048,
         "temperature": 0.2,
     },
     {
         "use_case": "decisions_simple",
         "description": "Quick yes/no decisions and simple classifications",
-        "model_id": "claude-haiku-3-5-latest",
+        "model_id": "gpt-5.2",  # Quick task - uses instant
         "max_tokens": 1024,
         "temperature": 0.2,
     },
@@ -141,63 +198,70 @@ USE_CASES_DATA = [
     {
         "use_case": "vision",
         "description": "Image analysis and visual understanding",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2",  # Vision task - uses instant
         "max_tokens": 4096,
         "temperature": 0.5,
     },
     {
         "use_case": "requirements_parsing",
         "description": "Parsing and extracting requirements from documents",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 8192,
         "temperature": 0.3,
     },
     {
         "use_case": "file_conversion",
         "description": "Converting files to markdown and other formats",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2",  # File processing - uses instant
+        "max_tokens": 8192,
+        "temperature": 0.2,
+    },
+    {
+        "use_case": "file_to_markdown",
+        "description": "Converting files to markdown (alias)",
+        "model_id": "gpt-5.2",  # File processing - uses instant
         "max_tokens": 8192,
         "temperature": 0.2,
     },
     {
         "use_case": "jira_generation",
         "description": "Generating Jira stories and tickets",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2",  # Generation task - uses instant
         "max_tokens": 4096,
         "temperature": 0.5,
     },
     {
         "use_case": "page_analysis",
         "description": "Analyzing web pages and UI screenshots",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 4096,
         "temperature": 0.3,
     },
     {
         "use_case": "test_generation",
         "description": "Generating test scripts and test cases",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 8192,
         "temperature": 0.3,
     },
     {
         "use_case": "failure_analysis",
         "description": "Analyzing test failures and suggesting fixes",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 4096,
         "temperature": 0.5,
     },
     {
         "use_case": "code_session",
         "description": "Interactive coding sessions (Vibecode)",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
         "max_tokens": 8192,
         "temperature": 0.3,
     },
     {
         "use_case": "chat",
         "description": "General conversational AI chat",
-        "model_id": "claude-sonnet-4-0-latest",
+        "model_id": "gpt-5.2",  # Chat - uses instant
         "max_tokens": 4096,
         "temperature": 0.7,
     },

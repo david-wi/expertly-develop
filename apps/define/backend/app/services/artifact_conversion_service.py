@@ -1,13 +1,10 @@
-import anthropic
 import base64
 import re
 from typing import Tuple, Optional
 from io import BytesIO
 from pypdf import PdfReader
 
-from app.config import get_settings
-
-settings = get_settings()
+from app.utils.ai_config import get_ai_client
 
 
 def reflow_pdf_text(text: str) -> str:
@@ -193,7 +190,7 @@ class ArtifactConversionService:
     """Service for converting various file types to markdown using AI."""
 
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.client = get_ai_client()
 
     async def convert_to_markdown(
         self,
@@ -243,32 +240,9 @@ class ArtifactConversionService:
         self, file_content: bytes, filename: str, mime_type: str
     ) -> Tuple[str, bool]:
         """Convert image to markdown with AI-generated description."""
-        from app.utils.ai_config import get_use_case_config
-
         base64_content = base64.b64encode(file_content).decode("utf-8")
 
-        # Get model configuration for file-to-markdown conversion
-        use_case_config = get_use_case_config("file_to_markdown")
-
-        try:
-            response = self.client.messages.create(
-                model=use_case_config.model_id,
-                max_tokens=use_case_config.max_tokens,
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image",
-                                "source": {
-                                    "type": "base64",
-                                    "media_type": mime_type,
-                                    "data": base64_content,
-                                },
-                            },
-                            {
-                                "type": "text",
-                                "text": """Analyze this image and create a detailed markdown description.
+        prompt = """Analyze this image and create a detailed markdown description.
 
 If this is a document or specification:
 - Extract all text content
@@ -285,49 +259,38 @@ If this is a screenshot:
 - Note any important UI elements
 - Capture any visible text
 
-Format your response as clean markdown with appropriate headings.""",
-                            },
-                        ],
-                    }
-                ],
+Format your response as clean markdown with appropriate headings."""
+
+        try:
+            text = await self.client.complete(
+                use_case="file_to_markdown",
+                system_prompt="You are an expert at analyzing images and converting them to detailed markdown descriptions.",
+                user_content=prompt,
+                images=[{"media_type": mime_type, "data": base64_content}],
             )
 
-            text_block = next((b for b in response.content if b.type == "text"), None)
-            if not text_block:
-                return f"# {filename}\n\n*Image could not be analyzed*", False
-
-            markdown = f"# {filename}\n\n{text_block.text}"
+            markdown = f"# {filename}\n\n{text}"
             return markdown, True
 
-        except anthropic.RateLimitError:
-            return (
-                f"# {filename}\n\n*AI service rate limit exceeded. Please wait a moment and try again.*",
-                False,
-            )
-        except anthropic.BadRequestError as e:
+        except Exception as e:
             error_msg = str(e).lower()
-            if "image" in error_msg or "media" in error_msg:
+            if "rate limit" in error_msg or "rate_limit" in error_msg:
+                return (
+                    f"# {filename}\n\n*AI service rate limit exceeded. Please wait a moment and try again.*",
+                    False,
+                )
+            elif "authentication" in error_msg or "api key" in error_msg:
+                return (
+                    f"# {filename}\n\n*AI service authentication failed. Please check the API key configuration.*",
+                    False,
+                )
+            elif "image" in error_msg or "media" in error_msg:
                 return (
                     f"# {filename}\n\n*Invalid image format or size. Please ensure images are JPEG, PNG, GIF, or WebP and under 5MB each.*",
                     False,
                 )
             return (
-                f"# {filename}\n\n*Invalid request: {str(e)}*",
-                False,
-            )
-        except anthropic.AuthenticationError:
-            return (
-                f"# {filename}\n\n*AI service authentication failed. Please check the API key configuration.*",
-                False,
-            )
-        except anthropic.APIStatusError as e:
-            if e.status_code in (500, 502, 503):
-                return (
-                    f"# {filename}\n\n*AI service is temporarily unavailable. Please try again in a few moments.*",
-                    False,
-                )
-            return (
-                f"# {filename}\n\n*AI service error ({e.status_code}): {str(e)}*",
+                f"# {filename}\n\n*AI service error: {str(e)}*",
                 False,
             )
 

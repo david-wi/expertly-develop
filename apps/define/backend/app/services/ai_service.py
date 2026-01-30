@@ -1,20 +1,18 @@
-import anthropic
 import json
+import re
 import base64
 from typing import List, Optional
 from pypdf import PdfReader
 from io import BytesIO
 
-from app.config import get_settings
 from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, ContextUrl
 from app.services.artifact_conversion_service import reflow_pdf_text
-
-settings = get_settings()
+from app.utils.ai_config import get_ai_client
 
 
 class AIService:
     def __init__(self):
-        self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.client = get_ai_client()
 
     def _extract_pdf_text(self, base64_content: str) -> str:
         """Extract text from PDF content."""
@@ -65,25 +63,21 @@ class AIService:
         context_urls: Optional[List[ContextUrl]] = None,
         related_requirement_ids: Optional[List[str]] = None,
     ) -> List[ParsedRequirement]:
-        """Parse requirements from description and files using Claude."""
+        """Parse requirements from description and files using AI."""
 
         # Build context about existing tree structure
         tree_text = self._build_tree_text(existing_requirements)
 
         # Process files
         file_context = ""
-        image_blocks = []
+        images = []
 
         if files:
             for file in files:
                 if file.type.startswith("image/"):
-                    image_blocks.append({
-                        "type": "image",
-                        "source": {
-                            "type": "base64",
-                            "media_type": file.type,
-                            "data": file.content,
-                        },
+                    images.append({
+                        "media_type": file.type,
+                        "data": file.content,
                     })
                 elif file.type == "application/pdf":
                     pdf_text = self._extract_pdf_text(file.content)
@@ -150,8 +144,8 @@ Existing requirements tree:
 
 User's description of new requirements:
 {description}
-{f'\n\nAdditional context from files:{file_context}' if file_context else ''}
-{'\n\n(See attached images for additional context)' if image_blocks else ''}
+{f'\\n\\nAdditional context from files:{file_context}' if file_context else ''}
+{'\\n\\n(See attached images for additional context)' if images else ''}
 
 Generate structured requirements based on this input. Return a JSON array with this exact structure:
 [
@@ -174,33 +168,15 @@ For child requirements, set parent_ref to either:
 
 Respond with ONLY the JSON array, no other text."""
 
-        # Build content blocks
-        content_blocks = []
-        for image_block in image_blocks:
-            content_blocks.append(image_block)
-        content_blocks.append({"type": "text", "text": user_prompt_text})
-
-        # Get model configuration for requirements parsing
-        from app.utils.ai_config import get_use_case_config
-        use_case_config = get_use_case_config("requirements_parsing")
-
-        # Call Claude
-        response = self.client.messages.create(
-            model=use_case_config.model_id,
-            max_tokens=use_case_config.max_tokens,
-            system=system_prompt,
-            messages=[{"role": "user", "content": content_blocks}],
+        # Call AI using multi-provider client
+        text = await self.client.complete(
+            use_case="requirements_parsing",
+            system_prompt=system_prompt,
+            user_content=user_prompt_text,
+            images=images if images else None,
         )
 
-        # Extract text from response
-        text_block = next((b for b in response.content if b.type == "text"), None)
-        if not text_block:
-            raise ValueError("No text response from AI")
-
-        text = text_block.text
-
         # Parse JSON response
-        import re
         json_match = re.search(r"\[[\s\S]*\]", text)
         if not json_match:
             raise ValueError(f"Failed to parse AI response: {text[:200]}")
