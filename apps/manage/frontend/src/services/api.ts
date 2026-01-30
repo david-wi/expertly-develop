@@ -673,9 +673,17 @@ export interface OAuthStartResponse {
   state: string
 }
 
+export interface ProviderSetupInstructions {
+  steps: string[]
+  console_url: string
+  docs_url: string
+}
+
 export interface ConnectionProvider {
   id: string
   name: string
   description: string
   scopes: string[]
+  configured: boolean
+  setup?: ProviderSetupInstructions
 }

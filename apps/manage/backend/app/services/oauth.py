@@ -63,9 +63,21 @@ def get_provider_config(provider: str) -> OAuthProviderConfig:
             ],
             redirect_uri=f"{base_url}/api/v1/connections/oauth/google/callback",
         ),
-        # Future providers can be added here:
-        # "slack": OAuthProviderConfig(...),
-        # "microsoft": OAuthProviderConfig(...),
+        "slack": OAuthProviderConfig(
+            name="Slack",
+            client_id=settings.slack_client_id,
+            client_secret=settings.slack_client_secret,
+            auth_url="https://slack.com/oauth/v2/authorize",
+            token_url="https://slack.com/api/oauth.v2.access",
+            userinfo_url="https://slack.com/api/users.identity",
+            scopes=[
+                "channels:read",
+                "chat:write",
+                "users:read",
+                "users:read.email",
+            ],
+            redirect_uri=f"{base_url}/api/v1/connections/oauth/slack/callback",
+        ),
     }
 
     if provider not in providers:
@@ -99,12 +111,18 @@ def build_auth_url(provider: str, state: str) -> str:
     params = {
         "client_id": config.client_id,
         "redirect_uri": config.redirect_uri,
-        "response_type": "code",
-        "scope": " ".join(config.scopes),
         "state": state,
-        "access_type": "offline",  # Request refresh token
-        "prompt": "consent",  # Always show consent to get refresh token
     }
+
+    if provider == "slack":
+        # Slack uses user_scope for user tokens (vs scope for bot tokens)
+        params["user_scope"] = ",".join(config.scopes)
+    else:
+        # Google and others
+        params["response_type"] = "code"
+        params["scope"] = " ".join(config.scopes)
+        params["access_type"] = "offline"  # Request refresh token
+        params["prompt"] = "consent"  # Always show consent to get refresh token
 
     return f"{config.auth_url}?{urlencode(params)}"
 
@@ -140,6 +158,21 @@ async def exchange_code_for_tokens(provider: str, code: str) -> TokenResponse:
             raise ValueError(f"Token exchange failed: {error_msg}")
 
         data = response.json()
+
+        # Slack returns ok: false on error even with 200 status
+        if provider == "slack":
+            if not data.get("ok"):
+                raise ValueError(f"Token exchange failed: {data.get('error', 'Unknown error')}")
+            # Slack returns user token in authed_user for user_scope
+            authed_user = data.get("authed_user", {})
+            return TokenResponse(
+                access_token=authed_user.get("access_token", data.get("access_token")),
+                refresh_token=authed_user.get("refresh_token"),
+                expires_in=authed_user.get("expires_in"),
+                token_type="Bearer",
+                scope=authed_user.get("scope", data.get("scope")),
+            )
+
         return TokenResponse(
             access_token=data["access_token"],
             refresh_token=data.get("refresh_token"),
@@ -220,6 +253,16 @@ async def get_user_info(provider: str, access_token: str) -> UserInfo:
                 name=data.get("name"),
             )
 
+        if provider == "slack":
+            if not data.get("ok"):
+                raise ValueError(f"Failed to get user info: {data.get('error', 'Unknown error')}")
+            user = data.get("user", {})
+            return UserInfo(
+                id=user.get("id", ""),
+                email=user.get("email"),
+                name=user.get("name"),
+            )
+
         # Default handling
         return UserInfo(
             id=str(data.get("id") or data.get("sub")),
@@ -233,3 +276,49 @@ def calculate_token_expiry(expires_in: Optional[int]) -> Optional[datetime]:
     if not expires_in:
         return None
     return datetime.now(timezone.utc) + timedelta(seconds=expires_in)
+
+
+def is_provider_configured(provider: str) -> bool:
+    """Check if a provider has OAuth credentials configured."""
+    settings = get_settings()
+
+    if provider == "google":
+        return bool(settings.google_client_id and settings.google_client_secret)
+    elif provider == "slack":
+        return bool(settings.slack_client_id and settings.slack_client_secret)
+
+    return False
+
+
+def get_provider_setup_instructions(provider: str) -> dict:
+    """Get setup instructions for a provider."""
+    settings = get_settings()
+    base_url = settings.app_base_url.rstrip("/")
+
+    instructions = {
+        "google": {
+            "steps": [
+                "Go to Google Cloud Console: https://console.cloud.google.com/apis/credentials",
+                "Create a new OAuth 2.0 Client ID (Web application)",
+                f"Add authorized redirect URI: {base_url}/api/v1/connections/oauth/google/callback",
+                "Copy the Client ID and Client Secret",
+                "Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables",
+            ],
+            "console_url": "https://console.cloud.google.com/apis/credentials",
+            "docs_url": "https://developers.google.com/identity/protocols/oauth2",
+        },
+        "slack": {
+            "steps": [
+                "Go to Slack API: https://api.slack.com/apps",
+                "Create a new app or select an existing one",
+                f"Under OAuth & Permissions, add redirect URL: {base_url}/api/v1/connections/oauth/slack/callback",
+                "Add required user token scopes: channels:read, chat:write, users:read, users:read.email",
+                "Copy the Client ID and Client Secret from Basic Information",
+                "Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET environment variables",
+            ],
+            "console_url": "https://api.slack.com/apps",
+            "docs_url": "https://api.slack.com/authentication/oauth-v2",
+        },
+    }
+
+    return instructions.get(provider, {"steps": [], "console_url": "", "docs_url": ""})

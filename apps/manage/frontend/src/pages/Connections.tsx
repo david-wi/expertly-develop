@@ -13,7 +13,9 @@ export default function Connections() {
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showSetupModal, setShowSetupModal] = useState(false)
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null)
+  const [selectedProvider, setSelectedProvider] = useState<ConnectionProvider | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   // Toast/notification state
@@ -182,7 +184,6 @@ export default function Connections() {
 
   // Check which providers are already connected
   const connectedProviders = new Set(connections.map((c) => c.provider))
-  const availableProviders = providers.filter((p) => !connectedProviders.has(p.id as Connection['provider']))
 
   return (
     <div className="space-y-4">
@@ -225,14 +226,12 @@ export default function Connections() {
             Connect external services to use with your tasks
           </p>
         </div>
-        {availableProviders.length > 0 && (
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
-          >
-            Add Connection
-          </button>
-        )}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
+        >
+          Add Connection
+        </button>
       </div>
 
       {/* Connections List */}
@@ -258,14 +257,12 @@ export default function Connections() {
             <p className="mt-1 text-sm text-gray-500">
               Connect external services like Google, Slack, or Microsoft.
             </p>
-            {providers.length > 0 && (
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
-              >
-                Add your first connection
-              </button>
-            )}
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors"
+            >
+              Add your first connection
+            </button>
           </div>
         ) : (
           <table className="min-w-full divide-y divide-gray-200">
@@ -382,11 +379,17 @@ export default function Connections() {
         <div className="space-y-2">
           {providers.map((provider) => {
             const isConnected = connectedProviders.has(provider.id as Connection['provider'])
+            const isConfigured = provider.configured
             return (
               <button
                 key={provider.id}
                 onClick={() => {
-                  if (!isConnected) {
+                  if (isConnected) return
+                  if (!isConfigured) {
+                    setSelectedProvider(provider)
+                    setShowAddModal(false)
+                    setShowSetupModal(true)
+                  } else {
                     setShowAddModal(false)
                     handleConnect(provider.id)
                   }
@@ -395,7 +398,9 @@ export default function Connections() {
                 className={`w-full flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
                   isConnected
                     ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                    : !isConfigured
+                      ? 'border-amber-200 bg-amber-50 hover:border-amber-300'
+                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                 }`}
               >
                 {getProviderIcon(provider.id)}
@@ -406,6 +411,10 @@ export default function Connections() {
                 {isConnected ? (
                   <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                     Connected
+                  </span>
+                ) : !isConfigured ? (
+                  <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded">
+                    Setup Required
                   </span>
                 ) : connecting ? (
                   <span className="text-sm text-gray-500">Connecting...</span>
@@ -428,9 +437,9 @@ export default function Connections() {
             )
           })}
           {providers.length === 0 && (
-            <p className="text-center text-gray-500 py-4">
-              No connection providers are configured yet.
-            </p>
+            <div className="text-center py-4">
+              <p className="text-gray-500 mb-2">Loading providers...</p>
+            </div>
           )}
         </div>
         <ModalFooter>
@@ -439,6 +448,81 @@ export default function Connections() {
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
             Cancel
+          </button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Setup Instructions Modal */}
+      <Modal
+        isOpen={showSetupModal && !!selectedProvider}
+        onClose={() => {
+          setShowSetupModal(false)
+          setSelectedProvider(null)
+        }}
+        title={`Setup ${selectedProvider?.name} Connection`}
+      >
+        <div className="space-y-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <div>
+                <p className="font-medium text-amber-800">Configuration Required</p>
+                <p className="text-sm text-amber-700 mt-1">
+                  OAuth credentials need to be configured on the server before you can connect to {selectedProvider?.name}.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-medium text-gray-900 mb-2">Setup Steps:</h4>
+            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+              {selectedProvider?.setup?.steps.map((step, index) => (
+                <li key={index} className="pl-1">{step}</li>
+              ))}
+            </ol>
+          </div>
+
+          {selectedProvider?.setup?.console_url && (
+            <div className="flex space-x-3">
+              <a
+                href={selectedProvider.setup.console_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+              >
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+                Open Developer Console
+              </a>
+              {selectedProvider?.setup?.docs_url && (
+                <a
+                  href={selectedProvider.setup.docs_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800"
+                >
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  </svg>
+                  View Documentation
+                </a>
+              )}
+            </div>
+          )}
+        </div>
+        <ModalFooter>
+          <button
+            onClick={() => {
+              setShowSetupModal(false)
+              setSelectedProvider(null)
+            }}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Close
           </button>
         </ModalFooter>
       </Modal>
