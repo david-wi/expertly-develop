@@ -4,8 +4,29 @@ import { Modal, ModalFooter } from '@expertly/ui'
 import { ChevronRight } from 'lucide-react'
 import { api, Project, ProjectStatus, CreateProjectRequest } from '../services/api'
 
-// Local storage key for collapsed projects
+// Local storage keys
 const COLLAPSED_KEY = 'expertly-manage-collapsed-projects'
+const VIEW_MODE_KEY = 'expertly-manage-projects-view-mode'
+
+type ViewMode = 'tree' | 'compact'
+
+function getViewMode(): ViewMode {
+  try {
+    const stored = localStorage.getItem(VIEW_MODE_KEY)
+    if (stored === 'compact') return 'compact'
+  } catch {
+    // Ignore storage errors
+  }
+  return 'tree'
+}
+
+function saveViewMode(mode: ViewMode) {
+  try {
+    localStorage.setItem(VIEW_MODE_KEY, mode)
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 function getCollapsedProjects(): Set<string> {
   try {
@@ -138,37 +159,6 @@ function getDescendantCount(node: TreeNode): number {
   return count
 }
 
-// Status badge colors
-function getStatusBadgeColor(status: ProjectStatus): string {
-  switch (status) {
-    case 'active':
-      return 'bg-green-100 text-green-800'
-    case 'on_hold':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'completed':
-      return 'bg-blue-100 text-blue-800'
-    case 'cancelled':
-      return 'bg-gray-100 text-gray-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
-}
-
-// Format status for display
-function formatStatus(status: ProjectStatus): string {
-  switch (status) {
-    case 'active':
-      return 'Active'
-    case 'on_hold':
-      return 'On Hold'
-    case 'completed':
-      return 'Completed'
-    case 'cancelled':
-      return 'Cancelled'
-    default:
-      return status
-  }
-}
 
 export default function Projects() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -187,6 +177,9 @@ export default function Projects() {
 
   // Collapse state
   const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => getCollapsedProjects())
+
+  // View mode state (tree vs compact)
+  const [viewMode, setViewMode] = useState<ViewMode>(() => getViewMode())
 
   // Form state
   const [formData, setFormData] = useState<CreateProjectRequest & { status?: ProjectStatus }>({
@@ -262,6 +255,47 @@ export default function Projects() {
     }
     setCollapsedProjects(newCollapsed)
     saveCollapsedProjects(newCollapsed)
+  }
+
+  // Toggle view mode
+  const toggleViewMode = () => {
+    const newMode = viewMode === 'tree' ? 'compact' : 'tree'
+    setViewMode(newMode)
+    saveViewMode(newMode)
+  }
+
+  // Get all leaf descendants of a node (childless subprojects)
+  const getLeafDescendants = (node: TreeNode): TreeNode[] => {
+    const leaves: TreeNode[] = []
+    const collect = (n: TreeNode) => {
+      if (n.children.length === 0) {
+        leaves.push(n)
+      } else {
+        n.children.forEach(collect)
+      }
+    }
+    node.children.forEach(collect)
+    return leaves
+  }
+
+  // For compact view, get nodes that have children (to show as rows with inline leaf tags)
+  const getCompactViewNodes = (nodes: TreeNode[]): TreeNode[] => {
+    const result: TreeNode[] = []
+    const collect = (nodeList: TreeNode[], depth: number) => {
+      for (const node of nodeList) {
+        // Include this node if it has children OR if it's a top-level project
+        if (node.children.length > 0 || depth === 0) {
+          result.push(node)
+          // Recurse into children that have their own children
+          const nonLeafChildren = node.children.filter(c => c.children.length > 0)
+          if (nonLeafChildren.length > 0) {
+            collect(nonLeafChildren, depth + 1)
+          }
+        }
+      }
+    }
+    collect(nodes, 0)
+    return result
   }
 
   // Build a map from project ID to tree node for quick lookup
@@ -553,20 +587,36 @@ export default function Projects() {
         </button>
       </div>
 
-      {/* Status Filter */}
-      <div className="flex items-center space-x-4">
-        <label className="text-sm font-medium text-gray-700">Filter by status:</label>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+      {/* Status Filter and View Toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <label className="text-sm font-medium text-gray-700">Filter by status:</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+          >
+            <option value="">All</option>
+            <option value="active">Active</option>
+            <option value="on_hold">On Hold</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <button
+          onClick={toggleViewMode}
+          className="flex items-center space-x-2 px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          title={viewMode === 'tree' ? 'Switch to compact view' : 'Switch to tree view'}
         >
-          <option value="">All</option>
-          <option value="active">Active</option>
-          <option value="on_hold">On Hold</option>
-          <option value="completed">Completed</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+          <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {viewMode === 'tree' ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h7v7H3V4zm11 0h7v7h-7V4zm-11 11h7v7H3v-7zm11 0h7v7h-7v-7z" />
+            )}
+          </svg>
+          <span className="text-gray-600">{viewMode === 'tree' ? 'Compact' : 'Tree'}</span>
+        </button>
       </div>
 
       {/* Drop zone for making projects top-level */}
@@ -596,175 +646,311 @@ export default function Projects() {
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Project
                 </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assignments
-                </th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {flatNodes.map((node) => {
-                const project = node.project
-                const projectId = project._id || project.id
-                const isDraggedOver = dragOverProjectId === projectId
-                const isDragging = draggedProjectId === projectId
+              {viewMode === 'tree' ? (
+                // Tree view - show all nodes in hierarchical order
+                flatNodes.map((node) => {
+                  const project = node.project
+                  const projectId = project._id || project.id
+                  const isDraggedOver = dragOverProjectId === projectId
+                  const isDragging = draggedProjectId === projectId
 
-                return (
-                  <tr
-                    key={projectId}
-                    className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, projectId)}
-                    onDragEnd={handleDragEnd}
-                    onDragOver={(e) => handleDragOver(e, projectId)}
-                    onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, projectId)}
-                  >
-                    <td className="px-4 py-3">
-                      <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
-                        {/* Expand/Collapse toggle */}
-                        {node.children.length > 0 ? (
+                  return (
+                    <tr
+                      key={projectId}
+                      className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, projectId)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, projectId)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, projectId)}
+                    >
+                      <td className="px-4 py-3">
+                        <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
+                          {/* Expand/Collapse toggle */}
+                          {node.children.length > 0 ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                toggleCollapse(projectId)
+                              }}
+                              className="mr-1 p-0.5 rounded hover:bg-gray-200 transition-transform"
+                            >
+                              <ChevronRight
+                                className={`w-4 h-4 text-gray-500 transition-transform ${
+                                  !collapsedProjects.has(projectId) ? 'rotate-90' : ''
+                                }`}
+                              />
+                            </button>
+                          ) : (
+                            <span className="w-5 mr-1" /> // Spacer for alignment
+                          )}
+                          <div
+                            className="mr-2 text-gray-400 select-none"
+                            title="Drag to reparent"
+                          >
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <circle cx="9" cy="6" r="1.5" />
+                              <circle cx="15" cy="6" r="1.5" />
+                              <circle cx="9" cy="12" r="1.5" />
+                              <circle cx="15" cy="12" r="1.5" />
+                              <circle cx="9" cy="18" r="1.5" />
+                              <circle cx="15" cy="18" r="1.5" />
+                            </svg>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link
+                              to={`/projects/${projectId}`}
+                              className="font-medium text-blue-600 hover:text-blue-800"
+                            >
+                              {project.name}
+                            </Link>
+                            {/* Task count badge */}
+                            {node.taskCount > 0 && (
+                              <Link
+                                to={`/tasks?project_id=${projectId}`}
+                                className="px-1.5 py-0.5 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                                title={`${node.taskCount} task${node.taskCount !== 1 ? 's' : ''}`}
+                              >
+                                {node.taskCount}
+                              </Link>
+                            )}
+                            {/* Subproject count badge when collapsed */}
+                            {collapsedProjects.has(projectId) && node.children.length > 0 && (
+                              <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
+                                {getDescendantCount(node)} sub
+                              </span>
+                            )}
+                            {project.description && (
+                              <p className="text-xs text-gray-500 truncate max-w-xs">
+                                {project.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              toggleCollapse(projectId)
-                            }}
-                            className="mr-1 p-0.5 rounded hover:bg-gray-200 transition-transform"
+                            onClick={() => openCreateWithParent(project)}
+                            className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                            title="Add Subproject"
                           >
-                            <ChevronRight
-                              className={`w-4 h-4 text-gray-500 transition-transform ${
-                                !collapsedProjects.has(projectId) ? 'rotate-90' : ''
-                              }`}
-                            />
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 4v16m8-8H4"
+                              />
+                            </svg>
                           </button>
-                        ) : (
-                          <span className="w-5 mr-1" /> // Spacer for alignment
-                        )}
-                        <div
-                          className="mr-2 text-gray-400 select-none"
-                          title="Drag to reparent"
-                        >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                            <circle cx="9" cy="6" r="1.5" />
-                            <circle cx="15" cy="6" r="1.5" />
-                            <circle cx="9" cy="12" r="1.5" />
-                            <circle cx="15" cy="12" r="1.5" />
-                            <circle cx="9" cy="18" r="1.5" />
-                            <circle cx="15" cy="18" r="1.5" />
-                          </svg>
+                          <button
+                            onClick={() => openEditModal(project)}
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirm(project)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Link
-                            to={`/projects/${projectId}`}
-                            className="font-medium text-blue-600 hover:text-blue-800"
+                      </td>
+                    </tr>
+                  )
+                })
+              ) : (
+                // Compact view - show parent projects with childless subprojects as inline tags
+                getCompactViewNodes(treeNodes).map((node) => {
+                  const project = node.project
+                  const projectId = project._id || project.id
+                  const isDraggedOver = dragOverProjectId === projectId
+                  const isDragging = draggedProjectId === projectId
+                  const leafChildren = getLeafDescendants(node)
+
+                  return (
+                    <tr
+                      key={projectId}
+                      className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, projectId)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, projectId)}
+                      onDragLeave={handleDragLeave}
+                      onDrop={(e) => handleDrop(e, projectId)}
+                    >
+                      <td className="px-4 py-3">
+                        <div style={{ paddingLeft: node.depth * 24 }} className="flex items-start">
+                          <div
+                            className="mr-2 mt-0.5 text-gray-400 select-none flex-shrink-0"
+                            title="Drag to reparent"
                           >
-                            {project.name}
-                          </Link>
-                          {/* Subproject count badge when collapsed */}
-                          {collapsedProjects.has(projectId) && node.children.length > 0 && (
-                            <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
-                              {getDescendantCount(node)} sub
-                            </span>
-                          )}
-                          {project.description && (
-                            <p className="text-xs text-gray-500 truncate max-w-xs">
-                              {project.description}
-                            </p>
-                          )}
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                              <circle cx="9" cy="6" r="1.5" />
+                              <circle cx="15" cy="6" r="1.5" />
+                              <circle cx="9" cy="12" r="1.5" />
+                              <circle cx="15" cy="12" r="1.5" />
+                              <circle cx="9" cy="18" r="1.5" />
+                              <circle cx="15" cy="18" r="1.5" />
+                            </svg>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Link
+                                to={`/projects/${projectId}`}
+                                className="font-medium text-blue-600 hover:text-blue-800"
+                              >
+                                {project.name}
+                              </Link>
+                              {/* Task count badge */}
+                              {node.taskCount > 0 && (
+                                <Link
+                                  to={`/tasks?project_id=${projectId}`}
+                                  className="px-1.5 py-0.5 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                                  title={`${node.taskCount} task${node.taskCount !== 1 ? 's' : ''}`}
+                                >
+                                  {node.taskCount}
+                                </Link>
+                              )}
+                              {project.description && (
+                                <span className="text-xs text-gray-500 truncate max-w-xs">
+                                  {project.description}
+                                </span>
+                              )}
+                            </div>
+                            {/* Inline leaf subprojects as tags */}
+                            {leafChildren.length > 0 && (
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {leafChildren.map((leaf) => {
+                                  const leafId = leaf.project._id || leaf.project.id
+                                  return (
+                                    <Link
+                                      key={leafId}
+                                      to={`/projects/${leafId}`}
+                                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+                                    >
+                                      {leaf.project.name}
+                                      {leaf.taskCount > 0 && (
+                                        <span className="px-1 py-px text-[10px] bg-gray-300 text-gray-600 rounded">
+                                          {leaf.taskCount}
+                                        </span>
+                                      )}
+                                    </Link>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeColor(project.status)}`}
-                      >
-                        {formatStatus(project.status)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {node.taskCount > 0 ? (
-                        <Link
-                          to={`/tasks?project_id=${projectId}`}
-                          className="text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          {node.taskCount} assignment{node.taskCount !== 1 ? 's' : ''}
-                        </Link>
-                      ) : (
-                        <span className="text-sm text-gray-400">0 assignments</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => openCreateWithParent(project)}
-                          className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
-                          title="Add Subproject"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                      </td>
+                      <td className="px-4 py-3 text-right align-top">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={() => openCreateWithParent(project)}
+                            className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
+                            title="Add Subproject"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M12 4v16m8-8H4"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => openEditModal(project)}
-                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 4v16m8-8H4"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => openEditModal(project)}
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition-colors"
+                            title="Edit"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={() => openDeleteConfirm(project)}
-                          className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
-                          title="Delete"
-                        >
-                          <svg
-                            className="w-4 h-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => openDeleteConfirm(project)}
+                            className="text-red-600 hover:text-red-800 p-1 rounded hover:bg-red-50 transition-colors"
+                            title="Delete"
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-              {flatNodes.length === 0 && (
+                            <svg
+                              className="w-4 h-4"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+              {((viewMode === 'tree' && flatNodes.length === 0) || (viewMode === 'compact' && treeNodes.length === 0)) && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
+                  <td colSpan={2} className="px-4 py-8 text-center text-gray-500">
                     No projects found. Create one to get started.
                   </td>
                 </tr>
