@@ -130,8 +130,9 @@ describe('Projects', () => {
     renderWithRouter(<Projects />)
 
     await waitFor(() => {
-      // Each project has 1 task (mocked)
-      expect(screen.getAllByText('1 task').length).toBeGreaterThan(0)
+      // Task count is shown as a number badge with title "1 task"
+      const taskBadges = screen.getAllByTitle('1 task')
+      expect(taskBadges.length).toBeGreaterThan(0)
     })
   })
 
@@ -485,9 +486,10 @@ describe('Projects', () => {
       expect(screen.getByText('Grandchild Project')).toBeInTheDocument()
     })
 
-    // All three levels should be visible in the table
+    // In compact view: parent projects get rows, leaf projects are inline tags
+    // Test Project and Test Subproject are rows; Grandchild is an inline tag under Subproject
     const rows = screen.getAllByRole('row')
-    // Header row + 3 project rows
-    expect(rows.length).toBe(4)
+    // Header row + 2 parent project rows (leaf shown inline)
+    expect(rows.length).toBe(3)
   })
 })
