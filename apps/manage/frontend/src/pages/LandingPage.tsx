@@ -1,57 +1,67 @@
 import { Link } from 'react-router-dom'
 import {
-  ListTodo,
-  Users,
-  RotateCcw,
-  AlertTriangle,
-  BarChart3,
-  UsersRound,
+  Calendar,
+  Zap,
+  Inbox,
+  Bot,
+  ShieldCheck,
+  Workflow,
   ArrowRight,
   Check,
   Layers,
   Sparkles,
+  Mail,
+  MessageSquare,
+  Ticket,
 } from 'lucide-react'
 
 const features = [
   {
-    name: 'Task Queues',
-    description: 'Organize work into smart queues that automatically prioritize and distribute tasks to the right team members.',
-    icon: ListTodo,
+    name: 'Scheduled Workflows',
+    description: 'Define what needs to happen and when. Daily reports, weekly reviews, monthly audits — all running automatically on your schedule.',
+    icon: Calendar,
   },
   {
-    name: 'Team Assignments',
-    description: 'Assign tasks to individuals or teams with clear ownership and accountability tracking.',
-    icon: Users,
+    name: 'Event-Driven Triggers',
+    description: 'React instantly when things happen. New email? Slack message? Jira ticket? Trigger the right workflow automatically.',
+    icon: Zap,
   },
   {
-    name: 'Recurring Tasks',
-    description: 'Set up recurring tasks that automatically regenerate on schedule. Never miss a routine activity.',
-    icon: RotateCcw,
+    name: 'Unified Inbox',
+    description: 'One place for everything. Pull in tasks from email, Slack, Teamwork, Jira, and more. Never miss what matters.',
+    icon: Inbox,
   },
   {
-    name: 'Priority Management',
-    description: 'Define priority levels and let the system surface what matters most right now.',
-    icon: AlertTriangle,
+    name: 'Bot Execution',
+    description: 'Let bots handle the routine work. They follow your playbooks, execute tasks, and escalate when needed.',
+    icon: Bot,
   },
   {
-    name: 'Progress Tracking',
-    description: 'Monitor task progress in real-time with visual dashboards and completion metrics.',
-    icon: BarChart3,
+    name: 'Human Approval Gates',
+    description: 'Stay in control. Review and approve bot actions before they go live. Automation with oversight.',
+    icon: ShieldCheck,
   },
   {
-    name: 'Team Collaboration',
-    description: 'Work together seamlessly with shared queues, comments, and real-time updates.',
-    icon: UsersRound,
+    name: 'Playbook Builder',
+    description: 'Define exactly how work should be done. Step-by-step procedures that bots and humans follow consistently.',
+    icon: Workflow,
   },
 ]
 
+const integrations = [
+  { name: 'Email', icon: Mail },
+  { name: 'Slack', icon: MessageSquare },
+  { name: 'Jira', icon: Ticket },
+  { name: 'Teamwork', icon: Ticket },
+]
+
 const benefits = [
-  'Reduce task chaos',
-  'Improve team visibility',
-  'Never drop the ball',
-  'Scale operations smoothly',
-  'Automate routine work',
-  'Track everything',
+  'Run on autopilot',
+  'Never miss a deadline',
+  'Unified task inbox',
+  'Bots do the work',
+  'You stay in control',
+  'Scale effortlessly',
 ]
 
 export default function LandingPage() {
@@ -91,16 +101,16 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
-              Queue-Driven Task Management,{' '}
-              <span className="text-primary-600">Simplified</span>
+              Put Your Organization on{' '}
+              <span className="text-primary-600">Autopilot</span>
             </h1>
             <p className="mt-3 text-lg font-medium text-primary-600 italic">
-              Your organization on autopilot
+              Scheduled and event-driven workflows that run themselves
             </p>
             <p className="mt-6 text-xl text-gray-600 leading-relaxed">
-              Stop chasing tasks across spreadsheets and chat threads.
-              Expertly Manage brings order to chaos with intelligent task queues
-              that ensure nothing falls through the cracks.
+              Schedule recurring tasks, react to events from email and Slack,
+              let bots handle the routine work — while you stay in control as the approver.
+              One unified inbox for everything that needs your attention.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -152,10 +162,10 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Everything you need to manage work effectively
+              Automation that keeps you in control
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Powerful features that bring clarity and control to your team's workload.
+              Schedule workflows, react to events, and let bots do the heavy lifting — with your approval.
             </p>
           </div>
 
@@ -178,15 +188,40 @@ export default function LandingPage() {
         </div>
       </div>
 
+      {/* Integrations Section */}
+      <div className="py-16 bg-white border-b border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-900">
+              Connect Your Tools
+            </h2>
+            <p className="mt-2 text-gray-600">
+              Pull tasks from the tools your team already uses
+            </p>
+          </div>
+          <div className="mt-8 flex flex-wrap justify-center gap-8">
+            {integrations.map((integration) => (
+              <div key={integration.name} className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <integration.icon className="w-5 h-5 text-gray-600" />
+                <span className="font-medium text-gray-700">{integration.name}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+              <span className="font-medium text-gray-500">+ more coming</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* How It Works */}
       <div className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Three steps to organized work
+              How It Works
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Getting started is simple. Here's how it works.
+              Set it up once. Let it run forever.
             </p>
           </div>
 
@@ -196,10 +231,10 @@ export default function LandingPage() {
                 1
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Create Your Queues
+                Define Your Workflows
               </h3>
               <p className="mt-3 text-gray-600">
-                Set up task queues for different work types, projects, or teams. Define priorities and assignment rules.
+                Schedule recurring tasks or set up event triggers. Connect your email, Slack, and project tools. Build playbooks for how work gets done.
               </p>
             </div>
             <div className="text-center">
@@ -207,10 +242,10 @@ export default function LandingPage() {
                 2
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Add Tasks
+                Bots Execute
               </h3>
               <p className="mt-3 text-gray-600">
-                Drop tasks into queues manually or automatically. Set due dates, priorities, and assign to team members.
+                Tasks arrive automatically. Bots pick them up and follow your playbooks. Routine work happens without you lifting a finger.
               </p>
             </div>
             <div className="text-center">
@@ -218,10 +253,10 @@ export default function LandingPage() {
                 3
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Work the Queue
+                You Approve
               </h3>
               <p className="mt-3 text-gray-600">
-                Team members pull from their assigned queues. Track progress, mark complete, and move on.
+                Review bot work in your unified inbox. Approve, adjust, or escalate. Stay in control while automation does the heavy lifting.
               </p>
             </div>
           </div>
@@ -232,10 +267,10 @@ export default function LandingPage() {
       <div className="bg-primary-600 py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white">
-            Ready to bring order to your team's work?
+            Ready to put your organization on autopilot?
           </h2>
           <p className="mt-4 text-lg text-primary-100">
-            Join teams who never lose track of tasks with queue-driven management.
+            Join teams who run scheduled workflows, react to events automatically, and let bots handle the routine.
           </p>
           <Link
             to="/"
