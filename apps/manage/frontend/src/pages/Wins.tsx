@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { api, Task, User as UserType, Team, Playbook } from '../services/api'
-import { Trophy, Star, TrendingUp, Users, User, Users2, BookOpen, ChevronDown, ChevronRight, Bot, X } from 'lucide-react'
+import { Trophy, Star, TrendingUp, Users, User, Users2, BookOpen, ChevronDown, ChevronRight, BotMessageSquare, X } from 'lucide-react'
 
 type TimeFilter = 'today' | 'week' | 'month'
 type GroupBy = 'none' | 'user' | 'queue' | 'team'
@@ -549,7 +549,7 @@ export default function Wins() {
                             {queue && <span>• {queue.purpose}</span>}
                             {assignedUser && groupBy !== 'user' && (
                               <span className="flex items-center">
-                                • {isBot && <Bot className="h-3 w-3 mr-1" />}
+                                • {isBot && <BotMessageSquare className="h-3 w-3 mr-1" />}
                                 {assignedUser.name}
                               </span>
                             )}

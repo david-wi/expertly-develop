@@ -10,7 +10,7 @@ import {
   BookOpen,
   Star,
   Link2,
-  Bot,
+  BotMessageSquare,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
   { name: 'Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Teams', href: '/teams', icon: Users2 },
-  { name: 'Users and Bots', href: '/users', icon: Bot },
+  { name: 'Users and Bots', href: '/users', icon: BotMessageSquare },
   { name: 'Connections', href: '/connections', icon: Link2 },
   { name: 'Wins', href: '/wins', icon: Star, spacerBefore: true },
 ]
