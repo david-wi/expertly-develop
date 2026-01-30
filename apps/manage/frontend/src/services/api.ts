@@ -23,6 +23,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(error.detail || `HTTP ${response.status}`)
   }
 
+  // Handle responses with no content (204, 205, 304)
+  if (response.status === 204 || response.status === 205 || response.status === 304) {
+    return undefined as T
+  }
+
   return response.json()
 }
 

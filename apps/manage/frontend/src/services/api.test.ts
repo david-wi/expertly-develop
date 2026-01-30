@@ -132,4 +132,42 @@ describe('API Service', () => {
       )
     })
   })
+
+  describe('deletePlaybook', () => {
+    it('should handle 204 No Content response from DELETE', async () => {
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: () => Promise.reject(new Error('Should not be called'))
+      })
+
+      const result = await api.deletePlaybook('playbook123')
+      expect(result).toBeUndefined()
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/playbooks/playbook123',
+        expect.objectContaining({
+          method: 'DELETE'
+        })
+      )
+    })
+  })
+
+  describe('deleteTask', () => {
+    it('should handle 204 No Content response from DELETE', async () => {
+      ;(global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        ok: true,
+        status: 204,
+        json: () => Promise.reject(new Error('Should not be called'))
+      })
+
+      const result = await api.deleteTask('task123')
+      expect(result).toBeUndefined()
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/tasks/task123',
+        expect.objectContaining({
+          method: 'DELETE'
+        })
+      )
+    })
+  })
 })
