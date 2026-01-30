@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { api, Project, ProjectStatus, CreateProjectRequest } from '../services/api'
 
@@ -98,6 +98,7 @@ function formatStatus(status: ProjectStatus): string {
 }
 
 export default function Projects() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [projects, setProjects] = useState<Project[]>([])
   const [taskCounts, setTaskCounts] = useState<Map<string, number>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -154,6 +155,22 @@ export default function Projects() {
   useEffect(() => {
     loadData()
   }, [loadData])
+
+  // Handle parent query parameter for "Add Subproject" flow
+  useEffect(() => {
+    const parentId = searchParams.get('parent')
+    if (parentId && !loading) {
+      // Open create modal with parent pre-selected
+      setFormData({
+        name: '',
+        description: '',
+        parent_project_id: parentId,
+      })
+      setShowCreateModal(true)
+      // Clear the query parameter
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams, loading, setSearchParams])
 
   // Build tree and flatten for display
   const treeNodes = buildTree(projects, taskCounts)
