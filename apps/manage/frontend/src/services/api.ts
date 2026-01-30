@@ -23,11 +23,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error(error.detail || `HTTP ${response.status}`)
   }
 
-  // Handle responses with no content (204, 205, 304)
-  if (response.status === 204 || response.status === 205 || response.status === 304) {
-    return undefined as T
-  }
-
   return response.json()
 }
 
@@ -406,6 +401,82 @@ export const api = {
     return request<MonitorEvent[]>(`/api/v1/monitors/${id}/events${query}`)
   },
   getMonitorStats: () => request<MonitorStats>('/api/v1/monitors/stats/summary'),
+
+  // Task Dependencies
+  getTaskDependencies: (taskId: string) =>
+    request<TaskDependencyInfo>(`/api/v1/tasks/${taskId}/dependencies`),
+  updateTaskDependencies: (taskId: string, depends_on: string[]) =>
+    request<Task>(`/api/v1/tasks/${taskId}/dependencies`, {
+      method: 'PATCH',
+      body: JSON.stringify({ depends_on }),
+    }),
+
+  // Notifications
+  getNotifications: (params?: { unread_only?: boolean; notification_type?: string; limit?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.unread_only) searchParams.set('unread_only', 'true')
+    if (params?.notification_type) searchParams.set('notification_type', params.notification_type)
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    const query = searchParams.toString()
+    return request<Notification[]>(`/api/v1/notifications${query ? `?${query}` : ''}`)
+  },
+  getUnreadNotificationCount: () =>
+    request<{ count: number }>('/api/v1/notifications/unread-count'),
+  markNotificationRead: (id: string) =>
+    request<{ success: boolean }>(`/api/v1/notifications/${id}/read`, {
+      method: 'POST',
+    }),
+  markAllNotificationsRead: () =>
+    request<{ success: boolean; marked_count: number }>('/api/v1/notifications/read-all', {
+      method: 'POST',
+    }),
+  dismissNotification: (id: string) =>
+    request<{ success: boolean }>(`/api/v1/notifications/${id}/dismiss`, {
+      method: 'POST',
+    }),
+
+  // Bots
+  getBots: (params?: { status_filter?: string; queue_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status_filter) searchParams.set('status_filter', params.status_filter)
+    if (params?.queue_id) searchParams.set('queue_id', params.queue_id)
+    const query = searchParams.toString()
+    return request<BotWithStatus[]>(`/api/v1/bots${query ? `?${query}` : ''}`)
+  },
+  getBot: (id: string) => request<BotWithStatus>(`/api/v1/bots/${id}`),
+  getBotActivity: (id: string, params?: { limit?: number; activity_type?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    if (params?.activity_type) searchParams.set('activity_type', params.activity_type)
+    const query = searchParams.toString()
+    return request<BotActivity[]>(`/api/v1/bots/${id}/activity${query ? `?${query}` : ''}`)
+  },
+  getBotStats: (id: string, days?: number) => {
+    const query = days ? `?days=${days}` : ''
+    return request<BotStats>(`/api/v1/bots/${id}/stats${query}`)
+  },
+  pauseBot: (id: string) =>
+    request<{ success: boolean; bot_id: string; status: string }>(`/api/v1/bots/${id}/pause`, {
+      method: 'POST',
+    }),
+  resumeBot: (id: string) =>
+    request<{ success: boolean; bot_id: string; status: string }>(`/api/v1/bots/${id}/resume`, {
+      method: 'POST',
+    }),
+  updateBotConfig: (id: string, data: BotConfigUpdate) =>
+    request<BotWithStatus>(`/api/v1/bots/${id}/config`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  getBotTasks: (id: string) =>
+    request<Array<{
+      id: string
+      title: string
+      status: string
+      priority: number
+      checked_out_at?: string
+      started_at?: string
+    }>>(`/api/v1/bots/${id}/tasks`),
 }
 
 // Types
@@ -463,7 +534,7 @@ export interface Task {
   queue_id: string
   title: string
   description?: string
-  status: 'queued' | 'checked_out' | 'in_progress' | 'completed' | 'failed'
+  status: 'queued' | 'blocked' | 'checked_out' | 'in_progress' | 'completed' | 'failed'
   priority: number
   assigned_to_id?: string
   project_id?: string
@@ -473,6 +544,11 @@ export interface Task {
   approver_id?: string
   approver_queue_id?: string
   approval_required?: boolean
+  // Dependencies
+  depends_on?: string[]
+  // Playbook tracking
+  playbook_id?: string
+  source_monitor_id?: string
   created_at: string
   updated_at: string
 }
@@ -489,6 +565,10 @@ export interface CreateTaskRequest {
   approver_id?: string
   approver_queue_id?: string
   approval_required?: boolean
+  // Dependencies
+  depends_on?: string[]
+  // Playbook tracking
+  playbook_id?: string
 }
 
 export interface UpdateTaskRequest {
@@ -504,6 +584,8 @@ export interface UpdateTaskRequest {
   approver_id?: string
   approver_queue_id?: string
   approval_required?: boolean
+  // Dependencies
+  depends_on?: string[]
 }
 
 export interface CreateQueueRequest {
@@ -915,7 +997,7 @@ export interface UpdateTaskCommentRequest {
 }
 
 // Monitor types
-export type MonitorProviderType = 'slack' | 'google_drive' | 'gmail' | 'outlook' | 'teamwork'
+export type MonitorProviderType = 'slack' | 'google_drive' | 'gmail' | 'outlook' | 'teamwork' | 'github'
 export type MonitorStatusType = 'active' | 'paused' | 'error'
 
 export interface SlackConfig {
@@ -1008,4 +1090,128 @@ export interface MonitorStats {
   error: number
   total_events_detected: number
   total_playbooks_triggered: number
+}
+
+// GitHub config for monitors
+export interface GitHubConfig {
+  owner: string
+  repo: string
+  event_types?: string[]
+  branches?: string[]
+  labels?: string[]
+  exclude_bots?: boolean
+  pr_actions?: string[]
+  issue_actions?: string[]
+  include_diff?: boolean
+  include_comments?: number
+}
+
+// Task Dependency types
+export interface TaskDependencyInfo {
+  task_id: string
+  upstream: Array<{
+    id: string
+    title: string
+    status: string
+  }>
+  downstream: Array<{
+    id: string
+    title: string
+    status: string
+  }>
+}
+
+// Notification types
+export type NotificationType =
+  | 'task_assigned'
+  | 'task_completed'
+  | 'task_failed'
+  | 'task_unblocked'
+  | 'approval_needed'
+  | 'bot_failure_alert'
+  | 'mention'
+
+export interface Notification {
+  id: string
+  organization_id: string
+  user_id: string
+  notification_type: NotificationType
+  title: string
+  message: string
+  task_id?: string
+  actor_id?: string
+  actor_name?: string
+  read: boolean
+  read_at?: string
+  dismissed: boolean
+  action_url?: string
+  created_at: string
+}
+
+// Bot types
+export type BotStatusType = 'online' | 'offline' | 'paused' | 'busy'
+
+export interface BotWithStatus {
+  id: string
+  organization_id: string
+  email: string
+  name: string
+  avatar_url?: string
+  title?: string
+  responsibilities?: string
+  is_active: boolean
+  poll_interval_seconds: number
+  max_concurrent_tasks: number
+  allowed_queue_ids: string[]
+  capabilities: string[]
+  what_i_can_help_with?: string
+  status: BotStatusType
+  last_seen_at?: string
+  current_task_count: number
+  tasks_completed_7d: number
+  tasks_failed_7d: number
+  avg_task_duration_seconds?: number
+  created_at: string
+}
+
+export type BotActivityType =
+  | 'task_claimed'
+  | 'task_started'
+  | 'task_completed'
+  | 'task_failed'
+  | 'task_released'
+  | 'heartbeat'
+  | 'connected'
+  | 'disconnected'
+
+export interface BotActivity {
+  id: string
+  bot_id: string
+  activity_type: BotActivityType
+  task_id?: string
+  task_title?: string
+  duration_seconds?: number
+  error_message?: string
+  metadata?: Record<string, unknown>
+  created_at: string
+}
+
+export interface BotStats {
+  bot_id: string
+  period_days: number
+  tasks_completed: number
+  tasks_failed: number
+  tasks_claimed: number
+  avg_duration_seconds?: number
+  min_duration_seconds?: number
+  max_duration_seconds?: number
+  last_activity_at?: string
+}
+
+export interface BotConfigUpdate {
+  poll_interval_seconds?: number
+  max_concurrent_tasks?: number
+  allowed_queue_ids?: string[]
+  capabilities?: string[]
+  what_i_can_help_with?: string
 }

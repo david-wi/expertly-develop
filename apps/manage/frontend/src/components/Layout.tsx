@@ -12,14 +12,17 @@ import {
   Link2,
   PersonStanding,
   Eye,
+  Bot,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
+import NotificationBell from './NotificationBell'
 import { api, Organization as ApiOrganization } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Assignments', href: '/tasks', icon: ListTodo },
+  { name: 'Bots', href: '/bots', icon: Bot },
   { name: 'Connections', href: '/connections', icon: Link2 },
   { name: 'Monitors', href: '/monitors', icon: Eye },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
@@ -155,9 +158,14 @@ export default function Layout() {
         navigate={navigate}
         user={userWithOrg}
       />
-      <MainContent>
-        <Outlet context={{ viewAs, selectedOrgId }} />
-      </MainContent>
+      <div className="pl-72 min-h-screen bg-theme-bg">
+        <header className="sticky top-0 z-40 bg-theme-bg border-b border-gray-200 px-8 py-3 flex items-center justify-end">
+          <NotificationBell />
+        </header>
+        <main className="p-8">
+          <Outlet context={{ viewAs, selectedOrgId }} />
+        </main>
+      </div>
     </div>
   )
 }

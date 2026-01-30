@@ -5,6 +5,7 @@ import TaskDetailModal from '../components/TaskDetailModal'
 
 const STATUS_COLORS: Record<string, string> = {
   queued: 'bg-blue-100 text-blue-800',
+  blocked: 'bg-orange-100 text-orange-800',
   checked_out: 'bg-primary-100 text-primary-800',
   in_progress: 'bg-yellow-100 text-yellow-800',
   completed: 'bg-green-100 text-green-800',
