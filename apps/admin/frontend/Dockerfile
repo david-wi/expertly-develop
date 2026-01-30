@@ -17,9 +17,9 @@ COPY packages/ui ./packages/ui
 COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky, then rebuild lightningcss to get native bindings for Alpine
+# Use --ignore-scripts to skip husky, then explicitly install lightningcss native binding for Alpine/musl
 RUN npm install --workspace=apps/admin/frontend --ignore-scripts && \
-    npm rebuild lightningcss
+    npm install lightningcss-linux-x64-musl@1.30.2 --no-save
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend
