@@ -32,7 +32,7 @@ from app.models.task_comment import (
 from app.models.monitor import (
     Monitor, MonitorCreate, MonitorUpdate, MonitorEvent,
     MonitorProvider, MonitorStatus, SlackConfig, GoogleDriveConfig,
-    EmailConfig, TeamworkConfig
+    GmailConfig, OutlookConfig, TeamworkConfig
 )
 
 __all__ = [
@@ -116,6 +116,7 @@ __all__ = [
     "MonitorStatus",
     "SlackConfig",
     "GoogleDriveConfig",
-    "EmailConfig",
+    "GmailConfig",
+    "OutlookConfig",
     "TeamworkConfig",
 ]
