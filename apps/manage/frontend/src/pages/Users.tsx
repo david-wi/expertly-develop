@@ -229,16 +229,25 @@ export default function Users() {
         />
       )
     }
-    // Default avatar with initials
+    // Default cute bot avatar for virtual users
+    if (user.user_type === 'virtual') {
+      return (
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white">
+          <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2a2 2 0 012 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 017 7v1a2 2 0 01-2 2h-1v1a2 2 0 01-2 2H8a2 2 0 01-2-2v-1H5a2 2 0 01-2-2v-1a7 7 0 017-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 012-2zm-3 9a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm6 0a1.5 1.5 0 100 3 1.5 1.5 0 000-3zm-3 4c-1.1 0-2.1.45-2.83 1.17l1.42 1.42c.38-.38.88-.59 1.41-.59s1.03.21 1.41.59l1.42-1.42A3.988 3.988 0 0012 15z" />
+          </svg>
+        </div>
+      )
+    }
+    // Default avatar with initials for humans
     const initials = user.name
       .split(' ')
       .map((n) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2)
-    const bgColor = user.user_type === 'virtual' ? 'bg-primary-500' : 'bg-blue-500'
     return (
-      <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center text-white text-xs font-medium`}>
+      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-medium">
         {initials}
       </div>
     )
@@ -270,24 +279,18 @@ export default function Users() {
             <option value="human">Humans</option>
             <option value="virtual">Bots</option>
           </select>
-          <button
-            onClick={() => {
-              resetForm('human')
-              setShowCreateModal(true)
-            }}
-            className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
+          <a
+            href="https://identity.ai.devintensive.com/invite"
+            className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors inline-block"
           >
             Add User
-          </button>
-          <button
-            onClick={() => {
-              resetForm('virtual')
-              setShowCreateModal(true)
-            }}
-            className="bg-primary-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary-700 transition-colors"
+          </a>
+          <a
+            href="https://identity.ai.devintensive.com/invite?type=bot"
+            className="bg-primary-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary-700 transition-colors inline-block"
           >
             Add Bot
-          </button>
+          </a>
         </div>
       </div>
 
@@ -326,7 +329,9 @@ export default function Users() {
                         {getUserAvatar(user)}
                         <div>
                           <p className="font-medium text-gray-900">{user.name}</p>
-                          <p className="text-xs text-gray-500">{user.email}</p>
+                          {user.user_type !== 'virtual' && (
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                          )}
                         </div>
                       </div>
                     </td>
