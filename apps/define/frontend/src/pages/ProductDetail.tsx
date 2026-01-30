@@ -32,6 +32,7 @@ import {
   ArrowLeft,
   Paperclip,
   Sparkles,
+  Pencil,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
@@ -39,6 +40,7 @@ import { ArtifactList } from '@/components/artifacts'
 import { BulkImportDialog } from '@/components/BulkImportDialog'
 import { ProductAvatar } from '@/components/products/ProductAvatar'
 import { AvatarDialog } from '@/components/products/AvatarDialog'
+import { ProductEditDialog } from '@/components/products/ProductEditDialog'
 
 interface TreeNode extends Requirement {
   children: TreeNode[]
@@ -174,6 +176,7 @@ export default function ProductDetail() {
   })
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
 
   useEffect(() => {
     if (id) fetchProduct()
@@ -287,7 +290,22 @@ export default function ProductDetail() {
             onClick={() => setAvatarDialogOpen(true)}
             className="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 transition-all"
           />
-          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditDialogOpen(true)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            </div>
+            {product.description && (
+              <p className="text-gray-600 mt-1">{product.description}</p>
+            )}
+          </div>
         </div>
 
         <Tabs defaultValue="requirements">
@@ -577,6 +595,16 @@ export default function ProductDetail() {
         product={product}
         onAvatarChange={(avatarUrl) => {
           setProduct({ ...product, avatar_url: avatarUrl })
+        }}
+      />
+
+      {/* Edit Dialog */}
+      <ProductEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        product={product}
+        onProductUpdate={(updated) => {
+          setProduct(updated)
         }}
       />
     </div>
