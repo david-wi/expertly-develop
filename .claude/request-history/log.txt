@@ -27,3 +27,4 @@
 
 20260130 - Changelog page is blank at /changelog on manage.ai.devintensive.com and likely other Expertly apps. Need to implement changelog pages showing release history. The UserMenu links to /changelog but no page/route exists.
 20260130 Implemented comprehensive Task & Project enhancements for Expertly Manage per plan (PR #133 merged). Backend: TaskAttachment/TaskComment models, approver fields, API endpoints. Frontend: TaskDetailModal, MarkdownEditor, FileUploadZone, ApproverSelector, Breadcrumbs, ProjectTypeahead, expand/collapse on Projects, queue name resolution on Dashboard, org selector moved to sidebar bottom.
+20260130 - Manage backend crashing with ModuleNotFoundError: aiofiles. Added aiofiles to requirements.txt.
