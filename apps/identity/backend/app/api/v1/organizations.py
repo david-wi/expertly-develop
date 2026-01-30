@@ -47,7 +47,10 @@ async def create_organization(
         select(Organization).where(Organization.slug == org_data.slug)
     )
     if existing.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="Organization slug already exists")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Organization slug '{org_data.slug}' is already in use. Please choose a different slug."
+        )
 
     org = Organization(
         name=org_data.name,

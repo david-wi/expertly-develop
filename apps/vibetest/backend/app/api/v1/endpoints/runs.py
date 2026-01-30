@@ -122,7 +122,10 @@ async def start_run(
             test_case_ids = [t.id for t in tests]
 
     if not test_case_ids:
-        raise HTTPException(status_code=400, detail="No tests to run")
+        raise HTTPException(
+            status_code=400,
+            detail="No tests to run. Either specify test_case_ids, select a suite with tests, or ensure the project has approved test cases."
+        )
 
     # Start the run
     runner = TestRunnerService(db)
