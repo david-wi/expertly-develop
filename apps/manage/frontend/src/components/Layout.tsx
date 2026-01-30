@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   ListTodo,
@@ -13,7 +13,7 @@ import {
   PersonStanding,
   Eye,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, createRenderLink, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import { api, Organization as ApiOrganization } from '../services/api'
 
@@ -56,6 +56,7 @@ function setStoredOrgId(orgId: string | null) {
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
   const [organizations, setOrganizations] = useState<ApiOrganization[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getStoredOrgId())
@@ -151,11 +152,7 @@ export default function Layout() {
           )
         }
         userMenu={userMenu}
-        renderLink={({ href, className, children, onClick }) => (
-          <Link to={href} className={className} onClick={onClick}>
-            {children}
-          </Link>
-        )}
+        renderLink={createRenderLink(navigate)}
         user={userWithOrg}
       />
       <MainContent>

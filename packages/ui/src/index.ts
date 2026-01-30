@@ -61,6 +61,7 @@ export { Checkbox } from './primitives'
 
 // Utilities
 export { cn } from './utils/cn'
+export { createRenderLink, type RenderLinkProps } from './utils/createRenderLink'
 
 // User menu for sidebar
 export {
