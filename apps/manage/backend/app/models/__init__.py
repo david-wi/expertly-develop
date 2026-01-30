@@ -19,6 +19,10 @@ from app.models.backlog import (
     BacklogItem, BacklogItemCreate, BacklogItemUpdate,
     BacklogStatus, BacklogPriority, BacklogCategory
 )
+from app.models.connection import (
+    Connection, ConnectionCreate, ConnectionResponse,
+    ConnectionProvider, ConnectionStatus, OAuthStartResponse
+)
 
 __all__ = [
     "PyObjectId",
@@ -79,4 +83,10 @@ __all__ = [
     "BacklogStatus",
     "BacklogPriority",
     "BacklogCategory",
+    "Connection",
+    "ConnectionCreate",
+    "ConnectionResponse",
+    "ConnectionProvider",
+    "ConnectionStatus",
+    "OAuthStartResponse",
 ]

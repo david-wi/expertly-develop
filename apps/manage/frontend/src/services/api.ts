@@ -268,6 +268,21 @@ export const api = {
     request<void>(`/api/v1/projects/${id}`, {
       method: 'DELETE',
     }),
+
+  // Connections
+  getConnections: () => request<Connection[]>('/api/v1/connections'),
+  getConnection: (id: string) => request<Connection>(`/api/v1/connections/${id}`),
+  deleteConnection: (id: string) =>
+    request<void>(`/api/v1/connections/${id}`, {
+      method: 'DELETE',
+    }),
+  startOAuthFlow: (provider: string) =>
+    request<OAuthStartResponse>(`/api/v1/connections/oauth/${provider}/start`),
+  refreshConnection: (id: string) =>
+    request<Connection>(`/api/v1/connections/${id}/refresh`, {
+      method: 'POST',
+    }),
+  getConnectionProviders: () => request<ConnectionProvider[]>('/api/v1/connections/providers'),
 }
 
 // Types
@@ -637,4 +652,30 @@ export interface UpdateBacklogItemRequest {
   priority?: BacklogPriority
   category?: BacklogCategory
   tags?: string[]
+}
+
+// Connection types
+export type ConnectionProviderType = 'google' | 'slack' | 'microsoft' | 'teamwork'
+export type ConnectionStatusType = 'active' | 'expired' | 'revoked'
+
+export interface Connection {
+  id: string
+  provider: ConnectionProviderType
+  provider_email?: string
+  status: ConnectionStatusType
+  scopes: string[]
+  connected_at: string
+  last_used_at?: string
+}
+
+export interface OAuthStartResponse {
+  auth_url: string
+  state: string
+}
+
+export interface ConnectionProvider {
+  id: string
+  name: string
+  description: string
+  scopes: string[]
 }
