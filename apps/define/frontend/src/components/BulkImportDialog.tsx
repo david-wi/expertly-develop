@@ -188,8 +188,8 @@ export function BulkImportDialog({
   }
 
   const handleGenerate = async () => {
-    if (!description.trim()) {
-      setError('Please enter a description')
+    if (!description.trim() && files.length === 0) {
+      setError('Please enter a description or upload files')
       return
     }
 
@@ -718,7 +718,7 @@ export function BulkImportDialog({
               <Button variant="outline" onClick={() => handleClose(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleGenerate} disabled={generating || !description.trim()}>
+              <Button onClick={handleGenerate} disabled={generating || (!description.trim() && files.length === 0)}>
                 {generating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 <Sparkles className="h-4 w-4 mr-2" />
                 Generate
