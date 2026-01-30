@@ -37,6 +37,44 @@ router = APIRouter()
 _oauth_states: dict[str, dict] = {}
 
 
+@router.get("/providers")
+async def list_providers(
+    current_user: User = Depends(get_current_user)
+) -> list[dict]:
+    """List all supported OAuth providers with configuration status."""
+    # Define all supported providers
+    all_providers = [
+        {
+            "id": "google",
+            "name": "Google",
+            "description": "Connect Gmail, Drive, and Docs",
+            "scopes": [
+                "Gmail (read/send)",
+                "Google Drive (read)",
+                "Google Docs (read)",
+            ],
+        },
+        {
+            "id": "slack",
+            "name": "Slack",
+            "description": "Connect Slack channels and messaging",
+            "scopes": [
+                "Read channels",
+                "Send messages",
+                "Read user info",
+            ],
+        },
+    ]
+
+    # Add configuration status and setup instructions
+    for provider in all_providers:
+        provider["configured"] = is_provider_configured(provider["id"])
+        if not provider["configured"]:
+            provider["setup"] = get_provider_setup_instructions(provider["id"])
+
+    return all_providers
+
+
 def serialize_connection(conn: dict) -> ConnectionResponse:
     """Convert MongoDB connection document to response model."""
     return ConnectionResponse(
@@ -332,41 +370,3 @@ async def refresh_connection(
             {"$set": {"status": ConnectionStatus.EXPIRED.value}},
         )
         raise HTTPException(status_code=400, detail=str(e))
-
-
-@router.get("/providers")
-async def list_providers(
-    current_user: User = Depends(get_current_user)
-) -> list[dict]:
-    """List all supported OAuth providers with configuration status."""
-    # Define all supported providers
-    all_providers = [
-        {
-            "id": "google",
-            "name": "Google",
-            "description": "Connect Gmail, Drive, and Docs",
-            "scopes": [
-                "Gmail (read/send)",
-                "Google Drive (read)",
-                "Google Docs (read)",
-            ],
-        },
-        {
-            "id": "slack",
-            "name": "Slack",
-            "description": "Connect Slack channels and messaging",
-            "scopes": [
-                "Read channels",
-                "Send messages",
-                "Read user info",
-            ],
-        },
-    ]
-
-    # Add configuration status and setup instructions
-    for provider in all_providers:
-        provider["configured"] = is_provider_configured(provider["id"])
-        if not provider["configured"]:
-            provider["setup"] = get_provider_setup_instructions(provider["id"])
-
-    return all_providers
