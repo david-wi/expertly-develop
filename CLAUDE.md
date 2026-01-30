@@ -8,6 +8,10 @@ For the full list of Expertly products and deployment URLs, see `/Users/david/CL
 
 This project uses the standard `.claude/` directory structure for docs, planning, request-history, performance, skills, and gitignore (for credentials). See `_common/CLAUDE.md` for details.
 
+### Available Skills
+
+- **database-migration.md** - Checklist for migrating databases between backends (SQLite to PostgreSQL, etc.). Use before any database migration to prevent data loss.
+
 ## This Monorepo
 
 **Expertly Platform Monorepo** - Contains all Expertly applications
