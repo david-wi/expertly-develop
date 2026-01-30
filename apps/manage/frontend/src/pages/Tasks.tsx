@@ -51,12 +51,12 @@ export default function Tasks() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Tasks</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Assignments</h2>
         <button
           onClick={() => setShowCreateModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
         >
-          New Task
+          New Assignment
         </button>
       </div>
 
@@ -133,7 +133,7 @@ export default function Tasks() {
               </li>
             ))}
             {filteredTasks.length === 0 && (
-              <li className="p-4 text-gray-500">No tasks found</li>
+              <li className="p-4 text-gray-500">No assignments found</li>
             )}
           </ul>
         )}
@@ -149,11 +149,11 @@ export default function Tasks() {
         />
       )}
 
-      {/* Create Task Modal */}
+      {/* Create Assignment Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create New Task"
+        title="Create New Assignment"
       >
         <form onSubmit={handleCreateTask} className="space-y-4">
           <div>
@@ -179,7 +179,7 @@ export default function Tasks() {
               value={newTask.title}
               onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="Task title"
+              placeholder="Assignment title"
               required
             />
           </div>
@@ -192,7 +192,7 @@ export default function Tasks() {
               onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
               rows={3}
-              placeholder="Task description"
+              placeholder="Assignment description"
             />
           </div>
           <ModalFooter>
@@ -207,7 +207,7 @@ export default function Tasks() {
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              Create Task
+              Create Assignment
             </button>
           </ModalFooter>
         </form>

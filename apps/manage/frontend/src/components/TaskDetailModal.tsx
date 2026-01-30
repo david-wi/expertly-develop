@@ -269,7 +269,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 {task.status.replace('_', ' ')}
               </span>
             )}
-            <h2 className="text-lg font-semibold text-theme-text-primary">Task Details</h2>
+            <h2 className="text-lg font-semibold text-theme-text-primary">Assignment Details</h2>
           </div>
           <button
             onClick={onClose}
@@ -574,7 +574,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
             onClick={handleDelete}
             className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
           >
-            Delete Task
+            Delete Assignment
           </button>
           <div className="flex items-center gap-3">
             <button

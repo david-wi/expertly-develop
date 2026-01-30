@@ -598,7 +598,7 @@ export default function Projects() {
                   Status
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tasks
+                  Assignments
                 </th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
                   Actions
@@ -690,10 +690,10 @@ export default function Projects() {
                           to={`/tasks?project_id=${projectId}`}
                           className="text-blue-600 hover:text-blue-800 text-sm"
                         >
-                          {node.taskCount} task{node.taskCount !== 1 ? 's' : ''}
+                          {node.taskCount} assignment{node.taskCount !== 1 ? 's' : ''}
                         </Link>
                       ) : (
-                        <span className="text-sm text-gray-400">0 tasks</span>
+                        <span className="text-sm text-gray-400">0 assignments</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right">
