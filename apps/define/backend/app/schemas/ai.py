@@ -15,12 +15,20 @@ class ExistingRequirement(BaseModel):
     parent_id: Optional[str] = None
 
 
+class ContextUrl(BaseModel):
+    url: str
+    title: str
+    content: str
+
+
 class ParseRequirementsRequest(BaseModel):
     description: str
     files: Optional[List[FileContent]] = None
     existing_requirements: List[ExistingRequirement]
     target_parent_id: Optional[str] = None
     product_name: str
+    context_urls: Optional[List[ContextUrl]] = None
+    related_requirement_ids: Optional[List[str]] = None
 
 
 class ParsedRequirement(BaseModel):

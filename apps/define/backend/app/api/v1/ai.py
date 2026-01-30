@@ -29,6 +29,8 @@ async def parse_requirements(
             existing_requirements=data.existing_requirements,
             target_parent_id=data.target_parent_id,
             product_name=data.product_name,
+            context_urls=data.context_urls,
+            related_requirement_ids=data.related_requirement_ids,
         )
 
         return {"requirements": requirements}
