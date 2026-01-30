@@ -8,26 +8,29 @@ ARG VITE_IDENTITY_URL=https://identity.ai.devintensive.com
 ARG VITE_BUILD_TIMESTAMP
 ARG VITE_GIT_COMMIT
 
-# Copy the UI package (dependency)
+# Copy monorepo package files for workspace resolution
+COPY package.json package-lock.json ./
+
+# Copy the UI package (workspace dependency)
 COPY packages/ui ./packages/ui
 
-# Copy all frontend files including package.json
-COPY apps/define/frontend ./apps/define/frontend
+# Copy define frontend package files
+COPY apps/define/frontend/package*.json ./apps/define/frontend/
 
-# Set working directory and install dependencies locally
-WORKDIR /app/apps/define/frontend
-
-# Update @expertly/ui to point to local package path (3 levels up from /app/apps/define/frontend)
-RUN sed -i 's|"@expertly/ui": "\*"|"@expertly/ui": "file:../../../packages/ui"|' package.json
-
-# Install dependencies directly in the frontend directory
-# This ensures all deps (including devDeps like @vitejs/plugin-react) are in local node_modules
-RUN npm install --ignore-scripts && \
+# Install dependencies from monorepo root (resolves workspace packages)
+# Use --ignore-scripts to skip husky, then rebuild native modules
+RUN npm install --workspace=apps/define/frontend --ignore-scripts && \
     npm install @rollup/rollup-linux-x64-musl --save-optional
+
+# Copy source code
+COPY apps/define/frontend ./apps/define/frontend
 
 # Set environment variables for Vite build
 ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
 ENV VITE_GIT_COMMIT=$VITE_GIT_COMMIT
+
+# Build the application with timestamp
+WORKDIR /app/apps/define/frontend
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
       export VITE_BUILD_TIMESTAMP=$(date +%s); \
     else \
