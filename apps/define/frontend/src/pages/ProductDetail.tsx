@@ -166,7 +166,7 @@ export default function ProductDetail() {
     not_included: '',
     acceptance_criteria: '',
     status: 'draft',
-    priority: 'medium',
+    priority: '',
     tags: [] as string[],
     parent_id: '',
   })
@@ -221,7 +221,7 @@ export default function ProductDetail() {
         not_included: newReq.not_included || undefined,
         acceptance_criteria: newReq.acceptance_criteria || undefined,
         status: newReq.status,
-        priority: newReq.priority,
+        priority: newReq.priority || undefined,
         tags: newReq.tags.length > 0 ? newReq.tags : undefined,
         parent_id: newReq.parent_id || null,
       })
@@ -233,7 +233,7 @@ export default function ProductDetail() {
         not_included: '',
         acceptance_criteria: '',
         status: 'draft',
-        priority: 'medium',
+        priority: '',
         tags: [],
         parent_id: '',
       })
@@ -307,7 +307,7 @@ export default function ProductDetail() {
                             <Plus className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <DialogContent className="max-w-4xl">
                           <form onSubmit={createRequirement}>
                             <DialogHeader>
                               <DialogTitle>Add Requirement</DialogTitle>
@@ -327,51 +327,53 @@ export default function ProductDetail() {
                                   required
                                 />
                               </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                  What this does
-                                </label>
-                                <Textarea
-                                  placeholder="Users can view, compare, and restore previous versions..."
-                                  value={newReq.what_this_does}
-                                  onChange={(e) => setNewReq({ ...newReq, what_this_does: e.target.value })}
-                                  rows={2}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                  Why this exists
-                                </label>
-                                <Textarea
-                                  placeholder="This helps people understand changes over time..."
-                                  value={newReq.why_this_exists}
-                                  onChange={(e) => setNewReq({ ...newReq, why_this_exists: e.target.value })}
-                                  rows={2}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                  Not included (out of scope)
-                                </label>
-                                <Textarea
-                                  placeholder="Things explicitly not part of this requirement..."
-                                  value={newReq.not_included}
-                                  onChange={(e) => setNewReq({ ...newReq, not_included: e.target.value })}
-                                  rows={2}
-                                />
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                  Acceptance criteria
-                                </label>
-                                <Textarea
-                                  placeholder="How we'll know this is done..."
-                                  value={newReq.acceptance_criteria}
-                                  onChange={(e) => setNewReq({ ...newReq, acceptance_criteria: e.target.value })}
-                                  rows={2}
-                                />
-                              </div>
                               <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    What this does
+                                  </label>
+                                  <Textarea
+                                    placeholder="Users can view, compare, and restore previous versions..."
+                                    value={newReq.what_this_does}
+                                    onChange={(e) => setNewReq({ ...newReq, what_this_does: e.target.value })}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Why this exists
+                                  </label>
+                                  <Textarea
+                                    placeholder="This helps people understand changes over time..."
+                                    value={newReq.why_this_exists}
+                                    onChange={(e) => setNewReq({ ...newReq, why_this_exists: e.target.value })}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Acceptance criteria
+                                  </label>
+                                  <Textarea
+                                    placeholder="How we'll know this is done..."
+                                    value={newReq.acceptance_criteria}
+                                    onChange={(e) => setNewReq({ ...newReq, acceptance_criteria: e.target.value })}
+                                    rows={3}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Not included (out of scope)
+                                  </label>
+                                  <Textarea
+                                    placeholder="Things explicitly not part of this requirement..."
+                                    value={newReq.not_included}
+                                    onChange={(e) => setNewReq({ ...newReq, not_included: e.target.value })}
+                                    rows={3}
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-4 gap-4">
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     Status
@@ -396,13 +398,14 @@ export default function ProductDetail() {
                                     Priority
                                   </label>
                                   <Select
-                                    value={newReq.priority}
-                                    onValueChange={(value) => setNewReq({ ...newReq, priority: value })}
+                                    value={newReq.priority || 'none'}
+                                    onValueChange={(value) => setNewReq({ ...newReq, priority: value === 'none' ? '' : value })}
                                   >
                                     <SelectTrigger>
-                                      <SelectValue />
+                                      <SelectValue placeholder="Not set" />
                                     </SelectTrigger>
                                     <SelectContent>
+                                      <SelectItem value="none">Not set</SelectItem>
                                       <SelectItem value="critical">Critical</SelectItem>
                                       <SelectItem value="high">High</SelectItem>
                                       <SelectItem value="medium">Medium</SelectItem>
@@ -410,42 +413,42 @@ export default function ProductDetail() {
                                     </SelectContent>
                                   </Select>
                                 </div>
-                              </div>
-                              {requirements.length > 0 && (
-                                <div>
+                                {requirements.length > 0 && (
+                                  <div>
+                                    <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                      Parent
+                                    </label>
+                                    <Select
+                                      value={newReq.parent_id || 'none'}
+                                      onValueChange={(value) => setNewReq({ ...newReq, parent_id: value === 'none' ? '' : value })}
+                                    >
+                                      <SelectTrigger>
+                                        <SelectValue placeholder="None (root level)" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="none">None (root level)</SelectItem>
+                                        {requirements.map((req) => (
+                                          <SelectItem key={req.id} value={req.id}>
+                                            {req.title}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                )}
+                                <div className={requirements.length > 0 ? '' : 'col-span-2'}>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Parent (optional)
+                                    Tags
                                   </label>
-                                  <Select
-                                    value={newReq.parent_id || 'none'}
-                                    onValueChange={(value) => setNewReq({ ...newReq, parent_id: value === 'none' ? '' : value })}
-                                  >
-                                    <SelectTrigger>
-                                      <SelectValue placeholder="None (root level)" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="none">None (root level)</SelectItem>
-                                      {requirements.map((req) => (
-                                        <SelectItem key={req.id} value={req.id}>
-                                          {req.title}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
+                                  <Input
+                                    placeholder="auth, security, mvp"
+                                    value={newReq.tags.join(', ')}
+                                    onChange={(e) => setNewReq({
+                                      ...newReq,
+                                      tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
+                                    })}
+                                  />
                                 </div>
-                              )}
-                              <div>
-                                <label className="text-sm font-medium text-gray-700 mb-1 block">
-                                  Tags (optional)
-                                </label>
-                                <Input
-                                  placeholder="e.g., auth, security, mvp (comma-separated)"
-                                  value={newReq.tags.join(', ')}
-                                  onChange={(e) => setNewReq({
-                                    ...newReq,
-                                    tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
-                                  })}
-                                />
                               </div>
                             </div>
                             <DialogFooter>
