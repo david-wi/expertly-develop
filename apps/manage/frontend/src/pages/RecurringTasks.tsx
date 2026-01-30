@@ -232,7 +232,7 @@ export default function RecurringTasks() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Recurring Tasks</h2>
+        <h2 className="text-2xl font-bold text-gray-900">Recurring Assignments</h2>
         <div className="flex items-center space-x-3">
           <select
             value={filter}
@@ -250,12 +250,12 @@ export default function RecurringTasks() {
             }}
             className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
           >
-            New Recurring Task
+            New Recurring Assignment
           </button>
         </div>
       </div>
 
-      {/* Recurring Tasks List */}
+      {/* Recurring Assignments List */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         {loading ? (
           <div className="p-4 text-gray-500">Loading...</div>
@@ -264,7 +264,7 @@ export default function RecurringTasks() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Task
+                  Assignment
                 </th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Queue
@@ -351,7 +351,7 @@ export default function RecurringTasks() {
               {recurringTasks.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
-                    No recurring tasks found. Create one to automate task creation.
+                    No recurring assignments found. Create one to automate assignment creation.
                   </td>
                 </tr>
               )}
@@ -364,7 +364,7 @@ export default function RecurringTasks() {
       <Modal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create Recurring Task"
+        title="Create Recurring Assignment"
       >
         <form onSubmit={handleCreate} className="space-y-4">
           <div>
@@ -532,7 +532,7 @@ export default function RecurringTasks() {
       <Modal
         isOpen={showEditModal && !!selectedTask}
         onClose={() => setShowEditModal(false)}
-        title="Edit Recurring Task"
+        title="Edit Recurring Assignment"
       >
         <form onSubmit={handleEdit} className="space-y-4">
           <div>
@@ -697,12 +697,12 @@ export default function RecurringTasks() {
       <Modal
         isOpen={showDeleteConfirm && !!selectedTask}
         onClose={() => setShowDeleteConfirm(false)}
-        title="Delete Recurring Task?"
+        title="Delete Recurring Assignment?"
         size="sm"
       >
         <p className="text-gray-500 mb-4">
           Are you sure you want to delete "{selectedTask?.title}"? This will not delete
-          already-created tasks.
+          already-created assignments.
         </p>
         <ModalFooter>
           <button
