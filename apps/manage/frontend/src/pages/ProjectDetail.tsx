@@ -177,8 +177,8 @@ export default function ProjectDetail() {
         api.getProject(id),
         api.getProjectChildren(id),
         api.getProjects(), // Fetch all projects for breadcrumbs and typeahead
-        api.getProjectTasks(id, { status: undefined }), // Get non-completed tasks
-        api.getProjectTasks(id, { status: 'completed' }),
+        api.getProjectTasks(id, { status: undefined, include_subtasks: true }), // Get non-completed tasks including subprojects
+        api.getProjectTasks(id, { status: 'completed', include_subtasks: true }), // Include completed tasks from subprojects
         api.getProjectRecurringTasks(id),
         api.getQueues(),
         api.getTeams(),

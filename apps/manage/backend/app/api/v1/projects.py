@@ -133,6 +133,23 @@ async def get_project_recurring_tasks(
     return result
 
 
+async def get_all_descendant_project_ids(db, project_id: ObjectId, org_id: str) -> list[ObjectId]:
+    """Recursively get all descendant project IDs."""
+    descendants = []
+    children_cursor = db.projects.find({
+        "organization_id": org_id,
+        "parent_project_id": project_id
+    })
+    children = await children_cursor.to_list(1000)
+    for child in children:
+        child_id = child["_id"]
+        descendants.append(child_id)
+        # Recursively get descendants of this child
+        child_descendants = await get_all_descendant_project_ids(db, child_id, org_id)
+        descendants.extend(child_descendants)
+    return descendants
+
+
 @router.get("/{project_id}/tasks")
 async def get_project_tasks(
     project_id: str,
@@ -140,22 +157,35 @@ async def get_project_tasks(
     include_subtasks: bool = False,
     current_user: User = Depends(get_current_user)
 ) -> list[dict]:
-    """Get tasks associated with a project."""
+    """Get tasks associated with a project.
+
+    Args:
+        include_subtasks: If True, includes tasks from all subprojects (descendants)
+    """
     db = get_database()
 
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
-    query = {
-        "organization_id": current_user.organization_id,
-        "project_id": ObjectId(project_id)
-    }
+    project_oid = ObjectId(project_id)
+
+    # Build list of project IDs to query
+    if include_subtasks:
+        # Get all descendant project IDs
+        descendant_ids = await get_all_descendant_project_ids(db, project_oid, current_user.organization_id)
+        project_ids = [project_oid] + descendant_ids
+        query = {
+            "organization_id": current_user.organization_id,
+            "project_id": {"$in": project_ids}
+        }
+    else:
+        query = {
+            "organization_id": current_user.organization_id,
+            "project_id": project_oid
+        }
 
     if status:
         query["status"] = status
-
-    if not include_subtasks:
-        query["parent_task_id"] = None
 
     cursor = db.tasks.find(query).sort([("priority", 1), ("created_at", 1)])
     tasks = await cursor.to_list(1000)
