@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity, Bug } from 'lucide-react'
 
 export interface Organization {
   id: string
@@ -405,6 +405,14 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             icon: Lightbulb,
             type: 'link',
             href: 'https://manage.ai.devintensive.com/idea-backlog',
+            external: true,
+          },
+          {
+            id: 'known-issues',
+            label: 'Known Issues',
+            icon: Bug,
+            type: 'link',
+            href: 'https://admin.ai.devintensive.com/known-issues',
             external: true,
           },
           {
