@@ -1,6 +1,6 @@
 """Expertly AI Config - Shared AI configuration client."""
 
-from ai_config.client import AIConfigClient
+from ai_config.client import AIConfigClient, get_ai_config_client
 from ai_config.models import (
     AIConfig,
     AIProviderConfig,
@@ -10,6 +10,7 @@ from ai_config.models import (
 
 __all__ = [
     "AIConfigClient",
+    "get_ai_config_client",
     "AIConfig",
     "AIProviderConfig",
     "AIModelConfig",
