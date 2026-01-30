@@ -151,7 +151,7 @@ export function Sidebar({
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col overflow-hidden`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col`}>
       {/* Version Update Banner */}
       {versionCheck?.currentCommit && (
         <VersionChecker
