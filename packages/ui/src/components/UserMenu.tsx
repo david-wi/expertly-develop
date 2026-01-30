@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity } from 'lucide-react'
 
 export interface Organization {
   id: string
@@ -208,7 +208,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                       {itemContent}
                     </button>
                     {isExpanded && item.children && (
-                      <div className="absolute left-full top-0 ml-1 min-w-48 bg-[var(--theme-bg-surface)] border border-[var(--theme-border-default)] rounded-lg shadow-lg overflow-hidden z-50">
+                      <div className="absolute left-full bottom-0 ml-1 min-w-48 bg-[var(--theme-bg-surface)] border border-[var(--theme-border-default)] rounded-lg shadow-lg overflow-hidden z-50">
                         <div className="py-1">
                           {item.children.map((child) => {
                             const ChildIcon = child.icon
@@ -405,6 +405,14 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             icon: Lightbulb,
             type: 'link',
             href: 'https://manage.ai.devintensive.com/idea-backlog',
+            external: true,
+          },
+          {
+            id: 'system-health',
+            label: 'System Health',
+            icon: Activity,
+            type: 'link',
+            href: 'https://admin.ai.devintensive.com/monitoring',
             external: true,
           },
           {
