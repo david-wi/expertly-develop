@@ -542,10 +542,14 @@ networks:
 volumes:
   admin_postgres_data:
   artifacts_data:
-  define_data:
-  define_uploads:
   # Shared volumes - external to prevent blue/green prefixing
-  # These persist across deployments so sessions survive blue-green switches
+  # These persist across deployments so data survives blue-green switches
+  define_data:
+    external: true
+    name: shared_define_data
+  define_uploads:
+    external: true
+    name: shared_define_uploads
   identity_postgres_data:
     external: true
     name: shared_identity_postgres_data
