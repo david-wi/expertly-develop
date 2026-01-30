@@ -1,44 +1,19 @@
 """AI service for test generation and analysis using Claude."""
-import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
 from typing import Optional
 
 from app.config import get_settings
-from ai_config import AIConfigClient
+from app.utils.ai_config import get_use_case_config
 
 logger = logging.getLogger(__name__)
 
-# Global AI config client
-_ai_config_client: Optional[AIConfigClient] = None
-
-
-def get_ai_config_client() -> AIConfigClient:
-    """Get or create the global AI config client."""
-    global _ai_config_client
-    if _ai_config_client is None:
-        _ai_config_client = AIConfigClient()
-    return _ai_config_client
-
 
 def _get_model_config_sync(use_case: str) -> dict:
-    """Get model config synchronously (for sync methods)."""
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            # Create new event loop for sync call
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, get_ai_config_client().get_use_case_config(use_case))
-                config = future.result(timeout=5)
-                return {"model_id": config.model_id, "max_tokens": config.max_tokens, "temperature": config.temperature}
-        else:
-            config = loop.run_until_complete(get_ai_config_client().get_use_case_config(use_case))
-            return {"model_id": config.model_id, "max_tokens": config.max_tokens, "temperature": config.temperature}
-    except Exception as e:
-        logger.warning(f"Failed to get model config: {e}, using defaults")
-        return {"model_id": "claude-sonnet-4-0-latest", "max_tokens": 4096, "temperature": 0.3}
+    """Get model config for a use case."""
+    config = get_use_case_config(use_case)
+    return {"model_id": config.model_id, "max_tokens": config.max_tokens, "temperature": config.temperature}
 
 
 @dataclass

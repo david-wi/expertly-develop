@@ -63,12 +63,17 @@ class ArtifactConversionService:
         self, file_content: bytes, filename: str, mime_type: str
     ) -> Tuple[str, bool]:
         """Convert image to markdown with AI-generated description."""
+        from app.utils.ai_config import get_use_case_config
+
         base64_content = base64.b64encode(file_content).decode("utf-8")
+
+        # Get model configuration for file-to-markdown conversion
+        use_case_config = get_use_case_config("file_to_markdown")
 
         try:
             response = self.client.messages.create(
-                model="claude-sonnet-4-20250514",
-                max_tokens=4096,
+                model=use_case_config.model_id,
+                max_tokens=use_case_config.max_tokens,
                 messages=[
                     {
                         "role": "user",
