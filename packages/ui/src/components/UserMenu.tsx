@@ -149,7 +149,6 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
               )
 
               const itemClassName = `w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-elevated)] hover:text-[var(--theme-text-primary)] transition-colors`
-              const childItemClassName = `w-full flex items-center gap-2 pl-9 pr-3 py-2 text-sm text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-elevated)] hover:text-[var(--theme-text-primary)] transition-colors`
 
               if (isSubmenu) {
                 return (
