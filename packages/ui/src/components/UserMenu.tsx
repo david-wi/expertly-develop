@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, FlaskConical } from 'lucide-react'
 
 export interface UserMenuItem {
   id: string
@@ -322,11 +322,11 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
         type: 'submenu',
         children: [
           {
-            id: 'error-logs',
-            label: 'Error Logs',
-            icon: AlertTriangle,
+            id: 'backlog',
+            label: 'Backlog',
+            icon: ClipboardList,
             type: 'link',
-            href: 'https://admin.ai.devintensive.com/error-logs',
+            href: 'https://manage.ai.devintensive.com/backlog',
             external: true,
           },
           {
@@ -338,11 +338,11 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             external: false,
           },
           {
-            id: 'backlog',
-            label: 'Backlog',
-            icon: ClipboardList,
+            id: 'error-logs',
+            label: 'Error Logs',
+            icon: AlertTriangle,
             type: 'link',
-            href: 'https://manage.ai.devintensive.com/backlog',
+            href: 'https://admin.ai.devintensive.com/error-logs',
             external: true,
           },
           {
@@ -351,6 +351,14 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             icon: Lightbulb,
             type: 'link',
             href: 'https://manage.ai.devintensive.com/idea-backlog',
+            external: true,
+          },
+          {
+            id: 'testing-scenarios',
+            label: 'Testing Scenarios',
+            icon: FlaskConical,
+            type: 'link',
+            href: 'https://vibetest.ai.devintensive.com/projects',
             external: true,
           },
         ],
