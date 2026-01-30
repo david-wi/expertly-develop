@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Globe } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode, ComponentType } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
@@ -162,7 +162,7 @@ export function Sidebar({
 
       {/* Logo / Product Switcher */}
       <div className="relative flex-shrink-0">
-        <div className={`flex h-14 items-center justify-between px-4 border-b ${borderColor}`}>
+        <div className={`flex h-14 items-center px-4 border-b ${borderColor}`}>
           <button
             onClick={() => setShowProductSwitcher(!showProductSwitcher)}
             className={`flex items-center gap-2 ${hoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
@@ -171,47 +171,6 @@ export function Sidebar({
             <span className={`font-semibold ${textPrimary} text-base whitespace-nowrap`}>Expertly {productName}</span>
             <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
-
-          {/* Compact Language Selector */}
-          {onLanguageChange && (
-            <div className="relative flex-shrink-0">
-              <button
-                onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
-                className={`p-1.5 rounded-lg ${hoverBg} transition-colors`}
-                title={currentLang.name}
-              >
-                <span className="text-base">{currentLang.flag}</span>
-              </button>
-
-              {showLanguageSwitcher && (
-                <>
-                  <div
-                    className="fixed inset-0 z-40"
-                    onClick={() => setShowLanguageSwitcher(false)}
-                  />
-                  <div className={`absolute top-full right-0 mt-1 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50 min-w-[120px]`}>
-                    {SUPPORTED_LANGUAGES.map((lang) => (
-                      <button
-                        key={lang.code}
-                        onClick={() => {
-                          onLanguageChange(lang.code)
-                          setShowLanguageSwitcher(false)
-                        }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${
-                          lang.code === currentLanguage
-                            ? `${activeBg} ${activeText}`
-                            : `${textSecondary} ${hoverBg}`
-                        } first:rounded-t-lg last:rounded-b-lg transition-colors`}
-                      >
-                        <span>{lang.flag}</span>
-                        <span>{lang.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
         </div>
 
         {/* Product Dropdown */}
@@ -324,45 +283,89 @@ export function Sidebar({
       {/* User */}
       {user && (
         <div className={`p-4 border-t ${borderColor} ${userBg} flex-shrink-0 relative`}>
-          {userMenu ? (
-            <>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className={`w-full flex items-center gap-3 ${hoverBg} rounded-lg p-1 -m-1 transition-colors`}
-              >
-                <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+          <div className="flex items-center gap-2">
+            {/* Language Switcher - Globe Icon */}
+            {onLanguageChange && (
+              <div className="relative flex-shrink-0">
+                <button
+                  onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
+                  className={`p-2 rounded-lg ${hoverBg} transition-colors`}
+                  title={currentLang.name}
+                >
+                  <Globe className={`w-5 h-5 ${textSecondary}`} />
+                </button>
+
+                {showLanguageSwitcher && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowLanguageSwitcher(false)}
+                    />
+                    <div className={`absolute bottom-full left-0 mb-1 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50 min-w-[120px]`}>
+                      {SUPPORTED_LANGUAGES.map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => {
+                            onLanguageChange(lang.code)
+                            setShowLanguageSwitcher(false)
+                          }}
+                          className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${
+                            lang.code === currentLanguage
+                              ? `${activeBg} ${activeText}`
+                              : `${textSecondary} ${hoverBg}`
+                          } first:rounded-t-lg last:rounded-b-lg transition-colors`}
+                        >
+                          <span>{lang.flag}</span>
+                          <span>{lang.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* User Info */}
+            {userMenu ? (
+              <div className="flex-1 min-w-0 relative">
+                <button
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className={`w-full flex items-center gap-3 ${hoverBg} rounded-lg p-1 -m-1 transition-colors`}
+                >
+                  <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                    <span className={`${avatarText} font-medium text-sm`}>
+                      {user.name?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
+                    {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
+                    {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
+                  </div>
+                  <ChevronUp className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
+                </button>
+                <UserMenu
+                  config={userMenu}
+                  isOpen={showUserMenu}
+                  onClose={() => setShowUserMenu(false)}
+                  renderLink={renderLink}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
                   <span className={`${avatarText} font-medium text-sm`}>
                     {user.name?.charAt(0) || 'U'}
                   </span>
                 </div>
-                <div className="min-w-0 flex-1 text-left">
+                <div className="min-w-0">
                   <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
                   {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
                   {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
                 </div>
-                <ChevronUp className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
-              <UserMenu
-                config={userMenu}
-                isOpen={showUserMenu}
-                onClose={() => setShowUserMenu(false)}
-                renderLink={renderLink}
-              />
-            </>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
-                <span className={`${avatarText} font-medium text-sm`}>
-                  {user.name?.charAt(0) || 'U'}
-                </span>
               </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
-                {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
-                {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>
