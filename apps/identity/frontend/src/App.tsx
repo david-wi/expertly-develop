@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import UsersPage from './pages/UsersPage'
+import UserProfilePage from './pages/UserProfilePage'
 import TeamsPage from './pages/TeamsPage'
 import OrganizationsPage from './pages/OrganizationsPage'
 import LandingPage from './pages/LandingPage'
@@ -25,6 +26,7 @@ export default function App() {
       <Route path="/" element={<Layout />}>
         <Route index element={<Navigate to="/users" replace />} />
         <Route path="users" element={<UsersPage defaultFilter="all" />} />
+        <Route path="users/:userId" element={<UserProfilePage />} />
         <Route path="bots" element={<Navigate to="/users" replace />} />
         <Route path="teams" element={<TeamsPage />} />
         <Route path="organizations" element={<OrganizationsPage />} />

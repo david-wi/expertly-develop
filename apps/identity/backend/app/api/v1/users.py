@@ -4,6 +4,7 @@ import secrets
 from typing import Optional
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Header, status
+from pydantic import BaseModel
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from passlib.hash import bcrypt
@@ -17,6 +18,12 @@ from app.schemas.user import (
     UserListResponse,
     UserCreateResponse,
 )
+from app.core.password import validate_password_strength
+
+
+class SetPasswordRequest(BaseModel):
+    """Schema for setting a user's password."""
+    password: str
 
 router = APIRouter()
 
@@ -222,3 +229,37 @@ async def regenerate_api_key(
     await db.commit()
 
     return {"api_key": api_key}
+
+
+@router.post("/{user_id}/set-password")
+async def set_user_password(
+    user_id: UUID,
+    request: SetPasswordRequest,
+    org: Organization = Depends(get_organization),
+    db: AsyncSession = Depends(get_db),
+):
+    """Set a user's password (admin action)."""
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.organization_id == org.id)
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.user_type != "human":
+        raise HTTPException(status_code=400, detail="Cannot set password for bot users")
+
+    # Validate password strength
+    errors = validate_password_strength(request.password, user.email)
+    if errors:
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "Password does not meet requirements", "errors": errors}
+        )
+
+    # Set the password
+    user.password_hash = bcrypt.hash(request.password)
+    await db.commit()
+
+    return {"message": "Password set successfully"}
