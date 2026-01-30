@@ -203,20 +203,20 @@ export default function TestRun() {
 
                   {/* AI Analysis */}
                   {result.ai_analysis && (
-                    <div className="bg-purple-50 p-4 rounded-lg">
-                      <h4 className="text-sm font-medium text-purple-900 mb-2">
+                    <div className="bg-primary-50 p-4 rounded-lg">
+                      <h4 className="text-sm font-medium text-primary-900 mb-2">
                         AI Analysis
                       </h4>
-                      <p className="text-sm text-purple-800 mb-2">
+                      <p className="text-sm text-primary-800 mb-2">
                         <strong>Summary:</strong> {result.ai_analysis.summary}
                       </p>
-                      <p className="text-sm text-purple-800 mb-2">
+                      <p className="text-sm text-primary-800 mb-2">
                         <strong>Root Cause:</strong> {result.ai_analysis.likely_root_cause}
                       </p>
-                      <p className="text-sm text-purple-800">
+                      <p className="text-sm text-primary-800">
                         <strong>Suggested Fix:</strong> {result.ai_analysis.suggested_fix}
                       </p>
-                      <p className="text-xs text-purple-600 mt-2">
+                      <p className="text-xs text-primary-600 mt-2">
                         Confidence: {Math.round(result.ai_analysis.confidence * 100)}%
                       </p>
                     </div>

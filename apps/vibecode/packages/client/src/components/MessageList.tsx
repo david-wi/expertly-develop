@@ -205,7 +205,7 @@ export default function MessageList({ messages, showStreaming = true, isBusy = f
                   : message.role === 'system'
                   ? 'bg-amber-500'
                   : message.toolUse
-                  ? 'bg-purple-500'
+                  ? 'bg-primary-500'
                   : 'bg-gray-700'
               }`}
             >
@@ -236,13 +236,13 @@ export default function MessageList({ messages, showStreaming = true, isBusy = f
                       : message.role === 'system'
                       ? 'bg-amber-50 border border-amber-200 text-amber-800'
                       : message.toolUse
-                      ? 'bg-purple-50 border border-purple-200 text-purple-800'
+                      ? 'bg-primary-50 border border-primary-200 text-primary-800'
                       : 'bg-gray-100 text-gray-800'
                   }`}
                 >
                   {message.toolUse ? (
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-purple-600 text-xs font-medium">
+                      <div className="flex items-center gap-2 text-primary-600 text-xs font-medium">
                         <Wrench className="w-3 h-3" />
                         {message.toolUse.name}
                       </div>

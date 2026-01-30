@@ -116,7 +116,7 @@ export function JiraSettingsDialog({
 
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+            <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
           </div>
         ) : (
           <form onSubmit={saveSettings} className="space-y-4">
@@ -167,7 +167,7 @@ export function JiraSettingsDialog({
                   href="https://id.atlassian.com/manage-profile/security/api-tokens"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-purple-600 hover:underline"
+                  className="text-primary-600 hover:underline"
                 >
                   Create an API token
                 </a>{' '}

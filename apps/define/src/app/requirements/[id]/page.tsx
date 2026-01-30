@@ -185,7 +185,7 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     );
   }
@@ -359,7 +359,7 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                                       setEditForm({ ...editForm, tags: (editForm.tags || []).filter((t: string) => t !== tag) });
                                     }
                                   }}
-                                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                                 />
                                 <span className="text-sm text-gray-700">{tag}</span>
                               </label>
@@ -645,7 +645,7 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                                 href={link.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-purple-600 hover:text-purple-700"
+                                className="text-primary-600 hover:text-primary-700"
                               >
                                 <ExternalLink className="h-4 w-4" />
                               </a>
@@ -722,9 +722,9 @@ export default function RequirementPage({ params }: { params: Promise<{ id: stri
                       <li key={child.id}>
                         <Link
                           href={`/requirements/${child.id}`}
-                          className="text-sm text-gray-600 hover:text-purple-600 flex items-center gap-2"
+                          className="text-sm text-gray-600 hover:text-primary-600 flex items-center gap-2"
                         >
-                          <div className="w-2 h-2 rounded-full bg-purple-400" />
+                          <div className="w-2 h-2 rounded-full bg-primary-400" />
                           {child.title}
                         </Link>
                       </li>

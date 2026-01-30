@@ -28,7 +28,7 @@ export function MarkdownViewer({ content, className }: MarkdownViewerProps) {
       // Unordered lists
       .replace(/^- (.+)$/gm, '<li class="ml-4">$1</li>')
       // Links
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-purple-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-primary-600 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>')
       // Horizontal rules
       .replace(/^---$/gm, '<hr class="my-4 border-gray-200" />')
       // Paragraphs (double newlines)

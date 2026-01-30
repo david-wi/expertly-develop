@@ -86,7 +86,7 @@ export function ArtifactCard({ artifact, latestVersion, onClick }: ArtifactCardP
   return (
     <Card
       className={cn(
-        'cursor-pointer transition-all hover:shadow-md hover:border-purple-200',
+        'cursor-pointer transition-all hover:shadow-md hover:border-primary-200',
         artifact.status === 'archived' && 'opacity-60'
       )}
       onClick={handleClick}

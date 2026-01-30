@@ -132,7 +132,7 @@ export default function Dashboard() {
                   onClick={() => setSelectedQueueFilter(queue._id || queue.id)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
                     selectedQueueFilter === (queue._id || queue.id)
-                      ? 'bg-purple-100 text-purple-700'
+                      ? 'bg-primary-100 text-primary-700'
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >

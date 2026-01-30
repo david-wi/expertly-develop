@@ -47,7 +47,7 @@ export function ArtifactVersionHistory({
           key={version.id}
           className={`p-3 rounded-lg border cursor-pointer transition-colors ${
             selectedVersionId === version.id
-              ? 'border-purple-300 bg-purple-50'
+              ? 'border-primary-300 bg-primary-50'
               : 'border-gray-200 hover:border-gray-300'
           }`}
           onClick={() => onSelectVersion(version.id)}

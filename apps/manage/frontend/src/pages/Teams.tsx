@@ -191,7 +191,7 @@ export default function Teams() {
       .join('')
       .toUpperCase()
       .slice(0, 2)
-    const bgColor = user.user_type === 'virtual' ? 'bg-purple-500' : 'bg-blue-500'
+    const bgColor = user.user_type === 'virtual' ? 'bg-primary-500' : 'bg-blue-500'
     return (
       <div
         className={`${sizeClass} rounded-full ${bgColor} flex items-center justify-center text-white font-medium`}

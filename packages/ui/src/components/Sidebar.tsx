@@ -235,7 +235,7 @@ export function Sidebar({
                     }`}
                     onClick={() => setShowProductSwitcher(false)}
                   >
-                    <div className="w-8 h-8 border-2 border-violet-500 rounded-lg flex items-center justify-center">
+                    <div className="w-8 h-8 border-2 border-primary-500 rounded-lg flex items-center justify-center">
                       <span>{product.icon}</span>
                     </div>
                     <div>
@@ -383,7 +383,7 @@ export function MainLayout({ children }: MainLayoutProps) {
 
 export function MainContent({ children }: { children: ReactNode }) {
   return (
-    <div className="pl-72">
+    <div className="pl-72 min-h-screen bg-theme-bg">
       <main className="p-8">
         {children}
       </main>

@@ -89,7 +89,7 @@ export function RequirementSelector({
           {selectedRequirements.map((req) => (
             <span
               key={req.id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-md"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-100 text-primary-800 text-xs rounded-md"
             >
               [{req.stableKey}] {req.title.substring(0, 30)}
               {req.title.length > 30 && '...'}
@@ -99,7 +99,7 @@ export function RequirementSelector({
                   e.stopPropagation();
                   toggleRequirement(req.id);
                 }}
-                className="ml-0.5 hover:text-purple-600"
+                className="ml-0.5 hover:text-primary-600"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -149,7 +149,7 @@ export function RequirementSelector({
                     checked={selectedIds.includes(req.id)}
                     onCheckedChange={() => toggleRequirement(req.id)}
                   />
-                  <span className="text-xs text-purple-600 font-mono">[{req.stableKey}]</span>
+                  <span className="text-xs text-primary-600 font-mono">[{req.stableKey}]</span>
                   <span className="text-sm text-gray-800 truncate flex-1">{req.title}</span>
                 </label>
               ))

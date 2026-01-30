@@ -181,7 +181,7 @@ export function ArtifactDetailDialog({
 
         {loading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
           </div>
         ) : artifact ? (
           <div className="flex-1 overflow-hidden grid grid-cols-3 gap-4">
@@ -256,7 +256,7 @@ export function ArtifactDetailDialog({
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Upload New Version</h4>
                   <div className="space-y-2">
                     <div
-                      className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-purple-300 transition-colors"
+                      className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-primary-300 transition-colors"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {uploadFile ? (
@@ -341,7 +341,7 @@ export function ArtifactDetailDialog({
                   <h4 className="text-sm font-medium text-gray-700 mb-3">Markdown Preview</h4>
                   {markdownLoading ? (
                     <div className="flex items-center justify-center py-12">
-                      <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+                      <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
                     </div>
                   ) : markdownContent ? (
                     <MarkdownViewer content={markdownContent} />

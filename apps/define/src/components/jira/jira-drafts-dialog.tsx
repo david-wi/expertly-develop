@@ -302,7 +302,7 @@ export function JiraDraftsDialog({
 
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
             </div>
           ) : (
             <div className="space-y-6">
@@ -589,7 +589,7 @@ function DraftCard({
                     href={draft.jiraUrl || '#'}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-purple-600 hover:text-purple-700 text-sm font-medium flex items-center gap-1"
+                    className="text-primary-600 hover:text-primary-700 text-sm font-medium flex items-center gap-1"
                   >
                     {draft.jiraIssueKey}
                     <ExternalLink className="h-3 w-3" />

@@ -266,7 +266,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
       .join('')
       .toUpperCase()
       .slice(0, 2)
-    const bgColor = user.user_type === 'bot' ? 'bg-purple-500' : 'bg-blue-500'
+    const bgColor = user.user_type === 'bot' ? 'bg-primary-500' : 'bg-blue-500'
     return (
       <div className={`w-10 h-10 rounded-full ${bgColor} flex items-center justify-center text-white text-sm font-medium`}>
         {initials}
@@ -320,7 +320,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                 resetForm('bot')
                 setShowCreateModal(true)
               }}
-              className="bg-purple-600 text-white px-4 py-2 rounded-md text-sm hover:bg-purple-700 transition-colors"
+              className="bg-primary-600 text-white px-4 py-2 rounded-md text-sm hover:bg-primary-700 transition-colors"
             >
               Add Bot
             </button>
@@ -374,7 +374,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.user_type === 'bot'
-                          ? 'bg-purple-100 text-purple-800'
+                          ? 'bg-primary-100 text-primary-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >
@@ -476,7 +476,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                       onClick={() => setFormData({ ...formData, user_type: 'bot', role: 'member', bot_config: {} })}
                       className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                         formData.user_type === 'bot'
-                          ? 'bg-purple-600 text-white'
+                          ? 'bg-primary-600 text-white'
                           : 'bg-white text-gray-700 hover:bg-gray-50'
                       }`}
                     >
@@ -609,7 +609,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                       type="button"
                       onClick={generateBotAvatar}
                       disabled={generatingAvatar || !formData.responsibilities?.trim()}
-                      className="w-full px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors disabled:opacity-50 text-sm"
+                      className="w-full px-3 py-2 bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200 transition-colors disabled:opacity-50 text-sm"
                     >
                       {generatingAvatar ? 'Generating...' : 'Generate Avatar from Responsibilities'}
                     </button>

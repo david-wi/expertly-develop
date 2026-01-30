@@ -214,7 +214,7 @@ export default function ProjectDetail() {
                           {t(`priority.${test.priority}`)}
                         </span>
                         {test.created_by === 'ai' && (
-                          <span className="px-2 py-0.5 text-xs bg-purple-100 text-purple-700 rounded-full flex items-center gap-1">
+                          <span className="px-2 py-0.5 text-xs bg-primary-100 text-primary-700 rounded-full flex items-center gap-1">
                             <Zap className="w-3 h-3" /> AI
                           </span>
                         )}

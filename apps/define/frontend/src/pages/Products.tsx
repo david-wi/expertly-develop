@@ -150,7 +150,7 @@ export default function Products() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
         </div>
       ) : products.length === 0 ? (
         <Card>
@@ -170,10 +170,10 @@ export default function Products() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {products.map((product) => (
             <Link key={product.id} to={`/products/${product.id}`}>
-              <Card className="h-full hover:border-purple-300 hover:shadow-md transition-all cursor-pointer">
+              <Card className="h-full hover:border-primary-300 hover:shadow-md transition-all cursor-pointer">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <FolderTree className="h-5 w-5 text-purple-600" />
+                    <FolderTree className="h-5 w-5 text-primary-600" />
                     {product.name}
                   </CardTitle>
                 </CardHeader>

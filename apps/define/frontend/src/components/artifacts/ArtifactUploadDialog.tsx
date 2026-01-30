@@ -291,8 +291,8 @@ export function ArtifactUploadDialog({
                 className={cn(
                   'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
                   isDragging
-                    ? 'border-purple-500 bg-purple-50'
-                    : 'border-gray-200 hover:border-purple-300'
+                    ? 'border-primary-500 bg-primary-50'
+                    : 'border-gray-200 hover:border-primary-300'
                 )}
                 onClick={() => fileInputRef.current?.click()}
                 onDragEnter={handleDragEnter}
@@ -302,8 +302,8 @@ export function ArtifactUploadDialog({
               >
                 {isDragging ? (
                   <>
-                    <Upload className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-                    <p className="text-sm text-purple-600 font-medium">Drop files here</p>
+                    <Upload className="h-8 w-8 text-primary-500 mx-auto mb-2" />
+                    <p className="text-sm text-primary-600 font-medium">Drop files here</p>
                   </>
                 ) : (
                   <>
@@ -345,12 +345,12 @@ export function ArtifactUploadDialog({
                       'border rounded-lg p-3 space-y-2',
                       fileItem.status === 'success' && 'border-green-200 bg-green-50',
                       fileItem.status === 'error' && 'border-red-200 bg-red-50',
-                      fileItem.status === 'uploading' && 'border-purple-200 bg-purple-50'
+                      fileItem.status === 'uploading' && 'border-primary-200 bg-primary-50'
                     )}
                   >
                     <div className="flex items-center gap-2">
                       {fileItem.status === 'pending' && <File className="h-4 w-4 text-gray-500 flex-shrink-0" />}
-                      {fileItem.status === 'uploading' && <Loader2 className="h-4 w-4 text-purple-600 animate-spin flex-shrink-0" />}
+                      {fileItem.status === 'uploading' && <Loader2 className="h-4 w-4 text-primary-600 animate-spin flex-shrink-0" />}
                       {fileItem.status === 'success' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
                       {fileItem.status === 'error' && <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />}
                       <span className="text-sm text-gray-700 truncate flex-1">{fileItem.file.name}</span>

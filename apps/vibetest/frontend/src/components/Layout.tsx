@@ -70,7 +70,7 @@ export default function Layout({ children }: LayoutProps) {
   }), [handleLogout])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div

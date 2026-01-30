@@ -39,7 +39,7 @@ export function RichTextViewer({ content, className, emptyText = 'Not defined ye
           '[&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6',
           '[&_h2]:text-lg [&_h2]:font-semibold [&_h3]:text-base [&_h3]:font-medium',
           '[&_img]:max-w-full [&_img]:rounded-lg [&_img]:my-2',
-          '[&_a]:text-purple-600 [&_a]:underline'
+          '[&_a]:text-primary-600 [&_a]:underline'
         ),
       },
     },

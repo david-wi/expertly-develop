@@ -46,7 +46,7 @@ function TaskListItem({ task }: { task: Task }) {
               <TaskStatusBadge status={task.status} />
               <PriorityBadge priority={task.priority} />
               {task.assignee === 'claude' && (
-                <span className="inline-flex items-center text-xs text-purple-600">
+                <span className="inline-flex items-center text-xs text-primary-600">
                   <ClaudeIcon className="w-3 h-3 mr-1" />
                   Claude
                 </span>

@@ -184,7 +184,7 @@ export default function ReleasesPage() {
 
       {loading ? (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
         </div>
       ) : products.length === 0 ? (
         <Card>
@@ -219,11 +219,11 @@ export default function ReleasesPage() {
             const stats = release.stats ? JSON.parse(release.stats) : null;
             return (
               <Link key={release.id} href={`/releases/${release.id}`}>
-                <Card className="hover:border-purple-300 hover:shadow-md transition-all cursor-pointer">
+                <Card className="hover:border-primary-300 hover:shadow-md transition-all cursor-pointer">
                   <CardContent className="py-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4">
-                        <Package className="h-8 w-8 text-purple-600" />
+                        <Package className="h-8 w-8 text-primary-600" />
                         <div>
                           <div className="flex items-center gap-2">
                             <h3 className="font-semibold text-gray-900">{release.versionName}</h3>
