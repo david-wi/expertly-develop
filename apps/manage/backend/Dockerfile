@@ -7,14 +7,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy identity-client package first
+# Copy shared packages
 COPY packages/identity-client /tmp/identity-client
+COPY packages/ai-config /tmp/ai-config
 
 # Install Python dependencies
 COPY apps/manage/backend/requirements.txt .
 RUN pip install --no-cache-dir /tmp/identity-client && \
+    pip install --no-cache-dir /tmp/ai-config && \
     pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /tmp/identity-client
+    rm -rf /tmp/identity-client /tmp/ai-config
 
 # Copy application code
 COPY apps/manage/backend/app/ app/

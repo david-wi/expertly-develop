@@ -1,13 +1,11 @@
 """
-AI service for generating playbook steps using OpenAI.
+AI service for generating playbook steps using the centralized AI config.
 """
 import json
 import logging
 from typing import Optional
 
-from openai import OpenAI
-
-from app.config import get_settings
+from ai_config import AIConfigClient, get_ai_config_client
 
 logger = logging.getLogger(__name__)
 
@@ -47,22 +45,25 @@ Example response format:
 
 Do not include any text before or after the JSON array."""
 
+    # Use case for playbook step generation - falls back to analysis_medium if not defined
+    USE_CASE = "playbook_generation"
+    FALLBACK_USE_CASE = "analysis_medium"
+
     def __init__(self):
-        self.settings = get_settings()
-        self._client: Optional[OpenAI] = None
+        self._ai_client: Optional[AIConfigClient] = None
 
     @property
-    def client(self) -> OpenAI:
-        """Lazy initialization of OpenAI client."""
-        if self._client is None:
-            if not self.settings.openai_api_key:
-                raise ValueError("OPENAI_API_KEY not configured")
-            self._client = OpenAI(api_key=self.settings.openai_api_key)
-        return self._client
+    def ai_client(self) -> AIConfigClient:
+        """Get the AI config client."""
+        if self._ai_client is None:
+            self._ai_client = get_ai_config_client()
+        return self._ai_client
 
     def is_configured(self) -> bool:
         """Check if the AI service is properly configured."""
-        return bool(self.settings.openai_api_key)
+        import os
+        # Check if at least one AI provider is configured
+        return bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
 
     async def generate_steps(
         self,
@@ -72,7 +73,7 @@ Do not include any text before or after the JSON array."""
         user_prompt: Optional[str] = None,
     ) -> list[dict]:
         """
-        Generate playbook steps using OpenAI.
+        Generate playbook steps using the configured AI model.
 
         Args:
             playbook_name: Name of the playbook
@@ -83,6 +84,20 @@ Do not include any text before or after the JSON array."""
         Returns:
             List of generated step dictionaries with title, description, when_to_perform
         """
+        # Get the model configuration for this use case
+        try:
+            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
+        except Exception:
+            logger.info(f"Use case '{self.USE_CASE}' not found, trying fallback")
+            use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
+
+        model_id = use_case_config.model_id
+        provider = use_case_config.provider_name
+        max_tokens = use_case_config.max_tokens
+        temperature = use_case_config.temperature
+
+        logger.info(f"Generating steps for playbook '{playbook_name}' using {provider}/{model_id}")
+
         # Build the user message
         message_parts = [f"Generate steps for a playbook named: \"{playbook_name}\""]
 
@@ -102,21 +117,15 @@ Do not include any text before or after the JSON array."""
 
         user_message = "\n".join(message_parts)
 
-        logger.info(f"Generating steps for playbook: {playbook_name}")
-
-        # Call OpenAI API
-        response = self.client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": self.SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            max_tokens=4096,
-            temperature=0.7,
-        )
-
-        # Extract the response text
-        response_text = response.choices[0].message.content.strip()
+        # Call the appropriate AI provider
+        if provider == "anthropic":
+            response_text = await self._call_anthropic(
+                model_id, user_message, max_tokens, temperature
+            )
+        else:
+            response_text = await self._call_openai(
+                model_id, user_message, max_tokens, temperature
+            )
 
         # Parse the JSON response
         try:
@@ -147,6 +156,36 @@ Do not include any text before or after the JSON array."""
 
         logger.info(f"Generated {len(validated_steps)} steps for playbook: {playbook_name}")
         return validated_steps
+
+    async def _call_anthropic(
+        self, model_id: str, user_message: str, max_tokens: int, temperature: float
+    ) -> str:
+        """Call Anthropic API."""
+        client = self.ai_client.get_anthropic_client()
+        response = client.messages.create(
+            model=model_id,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=self.SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": user_message}],
+        )
+        return response.content[0].text.strip()
+
+    async def _call_openai(
+        self, model_id: str, user_message: str, max_tokens: int, temperature: float
+    ) -> str:
+        """Call OpenAI API."""
+        client = self.ai_client.get_openai_client()
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content.strip()
 
 
 # Singleton instance
