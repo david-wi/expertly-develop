@@ -7,7 +7,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       <Sidebar />
       <div className="pl-64">
         <main className="p-8">{children}</main>

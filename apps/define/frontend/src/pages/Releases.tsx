@@ -93,7 +93,7 @@ export default function Releases() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
   }
@@ -207,7 +207,7 @@ export default function Releases() {
             const stats = release.stats ? JSON.parse(release.stats) : null
             return (
               <Link key={release.id} to={`/releases/${release.id}`}>
-                <Card className="hover:border-purple-300 hover:shadow-md transition-all cursor-pointer">
+                <Card className="hover:border-primary-300 hover:shadow-md transition-all cursor-pointer">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">

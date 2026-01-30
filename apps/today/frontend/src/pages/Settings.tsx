@@ -137,8 +137,8 @@ export default function Settings() {
                     <div className="text-2xl font-bold text-green-600">{org.usage.total_tasks}</div>
                     <div className="text-sm text-gray-500">Total Tasks</div>
                   </div>
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">{org.usage.tasks_created_this_month}</div>
+                  <div className="bg-primary-50 p-4 rounded-lg">
+                    <div className="text-2xl font-bold text-primary-600">{org.usage.tasks_created_this_month}</div>
                     <div className="text-sm text-gray-500">Tasks Created</div>
                   </div>
                   <div className="bg-orange-50 p-4 rounded-lg">
@@ -295,7 +295,7 @@ export default function Settings() {
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded-full ${
                             user.role === 'admin'
-                              ? 'bg-purple-100 text-purple-800'
+                              ? 'bg-primary-100 text-primary-800'
                               : user.role === 'viewer'
                               ? 'bg-gray-100 text-gray-800'
                               : 'bg-green-100 text-green-800'

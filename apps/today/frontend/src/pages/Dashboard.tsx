@@ -56,7 +56,7 @@ export function Dashboard() {
         <Card title="Quick Stats">
           <div className="grid grid-cols-2 gap-4">
             <StatItem label="Queued" value={queuedTasks.length} color="blue" />
-            <StatItem label="Working" value={workingTasks.length} color="purple" />
+            <StatItem label="Working" value={workingTasks.length} color="primary" />
             <StatItem label="Blocked" value={blockedTasks.length} color="yellow" />
             <StatItem label="Questions" value={questions.length} color="orange" />
           </div>
@@ -129,11 +129,11 @@ function StatItem({
 }: {
   label: string;
   value: number;
-  color: 'blue' | 'purple' | 'yellow' | 'orange';
+  color: 'blue' | 'primary' | 'yellow' | 'orange';
 }) {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-700',
-    purple: 'bg-purple-50 text-purple-700',
+    primary: 'bg-primary-50 text-primary-700',
     yellow: 'bg-yellow-50 text-yellow-700',
     orange: 'bg-orange-50 text-orange-700',
   };

@@ -518,7 +518,7 @@ export function BulkImportDialog({
           className={cn(
             'flex items-start gap-2 py-3 px-3 hover:bg-gray-50 transition-colors',
             statusStyles[req.approvalStatus],
-            isEditing && 'bg-purple-50'
+            isEditing && 'bg-primary-50'
           )}
           style={{ paddingLeft: `${level * 20 + 12}px` }}
         >
@@ -667,7 +667,7 @@ export function BulkImportDialog({
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-purple-600" />
+            <Sparkles className="h-5 w-5 text-primary-600" />
             Import Requirements with AI
           </DialogTitle>
           <DialogDescription>
@@ -779,7 +779,7 @@ export function BulkImportDialog({
                 <div
                   className={cn(
                     'border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:bg-gray-50 transition-colors',
-                    files.length > 0 && 'border-purple-300 bg-purple-50'
+                    files.length > 0 && 'border-primary-300 bg-primary-50'
                   )}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -905,7 +905,7 @@ export function BulkImportDialog({
 
           {step === 'creating' && (
             <div className="py-12 text-center">
-              <Loader2 className="h-8 w-8 animate-spin text-purple-600 mx-auto mb-4" />
+              <Loader2 className="h-8 w-8 animate-spin text-primary-600 mx-auto mb-4" />
               <p className="text-gray-600">
                 Creating requirements... {createProgress.current} / {createProgress.total}
               </p>

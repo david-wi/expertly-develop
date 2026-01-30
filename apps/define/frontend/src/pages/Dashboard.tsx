@@ -36,7 +36,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
   }
@@ -121,7 +121,7 @@ export default function Dashboard() {
                   <Link
                     key={product.id}
                     to={`/products/${product.id}`}
-                    className="p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-colors"
+                    className="p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50/50 transition-colors"
                   >
                     <div className="flex items-center gap-2 mb-1">
                       <div className="font-medium text-gray-900">{product.name}</div>

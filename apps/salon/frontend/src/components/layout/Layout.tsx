@@ -7,7 +7,7 @@ export function Layout() {
   const { isConnected } = useWebSocket();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       <Sidebar />
       <div className="pl-64">
         <main className="p-8">

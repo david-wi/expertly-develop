@@ -103,7 +103,7 @@ function RequirementTreeItem({
       <div
         className={cn(
           'flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors',
-          selectedId === node.id && 'bg-purple-50 border-l-2 border-purple-600'
+          selectedId === node.id && 'bg-primary-50 border-l-2 border-primary-600'
         )}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => onSelect(node.id)}
@@ -251,7 +251,7 @@ export default function ProductDetail() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     )
   }

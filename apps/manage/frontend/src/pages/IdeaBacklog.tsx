@@ -6,7 +6,7 @@ import { Lightbulb, Plus, Sparkles } from 'lucide-react'
 function getStatusBadgeColor(status: BacklogStatus): string {
   switch (status) {
     case 'new':
-      return 'bg-purple-100 text-purple-800'
+      return 'bg-primary-100 text-primary-800'
     case 'in_progress':
       return 'bg-yellow-100 text-yellow-800'
     case 'done':

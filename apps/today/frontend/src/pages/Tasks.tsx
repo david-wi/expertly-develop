@@ -117,7 +117,7 @@ function TaskRow({ task }: { task: Task }) {
               Created {new Date(task.created_at).toLocaleDateString()}
             </span>
             {task.assignee === 'claude' && (
-              <span className="text-purple-600">Assigned to Claude</span>
+              <span className="text-primary-600">Assigned to Claude</span>
             )}
           </div>
         </div>

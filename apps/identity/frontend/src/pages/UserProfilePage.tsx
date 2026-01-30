@@ -213,7 +213,7 @@ export default function UserProfilePage() {
       .join('')
       .toUpperCase()
       .slice(0, 2)
-    const bgColor = user?.user_type === 'bot' ? 'bg-purple-500' : 'bg-blue-500'
+    const bgColor = user?.user_type === 'bot' ? 'bg-primary-500' : 'bg-blue-500'
     return (
       <div className={`${sizeClasses} rounded-full ${bgColor} flex items-center justify-center text-white font-medium`}>
         {initials}
@@ -331,7 +331,7 @@ export default function UserProfilePage() {
                       type="button"
                       onClick={generateBotAvatar}
                       disabled={generatingAvatar || !formData.responsibilities?.trim()}
-                      className="w-full px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs hover:bg-purple-200 transition-colors disabled:opacity-50"
+                      className="w-full px-2 py-1 bg-primary-100 text-primary-700 rounded text-xs hover:bg-primary-200 transition-colors disabled:opacity-50"
                     >
                       {generatingAvatar ? 'Generating...' : 'Generate'}
                     </button>
@@ -458,7 +458,7 @@ export default function UserProfilePage() {
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         user.user_type === 'bot'
-                          ? 'bg-purple-100 text-purple-800'
+                          ? 'bg-primary-100 text-primary-800'
                           : 'bg-blue-100 text-blue-800'
                       }`}
                     >

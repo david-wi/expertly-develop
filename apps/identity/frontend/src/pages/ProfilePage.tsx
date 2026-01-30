@@ -65,7 +65,7 @@ export default function ProfilePage() {
                 className="w-16 h-16 rounded-full object-cover"
               />
             ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-primary-600 flex items-center justify-center">
                 <span className="text-white text-xl font-medium">
                   {user.name?.charAt(0) || 'U'}
                 </span>

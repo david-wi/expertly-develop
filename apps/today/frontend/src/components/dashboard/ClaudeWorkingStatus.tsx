@@ -12,13 +12,13 @@ export function ClaudeWorkingStatus({ task }: ClaudeWorkingStatusProps) {
         <div className="space-y-3">
           <div className="flex items-center space-x-3">
             <div className="relative">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                <ClaudeIcon className="w-6 h-6 text-purple-600" />
+              <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                <ClaudeIcon className="w-6 h-6 text-primary-600" />
               </div>
               {/* Pulsing indicator */}
               <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-purple-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-primary-500"></span>
               </span>
             </div>
             <div className="flex-1 min-w-0">
@@ -36,7 +36,7 @@ export function ClaudeWorkingStatus({ task }: ClaudeWorkingStatusProps) {
           {/* Progress bar (simulated) */}
           <div className="w-full bg-gray-200 rounded-full h-1.5">
             <div
-              className="bg-purple-600 h-1.5 rounded-full animate-pulse"
+              className="bg-primary-600 h-1.5 rounded-full animate-pulse"
               style={{ width: '60%' }}
             ></div>
           </div>

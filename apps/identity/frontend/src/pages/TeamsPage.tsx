@@ -164,7 +164,7 @@ export default function TeamsPage() {
       .join('')
       .toUpperCase()
       .slice(0, 2)
-    const bgColor = member.user_type === 'bot' ? 'bg-purple-500' : 'bg-blue-500'
+    const bgColor = member.user_type === 'bot' ? 'bg-primary-500' : 'bg-blue-500'
     return (
       <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center text-white text-xs font-medium`}>
         {initials}
@@ -288,7 +288,7 @@ export default function TeamsPage() {
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                               member.user_type === 'bot'
-                                ? 'bg-purple-100 text-purple-800'
+                                ? 'bg-primary-100 text-primary-800'
                                 : 'bg-blue-100 text-blue-800'
                             }`}
                           >

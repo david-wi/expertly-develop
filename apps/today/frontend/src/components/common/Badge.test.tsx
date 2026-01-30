@@ -44,11 +44,11 @@ describe('Badge', () => {
       expect(badge.className).toContain('text-blue-700')
     })
 
-    it('applies purple variant', () => {
-      render(<Badge variant="purple">Purple</Badge>)
-      const badge = screen.getByText('Purple')
-      expect(badge.className).toContain('bg-purple-100')
-      expect(badge.className).toContain('text-purple-700')
+    it('applies primary variant', () => {
+      render(<Badge variant="primary">Primary</Badge>)
+      const badge = screen.getByText('Primary')
+      expect(badge.className).toContain('bg-primary-100')
+      expect(badge.className).toContain('text-primary-700')
     })
   })
 

@@ -12,8 +12,8 @@ describe('Badge Component', () => {
     it('should render with default variant', () => {
       render(<Badge>Default</Badge>);
       const badge = screen.getByText('Default');
-      expect(badge.className).toContain('bg-purple-100');
-      expect(badge.className).toContain('text-purple-800');
+      expect(badge.className).toContain('bg-primary-100');
+      expect(badge.className).toContain('text-primary-800');
     });
 
     it('should apply base styles', () => {
@@ -38,8 +38,8 @@ describe('Badge Component', () => {
     it('should render default variant', () => {
       render(<Badge variant="default">Default</Badge>);
       const badge = screen.getByText('Default');
-      expect(badge.className).toContain('bg-purple-100');
-      expect(badge.className).toContain('text-purple-800');
+      expect(badge.className).toContain('bg-primary-100');
+      expect(badge.className).toContain('text-primary-800');
     });
 
     it('should render secondary variant', () => {

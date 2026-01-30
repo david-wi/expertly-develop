@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, ChevronDown, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList } from 'lucide-react'
+import { ChevronRight, ChevronDown, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info } from 'lucide-react'
 
 export interface UserMenuItem {
   id: string
@@ -279,26 +279,37 @@ export interface CreateDefaultUserMenuOptions {
   buildTimestamp?: string
   gitCommit?: string
   includeProfile?: boolean  // false for Identity app itself
+  aboutHref?: string  // Link to about/landing page (defaults to /landing)
 }
 
 export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): UserMenuConfig {
-  const { onLogout, buildTimestamp, gitCommit, includeProfile = true } = options
+  const { onLogout, buildTimestamp, gitCommit, includeProfile = true, aboutHref = '/landing' } = options
 
   const sections: UserMenuSection[] = []
 
-  // Profile section (if included)
+  // Profile and About section
+  const profileItems: UserMenuItem[] = []
   if (includeProfile) {
+    profileItems.push({
+      id: 'profile',
+      label: 'Profile',
+      icon: User,
+      type: 'link',
+      href: 'https://identity.ai.devintensive.com/profile',
+      external: true,
+    })
+  }
+  profileItems.push({
+    id: 'about',
+    label: 'About',
+    icon: Info,
+    type: 'link',
+    href: aboutHref,
+  })
+
+  if (profileItems.length > 0) {
     sections.push({
-      items: [
-        {
-          id: 'profile',
-          label: 'Profile',
-          icon: User,
-          type: 'link',
-          href: 'https://identity.ai.devintensive.com/profile',
-          external: true,
-        },
-      ],
+      items: profileItems,
     })
   }
 

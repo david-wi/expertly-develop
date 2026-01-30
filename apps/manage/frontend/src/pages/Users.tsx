@@ -236,7 +236,7 @@ export default function Users() {
       .join('')
       .toUpperCase()
       .slice(0, 2)
-    const bgColor = user.user_type === 'virtual' ? 'bg-purple-500' : 'bg-blue-500'
+    const bgColor = user.user_type === 'virtual' ? 'bg-primary-500' : 'bg-blue-500'
     return (
       <div className={`w-8 h-8 rounded-full ${bgColor} flex items-center justify-center text-white text-xs font-medium`}>
         {initials}
@@ -284,7 +284,7 @@ export default function Users() {
               resetForm('virtual')
               setShowCreateModal(true)
             }}
-            className="bg-purple-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-purple-700 transition-colors"
+            className="bg-primary-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-primary-700 transition-colors"
           >
             Add Bot
           </button>
@@ -334,7 +334,7 @@ export default function Users() {
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                           user.user_type === 'virtual'
-                            ? 'bg-purple-100 text-purple-800'
+                            ? 'bg-primary-100 text-primary-800'
                             : 'bg-blue-100 text-blue-800'
                         }`}
                       >
@@ -419,7 +419,7 @@ export default function Users() {
                     onClick={() => setFormData({ ...formData, user_type: 'virtual', bot_config: {} })}
                     className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${
                       formData.user_type === 'virtual'
-                        ? 'bg-purple-600 text-white'
+                        ? 'bg-primary-600 text-white'
                         : 'bg-white text-gray-700 hover:bg-gray-50'
                     }`}
                   >
@@ -511,7 +511,7 @@ export default function Users() {
                       type="button"
                       onClick={generateBotAvatar}
                       disabled={generatingAvatar || !formData.responsibilities?.trim()}
-                      className="w-full px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors disabled:opacity-50 text-sm"
+                      className="w-full px-3 py-2 bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200 transition-colors disabled:opacity-50 text-sm"
                     >
                       {generatingAvatar ? 'Generating...' : 'Generate Avatar from Responsibilities'}
                     </button>
@@ -668,7 +668,7 @@ export default function Users() {
                       type="button"
                       onClick={generateBotAvatar}
                       disabled={generatingAvatar || !formData.responsibilities?.trim()}
-                      className="w-full px-3 py-2 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors disabled:opacity-50 text-sm"
+                      className="w-full px-3 py-2 bg-primary-100 text-primary-700 rounded-md hover:bg-primary-200 transition-colors disabled:opacity-50 text-sm"
                     >
                       {generatingAvatar ? 'Generating...' : 'Generate Avatar from Responsibilities'}
                     </button>

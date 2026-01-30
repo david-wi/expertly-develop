@@ -115,7 +115,7 @@ export default function Layout() {
     : undefined
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       <Sidebar
         productCode="manage"
         productName="Manage"

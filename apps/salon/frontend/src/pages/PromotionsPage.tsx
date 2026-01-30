@@ -15,7 +15,7 @@ const typeLabels: Record<PromotionType, string> = {
 
 const typeColors: Record<PromotionType, string> = {
   birthday: 'bg-pink-100 text-pink-800',
-  referral: 'bg-purple-100 text-purple-800',
+  referral: 'bg-primary-100 text-primary-800',
   new_client: 'bg-green-100 text-green-800',
   loyalty: 'bg-amber-100 text-amber-800',
   seasonal: 'bg-blue-100 text-blue-800',

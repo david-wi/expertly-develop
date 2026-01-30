@@ -13,8 +13,8 @@ describe('Button Component', () => {
       render(<Button>Default</Button>);
       const button = screen.getByRole('button');
 
-      // Default variant should have purple background
-      expect(button.className).toContain('bg-purple-600');
+      // Default variant should have primary background
+      expect(button.className).toContain('bg-primary-600');
       // Default size should have h-10
       expect(button.className).toContain('h-10');
     });
@@ -26,10 +26,10 @@ describe('Button Component', () => {
   });
 
   describe('variants', () => {
-    it('should render default variant with purple background', () => {
+    it('should render default variant with primary background', () => {
       render(<Button variant="default">Default</Button>);
       const button = screen.getByRole('button');
-      expect(button.className).toContain('bg-purple-600');
+      expect(button.className).toContain('bg-primary-600');
       expect(button.className).toContain('text-white');
     });
 
@@ -49,7 +49,7 @@ describe('Button Component', () => {
     it('should render link variant', () => {
       render(<Button variant="link">Link</Button>);
       const button = screen.getByRole('button');
-      expect(button.className).toContain('text-purple-600');
+      expect(button.className).toContain('text-primary-600');
       expect(button.className).toContain('underline-offset-4');
     });
   });
@@ -97,7 +97,7 @@ describe('Button Component', () => {
       render(<Button>Focusable</Button>);
       const button = screen.getByRole('button');
       expect(button.className).toContain('focus-visible:ring-2');
-      expect(button.className).toContain('focus-visible:ring-purple-500');
+      expect(button.className).toContain('focus-visible:ring-primary-500');
     });
   });
 

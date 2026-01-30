@@ -360,7 +360,7 @@ export function ErrorLogs() {
             title="Last 7 Days"
             value={stats.last_7d}
             icon={Info}
-            color="bg-purple-100 text-purple-600 dark:bg-purple-900/50 dark:text-purple-400"
+            color="bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
           />
         </div>
       )}

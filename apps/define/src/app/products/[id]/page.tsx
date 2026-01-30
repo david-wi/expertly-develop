@@ -128,7 +128,7 @@ function RequirementTreeItem({
       <div
         className={cn(
           'flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors',
-          selectedId === node.id && 'bg-purple-50 border-l-2 border-purple-600'
+          selectedId === node.id && 'bg-primary-50 border-l-2 border-primary-600'
         )}
         style={{ paddingLeft: `${level * 16 + 8}px` }}
         onClick={() => onSelect(node.id)}
@@ -283,7 +283,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   if (loading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     );
   }
@@ -454,7 +454,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
                                       setNewReq({ ...newReq, tags: newReq.tags.filter((t) => t !== tag) });
                                     }
                                   }}
-                                  className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                                 />
                                 <span className="text-sm text-gray-700">{tag}</span>
                               </label>

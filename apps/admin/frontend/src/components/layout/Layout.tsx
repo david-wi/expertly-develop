@@ -32,7 +32,7 @@ export function Layout() {
   }), [handleLogout])
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-theme-bg">
       <Sidebar
         productCode="admin"
         productName="Admin"

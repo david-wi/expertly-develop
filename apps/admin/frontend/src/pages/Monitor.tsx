@@ -73,7 +73,7 @@ function ServiceRow({ service, isChecking }: { service: ServiceStatus; isCheckin
           className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
             isApi
               ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
-              : 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300'
+              : 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300'
           }`}
         >
           {isApi ? <Server className="w-3 h-3" /> : <Globe className="w-3 h-3" />}

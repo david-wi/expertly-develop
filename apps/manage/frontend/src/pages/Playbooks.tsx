@@ -966,7 +966,7 @@ export default function Playbooks() {
       case 'user':
         return 'bg-blue-100 text-blue-800'
       case 'team':
-        return 'bg-purple-100 text-purple-800'
+        return 'bg-primary-100 text-primary-800'
       case 'organization':
         return 'bg-green-100 text-green-800'
       default:

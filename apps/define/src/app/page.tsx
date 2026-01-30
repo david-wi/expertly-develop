@@ -112,7 +112,7 @@ export default async function Dashboard() {
         <>
           {/* Action bar */}
           {(data.recentVersions.length > 0 || data.failingTests.length > 0) && (
-            <Card className="mb-8 bg-purple-50 border-purple-100">
+            <Card className="mb-8 bg-primary-50 border-primary-100">
               <CardContent className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -140,7 +140,7 @@ export default async function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <GitBranch className="h-5 w-5 text-purple-600" />
+                  <GitBranch className="h-5 w-5 text-primary-600" />
                   Recent changes
                 </CardTitle>
               </CardHeader>
@@ -155,7 +155,7 @@ export default async function Dashboard() {
                         href={`/requirements/${version.requirementId}`}
                         className="block group"
                       >
-                        <div className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors">
+                        <div className="font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
                           {version.requirementTitle}
                         </div>
                         <div className="text-sm text-gray-500">
@@ -175,7 +175,7 @@ export default async function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-purple-600" />
+                  <Package className="h-5 w-5 text-primary-600" />
                   Next release snapshot
                 </CardTitle>
               </CardHeader>
@@ -218,7 +218,7 @@ export default async function Dashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertCircle className="h-5 w-5 text-purple-600" />
+                  <AlertCircle className="h-5 w-5 text-primary-600" />
                   Checks that need love
                 </CardTitle>
               </CardHeader>
@@ -236,7 +236,7 @@ export default async function Dashboard() {
                         href={`/requirements/${test.requirementId}`}
                         className="block group"
                       >
-                        <div className="font-medium text-gray-900 group-hover:text-purple-600 transition-colors">
+                        <div className="font-medium text-gray-900 group-hover:text-primary-600 transition-colors">
                           {test.requirementTitle}
                         </div>
                         <div className="text-sm text-red-600">
@@ -272,7 +272,7 @@ export default async function Dashboard() {
                     <Link
                       key={product.id}
                       href={`/products/${product.id}`}
-                      className="p-4 rounded-lg border border-gray-200 hover:border-purple-300 hover:bg-purple-50/50 transition-colors"
+                      className="p-4 rounded-lg border border-gray-200 hover:border-primary-300 hover:bg-primary-50/50 transition-colors"
                     >
                       <div className="font-medium text-gray-900">{product.name}</div>
                       <div className="text-sm text-gray-500">

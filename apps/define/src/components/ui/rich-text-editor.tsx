@@ -187,7 +187,7 @@ export function RichTextEditor({
   return (
     <div className={cn(
       'rounded-lg border border-gray-300 bg-white overflow-hidden',
-      'focus-within:ring-2 focus-within:ring-purple-500 focus-within:border-transparent',
+      'focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-transparent',
       disabled && 'opacity-50 cursor-not-allowed',
       className
     )}>
@@ -319,7 +319,7 @@ function ToolbarButton({ onClick, active, disabled, title, children }: ToolbarBu
       title={title}
       className={cn(
         'p-1.5 rounded transition-colors',
-        active ? 'bg-purple-100 text-purple-700' : 'text-gray-600 hover:bg-gray-200',
+        active ? 'bg-primary-100 text-primary-700' : 'text-gray-600 hover:bg-gray-200',
         disabled && 'opacity-50 cursor-not-allowed hover:bg-transparent'
       )}
     >
