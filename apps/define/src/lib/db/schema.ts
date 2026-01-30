@@ -5,6 +5,7 @@ export const products = sqliteTable('products', {
   name: text('name').notNull(),
   prefix: text('prefix').notNull(), // Unique prefix for requirement IDs (e.g., "ED" for "Expertly Define")
   description: text('description'),
+  avatarUrl: text('avatar_url'), // URL to AI-generated or uploaded avatar image
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
