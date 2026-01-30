@@ -1,19 +1,34 @@
 import anthropic
 import json
 import base64
+import logging
 from typing import List, Optional
 from pypdf import PdfReader
 from io import BytesIO
 
 from app.config import get_settings
-from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement
+from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, ContextUrl
+from ai_config import AIConfigClient
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+# Global AI config client
+_ai_config_client: Optional[AIConfigClient] = None
+
+
+def get_ai_config_client() -> AIConfigClient:
+    """Get or create the global AI config client."""
+    global _ai_config_client
+    if _ai_config_client is None:
+        _ai_config_client = AIConfigClient()
+    return _ai_config_client
 
 
 class AIService:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
+        self.ai_config = get_ai_config_client()
 
     def _extract_pdf_text(self, base64_content: str) -> str:
         """Extract text from PDF content."""
@@ -58,6 +73,8 @@ class AIService:
         existing_requirements: List[ExistingRequirement],
         target_parent_id: Optional[str],
         product_name: str,
+        context_urls: Optional[List[ContextUrl]] = None,
+        related_requirement_ids: Optional[List[str]] = None,
     ) -> List[ParsedRequirement]:
         """Parse requirements from description and files using Claude."""
 
@@ -85,6 +102,25 @@ class AIService:
                 else:
                     file_context += f"\n\n--- File: {file.name} ---\n{file.content}"
 
+        # Build URL context section
+        url_context = ""
+        if context_urls:
+            url_context = "\n\n--- External Context (from URLs) ---"
+            for url_item in context_urls:
+                url_context += f"\n\n[{url_item.title}] ({url_item.url})\n{url_item.content[:3000]}"
+                if len(url_item.content) > 3000:
+                    url_context += "\n... (content truncated)"
+
+        # Build related requirements context section
+        related_reqs_context = ""
+        if related_requirement_ids and existing_requirements:
+            related_reqs = [r for r in existing_requirements if r.id in related_requirement_ids]
+            if related_reqs:
+                related_reqs_context = "\n\n--- Related Requirements for Context ---"
+                related_reqs_context += "\nUse these existing requirements as context to ensure consistency in terminology and avoid duplicating functionality:\n"
+                for req in related_reqs:
+                    related_reqs_context += f"\n[{req.stable_key}] {req.title}"
+
         # Build system prompt
         system_prompt = """You are an expert requirements analyst. Your job is to parse user descriptions and create well-structured software requirements.
 
@@ -102,6 +138,11 @@ For hierarchical structure:
 - Create child requirements for sub-features
 - Use parent_ref to link children to parents (either an existing ID or a temp_id from another requirement you're creating)
 
+When provided with external context (URLs or related requirements):
+- Use the terminology and patterns from the context
+- Avoid duplicating existing functionality
+- Ensure new requirements complement rather than conflict with existing ones
+
 Respond ONLY with a valid JSON array of requirements. No explanation or markdown."""
 
         target_info = (
@@ -115,6 +156,8 @@ Respond ONLY with a valid JSON array of requirements. No explanation or markdown
 Existing requirements tree:
 {tree_text}
 {target_info}
+{url_context}
+{related_reqs_context}
 
 User's description of new requirements:
 {description}
@@ -148,10 +191,14 @@ Respond with ONLY the JSON array, no other text."""
             content_blocks.append(image_block)
         content_blocks.append({"type": "text", "text": user_prompt_text})
 
+        # Get model config for requirements parsing
+        use_case_config = await self.ai_config.get_use_case_config("requirements_parsing")
+        logger.debug(f"Using model {use_case_config.model_id} for requirements parsing")
+
         # Call Claude
         response = self.client.messages.create(
-            model="claude-3-5-sonnet-latest",
-            max_tokens=4096,
+            model=use_case_config.model_id,
+            max_tokens=use_case_config.max_tokens,
             system=system_prompt,
             messages=[{"role": "user", "content": content_blocks}],
         )
