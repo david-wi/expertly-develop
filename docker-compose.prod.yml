@@ -193,6 +193,8 @@ services:
       - DATABASE_URL=postgresql+asyncpg://${DO_PG_USER:-doadmin}:${DO_PG_PASSWORD}@${DO_PG_HOST}:${DO_PG_PORT:-25060}/expertly_define?ssl=require
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
       - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     volumes:
