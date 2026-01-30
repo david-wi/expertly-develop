@@ -13,6 +13,7 @@ import { Instructions } from './pages/Instructions';
 import { Login } from './pages/Login';
 import Settings from './pages/Settings';
 import Artifacts from './pages/Artifacts';
+import { Changelog } from './pages/Changelog';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -124,6 +125,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Artifacts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/changelog"
+            element={
+              <ProtectedRoute>
+                <Changelog />
               </ProtectedRoute>
             }
           />

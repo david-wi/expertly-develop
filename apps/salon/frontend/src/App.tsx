@@ -15,6 +15,7 @@ import {
   WaitlistPage,
   PromotionsPage,
   WebsiteBuilderPage,
+  ChangelogPage,
 } from './pages';
 
 const queryClient = new QueryClient({
@@ -72,6 +73,7 @@ function App() {
             <Route path="website" element={<WebsiteBuilderPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="changelog" element={<ChangelogPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

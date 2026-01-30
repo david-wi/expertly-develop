@@ -8,3 +8,4 @@ export { SettingsPage } from './SettingsPage';
 export { default as WaitlistPage } from './WaitlistPage';
 export { default as PromotionsPage } from './PromotionsPage';
 export { default as WebsiteBuilderPage } from './WebsiteBuilderPage';
+export { default as ChangelogPage } from './Changelog';

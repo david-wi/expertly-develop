@@ -70,3 +70,10 @@ export {
   type UserMenuSection,
   type UserMenuConfig,
 } from './components/UserMenu'
+
+// Changelog page
+export {
+  ChangelogPage,
+  type ChangelogEntry,
+  type ChangelogPageProps,
+} from './components/ChangelogPage'

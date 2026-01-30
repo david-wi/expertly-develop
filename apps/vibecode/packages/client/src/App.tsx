@@ -7,6 +7,7 @@ import ConnectionStatus from './components/ConnectionStatus';
 import DownloadBanner from './components/DownloadBanner';
 import LandingPage from './pages/LandingPage';
 import DownloadPage from './pages/DownloadPage';
+import ChangelogPage from './pages/Changelog';
 import { ExternalLink } from 'lucide-react';
 
 function MainApp() {
@@ -54,6 +55,9 @@ export default function App() {
   }
   if (currentPath === '/download') {
     return <DownloadPage />;
+  }
+  if (currentPath === '/changelog') {
+    return <ChangelogPage />;
   }
 
   return <MainApp />;

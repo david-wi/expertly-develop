@@ -6,6 +6,7 @@ import ProductDetail from './pages/ProductDetail'
 import RequirementDetail from './pages/RequirementDetail'
 import Releases from './pages/Releases'
 import ReleaseDetail from './pages/ReleaseDetail'
+import Changelog from './pages/Changelog'
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/requirements/:id" element={<RequirementDetail />} />
         <Route path="/releases" element={<Releases />} />
         <Route path="/releases/:id" element={<ReleaseDetail />} />
+        <Route path="/changelog" element={<Changelog />} />
       </Route>
     </Routes>
   )
