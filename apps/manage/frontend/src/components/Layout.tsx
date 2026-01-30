@@ -11,6 +11,7 @@ import {
   Star,
   Link2,
   PersonStanding,
+  Eye,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
+  { name: 'Monitors', href: '/monitors', icon: Eye },
   { name: 'Assignments', href: '/tasks', icon: ListTodo },
   { name: 'Teams', href: '/teams', icon: Users2 },
   { name: 'Users and Bots', href: '/users', icon: PersonStanding },

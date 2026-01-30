@@ -29,6 +29,11 @@ from app.models.task_attachment import (
 from app.models.task_comment import (
     TaskComment, TaskCommentCreate, TaskCommentUpdate, TaskCommentResponse
 )
+from app.models.monitor import (
+    Monitor, MonitorCreate, MonitorUpdate, MonitorEvent,
+    MonitorProvider, MonitorStatus, SlackConfig, GoogleDriveConfig,
+    EmailConfig, TeamworkConfig
+)
 
 __all__ = [
     "PyObjectId",
@@ -103,4 +108,14 @@ __all__ = [
     "TaskCommentCreate",
     "TaskCommentUpdate",
     "TaskCommentResponse",
+    "Monitor",
+    "MonitorCreate",
+    "MonitorUpdate",
+    "MonitorEvent",
+    "MonitorProvider",
+    "MonitorStatus",
+    "SlackConfig",
+    "GoogleDriveConfig",
+    "EmailConfig",
+    "TeamworkConfig",
 ]

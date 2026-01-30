@@ -148,4 +148,19 @@ async def create_indexes(db) -> None:
     await db.sops.create_index("queue_ids")
     await db.sops.create_index("match_keywords")
 
+    # Monitors
+    await db.monitors.create_index("organization_id")
+    await db.monitors.create_index([("organization_id", 1), ("status", 1)])
+    await db.monitors.create_index([("organization_id", 1), ("provider", 1)])
+    await db.monitors.create_index([("organization_id", 1), ("project_id", 1)])
+    await db.monitors.create_index([("status", 1), ("last_polled_at", 1)])
+    await db.monitors.create_index("deleted_at")
+
+    # Monitor events
+    await db.monitor_events.create_index("organization_id")
+    await db.monitor_events.create_index("monitor_id")
+    await db.monitor_events.create_index([("monitor_id", 1), ("provider_event_id", 1)], unique=True)
+    await db.monitor_events.create_index([("monitor_id", 1), ("created_at", -1)])
+    await db.monitor_events.create_index([("organization_id", 1), ("processed", 1)])
+
     logger.info("Created database indexes")

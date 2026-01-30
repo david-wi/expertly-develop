@@ -359,6 +359,48 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // Monitors
+  getMonitors: (params?: { status?: string; provider?: string; project_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.provider) searchParams.set('provider', params.provider)
+    if (params?.project_id) searchParams.set('project_id', params.project_id)
+    const query = searchParams.toString()
+    return request<Monitor[]>(`/api/v1/monitors${query ? `?${query}` : ''}`)
+  },
+  getMonitor: (id: string) => request<Monitor>(`/api/v1/monitors/${id}`),
+  createMonitor: (data: CreateMonitorRequest) =>
+    request<Monitor>('/api/v1/monitors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateMonitor: (id: string, data: UpdateMonitorRequest) =>
+    request<Monitor>(`/api/v1/monitors/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteMonitor: (id: string) =>
+    request<void>(`/api/v1/monitors/${id}`, {
+      method: 'DELETE',
+    }),
+  pollMonitor: (id: string) =>
+    request<MonitorPollResult>(`/api/v1/monitors/${id}/poll`, {
+      method: 'POST',
+    }),
+  pauseMonitor: (id: string) =>
+    request<Monitor>(`/api/v1/monitors/${id}/pause`, {
+      method: 'POST',
+    }),
+  resumeMonitor: (id: string) =>
+    request<Monitor>(`/api/v1/monitors/${id}/resume`, {
+      method: 'POST',
+    }),
+  getMonitorEvents: (id: string, limit?: number) => {
+    const query = limit ? `?limit=${limit}` : ''
+    return request<MonitorEvent[]>(`/api/v1/monitors/${id}/events${query}`)
+  },
+  getMonitorStats: () => request<MonitorStats>('/api/v1/monitors/stats/summary'),
 }
 
 // Types
@@ -865,4 +907,100 @@ export interface CreateTaskCommentRequest {
 export interface UpdateTaskCommentRequest {
   content?: string
   attachment_ids?: string[]
+}
+
+// Monitor types
+export type MonitorProviderType = 'slack' | 'google_drive' | 'gmail' | 'outlook' | 'teamwork'
+export type MonitorStatusType = 'active' | 'paused' | 'error'
+
+export interface SlackConfig {
+  channel_ids?: string[]
+  workspace_wide?: boolean
+  tagged_user_ids?: string[]
+  keywords?: string[]
+  context_messages?: number
+}
+
+export interface Monitor {
+  _id?: string
+  id: string
+  organization_id: string
+  name: string
+  description?: string
+  scope_type: ScopeType
+  scope_id?: string
+  provider: MonitorProviderType
+  connection_id: string
+  provider_config: SlackConfig | Record<string, unknown>
+  playbook_id: string
+  input_data_template?: Record<string, unknown>
+  queue_id?: string
+  project_id?: string
+  poll_interval_seconds: number
+  status: MonitorStatusType
+  last_polled_at?: string
+  last_event_at?: string
+  last_error?: string
+  poll_cursor?: Record<string, unknown>
+  events_detected: number
+  playbooks_triggered: number
+  created_at: string
+  updated_at?: string
+}
+
+export interface MonitorEvent {
+  _id?: string
+  id: string
+  organization_id: string
+  monitor_id: string
+  provider_event_id: string
+  event_type: string
+  event_data: Record<string, unknown>
+  context_data?: Record<string, unknown>
+  processed: boolean
+  task_id?: string
+  provider_timestamp?: string
+  created_at: string
+}
+
+export interface CreateMonitorRequest {
+  name: string
+  description?: string
+  scope_type?: ScopeType
+  scope_id?: string
+  provider: MonitorProviderType
+  connection_id: string
+  provider_config: SlackConfig | Record<string, unknown>
+  playbook_id: string
+  input_data_template?: Record<string, unknown>
+  queue_id?: string
+  project_id?: string
+  poll_interval_seconds?: number
+}
+
+export interface UpdateMonitorRequest {
+  name?: string
+  description?: string
+  provider_config?: SlackConfig | Record<string, unknown>
+  playbook_id?: string
+  input_data_template?: Record<string, unknown>
+  queue_id?: string
+  project_id?: string
+  poll_interval_seconds?: number
+}
+
+export interface MonitorPollResult {
+  monitor_id: string
+  events_found: number
+  playbooks_triggered: number
+  error?: string
+}
+
+export interface MonitorStats {
+  total: number
+  active: number
+  paused: number
+  error: number
+  total_events_detected: number
+  total_playbooks_triggered: number
 }
