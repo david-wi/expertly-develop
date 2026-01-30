@@ -14,6 +14,7 @@ import IdeaBacklog from './pages/IdeaBacklog'
 import Connections from './pages/Connections'
 import Changelog from './pages/Changelog'
 import LandingPage from './pages/LandingPage'
+import Monitors from './pages/Monitors'
 import Layout from './components/Layout'
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="users" element={<Users />} />
           <Route path="teams" element={<Teams />} />
           <Route path="recurring" element={<RecurringTasks />} />
+          <Route path="monitors" element={<Monitors />} />
           <Route path="wins" element={<Wins />} />
           <Route path="backlog" element={<Backlog />} />
           <Route path="idea-backlog" element={<IdeaBacklog />} />

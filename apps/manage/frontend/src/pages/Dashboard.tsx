@@ -2,18 +2,20 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { useWebSocket } from '../hooks/useWebSocket'
-import { api, User as UserType, Team, Queue } from '../services/api'
+import { api, User as UserType, Team, Queue, MonitorStats } from '../services/api'
 
 export default function Dashboard() {
   const { user, queues, tasks, loading, wsConnected, fetchUser, fetchQueues, fetchTasks } = useAppStore()
   const [selectedQueueFilter, setSelectedQueueFilter] = useState<string>('all')
   const [users, setUsers] = useState<UserType[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [monitorStats, setMonitorStats] = useState<MonitorStats | null>(null)
 
-  // Fetch users and teams for queue name resolution
+  // Fetch users, teams, and monitor stats for dashboard
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error)
     api.getTeams().then(setTeams).catch(console.error)
+    api.getMonitorStats().then(setMonitorStats).catch(console.error)
   }, [])
 
   // Connect WebSocket
@@ -301,6 +303,47 @@ export default function Dashboard() {
           </ul>
         )}
       </div>
+
+      {/* Monitors Summary */}
+      {monitorStats && monitorStats.total > 0 && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">Monitors</h3>
+              <Link to="/monitors" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                View all →
+              </Link>
+            </div>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-gray-500">Active</p>
+                <p className="text-2xl font-bold text-green-600">{monitorStats.active}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Paused</p>
+                <p className="text-2xl font-bold text-yellow-600">{monitorStats.paused}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Events Detected</p>
+                <p className="text-2xl font-bold text-blue-600">{monitorStats.total_events_detected}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Playbooks Triggered</p>
+                <p className="text-2xl font-bold text-purple-600">{monitorStats.total_playbooks_triggered}</p>
+              </div>
+            </div>
+            {monitorStats.error > 0 && (
+              <div className="mt-4 p-3 bg-red-50 rounded-md">
+                <p className="text-sm text-red-700">
+                  <span className="font-medium">{monitorStats.error}</span> monitor{monitorStats.error !== 1 ? 's' : ''} in error state
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
