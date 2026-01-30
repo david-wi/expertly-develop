@@ -17,8 +17,8 @@ COPY packages/ui ./packages/ui
 COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Set HUSKY=0 to disable husky hooks during install (allows native module scripts to run)
-RUN HUSKY=0 npm install --workspace=apps/admin/frontend
+# Husky is conditional on .git existing (see root package.json prepare script)
+RUN npm install --workspace=apps/admin/frontend
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend
