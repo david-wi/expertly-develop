@@ -559,14 +559,17 @@ export default function Projects() {
                   >
                     <td className="px-4 py-3">
                       <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
-                        <span
-                          className="cursor-grab active:cursor-grabbing mr-2 text-gray-400 hover:text-gray-600"
+                        <div
+                          className="cursor-grab active:cursor-grabbing mr-2 text-gray-400 hover:text-gray-600 select-none"
                           title="Drag to reparent"
-                          draggable
-                          onDragStart={(e) => handleDragStart(e, projectId)}
+                          draggable="true"
+                          onDragStart={(e) => {
+                            e.stopPropagation()
+                            handleDragStart(e, projectId)
+                          }}
                           onDragEnd={handleDragEnd}
                         >
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
                             <circle cx="9" cy="6" r="1.5" />
                             <circle cx="15" cy="6" r="1.5" />
                             <circle cx="9" cy="12" r="1.5" />
@@ -574,7 +577,7 @@ export default function Projects() {
                             <circle cx="9" cy="18" r="1.5" />
                             <circle cx="15" cy="18" r="1.5" />
                           </svg>
-                        </span>
+                        </div>
                         <div>
                           <Link
                             to={`/projects/${projectId}`}
