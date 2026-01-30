@@ -1,36 +1,54 @@
-"""Database configuration and session management."""
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+"""Database configuration and session management for async PostgreSQL."""
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
+from typing import AsyncGenerator
 
 from app.config import get_settings
 
 settings = get_settings()
 
-# Convert database URL to use psycopg3 driver if needed
+# Convert database URL to use asyncpg driver
 database_url = settings.database_url
 if database_url.startswith("postgresql://"):
-    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+elif database_url.startswith("postgresql+psycopg://"):
+    database_url = database_url.replace("postgresql+psycopg://", "postgresql+asyncpg://", 1)
 
-# Create engine
-engine = create_engine(
+# Create async engine
+engine = create_async_engine(
     database_url,
-    pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
+    echo=settings.debug,
+    future=True,
 )
 
-# Create session factory
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Session factory
+async_session_maker = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
 
-# Base class for models
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """Base class for all models."""
+    pass
 
 
-def get_db():
-    """Get database session dependency."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency that provides a database session."""
+    async with async_session_maker() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+
+
+async def init_db() -> None:
+    """Initialize database tables."""
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

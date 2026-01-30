@@ -10,7 +10,7 @@ Note: Login/logout/register are now handled by the Identity frontend.
 """
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import User
@@ -42,7 +42,7 @@ async def get_identity_urls():
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_info(
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get current user information from Identity session."""
     current_user = await get_current_user(request, db)

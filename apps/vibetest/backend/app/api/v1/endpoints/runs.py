@@ -2,10 +2,11 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.database import get_db
-from app.models import TestRun, TestResult, TestCase, Environment, Project, Artifact, User
+from app.models import TestRun, TestResult, TestCase, Environment, Project, Artifact, User, TestSuite
 from app.schemas import TestRunCreate, TestRunResponse, TestRunDetailResponse, RunSummary
 from app.services.test_runner import TestRunnerService
 from app.api.deps import get_current_user
@@ -14,39 +15,45 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[TestRunResponse])
-def list_runs(
+async def list_runs(
     project_id: str,
     status: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """List test runs for a project."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    query = db.query(TestRun).filter(TestRun.project_id == project_id)
+    query = select(TestRun).where(TestRun.project_id == project_id)
 
     if status:
-        query = query.filter(TestRun.status == status)
+        query = query.where(TestRun.status == status)
 
-    runs = query.order_by(TestRun.created_at.desc()).limit(limit).all()
+    query = query.order_by(TestRun.created_at.desc()).limit(limit)
+    result = await db.execute(query)
+    runs = result.scalars().all()
 
     # Enrich with summary data
-    result = []
+    response = []
     for run in runs:
         summary = None
         if run.summary:
             summary = RunSummary(**run.summary)
         else:
             # Calculate summary from results
-            results = db.query(TestResult).filter(TestResult.run_id == run.id).all()
+            results_stmt = select(TestResult).where(TestResult.run_id == run.id)
+            results_result = await db.execute(results_stmt)
+            results = results_result.scalars().all()
             if results:
                 summary = RunSummary(
                     total=len(results),
@@ -55,7 +62,7 @@ def list_runs(
                     skipped=len([r for r in results if r.status == "skipped"]),
                 )
 
-        result.append(TestRunResponse(
+        response.append(TestRunResponse(
             id=run.id,
             project_id=run.project_id,
             environment_id=run.environment_id,
@@ -70,23 +77,25 @@ def list_runs(
             updated_at=run.updated_at,
         ))
 
-    return result
+    return response
 
 
 @router.post("", response_model=TestRunResponse, status_code=201)
-def start_run(
+async def start_run(
     project_id: str,
     run_in: TestRunCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Start a new test run."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -96,21 +105,20 @@ def start_run(
     if not test_case_ids:
         if run_in.suite_id:
             # Get tests from suite
-            from app.models import TestSuite
-            suite = db.query(TestSuite).filter(TestSuite.id == run_in.suite_id).first()
+            suite_stmt = select(TestSuite).where(TestSuite.id == run_in.suite_id)
+            suite_result = await db.execute(suite_stmt)
+            suite = suite_result.scalar_one_or_none()
             if suite:
                 test_case_ids = suite.test_case_ids or []
         else:
             # Get all approved tests
-            tests = (
-                db.query(TestCase)
-                .filter(
-                    TestCase.project_id == project_id,
-                    TestCase.status == "approved",
-                    TestCase.deleted_at.is_(None),
-                )
-                .all()
+            tests_stmt = select(TestCase).where(
+                TestCase.project_id == project_id,
+                TestCase.status == "approved",
+                TestCase.deleted_at.is_(None),
             )
+            tests_result = await db.execute(tests_stmt)
+            tests = tests_result.scalars().all()
             test_case_ids = [t.id for t in tests]
 
     if not test_case_ids:
@@ -118,7 +126,7 @@ def start_run(
 
     # Start the run
     runner = TestRunnerService(db)
-    run = runner.start_run(
+    run = await runner.start_run(
         project_id=project_id,
         test_case_ids=test_case_ids,
         environment_id=run_in.environment_id,
@@ -143,41 +151,45 @@ def start_run(
 
 
 @router.get("/{run_id}", response_model=TestRunDetailResponse)
-def get_run(
+async def get_run(
     project_id: str,
     run_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get a test run with results."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    run = (
-        db.query(TestRun)
-        .filter(
-            TestRun.id == run_id,
-            TestRun.project_id == project_id,
-        )
-        .first()
+    run_stmt = select(TestRun).where(
+        TestRun.id == run_id,
+        TestRun.project_id == project_id,
     )
+    run_result = await db.execute(run_stmt)
+    run = run_result.scalar_one_or_none()
 
     if not run:
         raise HTTPException(status_code=404, detail="Test run not found")
 
     # Get results
-    results = db.query(TestResult).filter(TestResult.run_id == run_id).all()
+    results_stmt = select(TestResult).where(TestResult.run_id == run_id)
+    results_result = await db.execute(results_stmt)
+    results = results_result.scalars().all()
 
     # Get environment
     environment = None
     if run.environment_id:
-        env = db.query(Environment).filter(Environment.id == run.environment_id).first()
+        env_stmt = select(Environment).where(Environment.id == run.environment_id)
+        env_result = await db.execute(env_stmt)
+        env = env_result.scalar_one_or_none()
         if env:
             environment = {
                 "id": env.id,
@@ -189,8 +201,13 @@ def get_run(
     # Enrich results with test case info and artifacts
     enriched_results = []
     for result in results:
-        test_case = db.query(TestCase).filter(TestCase.id == result.test_case_id).first()
-        artifacts = db.query(Artifact).filter(Artifact.result_id == result.id).all()
+        test_case_stmt = select(TestCase).where(TestCase.id == result.test_case_id)
+        test_case_result = await db.execute(test_case_stmt)
+        test_case = test_case_result.scalar_one_or_none()
+
+        artifacts_stmt = select(Artifact).where(Artifact.result_id == result.id)
+        artifacts_result = await db.execute(artifacts_stmt)
+        artifacts = artifacts_result.scalars().all()
 
         enriched_results.append({
             "id": result.id,
@@ -230,35 +247,37 @@ def get_run(
 
 
 @router.get("/{run_id}/results")
-def get_run_results(
+async def get_run_results(
     project_id: str,
     run_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get test results for a run."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    run = (
-        db.query(TestRun)
-        .filter(
-            TestRun.id == run_id,
-            TestRun.project_id == project_id,
-        )
-        .first()
+    run_stmt = select(TestRun).where(
+        TestRun.id == run_id,
+        TestRun.project_id == project_id,
     )
+    run_result = await db.execute(run_stmt)
+    run = run_result.scalar_one_or_none()
 
     if not run:
         raise HTTPException(status_code=404, detail="Test run not found")
 
-    results = db.query(TestResult).filter(TestResult.run_id == run_id).all()
+    results_stmt = select(TestResult).where(TestResult.run_id == run_id)
+    results_result = await db.execute(results_stmt)
+    results = results_result.scalars().all()
 
     return [
         {

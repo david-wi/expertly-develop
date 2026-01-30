@@ -3,7 +3,8 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Environment, Project, User
@@ -15,54 +16,64 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[EnvironmentResponse])
-def list_environments(
+async def list_environments(
     project_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """List all environments for a project."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    environments = (
-        db.query(Environment)
-        .filter(Environment.project_id == project_id)
+    result = await db.execute(
+        select(Environment)
+        .where(Environment.project_id == project_id)
         .order_by(Environment.created_at.desc())
-        .all()
     )
+    environments = result.scalars().all()
 
     return environments
 
 
 @router.post("", response_model=EnvironmentResponse, status_code=201)
-def create_environment(
+async def create_environment(
     project_id: str,
     env_in: EnvironmentCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Create a new environment."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
     # If this is default, unset other defaults
     if env_in.is_default:
-        db.query(Environment).filter(
-            Environment.project_id == project_id,
-            Environment.is_default == True,
-        ).update({"is_default": False})
+        await db.execute(
+            update(Environment)
+            .where(
+                Environment.project_id == project_id,
+                Environment.is_default == True,
+            )
+            .values(is_default=False)
+        )
 
     encryption_service = get_encryption_service()
     now = datetime.utcnow()
@@ -83,37 +94,39 @@ def create_environment(
     )
 
     db.add(environment)
-    db.commit()
-    db.refresh(environment)
+    await db.flush()
+    await db.refresh(environment)
 
     return environment
 
 
 @router.get("/{environment_id}", response_model=EnvironmentResponse)
-def get_environment(
+async def get_environment(
     project_id: str,
     environment_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get an environment by ID."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    environment = (
-        db.query(Environment)
-        .filter(
+    result = await db.execute(
+        select(Environment).where(
             Environment.id == environment_id,
             Environment.project_id == project_id,
         )
-        .first()
     )
+    environment = result.scalar_one_or_none()
 
     if not environment:
         raise HTTPException(status_code=404, detail="Environment not found")
@@ -122,31 +135,33 @@ def get_environment(
 
 
 @router.patch("/{environment_id}", response_model=EnvironmentResponse)
-def update_environment(
+async def update_environment(
     project_id: str,
     environment_id: str,
     env_in: EnvironmentUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Update an environment."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    environment = (
-        db.query(Environment)
-        .filter(
+    result = await db.execute(
+        select(Environment).where(
             Environment.id == environment_id,
             Environment.project_id == project_id,
         )
-        .first()
     )
+    environment = result.scalar_one_or_none()
 
     if not environment:
         raise HTTPException(status_code=404, detail="Environment not found")
@@ -155,11 +170,15 @@ def update_environment(
 
     # Handle is_default
     if update_data.get("is_default"):
-        db.query(Environment).filter(
-            Environment.project_id == project_id,
-            Environment.is_default == True,
-            Environment.id != environment_id,
-        ).update({"is_default": False})
+        await db.execute(
+            update(Environment)
+            .where(
+                Environment.project_id == project_id,
+                Environment.is_default == True,
+                Environment.id != environment_id,
+            )
+            .values(is_default=False)
+        )
 
     # Handle credentials encryption
     if "credentials" in update_data:
@@ -174,40 +193,42 @@ def update_environment(
 
     environment.updated_at = datetime.utcnow()
 
-    db.commit()
-    db.refresh(environment)
+    await db.flush()
+    await db.refresh(environment)
 
     return environment
 
 
 @router.delete("/{environment_id}", status_code=204)
-def delete_environment(
+async def delete_environment(
     project_id: str,
     environment_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Delete an environment."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    environment = (
-        db.query(Environment)
-        .filter(
+    result = await db.execute(
+        select(Environment).where(
             Environment.id == environment_id,
             Environment.project_id == project_id,
         )
-        .first()
     )
+    environment = result.scalar_one_or_none()
 
     if not environment:
         raise HTTPException(status_code=404, detail="Environment not found")
 
-    db.delete(environment)
-    db.commit()
+    await db.delete(environment)
+    await db.flush()

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, select
 from typing import List
 from uuid import uuid4
 from datetime import datetime
@@ -23,21 +23,30 @@ def generate_prefix(name: str) -> str:
 
 
 @router.get("", response_model=List[ProductWithCount])
-def list_products(
-    db: Session = Depends(get_db),
+async def list_products(
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """List all products with requirement counts."""
-    results = (
-        db.query(
-            Product,
-            func.count(Requirement.id).label("requirement_count"),
+    # Subquery for requirement counts
+    count_subq = (
+        select(
+            Requirement.product_id,
+            func.count(Requirement.id).label("requirement_count")
         )
-        .outerjoin(Requirement, Product.id == Requirement.product_id)
-        .group_by(Product.id)
-        .order_by(Product.name)
-        .all()
+        .group_by(Requirement.product_id)
+        .subquery()
     )
+
+    # Main query joining products with counts
+    stmt = (
+        select(Product, func.coalesce(count_subq.c.requirement_count, 0).label("requirement_count"))
+        .outerjoin(count_subq, Product.id == count_subq.c.product_id)
+        .order_by(Product.name)
+    )
+
+    result = await db.execute(stmt)
+    rows = result.all()
 
     return [
         ProductWithCount(
@@ -50,21 +59,23 @@ def list_products(
             updated_at=product.updated_at,
             requirement_count=count,
         )
-        for product, count in results
+        for product, count in rows
     ]
 
 
 @router.post("", response_model=ProductResponse, status_code=201)
-def create_product(
+async def create_product(
     data: ProductCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create a new product."""
     final_prefix = (data.prefix or generate_prefix(data.name)).upper()
 
     # Check if prefix already exists
-    existing = db.query(Product).filter(Product.prefix == final_prefix).first()
+    stmt = select(Product).where(Product.prefix == final_prefix)
+    result = await db.execute(stmt)
+    existing = result.scalar_one_or_none()
     if existing:
         raise HTTPException(
             status_code=400,
@@ -82,34 +93,38 @@ def create_product(
     )
 
     db.add(product)
-    db.commit()
-    db.refresh(product)
+    await db.flush()
+    await db.refresh(product)
 
     return product
 
 
 @router.get("/{product_id}", response_model=ProductResponse)
-def get_product(
+async def get_product(
     product_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get a single product by ID."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     return product
 
 
 @router.patch("/{product_id}", response_model=ProductResponse)
-def update_product(
+async def update_product(
     product_id: str,
     data: ProductUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update a product."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -117,11 +132,10 @@ def update_product(
         product.name = data.name.strip()
     if data.prefix is not None:
         new_prefix = data.prefix.upper()
-        existing = (
-            db.query(Product)
-            .filter(Product.prefix == new_prefix, Product.id != product_id)
-            .first()
-        )
+        # Check if prefix already exists for another product
+        check_stmt = select(Product).where(Product.prefix == new_prefix, Product.id != product_id)
+        check_result = await db.execute(check_stmt)
+        existing = check_result.scalar_one_or_none()
         if existing:
             raise HTTPException(
                 status_code=400,
@@ -134,24 +148,25 @@ def update_product(
         product.avatar_url = data.avatar_url if data.avatar_url else None
 
     product.updated_at = datetime.utcnow().isoformat()
-    db.commit()
-    db.refresh(product)
+    await db.flush()
+    await db.refresh(product)
 
     return product
 
 
 @router.delete("/{product_id}", status_code=204)
-def delete_product(
+async def delete_product(
     product_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete a product and all related data."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    db.delete(product)
-    db.commit()
+    await db.delete(product)
 
     return None

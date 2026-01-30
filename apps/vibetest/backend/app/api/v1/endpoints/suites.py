@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.database import get_db
 from app.models import TestSuite, Project, User
@@ -15,45 +16,51 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[TestSuiteResponse])
-def list_suites(
+async def list_suites(
     project_id: str,
     type: Optional[str] = Query(None, pattern="^(smoke|regression|critical|custom)$"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """List test suites for a project."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    query = db.query(TestSuite).filter(TestSuite.project_id == project_id)
+    query = select(TestSuite).where(TestSuite.project_id == project_id)
 
     if type:
-        query = query.filter(TestSuite.type == type)
+        query = query.where(TestSuite.type == type)
 
-    suites = query.order_by(TestSuite.updated_at.desc()).all()
+    query = query.order_by(TestSuite.updated_at.desc())
+    result = await db.execute(query)
+    suites = result.scalars().all()
     return suites
 
 
 @router.post("", response_model=TestSuiteResponse, status_code=201)
-def create_suite(
+async def create_suite(
     project_id: str,
     suite_in: TestSuiteCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Create a new test suite."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -71,37 +78,37 @@ def create_suite(
     )
 
     db.add(suite)
-    db.commit()
-    db.refresh(suite)
+    await db.flush()
+    await db.refresh(suite)
 
     return suite
 
 
 @router.get("/{suite_id}", response_model=TestSuiteResponse)
-def get_suite(
+async def get_suite(
     project_id: str,
     suite_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get a test suite by ID."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    suite = (
-        db.query(TestSuite)
-        .filter(
-            TestSuite.id == suite_id,
-            TestSuite.project_id == project_id,
-        )
-        .first()
+    suite_stmt = select(TestSuite).where(
+        TestSuite.id == suite_id,
+        TestSuite.project_id == project_id,
     )
+    suite_result = await db.execute(suite_stmt)
+    suite = suite_result.scalar_one_or_none()
 
     if not suite:
         raise HTTPException(status_code=404, detail="Test suite not found")
@@ -110,31 +117,31 @@ def get_suite(
 
 
 @router.patch("/{suite_id}", response_model=TestSuiteResponse)
-def update_suite(
+async def update_suite(
     project_id: str,
     suite_id: str,
     suite_in: TestSuiteUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Update a test suite."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    suite = (
-        db.query(TestSuite)
-        .filter(
-            TestSuite.id == suite_id,
-            TestSuite.project_id == project_id,
-        )
-        .first()
+    suite_stmt = select(TestSuite).where(
+        TestSuite.id == suite_id,
+        TestSuite.project_id == project_id,
     )
+    suite_result = await db.execute(suite_stmt)
+    suite = suite_result.scalar_one_or_none()
 
     if not suite:
         raise HTTPException(status_code=404, detail="Test suite not found")
@@ -146,40 +153,39 @@ def update_suite(
 
     suite.updated_at = datetime.utcnow()
 
-    db.commit()
-    db.refresh(suite)
+    await db.flush()
+    await db.refresh(suite)
 
     return suite
 
 
 @router.delete("/{suite_id}", status_code=204)
-def delete_suite(
+async def delete_suite(
     project_id: str,
     suite_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Delete a test suite."""
     # Validate project access
-    project = db.query(Project).filter(
+    project_stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    project_result = await db.execute(project_stmt)
+    project = project_result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    suite = (
-        db.query(TestSuite)
-        .filter(
-            TestSuite.id == suite_id,
-            TestSuite.project_id == project_id,
-        )
-        .first()
+    suite_stmt = select(TestSuite).where(
+        TestSuite.id == suite_id,
+        TestSuite.project_id == project_id,
     )
+    suite_result = await db.execute(suite_stmt)
+    suite = suite_result.scalar_one_or_none()
 
     if not suite:
         raise HTTPException(status_code=404, detail="Test suite not found")
 
-    db.delete(suite)
-    db.commit()
+    await db.delete(suite)

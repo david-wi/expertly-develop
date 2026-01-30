@@ -9,7 +9,7 @@ import os
 
 from app.config import get_settings
 from app.api.v1 import api_router
-from app.database import engine, Base
+from app.database import init_db
 
 
 @asynccontextmanager
@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     # Create database tables
-    Base.metadata.create_all(bind=engine)
+    await init_db()
 
     # Ensure artifacts directory exists
     settings = get_settings()
@@ -72,7 +72,7 @@ async def serve_artifact(artifact_path: str):
 
 # Root endpoint
 @app.get("/api")
-def api_root():
+async def api_root():
     """API root endpoint."""
     return {
         "name": "Vibe QA API",
@@ -83,7 +83,7 @@ def api_root():
 
 # Health check endpoint
 @app.get("/health")
-def health():
+async def health():
     """Health check endpoint for container orchestration."""
     return {"status": "ok"}
 

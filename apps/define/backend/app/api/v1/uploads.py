@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from uuid import uuid4
 from datetime import datetime
 import os
@@ -21,12 +22,14 @@ settings = get_settings()
 async def upload_file(
     requirement_id: str = Form(...),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Upload a file attachment for a requirement."""
     # Verify requirement exists
-    requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
+    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    result = await db.execute(stmt)
+    requirement = result.scalar_one_or_none()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
 
@@ -59,8 +62,8 @@ async def upload_file(
     )
 
     db.add(attachment)
-    db.commit()
-    db.refresh(attachment)
+    await db.flush()
+    await db.refresh(attachment)
 
     return attachment
 
@@ -68,11 +71,13 @@ async def upload_file(
 @router.get("/{attachment_id}")
 async def get_attachment(
     attachment_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Download an attachment."""
-    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    stmt = select(Attachment).where(Attachment.id == attachment_id)
+    result = await db.execute(stmt)
+    attachment = result.scalar_one_or_none()
     if not attachment:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
@@ -90,11 +95,13 @@ async def get_attachment(
 @router.delete("/{attachment_id}", status_code=204)
 async def delete_attachment(
     attachment_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete an attachment."""
-    attachment = db.query(Attachment).filter(Attachment.id == attachment_id).first()
+    stmt = select(Attachment).where(Attachment.id == attachment_id)
+    result = await db.execute(stmt)
+    attachment = result.scalar_one_or_none()
     if not attachment:
         raise HTTPException(status_code=404, detail="Attachment not found")
 
@@ -103,7 +110,6 @@ async def delete_attachment(
     if os.path.exists(full_path):
         os.remove(full_path)
 
-    db.delete(attachment)
-    db.commit()
+    await db.delete(attachment)
 
     return None
