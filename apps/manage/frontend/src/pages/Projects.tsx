@@ -13,11 +13,11 @@ type ViewMode = 'tree' | 'compact'
 function getViewMode(): ViewMode {
   try {
     const stored = localStorage.getItem(VIEW_MODE_KEY)
-    if (stored === 'compact') return 'compact'
+    if (stored === 'tree') return 'tree'
   } catch {
     // Ignore storage errors
   }
-  return 'tree'
+  return 'compact'
 }
 
 function saveViewMode(mode: ViewMode) {
@@ -610,12 +610,12 @@ export default function Projects() {
         >
           <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {viewMode === 'tree' ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            ) : (
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h7v7H3V4zm11 0h7v7h-7V4zm-11 11h7v7H3v-7zm11 0h7v7h-7v-7z" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
             )}
           </svg>
-          <span className="text-gray-600">{viewMode === 'tree' ? 'Compact' : 'Tree'}</span>
+          <span className="text-gray-600">{viewMode === 'tree' ? 'Tree View' : 'Compact View'}</span>
         </button>
       </div>
 
@@ -663,10 +663,7 @@ export default function Projects() {
                   return (
                     <tr
                       key={projectId}
-                      className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, projectId)}
-                      onDragEnd={handleDragEnd}
+                      className={`hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
                       onDragOver={(e) => handleDragOver(e, projectId)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
@@ -692,8 +689,11 @@ export default function Projects() {
                             <span className="w-5 mr-1" /> // Spacer for alignment
                           )}
                           <div
-                            className="mr-2 text-gray-400 select-none"
+                            className="mr-2 text-gray-400 select-none cursor-grab active:cursor-grabbing hover:text-gray-600"
                             title="Drag to reparent"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, projectId)}
+                            onDragEnd={handleDragEnd}
                           >
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
@@ -708,6 +708,8 @@ export default function Projects() {
                             <Link
                               to={`/projects/${projectId}`}
                               className="font-medium text-blue-600 hover:text-blue-800"
+                              title={project.description || undefined}
+                              draggable={false}
                             >
                               {project.name}
                             </Link>
@@ -715,8 +717,9 @@ export default function Projects() {
                             {node.taskCount > 0 && (
                               <Link
                                 to={`/tasks?project_id=${projectId}`}
-                                className="px-1.5 py-0.5 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                                className="px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
                                 title={`${node.taskCount} task${node.taskCount !== 1 ? 's' : ''}`}
+                                draggable={false}
                               >
                                 {node.taskCount}
                               </Link>
@@ -727,11 +730,6 @@ export default function Projects() {
                                 {getDescendantCount(node)} sub
                               </span>
                             )}
-                            {project.description && (
-                              <p className="text-xs text-gray-500 truncate max-w-xs">
-                                {project.description}
-                              </p>
-                            )}
                           </div>
                         </div>
                       </td>
@@ -741,6 +739,7 @@ export default function Projects() {
                             onClick={() => openCreateWithParent(project)}
                             className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
                             title="Add Subproject"
+                            draggable={false}
                           >
                             <svg
                               className="w-4 h-4"
@@ -811,10 +810,7 @@ export default function Projects() {
                   return (
                     <tr
                       key={projectId}
-                      className={`hover:bg-gray-50 cursor-grab active:cursor-grabbing ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, projectId)}
-                      onDragEnd={handleDragEnd}
+                      className={`hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
                       onDragOver={(e) => handleDragOver(e, projectId)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
@@ -822,8 +818,11 @@ export default function Projects() {
                       <td className="px-4 py-3">
                         <div style={{ paddingLeft: node.depth * 24 }} className="flex items-start">
                           <div
-                            className="mr-2 mt-0.5 text-gray-400 select-none flex-shrink-0"
+                            className="mr-2 mt-0.5 text-gray-400 select-none flex-shrink-0 cursor-grab active:cursor-grabbing hover:text-gray-600"
                             title="Drag to reparent"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, projectId)}
+                            onDragEnd={handleDragEnd}
                           >
                             <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
@@ -839,6 +838,8 @@ export default function Projects() {
                               <Link
                                 to={`/projects/${projectId}`}
                                 className="font-medium text-blue-600 hover:text-blue-800"
+                                title={project.description || undefined}
+                                draggable={false}
                               >
                                 {project.name}
                               </Link>
@@ -846,16 +847,12 @@ export default function Projects() {
                               {node.taskCount > 0 && (
                                 <Link
                                   to={`/tasks?project_id=${projectId}`}
-                                  className="px-1.5 py-0.5 text-xs bg-gray-200 text-gray-600 rounded hover:bg-gray-300 transition-colors"
+                                  className="px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-700 rounded hover:bg-indigo-200 transition-colors"
                                   title={`${node.taskCount} task${node.taskCount !== 1 ? 's' : ''}`}
+                                  draggable={false}
                                 >
                                   {node.taskCount}
                                 </Link>
-                              )}
-                              {project.description && (
-                                <span className="text-xs text-gray-500 truncate max-w-xs">
-                                  {project.description}
-                                </span>
                               )}
                             </div>
                             {/* Inline leaf subprojects as tags */}
@@ -868,10 +865,12 @@ export default function Projects() {
                                       key={leafId}
                                       to={`/projects/${leafId}`}
                                       className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+                                      title={leaf.project.description || undefined}
+                                      draggable={false}
                                     >
                                       {leaf.project.name}
                                       {leaf.taskCount > 0 && (
-                                        <span className="px-1 py-px text-[10px] bg-gray-300 text-gray-600 rounded">
+                                        <span className="px-1 py-px text-[10px] bg-indigo-200 text-indigo-700 rounded">
                                           {leaf.taskCount}
                                         </span>
                                       )}
@@ -889,6 +888,7 @@ export default function Projects() {
                             onClick={() => openCreateWithParent(project)}
                             className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
                             title="Add Subproject"
+                            draggable={false}
                           >
                             <svg
                               className="w-4 h-4"

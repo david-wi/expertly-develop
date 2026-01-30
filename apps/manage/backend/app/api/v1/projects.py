@@ -246,17 +246,18 @@ async def update_project(
     if not ObjectId.is_valid(project_id):
         raise HTTPException(status_code=400, detail="Invalid project ID")
 
-    update_data = data.model_dump(exclude_unset=True)
+    # Use exclude_none=False to include explicitly set None values (for removing parent)
+    update_data = data.model_dump(exclude_unset=True, exclude_none=False)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    # Convert IDs
+    # Convert IDs (but keep None values as None for removing associations)
     for field in ["parent_project_id", "owner_user_id", "team_id"]:
-        if field in update_data and update_data[field]:
+        if field in update_data and update_data[field] is not None:
             update_data[field] = ObjectId(update_data[field])
 
     # Prevent circular parent reference
-    if "parent_project_id" in update_data:
+    if "parent_project_id" in update_data and update_data["parent_project_id"] is not None:
         if str(update_data["parent_project_id"]) == project_id:
             raise HTTPException(status_code=400, detail="Project cannot be its own parent")
 
