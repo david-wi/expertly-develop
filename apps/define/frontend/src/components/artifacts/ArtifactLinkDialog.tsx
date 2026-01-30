@@ -65,9 +65,20 @@ export function ArtifactLinkDialog({
       resetForm()
       onOpenChange(false)
       onSuccess()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create link:', err)
-      setError('Failed to create link. Please try again.')
+      // Extract descriptive error message from response
+      let errorMessage = 'Failed to create link. Please try again.'
+      if (err.response?.data?.detail) {
+        errorMessage = typeof err.response.data.detail === 'string'
+          ? err.response.data.detail
+          : JSON.stringify(err.response.data.detail)
+      } else if (err.response?.data?.error) {
+        errorMessage = err.response.data.error
+      } else if (err.message) {
+        errorMessage = `Failed to create link: ${err.message}`
+      }
+      setError(errorMessage)
     } finally {
       setSaving(false)
     }

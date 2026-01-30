@@ -88,11 +88,23 @@ async def process_conversion(
         db.commit()
 
     except Exception as e:
+        # Format a descriptive error message
+        error_message = str(e)
+        if "anthropic" in error_message.lower() or "api" in error_message.lower():
+            if "rate" in error_message.lower() or "429" in error_message:
+                error_message = "AI service rate limit exceeded. Please wait a moment and try again."
+            elif "401" in error_message or "auth" in error_message.lower():
+                error_message = "AI service authentication failed. Please check the API key configuration."
+            elif "400" in error_message:
+                error_message = f"Invalid request to AI service: {error_message}"
+            elif "500" in error_message or "502" in error_message or "503" in error_message:
+                error_message = "AI service is temporarily unavailable. Please try again in a few moments."
+
         try:
             version = db.query(ArtifactVersion).filter(ArtifactVersion.id == version_id).first()
             if version:
                 version.conversion_status = "failed"
-                version.conversion_error = str(e)
+                version.conversion_error = error_message
                 db.commit()
         except Exception:
             pass
@@ -190,36 +202,52 @@ def create_link_artifact(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create a new link artifact for a product."""
-    # Verify product exists
-    product = db.query(Product).filter(Product.id == product_id).first()
-    if not product:
-        raise HTTPException(status_code=404, detail="Product not found")
+    try:
+        # Verify product exists
+        product = db.query(Product).filter(Product.id == product_id).first()
+        if not product:
+            raise HTTPException(status_code=404, detail=f"Product not found with ID: {product_id}")
 
-    now = datetime.utcnow().isoformat()
-    artifact_id = str(uuid4())
+        # Validate URL format
+        if not data.url.startswith(("http://", "https://")):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid URL format. URL must start with http:// or https://",
+            )
 
-    # Create artifact record (no file, no versions needed)
-    artifact = Artifact(
-        id=artifact_id,
-        product_id=product_id,
-        name=data.name,
-        description=data.description,
-        artifact_type="link",
-        url=data.url,
-        original_filename=None,
-        mime_type=None,
-        current_version=0,  # Links don't have versions
-        status="active",
-        created_at=now,
-        updated_at=now,
-        created_by=current_user.name,
-    )
+        now = datetime.utcnow().isoformat()
+        artifact_id = str(uuid4())
 
-    db.add(artifact)
-    db.commit()
-    db.refresh(artifact)
+        # Create artifact record (no file, no versions needed)
+        artifact = Artifact(
+            id=artifact_id,
+            product_id=product_id,
+            name=data.name,
+            description=data.description,
+            artifact_type="link",
+            url=data.url,
+            original_filename=None,
+            mime_type=None,
+            current_version=0,  # Links don't have versions
+            status="active",
+            created_at=now,
+            updated_at=now,
+            created_by=current_user.name,
+        )
 
-    return artifact
+        db.add(artifact)
+        db.commit()
+        db.refresh(artifact)
+
+        return artifact
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create link artifact: {str(e)}",
+        )
 
 
 @router.get("", response_model=List[ArtifactResponse])
