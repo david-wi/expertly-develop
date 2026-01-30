@@ -19,15 +19,15 @@ import { api, Organization as ApiOrganization } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { name: 'Assignments', href: '/tasks', icon: ListTodo },
+  { name: 'Connections', href: '/connections', icon: Link2 },
+  { name: 'Monitors', href: '/monitors', icon: Eye },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
-  { name: 'Monitors', href: '/monitors', icon: Eye },
-  { name: 'Assignments', href: '/tasks', icon: ListTodo },
   { name: 'Teams', href: '/teams', icon: Users2 },
   { name: 'Users and Bots', href: '/users', icon: PersonStanding },
-  { name: 'Connections', href: '/connections', icon: Link2 },
   { name: 'Wins', href: '/wins', icon: Star, spacerBefore: true },
 ]
 
