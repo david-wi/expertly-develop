@@ -176,10 +176,14 @@ Respond with ONLY the JSON array, no other text."""
             content_blocks.append(image_block)
         content_blocks.append({"type": "text", "text": user_prompt_text})
 
+        # Get model configuration for requirements parsing
+        from app.utils.ai_config import get_use_case_config
+        use_case_config = get_use_case_config("requirements_parsing")
+
         # Call Claude
         response = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
+            model=use_case_config.model_id,
+            max_tokens=use_case_config.max_tokens,
             system=system_prompt,
             messages=[{"role": "user", "content": content_blocks}],
         )
