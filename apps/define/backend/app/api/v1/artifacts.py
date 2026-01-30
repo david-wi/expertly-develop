@@ -229,7 +229,7 @@ async def upload_artifact(
 
     db.add(artifact)
     db.add(version)
-    await db.flush()
+    await db.commit()  # Commit before background task so it can find the records
     await db.refresh(artifact)
 
     # Start background conversion
@@ -472,7 +472,7 @@ async def upload_version(
     )
 
     db.add(version)
-    await db.flush()
+    await db.commit()  # Commit before background task so it can find the records
     await db.refresh(version)
 
     # Start background conversion
@@ -597,7 +597,7 @@ async def reconvert_version(
     # Reset conversion status
     version.conversion_status = "pending"
     version.conversion_error = None
-    await db.flush()
+    await db.commit()  # Commit before background task so it can find the records
     await db.refresh(version)
 
     # Get storage directory
