@@ -79,6 +79,19 @@ async def seed_database() -> None:
     await db.queues.insert_one(inbox_queue.model_dump_mongo())
     logger.info(f"Created Inbox queue for {user.name}")
 
+    # Create Approvals queue for David (user-scoped)
+    approvals_queue = Queue(
+        organization_id=org_id,
+        purpose="Approvals",
+        description="Queue for tasks requiring approval",
+        scope_type=ScopeType.USER,
+        scope_id=user_id,
+        is_system=True,
+        system_type="approvals"
+    )
+    await db.queues.insert_one(approvals_queue.model_dump_mongo())
+    logger.info(f"Created Approvals queue for {user.name}")
+
     logger.info("Database seeding complete!")
     logger.info(f"Default API key: {settings.default_api_key}")
 
@@ -115,6 +128,16 @@ async def create_indexes(db) -> None:
     # Task updates
     await db.task_updates.create_index("task_id")
     await db.task_updates.create_index([("task_id", 1), ("created_at", -1)])
+
+    # Task attachments
+    await db.task_attachments.create_index("task_id")
+    await db.task_attachments.create_index("organization_id")
+    await db.task_attachments.create_index([("task_id", 1), ("deleted_at", 1)])
+
+    # Task comments
+    await db.task_comments.create_index("task_id")
+    await db.task_comments.create_index("organization_id")
+    await db.task_comments.create_index([("task_id", 1), ("deleted_at", 1), ("created_at", 1)])
 
     # Projects
     await db.projects.create_index("organization_id")

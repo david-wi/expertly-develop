@@ -50,6 +50,12 @@ class Task(MongoModel):
     retry_count: int = 0
     max_retries: int = 3
 
+    # Approval assignment
+    approver_type: Optional[str] = None  # "user", "team", "anyone"
+    approver_id: Optional[PyObjectId] = None  # User or Team ID
+    approver_queue_id: Optional[PyObjectId] = None  # Queue where approval task goes
+    approval_required: bool = False
+
 
 class TaskCreate(BaseModel):
     """Schema for creating a task."""
@@ -62,6 +68,11 @@ class TaskCreate(BaseModel):
     sop_id: Optional[str] = None
     input_data: Optional[dict[str, Any]] = None
     max_retries: int = 3
+    # Approval fields
+    approver_type: Optional[str] = None
+    approver_id: Optional[str] = None
+    approver_queue_id: Optional[str] = None
+    approval_required: bool = False
 
 
 class TaskUpdate(BaseModel):
@@ -72,6 +83,12 @@ class TaskUpdate(BaseModel):
     queue_id: Optional[str] = None
     assigned_to_id: Optional[str] = None
     project_id: Optional[str] = None
+    sop_id: Optional[str] = None
+    # Approval fields
+    approver_type: Optional[str] = None
+    approver_id: Optional[str] = None
+    approver_queue_id: Optional[str] = None
+    approval_required: Optional[bool] = None
 
 
 class TaskCheckout(BaseModel):

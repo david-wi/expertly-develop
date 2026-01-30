@@ -1,7 +1,31 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
+import { ChevronRight } from 'lucide-react'
 import { api, Project, ProjectStatus, CreateProjectRequest } from '../services/api'
+
+// Local storage key for collapsed projects
+const COLLAPSED_KEY = 'expertly-manage-collapsed-projects'
+
+function getCollapsedProjects(): Set<string> {
+  try {
+    const stored = localStorage.getItem(COLLAPSED_KEY)
+    if (stored) {
+      return new Set(JSON.parse(stored))
+    }
+  } catch {
+    // Ignore storage errors
+  }
+  return new Set()
+}
+
+function saveCollapsedProjects(collapsed: Set<string>) {
+  try {
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...collapsed]))
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 // Tree node structure for hierarchical display
 interface TreeNode {
@@ -88,16 +112,30 @@ function buildTree(projects: Project[], taskCounts: Map<string, number>): TreeNo
 }
 
 // Flatten tree for rendering while preserving hierarchy
-function flattenTree(nodes: TreeNode[]): TreeNode[] {
+// Skip children of collapsed nodes
+function flattenTree(nodes: TreeNode[], collapsedProjects: Set<string>): TreeNode[] {
   const result: TreeNode[] = []
   const flatten = (nodes: TreeNode[]) => {
     for (const node of nodes) {
       result.push(node)
-      flatten(node.children)
+      const nodeId = node.project._id || node.project.id
+      // Only recurse into children if not collapsed
+      if (!collapsedProjects.has(nodeId)) {
+        flatten(node.children)
+      }
     }
   }
   flatten(nodes)
   return result
+}
+
+// Get total descendant count for a node
+function getDescendantCount(node: TreeNode): number {
+  let count = node.children.length
+  for (const child of node.children) {
+    count += getDescendantCount(child)
+  }
+  return count
 }
 
 // Status badge colors
@@ -146,6 +184,9 @@ export default function Projects() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Collapse state
+  const [collapsedProjects, setCollapsedProjects] = useState<Set<string>>(() => getCollapsedProjects())
 
   // Form state
   const [formData, setFormData] = useState<CreateProjectRequest & { status?: ProjectStatus }>({
@@ -209,7 +250,29 @@ export default function Projects() {
 
   // Build tree and flatten for display
   const treeNodes = buildTree(projects, taskCounts)
-  const flatNodes = flattenTree(treeNodes)
+  const flatNodes = flattenTree(treeNodes, collapsedProjects)
+
+  // Toggle collapse state
+  const toggleCollapse = (projectId: string) => {
+    const newCollapsed = new Set(collapsedProjects)
+    if (newCollapsed.has(projectId)) {
+      newCollapsed.delete(projectId)
+    } else {
+      newCollapsed.add(projectId)
+    }
+    setCollapsedProjects(newCollapsed)
+    saveCollapsedProjects(newCollapsed)
+  }
+
+  // Build a map from project ID to tree node for quick lookup
+  const nodeMap = new Map<string, TreeNode>()
+  const buildNodeMap = (nodes: TreeNode[]) => {
+    for (const node of nodes) {
+      nodeMap.set(node.project._id || node.project.id, node)
+      buildNodeMap(node.children)
+    }
+  }
+  buildNodeMap(treeNodes)
 
   // Get available parent projects (exclude current project and its descendants to prevent circular refs)
   const getAvailableParents = useCallback(
@@ -562,6 +625,24 @@ export default function Projects() {
                   >
                     <td className="px-4 py-3">
                       <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
+                        {/* Expand/Collapse toggle */}
+                        {node.children.length > 0 ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleCollapse(projectId)
+                            }}
+                            className="mr-1 p-0.5 rounded hover:bg-gray-200 transition-transform"
+                          >
+                            <ChevronRight
+                              className={`w-4 h-4 text-gray-500 transition-transform ${
+                                !collapsedProjects.has(projectId) ? 'rotate-90' : ''
+                              }`}
+                            />
+                          </button>
+                        ) : (
+                          <span className="w-5 mr-1" /> // Spacer for alignment
+                        )}
                         <div
                           className="mr-2 text-gray-400 select-none"
                           title="Drag to reparent"
@@ -575,13 +656,19 @@ export default function Projects() {
                             <circle cx="15" cy="18" r="1.5" />
                           </svg>
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2">
                           <Link
                             to={`/projects/${projectId}`}
                             className="font-medium text-blue-600 hover:text-blue-800"
                           >
                             {project.name}
                           </Link>
+                          {/* Subproject count badge when collapsed */}
+                          {collapsedProjects.has(projectId) && node.children.length > 0 && (
+                            <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
+                              {getDescendantCount(node)} sub
+                            </span>
+                          )}
                           {project.description && (
                             <p className="text-xs text-gray-500 truncate max-w-xs">
                               {project.description}

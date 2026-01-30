@@ -19,7 +19,7 @@ def serialize_task(task: dict) -> dict:
     result = {**task, "_id": str(task["_id"])}
 
     for field in ["organization_id", "queue_id", "assigned_to_id", "checked_out_by_id",
-                  "parent_task_id", "project_id", "sop_id"]:
+                  "parent_task_id", "project_id", "sop_id", "approver_id", "approver_queue_id"]:
         if task.get(field):
             result[field] = str(task[field])
 
@@ -113,7 +113,11 @@ async def create_task(
         project_id=ObjectId(data.project_id) if data.project_id else None,
         sop_id=ObjectId(data.sop_id) if data.sop_id else None,
         input_data=data.input_data,
-        max_retries=data.max_retries
+        max_retries=data.max_retries,
+        approver_type=data.approver_type,
+        approver_id=ObjectId(data.approver_id) if data.approver_id else None,
+        approver_queue_id=ObjectId(data.approver_queue_id) if data.approver_queue_id else None,
+        approval_required=data.approval_required,
     )
 
     await db.tasks.insert_one(task.model_dump_mongo())
@@ -138,7 +142,7 @@ async def update_task(
         raise HTTPException(status_code=400, detail="No fields to update")
 
     # Convert IDs
-    for field in ["queue_id", "assigned_to_id", "project_id"]:
+    for field in ["queue_id", "assigned_to_id", "project_id", "sop_id", "approver_id", "approver_queue_id"]:
         if field in update_data and update_data[field]:
             update_data[field] = ObjectId(update_data[field])
 

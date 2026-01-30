@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { useAppStore } from '../stores/appStore'
+import TaskDetailModal from '../components/TaskDetailModal'
 
 const STATUS_COLORS: Record<string, string> = {
   queued: 'bg-blue-100 text-blue-800',
@@ -16,6 +17,7 @@ export default function Tasks() {
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', description: '', queue_id: '' })
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchQueues()
@@ -101,7 +103,11 @@ export default function Tasks() {
         ) : (
           <ul className="divide-y divide-gray-200">
             {filteredTasks.map((task) => (
-              <li key={task._id || task.id} className="p-4 hover:bg-gray-50">
+              <li
+                key={task._id || task.id}
+                className="p-4 hover:bg-gray-50 cursor-pointer"
+                onClick={() => setSelectedTaskId(task._id || task.id)}
+              >
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
@@ -132,6 +138,16 @@ export default function Tasks() {
           </ul>
         )}
       </div>
+
+      {/* Task Detail Modal */}
+      {selectedTaskId && (
+        <TaskDetailModal
+          taskId={selectedTaskId}
+          isOpen={!!selectedTaskId}
+          onClose={() => setSelectedTaskId(null)}
+          onUpdate={() => fetchTasks()}
+        />
+      )}
 
       {/* Create Task Modal */}
       <Modal

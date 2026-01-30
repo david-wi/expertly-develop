@@ -3,9 +3,37 @@ from bson import ObjectId
 
 from app.database import get_database
 from app.models import Team, TeamCreate, TeamUpdate, User
+from app.models.queue import Queue, ScopeType
 from app.api.deps import get_current_user
 
 router = APIRouter()
+
+
+async def create_system_queues_for_team(db, organization_id, team_id):
+    """Create system queues (Inbox and Approvals) for a team."""
+    # Create Inbox queue
+    inbox_queue = Queue(
+        organization_id=organization_id,
+        purpose="Inbox",
+        description="Default queue for incoming tasks",
+        scope_type=ScopeType.TEAM,
+        scope_id=team_id,
+        is_system=True,
+        system_type="inbox"
+    )
+    await db.queues.insert_one(inbox_queue.model_dump_mongo())
+
+    # Create Approvals queue
+    approvals_queue = Queue(
+        organization_id=organization_id,
+        purpose="Approvals",
+        description="Queue for tasks requiring approval",
+        scope_type=ScopeType.TEAM,
+        scope_id=team_id,
+        is_system=True,
+        system_type="approvals"
+    )
+    await db.queues.insert_one(approvals_queue.model_dump_mongo())
 
 
 @router.get("")
@@ -79,6 +107,9 @@ async def create_team(
     )
 
     await db.teams.insert_one(team.model_dump_mongo())
+
+    # Create system queues (Inbox and Approvals) for the new team
+    await create_system_queues_for_team(db, current_user.organization_id, team.id)
 
     return {
         **team.model_dump_mongo(),
