@@ -31,11 +31,14 @@ describe('EXPERTLY_PRODUCTS', () => {
     })
   })
 
-  it('should have product names that fit in the sidebar (max 10 chars)', () => {
-    // Sidebar shows "Expertly {name}" - with w-72 (288px) we have room for names up to ~10 chars
-    const MAX_PRODUCT_NAME_LENGTH = 10
+  it('should have product names that fit in the sidebar', () => {
+    // Sidebar header shows "Expertly {productName}" (from props), dropdown shows full product.name
+    // With w-72 (288px), full names like "Expertly VibeCode" (17 chars) fit comfortably
+    const MAX_PRODUCT_NAME_LENGTH = 20
     EXPERTLY_PRODUCTS.forEach(product => {
       expect(product.name.length).toBeLessThanOrEqual(MAX_PRODUCT_NAME_LENGTH)
+      // All product names should start with "Expertly "
+      expect(product.name).toMatch(/^Expertly /)
     })
   })
 
