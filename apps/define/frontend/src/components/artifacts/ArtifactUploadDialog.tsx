@@ -146,7 +146,7 @@ export function ArtifactUploadDialog({
     }
   }
 
-  function addFiles(selectedFiles: FileList | File[]) {
+  const addFiles = useCallback((selectedFiles: FileList | File[]) => {
     const newFiles: FileToUpload[] = Array.from(selectedFiles).map((file) => ({
       file,
       name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
@@ -154,7 +154,7 @@ export function ArtifactUploadDialog({
       status: 'pending' as const,
     }))
     setFiles((prev) => [...prev, ...newFiles])
-  }
+  }, [])
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const selectedFiles = e.target.files
@@ -205,7 +205,7 @@ export function ArtifactUploadDialog({
     if (droppedFiles && droppedFiles.length > 0) {
       addFiles(droppedFiles)
     }
-  }, [])
+  }, [addFiles])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
