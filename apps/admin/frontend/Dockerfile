@@ -17,8 +17,9 @@ COPY packages/ui ./packages/ui
 COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky - optionalDependencies in package.json handle native modules
-RUN npm install --workspace=apps/admin/frontend --ignore-scripts
+# Use --ignore-scripts to skip husky, then rebuild lightningcss to get native bindings for Alpine
+RUN npm install --workspace=apps/admin/frontend --ignore-scripts && \
+    npm rebuild lightningcss
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend
