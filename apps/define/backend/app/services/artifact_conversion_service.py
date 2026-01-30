@@ -15,14 +15,104 @@ def reflow_pdf_text(text: str) -> str:
     Reflow PDF-extracted text to join lines that are part of the same paragraph.
 
     PDFs often have hard line breaks at visual line boundaries, causing text to appear
-    as 2-3 words per line. This function joins such lines while preserving:
-    - Paragraph breaks (blank lines)
+    as 1-3 words per line with blank lines between. This function joins such lines while
+    preserving:
+    - Real paragraph breaks (multiple blank lines or semantic breaks)
     - List items (lines starting with bullets, numbers, or letters)
     - Headings (short lines that look like titles)
     """
     if not text:
         return text
 
+    # First pass: detect if this is a "word-per-line" PDF by checking the pattern
+    lines = text.split('\n')
+    non_blank_lines = [l.strip() for l in lines if l.strip()]
+
+    # Calculate average words per non-blank line
+    if non_blank_lines:
+        total_words = sum(len(l.split()) for l in non_blank_lines)
+        avg_words = total_words / len(non_blank_lines)
+    else:
+        return text
+
+    # If average is very low (< 3 words per line), this is likely word-per-line extraction
+    # In this case, we need to be much more aggressive about joining
+    is_word_per_line = avg_words < 3
+
+    if is_word_per_line:
+        # For word-per-line PDFs: join everything, then split on semantic boundaries
+        return _reflow_word_per_line(text)
+    else:
+        # For normal PDFs: use standard paragraph-based reflow
+        return _reflow_normal(text)
+
+
+def _reflow_word_per_line(text: str) -> str:
+    """Handle PDFs where text is extracted as one word per line."""
+    # Join all text first, treating blank lines as spaces
+    # Then re-split on semantic boundaries
+
+    lines = text.split('\n')
+    tokens = []
+    blank_count = 0
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            blank_count += 1
+            continue
+
+        # Multiple blanks (3+) might indicate a real paragraph break
+        if blank_count >= 3:
+            tokens.append('\n\n')
+        blank_count = 0
+
+        tokens.append(stripped)
+
+    # Join with spaces
+    joined = ' '.join(t if t != '\n\n' else t for t in tokens)
+    # Clean up: paragraph markers become actual breaks
+    joined = joined.replace(' \n\n ', '\n\n').replace('\n\n ', '\n\n').replace(' \n\n', '\n\n')
+    # Clean up multiple spaces
+    joined = re.sub(r' +', ' ', joined)
+
+    # Now process line by line to restore structure
+    paragraphs = joined.split('\n\n')
+    result_parts = []
+
+    for para in paragraphs:
+        para = para.strip()
+        if not para:
+            continue
+
+        # Check for list items and split them out
+        # Look for bullet patterns in the middle of text
+        # Split on bullets: •, -, numbered items
+        parts = re.split(r'(?=\s*[•●○▪▸]\s+)|(?=\s+\d+[\.\)]\s+)', para)
+
+        for part in parts:
+            part = part.strip()
+            if not part:
+                continue
+
+            # Check if this starts with a numbered section like "1)" or "2)"
+            if re.match(r'^\d+\)\s+', part):
+                result_parts.append('')  # Add paragraph break before numbered sections
+                result_parts.append(part)
+            elif part.startswith(('•', '●', '○', '▪', '▸')):
+                result_parts.append(part)
+            else:
+                result_parts.append(part)
+
+    # Join and clean up
+    result = '\n\n'.join(result_parts)
+    result = re.sub(r'\n{3,}', '\n\n', result)
+
+    return result.strip()
+
+
+def _reflow_normal(text: str) -> str:
+    """Handle normal PDFs with reasonable line lengths."""
     lines = text.split('\n')
     result_lines = []
     current_paragraph = []
@@ -30,10 +120,8 @@ def reflow_pdf_text(text: str) -> str:
     def is_list_item(line: str) -> bool:
         """Check if line starts with a list marker."""
         stripped = line.strip()
-        # Bullet points
         if stripped.startswith(('•', '-', '*', '–', '—', '○', '●', '▪', '▸')):
             return True
-        # Numbered lists: 1. or 1) or (1) or a. or a) or (a)
         if re.match(r'^[\(\[]?\d+[\.\)\]]', stripped):
             return True
         if re.match(r'^[\(\[]?[a-zA-Z][\.\)\]]', stripped):
@@ -45,32 +133,25 @@ def reflow_pdf_text(text: str) -> str:
         stripped = line.strip()
         if not stripped:
             return False
-        # Short lines after blank lines that don't end with common sentence endings
         if prev_blank and len(stripped) < 80 and not stripped.endswith((',', ';')):
-            # Looks like a title if it's short and doesn't have lowercase continuation
             if stripped[0].isupper() and not stripped.endswith(('.', ':', '?', '!')):
                 return True
-        # All caps short lines
         if stripped.isupper() and len(stripped) < 60:
             return True
         return False
 
     def flush_paragraph():
-        """Join current paragraph lines and add to result."""
         if current_paragraph:
-            # Join with space, but preserve intentional spacing
             joined = ' '.join(current_paragraph)
-            # Clean up multiple spaces
             joined = re.sub(r' +', ' ', joined)
             result_lines.append(joined)
             current_paragraph.clear()
 
-    prev_was_blank = True  # Start as if there was a blank line before
+    prev_was_blank = True
 
     for line in lines:
         stripped = line.strip()
 
-        # Blank line = paragraph break
         if not stripped:
             flush_paragraph()
             if result_lines and result_lines[-1] != '':
@@ -78,40 +159,30 @@ def reflow_pdf_text(text: str) -> str:
             prev_was_blank = True
             continue
 
-        # List items get their own line
         if is_list_item(stripped):
             flush_paragraph()
             result_lines.append(stripped)
             prev_was_blank = False
             continue
 
-        # Headings get their own line
         if is_likely_heading(stripped, prev_was_blank):
             flush_paragraph()
             result_lines.append(stripped)
             prev_was_blank = False
             continue
 
-        # Check if this line should start a new paragraph
-        # (previous line ended with sentence-ending punctuation and this starts with capital)
         if current_paragraph:
             last_para_text = current_paragraph[-1]
             ends_sentence = last_para_text.rstrip().endswith(('.', '!', '?', ':'))
             starts_capital = stripped[0].isupper() if stripped else False
-
-            # If previous ended a sentence AND this is a short line that ended,
-            # it might be a new paragraph
             if ends_sentence and starts_capital and len(last_para_text) < 50:
                 flush_paragraph()
 
-        # Add to current paragraph
         current_paragraph.append(stripped)
         prev_was_blank = False
 
-    # Flush any remaining paragraph
     flush_paragraph()
 
-    # Join with newlines, collapsing multiple blank lines
     result = '\n'.join(result_lines)
     result = re.sub(r'\n{3,}', '\n\n', result)
 
