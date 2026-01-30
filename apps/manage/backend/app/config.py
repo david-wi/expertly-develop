@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # OpenAI (for avatar generation)
     openai_api_key: str = ""
 
+    # Anthropic (for AI-assisted features)
+    anthropic_api_key: str = ""
+
     # OAuth - Google
     google_client_id: str = ""
     google_client_secret: str = ""

@@ -283,6 +283,13 @@ export const api = {
       method: 'POST',
     }),
   getConnectionProviders: () => request<ConnectionProvider[]>('/api/v1/connections/providers'),
+
+  // AI
+  generatePlaybookSteps: (data: GenerateStepsRequest) =>
+    request<GenerateStepsResponse>('/api/v1/ai/playbooks/generate-steps', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }
 
 // Types
@@ -686,4 +693,28 @@ export interface ConnectionProvider {
   scopes: string[]
   configured: boolean
   setup?: ProviderSetupInstructions
+}
+
+// AI types
+export interface GenerateStepsExistingStep {
+  title: string
+  description?: string
+  when_to_perform?: string
+}
+
+export interface GenerateStepsRequest {
+  playbook_name: string
+  playbook_description?: string
+  existing_steps: GenerateStepsExistingStep[]
+  user_prompt?: string
+}
+
+export interface GeneratedStep {
+  title: string
+  description?: string | null
+  when_to_perform?: string | null
+}
+
+export interface GenerateStepsResponse {
+  steps: GeneratedStep[]
 }
