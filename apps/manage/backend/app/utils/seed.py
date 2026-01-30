@@ -66,26 +66,18 @@ async def seed_database() -> None:
     await db.users.insert_one(user.model_dump_mongo())
     logger.info(f"Created default user: {user.name} ({user.id})")
 
-    # Create default queues for David (user-scoped)
-    # These are personal queues for the default user
-    default_queues = [
-        ("My Todos", "inbox", "Default queue for incoming tasks"),
-        ("My Urgent Todos", "urgent", "High-priority tasks requiring immediate attention"),
-        ("My Followups", "followup", "Tasks that need follow-up or are waiting on something"),
-    ]
-
-    for purpose, system_type, description in default_queues:
-        queue = Queue(
-            organization_id=org_id,
-            purpose=purpose,
-            description=description,
-            scope_type=ScopeType.USER,
-            scope_id=user_id,  # Owned by David
-            is_system=False,
-            system_type=system_type
-        )
-        await db.queues.insert_one(queue.model_dump_mongo())
-        logger.info(f"Created queue for {user.name}: {purpose}")
+    # Create Inbox queue for David (user-scoped)
+    inbox_queue = Queue(
+        organization_id=org_id,
+        purpose="Inbox",
+        description="Default queue for incoming tasks",
+        scope_type=ScopeType.USER,
+        scope_id=user_id,
+        is_system=True,
+        system_type="inbox"
+    )
+    await db.queues.insert_one(inbox_queue.model_dump_mongo())
+    logger.info(f"Created Inbox queue for {user.name}")
 
     logger.info("Database seeding complete!")
     logger.info(f"Default API key: {settings.default_api_key}")
