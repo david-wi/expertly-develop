@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import Anthropic from '@anthropic-ai/sdk';
 import { SessionManager } from './session-manager.js';
 import { agentManager } from './agent-manager.js';
+import { getModelForUseCase } from './ai-config.js';
 import type { ExecutionMode, ChatMessage, ImageAttachment } from './types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -479,9 +480,12 @@ wss.on('connection', (ws: WebSocket) => {
               content: newMessageContent.length > 0 ? newMessageContent : content || '',
             });
 
+            // Get model config for chat use case
+            const modelConfig = await getModelForUseCase('chat');
+
             const response = await anthropic.messages.create({
-              model: 'claude-sonnet-4-20250514',
-              max_tokens: 4096,
+              model: modelConfig.model_id,
+              max_tokens: modelConfig.max_tokens,
               system: 'You are a helpful AI assistant. You do not have access to any tools or file system. Provide helpful, concise responses to the user\'s questions.',
               messages,
             });

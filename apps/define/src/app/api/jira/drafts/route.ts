@@ -7,6 +7,61 @@ import { v4 as uuidv4 } from 'uuid';
 import { anthropic } from '@ai-sdk/anthropic';
 import { generateText } from 'ai';
 
+// AI config types
+interface AIUseCaseConfig {
+  use_case: string;
+  model_id: string;
+  max_tokens: number;
+  temperature: number;
+}
+
+interface AIConfigResponse {
+  use_cases: AIUseCaseConfig[];
+}
+
+// Cache for AI config
+let aiConfigCache: AIConfigResponse | null = null;
+let aiConfigCacheTime = 0;
+const AI_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getAIConfig(): Promise<AIConfigResponse> {
+  const now = Date.now();
+  if (aiConfigCache && now - aiConfigCacheTime < AI_CONFIG_CACHE_TTL) {
+    return aiConfigCache;
+  }
+
+  const adminApiUrl = process.env.ADMIN_API_URL || 'https://admin-api.ai.devintensive.com';
+  try {
+    const response = await fetch(`${adminApiUrl}/api/public/ai-config`, {
+      next: { revalidate: 300 },
+    });
+    if (response.ok) {
+      aiConfigCache = await response.json();
+      aiConfigCacheTime = now;
+      return aiConfigCache!;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch AI config from Admin API:', error);
+  }
+
+  // Fallback to defaults
+  return {
+    use_cases: [
+      { use_case: 'jira_generation', model_id: 'claude-sonnet-4-0-latest', max_tokens: 4096, temperature: 0.5 },
+    ],
+  };
+}
+
+async function getModelForUseCase(useCase: string): Promise<AIUseCaseConfig> {
+  const config = await getAIConfig();
+  const useCaseConfig = config.use_cases.find((uc) => uc.use_case === useCase);
+  if (useCaseConfig) {
+    return useCaseConfig;
+  }
+  // Default fallback
+  return { use_case: useCase, model_id: 'claude-sonnet-4-0-latest', max_tokens: 4096, temperature: 0.7 };
+}
+
 // GET - List all drafts for a product
 export async function GET(request: NextRequest) {
   try {
@@ -144,8 +199,11 @@ Priority mapping: critical -> Highest, high -> High, medium -> Medium, low -> Lo
 
 Return ONLY the JSON array.`;
 
+    // Get model configuration from Admin API
+    const modelConfig = await getModelForUseCase('jira_generation');
+
     const { text } = await generateText({
-      model: anthropic('claude-sonnet-4-20250514'),
+      model: anthropic(modelConfig.model_id),
       system: systemPrompt,
       prompt: userPrompt,
     });

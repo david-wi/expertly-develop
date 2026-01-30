@@ -1,6 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { v4 as uuidv4 } from 'uuid';
 import type { ChatMessage, SessionOptions } from './types.js';
+import { getModelForUseCase } from './ai-config.js';
 
 // Tool definitions for Claude Code-like functionality
 const TOOL_DEFINITIONS: Anthropic.Tool[] = [
@@ -190,19 +191,44 @@ export interface ClaudeClientOptions extends SessionOptions {
 export class ClaudeClient {
   private client: Anthropic;
   private model: string;
+  private maxTokens: number;
   private cwd: string;
   private abortController: AbortController | null = null;
   private context: ConversationContext = { messages: [] };
   private toolExecutor: ToolExecutor | undefined;
   private toolExecutorProvider: ToolExecutorProvider | undefined;
+  private modelConfigPromise: Promise<void> | null = null;
 
   constructor(options: ClaudeClientOptions) {
     this.client = new Anthropic();
-    this.model = options.model || 'claude-sonnet-4-20250514';
+    // Use provided model or default; will be updated from config asynchronously
+    this.model = options.model || 'claude-sonnet-4-0-latest';
+    this.maxTokens = 8192;
     this.cwd = options.cwd || process.cwd();
     // Use custom executor if provided, otherwise use built-in
     this.toolExecutor = options.toolExecutor;
     this.toolExecutorProvider = options.toolExecutorProvider;
+
+    // Fetch model config asynchronously (don't await in constructor)
+    this.modelConfigPromise = this.initModelConfig();
+  }
+
+  private async initModelConfig(): Promise<void> {
+    try {
+      const config = await getModelForUseCase('code_session');
+      this.model = config.model_id;
+      this.maxTokens = config.max_tokens;
+      console.log(`[ClaudeClient] Using model ${this.model} from config`);
+    } catch (error) {
+      console.warn('[ClaudeClient] Failed to fetch model config, using defaults:', error);
+    }
+  }
+
+  private async ensureModelConfig(): Promise<void> {
+    if (this.modelConfigPromise) {
+      await this.modelConfigPromise;
+      this.modelConfigPromise = null;
+    }
   }
 
   private getToolExecutor(): ToolExecutor {
@@ -220,6 +246,9 @@ export class ClaudeClient {
     onMessage: MessageCallback,
     onState: StateCallback
   ): Promise<void> {
+    // Ensure model config is loaded
+    await this.ensureModelConfig();
+
     this.abortController = new AbortController();
     onState('busy');
 
@@ -235,7 +264,7 @@ export class ClaudeClient {
       while (continueLoop) {
         const response = await this.client.messages.create({
           model: this.model,
-          max_tokens: 8192,
+          max_tokens: this.maxTokens,
           system: `You are a helpful coding assistant running in a server-side Docker container. You have access to tools to read/write files, run commands, and search code. The working directory is: ${this.cwd}
 
 Important: You are running on a remote server, not on the user's local machine. Files you create or modify exist in the server's /workspace directory. If the user asks you to work on their local files, explain that you cannot access their local machine directly - they would need to upload files or clone a repository to the workspace.`,

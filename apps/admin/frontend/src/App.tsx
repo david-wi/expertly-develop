@@ -7,6 +7,7 @@ import { ThemeCreate } from './pages/ThemeCreate'
 import { Monitoring } from './pages/Monitoring'
 import { Monitor } from './pages/Monitor'
 import { ErrorLogs } from './pages/ErrorLogs'
+import { AIConfig } from './pages/AIConfig'
 import LandingPage from './pages/LandingPage'
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
         <Route path="/error-logs" element={<ErrorLogs />} />
         <Route path="/monitoring" element={<Monitoring />} />
         <Route path="/monitor" element={<Monitor />} />
+        <Route path="/ai-config" element={<AIConfig />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
