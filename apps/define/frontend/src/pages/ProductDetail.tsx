@@ -31,10 +31,12 @@ import {
   Search,
   ArrowLeft,
   Paperclip,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
 import { ArtifactList } from '@/components/artifacts'
+import { BulkImportDialog } from '@/components/BulkImportDialog'
 
 interface TreeNode extends Requirement {
   children: TreeNode[]
@@ -168,6 +170,7 @@ export default function ProductDetail() {
     tags: [] as string[],
     parent_id: '',
   })
+  const [bulkImportOpen, setBulkImportOpen] = useState(false)
 
   useEffect(() => {
     if (id) fetchProduct()
@@ -295,6 +298,9 @@ export default function ProductDetail() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Product map</CardTitle>
                     <div className="flex gap-1">
+                      <Button size="sm" variant="outline" onClick={() => setBulkImportOpen(true)} title="AI Import">
+                        <Sparkles className="h-4 w-4" />
+                      </Button>
                       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
                           <Button size="sm">
@@ -533,6 +539,21 @@ export default function ProductDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Bulk Import Dialog */}
+      <BulkImportDialog
+        open={bulkImportOpen}
+        onOpenChange={setBulkImportOpen}
+        productId={id!}
+        productName={product.name}
+        existingRequirements={requirements.map((r) => ({
+          id: r.id,
+          stable_key: r.stable_key,
+          title: r.title,
+          parent_id: r.parent_id,
+        }))}
+        onSuccess={fetchProduct}
+      />
     </div>
   )
 }
