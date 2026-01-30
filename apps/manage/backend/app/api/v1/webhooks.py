@@ -154,7 +154,102 @@ async def teamwork_webhook(request: Request):
     return {"ok": True}
 
 
+@router.post("/github")
+async def github_webhook(request: Request):
+    """
+    Handle GitHub webhook notifications.
+
+    Handles:
+    - Push events
+    - Pull request events
+    - Issue events
+    - And more based on monitor configuration
+    """
+    from app.services.monitor_providers.github import GitHubMonitorAdapter
+
+    # Get the raw body for signature verification
+    raw_body = await request.body()
+    body = {}
+    try:
+        import json
+        body = json.loads(raw_body)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+    event_type = request.headers.get("X-GitHub-Event", "")
+    delivery_id = request.headers.get("X-GitHub-Delivery", "")
+    signature = request.headers.get("X-Hub-Signature-256", "")
+
+    logger.info(f"Received GitHub webhook: event={event_type}, delivery={delivery_id}")
+
+    # Find monitors that might handle this webhook
+    # We need to verify signatures per-monitor since each has its own secret
+    service = MonitorService()
+    db = service.db
+
+    # Get the repo from the payload
+    repo_info = body.get("repository", {})
+    repo_owner = repo_info.get("owner", {}).get("login", "")
+    repo_name = repo_info.get("name", "")
+
+    if not repo_owner or not repo_name:
+        logger.warning("GitHub webhook missing repository info")
+        return {"ok": True, "skipped": "no repository info"}
+
+    # Find monitors for this repo
+    cursor = db.monitors.find({
+        "provider": MonitorProvider.GITHUB.value,
+        "status": "active",
+        "deleted_at": None,
+        "provider_config.owner": repo_owner,
+        "provider_config.repo": repo_name
+    })
+
+    processed_count = 0
+    async for monitor in cursor:
+        # Verify signature if webhook secret is configured
+        webhook_secret = monitor.get("webhook_secret")
+        if webhook_secret and signature:
+            if not GitHubMonitorAdapter.verify_webhook_signature(
+                raw_body, signature, webhook_secret
+            ):
+                logger.warning(f"Invalid signature for monitor {monitor['_id']}")
+                continue
+
+        # Get connection data for the adapter
+        connection_data = await service.get_connection_data(
+            monitor["connection_id"],
+            monitor["organization_id"]
+        )
+        if not connection_data:
+            logger.warning(f"No connection data for monitor {monitor['_id']}")
+            continue
+
+        # Create adapter and process webhook
+        try:
+            adapter = GitHubMonitorAdapter(
+                connection_data,
+                monitor.get("provider_config", {})
+            )
+            headers_dict = dict(request.headers)
+            events = await adapter.handle_webhook(body, headers_dict)
+
+            for event in events:
+                try:
+                    processed = await service.process_event(monitor, event)
+                    if processed:
+                        processed_count += 1
+                except Exception as e:
+                    logger.error(f"Error processing GitHub event: {e}")
+
+        except Exception as e:
+            logger.error(f"Error handling GitHub webhook for monitor {monitor['_id']}: {e}")
+
+    logger.info(f"GitHub webhook processed: {processed_count} events")
+    return {"ok": True, "events_processed": processed_count}
+
+
 @router.get("/health")
 async def webhooks_health():
     """Health check for webhook endpoints."""
-    return {"status": "ok", "endpoints": ["slack", "google-drive", "teamwork"]}
+    return {"status": "ok", "endpoints": ["slack", "google-drive", "teamwork", "github"]}

@@ -6,7 +6,7 @@ import logging
 from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection, check_database_connection
 from app.utils.seed import seed_database, ensure_indexes
-from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images, backlog, connections, ai, task_attachments, task_comments, monitors, webhooks
+from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images, backlog, connections, ai, task_attachments, task_comments, monitors, webhooks, notifications, bots
 
 settings = get_settings()
 
@@ -79,6 +79,8 @@ app.include_router(task_attachments.router, prefix="/api/v1", tags=["task-attach
 app.include_router(task_comments.router, prefix="/api/v1", tags=["task-comments"])
 app.include_router(monitors.router, prefix="/api/v1/monitors", tags=["monitors"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"])
+app.include_router(notifications.router, prefix="/api/v1/notifications", tags=["notifications"])
+app.include_router(bots.router, prefix="/api/v1/bots", tags=["bots"])
 app.include_router(websocket.router, tags=["websocket"])
 
 

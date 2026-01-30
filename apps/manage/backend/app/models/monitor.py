@@ -19,6 +19,7 @@ class MonitorProvider(str, Enum):
     TEAMWORK = "teamwork"
     GMAIL = "gmail"
     OUTLOOK = "outlook"
+    GITHUB = "github"
 
 
 class MonitorStatus(str, Enum):
@@ -66,6 +67,19 @@ class TeamworkConfig(BaseModel):
     """Configuration for Teamwork monitoring."""
     project_ids: list[str] = Field(default_factory=list)
     event_types: list[str] = Field(default_factory=lambda: ["task_created", "status_changed"])
+
+
+class GitHubConfig(BaseModel):
+    """Configuration for GitHub monitoring."""
+    owner: str  # Repository owner (user or organization)
+    repo: str  # Repository name
+    event_types: list[str] = Field(default_factory=lambda: ["pull_request", "issues", "push"])
+    branches: list[str] = Field(default_factory=list)  # Empty = all branches
+    labels: list[str] = Field(default_factory=list)  # Filter by issue/PR labels
+    exclude_bots: bool = True  # Ignore events from bot users
+    pr_actions: list[str] = Field(default_factory=lambda: ["opened", "reopened", "ready_for_review"])
+    include_diff: bool = False  # Include file diff in event data
+    include_comments: int = 0  # Number of recent comments to include
 
 
 class Monitor(MongoModel):

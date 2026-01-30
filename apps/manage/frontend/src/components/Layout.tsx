@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   ListTodo,
@@ -12,14 +12,17 @@ import {
   Link2,
   PersonStanding,
   Eye,
+  Bot,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, createRenderLink, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
+import NotificationBell from './NotificationBell'
 import { api, Organization as ApiOrganization } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Assignments', href: '/tasks', icon: ListTodo },
+  { name: 'Bots', href: '/bots', icon: Bot },
   { name: 'Connections', href: '/connections', icon: Link2 },
   { name: 'Monitors', href: '/monitors', icon: Eye },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
@@ -56,6 +59,7 @@ function setStoredOrgId(orgId: string | null) {
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
   const [organizations, setOrganizations] = useState<ApiOrganization[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getStoredOrgId())
@@ -151,16 +155,18 @@ export default function Layout() {
           )
         }
         userMenu={userMenu}
-        renderLink={({ href, className, children, onClick }) => (
-          <Link to={href} className={className} onClick={onClick}>
-            {children}
-          </Link>
-        )}
+        renderLink={createRenderLink(navigate)}
         user={userWithOrg}
       />
-      <MainContent>
-        <Outlet context={{ viewAs, selectedOrgId }} />
-      </MainContent>
+      <div className="pl-72 min-h-screen bg-theme-bg">
+        {/* Header with notification bell */}
+        <header className="sticky top-0 z-40 bg-theme-bg border-b border-gray-200 px-8 py-3 flex items-center justify-end">
+          <NotificationBell />
+        </header>
+        <main className="p-8">
+          <Outlet context={{ viewAs, selectedOrgId }} />
+        </main>
+      </div>
     </div>
   )
 }

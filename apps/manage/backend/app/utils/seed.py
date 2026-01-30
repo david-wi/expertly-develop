@@ -163,4 +163,19 @@ async def create_indexes(db) -> None:
     await db.monitor_events.create_index([("monitor_id", 1), ("created_at", -1)])
     await db.monitor_events.create_index([("organization_id", 1), ("processed", 1)])
 
+    # Task dependencies
+    await db.tasks.create_index("depends_on")
+
+    # Notifications
+    await db.notifications.create_index("organization_id")
+    await db.notifications.create_index("user_id")
+    await db.notifications.create_index([("organization_id", 1), ("user_id", 1), ("read", 1), ("created_at", -1)])
+    await db.notifications.create_index([("user_id", 1), ("read", 1), ("dismissed", 1)])
+
+    # Bot activities
+    await db.bot_activities.create_index("organization_id")
+    await db.bot_activities.create_index("bot_id")
+    await db.bot_activities.create_index([("organization_id", 1), ("bot_id", 1), ("created_at", -1)])
+    await db.bot_activities.create_index([("bot_id", 1), ("activity_type", 1), ("created_at", -1)])
+
     logger.info("Created database indexes")
