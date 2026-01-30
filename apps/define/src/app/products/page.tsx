@@ -16,12 +16,14 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Plus, FolderTree, Loader2 } from 'lucide-react';
+import { ProductAvatar } from '@/components/products/product-avatar';
 
 interface Product {
   id: string;
   name: string;
   prefix: string;
   description: string | null;
+  avatarUrl: string | null;
   createdAt: string;
   updatedAt: string;
   requirementCount: number;
@@ -197,8 +199,12 @@ export default function ProductsPage() {
             <Link key={product.id} href={`/products/${product.id}`}>
               <Card className="h-full hover:border-primary-300 hover:shadow-md transition-all cursor-pointer">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FolderTree className="h-5 w-5 text-primary-600" />
+                  <CardTitle className="flex items-center gap-3">
+                    <ProductAvatar
+                      name={product.name}
+                      avatarUrl={product.avatarUrl}
+                      size="md"
+                    />
                     {product.name}
                   </CardTitle>
                 </CardHeader>

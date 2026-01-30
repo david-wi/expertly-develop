@@ -43,20 +43,27 @@ export async function PUT(
   try {
     const { id } = await params;
     const body = await request.json();
-    const { name, description } = body;
+    const { name, description, avatarUrl } = body;
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
     const now = new Date().toISOString();
+    const updateData: Record<string, unknown> = {
+      name: name.trim(),
+      description: description?.trim() || null,
+      updatedAt: now,
+    };
+
+    // Only update avatarUrl if it's explicitly provided (including null to clear it)
+    if (avatarUrl !== undefined) {
+      updateData.avatarUrl = avatarUrl;
+    }
+
     await db
       .update(products)
-      .set({
-        name: name.trim(),
-        description: description?.trim() || null,
-        updatedAt: now,
-      })
+      .set(updateData)
       .where(eq(products.id, id));
 
     const updated = await db

@@ -38,6 +38,8 @@ import {
 import { cn } from '@/lib/utils/cn';
 import { BulkImportDialog } from '@/components/requirements/bulk-import-dialog';
 import { JiraDraftsDialog } from '@/components/jira/jira-drafts-dialog';
+import { ProductAvatar } from '@/components/products/product-avatar';
+import { AvatarDialog } from '@/components/products/avatar-dialog';
 
 interface Requirement {
   id: string;
@@ -57,6 +59,7 @@ interface Product {
   id: string;
   name: string;
   description: string | null;
+  avatarUrl: string | null;
   requirements: Requirement[];
 }
 
@@ -186,6 +189,7 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
   const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [jiraDraftsOpen, setJiraDraftsOpen] = useState(false);
   const [allDraftsOpen, setAllDraftsOpen] = useState(false);
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [newReq, setNewReq] = useState({
     title: '',
@@ -308,7 +312,16 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
             Products
           </Link>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">{product.name}</h1>
+        <div className="flex items-center gap-4 mb-8">
+          <ProductAvatar
+            name={product.name}
+            avatarUrl={product.avatarUrl}
+            size="lg"
+            onClick={() => setAvatarDialogOpen(true)}
+            className="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 transition-all"
+          />
+          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Tree sidebar */}
@@ -604,6 +617,18 @@ export default function ProductPage({ params }: { params: Promise<{ id: string }
         onOpenChange={setAllDraftsOpen}
         productId={id}
         productName={product.name}
+      />
+
+      <AvatarDialog
+        open={avatarDialogOpen}
+        onOpenChange={setAvatarDialogOpen}
+        productId={id}
+        productName={product.name}
+        productDescription={product.description}
+        currentAvatarUrl={product.avatarUrl}
+        onAvatarChange={(avatarUrl) => {
+          setProduct({ ...product, avatarUrl });
+        }}
       />
     </div>
   );

@@ -163,6 +163,14 @@ export function initializeDatabase() {
     // Column already exists, ignore error
   }
 
+  // Migration: Add avatar_url column to products if it doesn't exist
+  try {
+    sqlite.exec(`ALTER TABLE products ADD COLUMN avatar_url TEXT`);
+    console.log('Migration: Added avatar_url column to products table');
+  } catch {
+    // Column already exists, ignore error
+  }
+
   // Migration: Update existing products with auto-generated prefixes
   const productsWithoutPrefix = sqlite.prepare(`
     SELECT id, name FROM products WHERE prefix = 'REQ' OR prefix IS NULL
