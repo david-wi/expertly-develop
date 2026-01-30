@@ -139,6 +139,10 @@ export const usersApi = {
     const { data } = await api.post(`/users/${id}/regenerate-api-key`)
     return data
   },
+  setPassword: async (id: string, password: string): Promise<{ message: string }> => {
+    const { data } = await api.post(`/users/${id}/set-password`, { password })
+    return data
+  },
 }
 
 export const teamsApi = {

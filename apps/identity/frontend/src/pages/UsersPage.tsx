@@ -355,7 +355,11 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {users.map((user) => (
-                <tr key={user.id} className="hover:bg-gray-50">
+                <tr
+                  key={user.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => navigate(`/users/${user.id}`)}
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
                       {getUserAvatar(user)}
@@ -393,7 +397,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                       {user.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end space-x-4">
                       <button
                         onClick={() => handleRegenerateApiKey(user)}
