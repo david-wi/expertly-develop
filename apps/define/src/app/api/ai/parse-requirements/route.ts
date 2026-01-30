@@ -6,15 +6,19 @@ import { requirements } from '@/lib/db/schema';
 import { inArray } from 'drizzle-orm';
 
 // Dynamic import for pdf-parse (it has issues with static imports in Next.js)
-async function extractPdfText(base64Content: string): Promise<string> {
+async function extractPdfText(
+  base64Content: string,
+  fileName: string
+): Promise<string> {
   try {
     const pdfParse = (await import('pdf-parse')).default;
     const buffer = Buffer.from(base64Content, 'base64');
     const data = await pdfParse(buffer);
     return data.text;
   } catch (error) {
-    console.error('Error extracting PDF text:', error);
-    return '[PDF content could not be extracted]';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`Error extracting PDF text from ${fileName}:`, errorMessage);
+    return `[PDF "${fileName}" could not be extracted: ${errorMessage}]`;
   }
 }
 
@@ -133,7 +137,7 @@ export async function POST(request: NextRequest) {
           });
         } else if (file.type === 'application/pdf') {
           // Extract text from PDF
-          const pdfText = await extractPdfText(file.content);
+          const pdfText = await extractPdfText(file.content, file.name);
           fileContext += `\n\n--- File: ${file.name} (PDF) ---\n${pdfText}`;
         } else {
           // Plain text files - content is already text
@@ -281,7 +285,10 @@ Respond with ONLY the JSON array, no other text.`;
     const textBlock = response.content.find((block) => block.type === 'text');
     if (!textBlock || textBlock.type !== 'text') {
       return NextResponse.json(
-        { error: 'No text response from AI' },
+        {
+          error:
+            'AI returned an empty response. This may indicate an issue with the input content. Please try simplifying your description or removing some attachments.',
+        },
         { status: 500 }
       );
     }
@@ -291,9 +298,15 @@ Respond with ONLY the JSON array, no other text.`;
     // Parse the JSON response
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-      console.error('Failed to parse AI response:', text);
+      console.error(
+        'Failed to parse AI response - no JSON array found:',
+        text.substring(0, 500)
+      );
       return NextResponse.json(
-        { error: 'Failed to parse AI response' },
+        {
+          error:
+            'AI response was not in the expected format. The AI may have misunderstood the input. Please try rephrasing your description.',
+        },
         { status: 500 }
       );
     }
@@ -324,16 +337,69 @@ Respond with ONLY the JSON array, no other text.`;
 
       return NextResponse.json({ requirements: parsedRequirements });
     } catch (parseError) {
-      console.error('JSON parse error:', parseError, 'Raw text:', text);
+      const parseErrorMessage =
+        parseError instanceof Error ? parseError.message : 'Unknown parse error';
+      console.error(
+        'JSON parse error:',
+        parseErrorMessage,
+        'Raw text:',
+        text.substring(0, 500)
+      );
       return NextResponse.json(
-        { error: 'Failed to parse requirements from AI response' },
+        {
+          error: `AI response could not be processed: ${parseErrorMessage}. Please try again or simplify your description.`,
+        },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error('Error parsing requirements:', error);
+
+    // Handle Anthropic API errors with descriptive messages
+    if (error instanceof Anthropic.APIError) {
+      const statusCode = error.status || 500;
+      let message = 'AI service error';
+
+      if (error.status === 401) {
+        message =
+          'AI service authentication failed. Please check the API key configuration.';
+      } else if (error.status === 429) {
+        message =
+          'AI service rate limit exceeded. Please wait a moment and try again.';
+      } else if (error.status === 400) {
+        // Bad request - often due to content issues
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('image') || errorMessage.includes('media')) {
+          message =
+            'Invalid image format or size. Please ensure images are JPEG, PNG, GIF, or WebP and under 5MB each.';
+        } else if (
+          errorMessage.includes('token') ||
+          errorMessage.includes('length')
+        ) {
+          message =
+            'Content too large for AI processing. Please reduce the text or file sizes.';
+        } else {
+          message = `Invalid request to AI service: ${error.message}`;
+        }
+      } else if (
+        error.status === 500 ||
+        error.status === 502 ||
+        error.status === 503
+      ) {
+        message =
+          'AI service is temporarily unavailable. Please try again in a few moments.';
+      } else {
+        message = `AI service error (${error.status}): ${error.message}`;
+      }
+
+      return NextResponse.json({ error: message }, { status: statusCode });
+    }
+
+    // Handle other errors
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { error: 'Failed to parse requirements' },
+      { error: `Failed to parse requirements: ${errorMessage}` },
       { status: 500 }
     );
   }

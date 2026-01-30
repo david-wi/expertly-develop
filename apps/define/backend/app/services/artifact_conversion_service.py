@@ -65,24 +65,25 @@ class ArtifactConversionService:
         """Convert image to markdown with AI-generated description."""
         base64_content = base64.b64encode(file_content).decode("utf-8")
 
-        response = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4096,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image",
-                            "source": {
-                                "type": "base64",
-                                "media_type": mime_type,
-                                "data": base64_content,
+        try:
+            response = self.client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image",
+                                "source": {
+                                    "type": "base64",
+                                    "media_type": mime_type,
+                                    "data": base64_content,
+                                },
                             },
-                        },
-                        {
-                            "type": "text",
-                            "text": """Analyze this image and create a detailed markdown description.
+                            {
+                                "type": "text",
+                                "text": """Analyze this image and create a detailed markdown description.
 
 If this is a document or specification:
 - Extract all text content
@@ -100,18 +101,50 @@ If this is a screenshot:
 - Capture any visible text
 
 Format your response as clean markdown with appropriate headings.""",
-                        },
-                    ],
-                }
-            ],
-        )
+                            },
+                        ],
+                    }
+                ],
+            )
 
-        text_block = next((b for b in response.content if b.type == "text"), None)
-        if not text_block:
-            return f"# {filename}\n\n*Image could not be analyzed*", False
+            text_block = next((b for b in response.content if b.type == "text"), None)
+            if not text_block:
+                return f"# {filename}\n\n*Image could not be analyzed*", False
 
-        markdown = f"# {filename}\n\n{text_block.text}"
-        return markdown, True
+            markdown = f"# {filename}\n\n{text_block.text}"
+            return markdown, True
+
+        except anthropic.RateLimitError:
+            return (
+                f"# {filename}\n\n*AI service rate limit exceeded. Please wait a moment and try again.*",
+                False,
+            )
+        except anthropic.BadRequestError as e:
+            error_msg = str(e).lower()
+            if "image" in error_msg or "media" in error_msg:
+                return (
+                    f"# {filename}\n\n*Invalid image format or size. Please ensure images are JPEG, PNG, GIF, or WebP and under 5MB each.*",
+                    False,
+                )
+            return (
+                f"# {filename}\n\n*Invalid request: {str(e)}*",
+                False,
+            )
+        except anthropic.AuthenticationError:
+            return (
+                f"# {filename}\n\n*AI service authentication failed. Please check the API key configuration.*",
+                False,
+            )
+        except anthropic.APIStatusError as e:
+            if e.status_code in (500, 502, 503):
+                return (
+                    f"# {filename}\n\n*AI service is temporarily unavailable. Please try again in a few moments.*",
+                    False,
+                )
+            return (
+                f"# {filename}\n\n*AI service error ({e.status_code}): {str(e)}*",
+                False,
+            )
 
     async def _convert_pdf(
         self, file_content: bytes, filename: str
