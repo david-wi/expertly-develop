@@ -20,7 +20,7 @@ COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 # Husky is conditional on .git existing (see root package.json prepare script)
 # After install, add the musl-specific native bindings needed for Alpine Linux
 RUN npm install --workspace=apps/admin/frontend && \
-    npm install --no-save lightningcss-linux-x64-musl
+    npm install --no-save lightningcss-linux-x64-musl @tailwindcss/oxide-linux-x64-musl
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend
