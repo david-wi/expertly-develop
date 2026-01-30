@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Modal, ModalFooter } from '@expertly/ui'
-import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem } from '../services/api'
+import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem, GeneratedStep } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { createErrorLogger } from '../utils/errorLogger'
 
@@ -751,6 +751,13 @@ export default function Playbooks() {
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
 
+  // AI Assist state
+  const [showAIModal, setShowAIModal] = useState(false)
+  const [aiPrompt, setAIPrompt] = useState('')
+  const [aiLoading, setAILoading] = useState(false)
+  const [aiSuggestions, setAISuggestions] = useState<GeneratedStep[] | null>(null)
+  const [aiError, setAIError] = useState<string | null>(null)
+
   useEffect(() => {
     loadData()
   }, [])
@@ -1218,6 +1225,96 @@ export default function Playbooks() {
     setExpandedSteps(newExpanded)
   }
 
+  // AI Assist handlers
+  const openAIModal = () => {
+    setAIPrompt('')
+    setAISuggestions(null)
+    setAIError(null)
+    setShowAIModal(true)
+  }
+
+  const closeAIModal = () => {
+    setShowAIModal(false)
+    setAIPrompt('')
+    setAISuggestions(null)
+    setAIError(null)
+  }
+
+  const handleGenerateSteps = async () => {
+    if (!editingPlaybook) return
+
+    setAILoading(true)
+    setAIError(null)
+    setAISuggestions(null)
+
+    try {
+      const response = await api.generatePlaybookSteps({
+        playbook_name: formData.name || editingPlaybook.name,
+        playbook_description: formData.description || undefined,
+        existing_steps: steps.map(s => ({
+          title: s.title,
+          description: s.description || undefined,
+          when_to_perform: s.when_to_perform || undefined,
+        })),
+        user_prompt: aiPrompt || undefined,
+      })
+      setAISuggestions(response.steps)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate steps'
+      setAIError(message)
+      logger.error(err, { action: 'generatePlaybookSteps' })
+    } finally {
+      setAILoading(false)
+    }
+  }
+
+  const handleReplaceAllSteps = () => {
+    if (!aiSuggestions) return
+
+    const newSteps: StepFormData[] = aiSuggestions.map(s => ({
+      id: generateId(),
+      title: s.title,
+      description: s.description || '',
+      when_to_perform: s.when_to_perform || '',
+      parallel_group: '',
+      nested_playbook_id: '',
+      assignee_type: 'anyone' as AssigneeType,
+      assignee_id: '',
+      queue_id: '',
+      approval_required: false,
+      approver_type: 'anyone' as AssigneeType,
+      approver_id: '',
+      approver_queue_id: '',
+    }))
+
+    setSteps(newSteps)
+    setExpandedSteps(new Set())
+    closeAIModal()
+  }
+
+  const handleAddToExisting = () => {
+    if (!aiSuggestions) return
+
+    const newSteps: StepFormData[] = aiSuggestions.map(s => ({
+      id: generateId(),
+      title: s.title,
+      description: s.description || '',
+      when_to_perform: s.when_to_perform || '',
+      parallel_group: '',
+      nested_playbook_id: '',
+      assignee_type: 'anyone' as AssigneeType,
+      assignee_id: '',
+      queue_id: '',
+      approval_required: false,
+      approver_type: 'anyone' as AssigneeType,
+      approver_id: '',
+      approver_queue_id: '',
+    }))
+
+    setSteps([...steps, ...newSteps])
+    closeAIModal()
+  }
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -1371,13 +1468,25 @@ export default function Playbooks() {
           <div className="bg-white shadow rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900">Steps</h3>
-              <button
-                type="button"
-                onClick={addStep}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-              >
-                + Add Step
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={openAIModal}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-md transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  AI Assist
+                </button>
+                <button
+                  type="button"
+                  onClick={addStep}
+                  className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                >
+                  + Add Step
+                </button>
+              </div>
             </div>
 
             {steps.length === 0 ? (
@@ -1428,6 +1537,134 @@ export default function Playbooks() {
             )}
           </div>
         </form>
+
+        {/* AI Assist Modal */}
+        <Modal
+          isOpen={showAIModal}
+          onClose={closeAIModal}
+          title="AI Assist - Generate Steps"
+        >
+          <div className="space-y-4">
+            {!aiSuggestions ? (
+              <>
+                <p className="text-sm text-gray-600">
+                  Let AI help you generate high-quality, repeatable process steps for this playbook.
+                </p>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Additional Instructions (optional)
+                  </label>
+                  <textarea
+                    value={aiPrompt}
+                    onChange={(e) => setAIPrompt(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    rows={3}
+                    placeholder="e.g., Focus on quality control steps, Include approval checkpoints, Keep steps concise..."
+                    disabled={aiLoading}
+                  />
+                </div>
+
+                {aiError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-700">{aiError}</p>
+                  </div>
+                )}
+
+                <ModalFooter>
+                  <button
+                    type="button"
+                    onClick={closeAIModal}
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                    disabled={aiLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleGenerateSteps}
+                    disabled={aiLoading}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+                  >
+                    {aiLoading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Generate Steps
+                      </>
+                    )}
+                  </button>
+                </ModalFooter>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-600">
+                  AI generated {aiSuggestions.length} steps. Review them below and choose how to apply them.
+                </p>
+
+                <div className="max-h-72 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  {aiSuggestions.map((step, idx) => (
+                    <div key={idx} className="p-3">
+                      <div className="flex items-start gap-2">
+                        <span className="flex items-center justify-center w-5 h-5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900">{step.title}</p>
+                          {step.description && (
+                            <p className="text-sm text-gray-600 mt-1">{step.description}</p>
+                          )}
+                          {step.when_to_perform && (
+                            <p className="text-xs text-gray-400 mt-1">
+                              <span className="font-medium">When:</span> {step.when_to_perform}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <ModalFooter>
+                  <button
+                    type="button"
+                    onClick={() => setAISuggestions(null)}
+                    className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+                  >
+                    Back
+                  </button>
+                  <div className="flex gap-2">
+                    {steps.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleAddToExisting}
+                        className="px-4 py-2 border border-purple-600 text-purple-700 rounded-md hover:bg-purple-50 transition-colors"
+                      >
+                        Add to Existing
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleReplaceAllSteps}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors"
+                    >
+                      Replace All Steps
+                    </button>
+                  </div>
+                </ModalFooter>
+              </>
+            )}
+          </div>
+        </Modal>
       </div>
     )
   }
