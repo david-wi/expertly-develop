@@ -10,27 +10,18 @@ from app.utils.auth import generate_api_key, hash_api_key
 router = APIRouter()
 
 
-# Personal queues created for each new user
-PERSONAL_QUEUES = [
-    ("My Todos", "inbox", "Default queue for incoming tasks"),
-    ("My Urgent Todos", "urgent", "High-priority tasks requiring immediate attention"),
-    ("My Followups", "followup", "Tasks that need follow-up or are waiting on something"),
-]
-
-
-async def create_personal_queues(db, organization_id, user_id):
-    """Create personal queues for a new user."""
-    for purpose, system_type, description in PERSONAL_QUEUES:
-        queue = Queue(
-            organization_id=organization_id,
-            purpose=purpose,
-            description=description,
-            scope_type=ScopeType.USER,
-            scope_id=user_id,
-            is_system=False,
-            system_type=system_type
-        )
-        await db.queues.insert_one(queue.model_dump_mongo())
+async def create_inbox_queue(db, organization_id, scope_type: ScopeType, scope_id):
+    """Create an Inbox queue for a user, bot, or team."""
+    queue = Queue(
+        organization_id=organization_id,
+        purpose="Inbox",
+        description="Default queue for incoming tasks",
+        scope_type=scope_type,
+        scope_id=scope_id,
+        is_system=True,
+        system_type="inbox"
+    )
+    await db.queues.insert_one(queue.model_dump_mongo())
 
 
 @router.get("")
@@ -132,8 +123,8 @@ async def create_user(
 
     await db.users.insert_one(user.model_dump_mongo())
 
-    # Create personal queues for the new user
-    await create_personal_queues(db, current_user.organization_id, user.id)
+    # Create Inbox queue for the new user/bot
+    await create_inbox_queue(db, current_user.organization_id, ScopeType.USER, user.id)
 
     result = {
         **{k: v for k, v in user.model_dump_mongo().items() if k not in ["api_key_hash", "password_hash"]},
