@@ -15,6 +15,8 @@ from uuid import uuid4
 from datetime import datetime
 from typing import List, Optional
 import os
+import asyncio
+import logging
 import aiofiles
 
 from app.database import get_db
@@ -33,6 +35,8 @@ from app.schemas.artifact import (
 from app.config import get_settings
 from app.services.artifact_conversion_service import ArtifactConversionService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 settings = get_settings()
 
@@ -42,7 +46,7 @@ def get_artifact_storage_dir(artifact_id: str, version_number: int) -> str:
     return os.path.join(settings.uploads_dir, "artifacts", artifact_id, f"v{version_number}")
 
 
-async def process_conversion(
+def process_conversion(
     db_url: str,
     artifact_id: str,
     version_id: str,
@@ -51,7 +55,45 @@ async def process_conversion(
     mime_type: str,
     storage_dir: str,
 ):
-    """Background task to convert file to markdown."""
+    """Synchronous wrapper for background conversion task.
+
+    Creates its own event loop to ensure the async conversion runs reliably,
+    regardless of the state of the main application's event loop.
+    """
+    logger.info(f"Starting conversion for artifact {artifact_id}, version {version_id}")
+
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(
+                _async_process_conversion(
+                    db_url,
+                    artifact_id,
+                    version_id,
+                    file_content,
+                    filename,
+                    mime_type,
+                    storage_dir,
+                )
+            )
+            logger.info(f"Conversion completed for artifact {artifact_id}, version {version_id}")
+        finally:
+            loop.close()
+    except Exception as e:
+        logger.error(f"Conversion failed for artifact {artifact_id}, version {version_id}: {str(e)}", exc_info=True)
+
+
+async def _async_process_conversion(
+    db_url: str,
+    artifact_id: str,
+    version_id: str,
+    file_content: bytes,
+    filename: str,
+    mime_type: str,
+    storage_dir: str,
+):
+    """Async implementation of file to markdown conversion."""
     # Create new async engine and session for background task
     engine = create_async_engine(db_url)
     async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -62,10 +104,12 @@ async def process_conversion(
             result = await db.execute(stmt)
             version = result.scalar_one_or_none()
             if not version:
+                logger.warning(f"Version {version_id} not found, skipping conversion")
                 return
 
             version.conversion_status = "processing"
             await db.commit()
+            logger.info(f"Conversion status set to 'processing' for version {version_id}")
 
             # Convert to markdown
             service = ArtifactConversionService()
@@ -89,8 +133,10 @@ async def process_conversion(
             if not success:
                 version.conversion_error = "Conversion completed with warnings - see markdown for details"
             await db.commit()
+            logger.info(f"Conversion status set to '{version.conversion_status}' for version {version_id}")
 
         except Exception as e:
+            logger.error(f"Error during conversion for version {version_id}: {str(e)}", exc_info=True)
             # Format a descriptive error message
             error_message = str(e)
             if "anthropic" in error_message.lower() or "api" in error_message.lower():
@@ -111,8 +157,8 @@ async def process_conversion(
                     version.conversion_status = "failed"
                     version.conversion_error = error_message
                     await db.commit()
-            except Exception:
-                pass
+            except Exception as inner_e:
+                logger.error(f"Failed to update error status: {str(inner_e)}")
         finally:
             await engine.dispose()
 
