@@ -187,6 +187,37 @@ ssh -i ~/.ssh/do_droplet root@152.42.152.243 "cd /opt/expertly-develop && docker
 1. Run the health check for ALL services (see checklist above)
 2. If any service returns 404, check which containers are running and ensure correct project name is used
 
+## Docker Disk Space Management
+
+**IMPORTANT: Clean up Docker resources periodically to prevent disk space issues.**
+
+The server has 77GB disk. Without cleanup, Docker build cache and unused images accumulate and can fill the disk, causing build failures.
+
+### Quick Disk Check
+```bash
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 'df -h / && docker system df'
+```
+
+### Cleanup When Disk is Low (< 20GB free)
+```bash
+# Remove unused images, containers, and volumes
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 'docker system prune -af --volumes'
+
+# Remove build cache (can be 10-20GB)
+ssh -i ~/.ssh/do_droplet root@152.42.152.243 'docker builder prune -af'
+```
+
+### When to Clean Up
+- Before manual rebuilds if disk is low
+- After failed builds (partial images accumulate)
+- Weekly as routine maintenance
+- If you see "no space left on device" errors
+
+### Signs of Disk Space Issues
+- Build errors mentioning `ENOSPC`
+- `npm ci` failing with tar extraction errors
+- Docker commands hanging unexpectedly
+
 ## Environment Variables
 
 Define requires:
