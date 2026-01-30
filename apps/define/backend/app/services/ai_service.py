@@ -7,6 +7,7 @@ from io import BytesIO
 
 from app.config import get_settings
 from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, ContextUrl
+from app.services.artifact_conversion_service import reflow_pdf_text
 
 settings = get_settings()
 
@@ -22,8 +23,11 @@ class AIService:
             reader = PdfReader(BytesIO(pdf_bytes))
             text_parts = []
             for page in reader.pages:
-                text_parts.append(page.extract_text() or "")
-            return "\n".join(text_parts)
+                page_text = page.extract_text() or ""
+                # Reflow text to join lines that are part of the same paragraph
+                reflowed_text = reflow_pdf_text(page_text)
+                text_parts.append(reflowed_text)
+            return "\n\n".join(text_parts)
         except Exception as e:
             return f"[PDF content could not be extracted: {str(e)}]"
 
