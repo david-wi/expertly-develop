@@ -4,6 +4,25 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      # Documentation and notes
+      - '**/.claude/**'
+      - '**/docs/**'
+      - '**/*.md'
+      - 'docs/**'
+      - 'CLAUDE.md'
+      - 'README.md'
+      # Test artifacts and screenshots
+      - '**/screenshots/**'
+      - '**/playwright-report/**'
+      - '**/test-results/**'
+      - 'screenshots/**'
+      # IDE and editor config
+      - '.vscode/**'
+      - '.idea/**'
+      # Git-related
+      - '.gitignore'
+      - '.gitattributes'
   workflow_dispatch:
     inputs:
       skip_visual_verification:

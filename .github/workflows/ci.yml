@@ -4,6 +4,25 @@ on:
   pull_request:
     branches:
       - main
+    paths-ignore:
+      # Documentation and notes
+      - '**/.claude/**'
+      - '**/docs/**'
+      - '**/*.md'
+      - 'docs/**'
+      - 'CLAUDE.md'
+      - 'README.md'
+      # Test artifacts and screenshots
+      - '**/screenshots/**'
+      - '**/playwright-report/**'
+      - '**/test-results/**'
+      - 'screenshots/**'
+      # IDE and editor config
+      - '.vscode/**'
+      - '.idea/**'
+      # Git-related
+      - '.gitignore'
+      - '.gitattributes'
 
 jobs:
   typecheck:
