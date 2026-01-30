@@ -274,6 +274,12 @@ services:
     environment:
       - MONGODB_URL=mongodb://expertly-shared-mongo:27017
       - MONGODB_DATABASE=expertly_manage
+      # OAuth Connections (optional - connections feature requires these)
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID:-}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET:-}
+      - CONNECTION_ENCRYPTION_KEY=${CONNECTION_ENCRYPTION_KEY:-}
     networks:
       - traefik
       - default

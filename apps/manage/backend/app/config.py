@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
 
+    # OAuth - Slack
+    slack_client_id: str = ""
+    slack_client_secret: str = ""
+
     # Encryption key for tokens (Fernet key)
     connection_encryption_key: str = ""
 

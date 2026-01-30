@@ -25,6 +25,8 @@ from app.services.oauth import (
     refresh_access_token,
     get_user_info,
     calculate_token_expiry,
+    is_provider_configured,
+    get_provider_setup_instructions,
 )
 from app.config import get_settings
 
@@ -336,14 +338,10 @@ async def refresh_connection(
 async def list_providers(
     current_user: User = Depends(get_current_user)
 ) -> list[dict]:
-    """List available OAuth providers."""
-    settings = get_settings()
-
-    providers = []
-
-    # Only include providers that are configured
-    if settings.google_client_id and settings.google_client_secret:
-        providers.append({
+    """List all supported OAuth providers with configuration status."""
+    # Define all supported providers
+    all_providers = [
+        {
             "id": "google",
             "name": "Google",
             "description": "Connect Gmail, Drive, and Docs",
@@ -352,8 +350,23 @@ async def list_providers(
                 "Google Drive (read)",
                 "Google Docs (read)",
             ],
-        })
+        },
+        {
+            "id": "slack",
+            "name": "Slack",
+            "description": "Connect Slack channels and messaging",
+            "scopes": [
+                "Read channels",
+                "Send messages",
+                "Read user info",
+            ],
+        },
+    ]
 
-    # Future providers would be added here
+    # Add configuration status and setup instructions
+    for provider in all_providers:
+        provider["configured"] = is_provider_configured(provider["id"])
+        if not provider["configured"]:
+            provider["setup"] = get_provider_setup_instructions(provider["id"])
 
-    return providers
+    return all_providers
