@@ -264,18 +264,10 @@ export default function Projects() {
     saveViewMode(newMode)
   }
 
-  // Get all leaf descendants of a node (childless subprojects)
-  const getLeafDescendants = (node: TreeNode): TreeNode[] => {
-    const leaves: TreeNode[] = []
-    const collect = (n: TreeNode) => {
-      if (n.children.length === 0) {
-        leaves.push(n)
-      } else {
-        n.children.forEach(collect)
-      }
-    }
-    node.children.forEach(collect)
-    return leaves
+  // Get direct leaf children only (not recursive descendants)
+  // Recursive descendants will be shown under their intermediate parent's own row
+  const getDirectLeafChildren = (node: TreeNode): TreeNode[] => {
+    return node.children.filter(child => child.children.length === 0)
   }
 
   // For compact view, get nodes that have children (to show as rows with inline leaf tags)
@@ -805,7 +797,7 @@ export default function Projects() {
                   const projectId = project._id || project.id
                   const isDraggedOver = dragOverProjectId === projectId
                   const isDragging = draggedProjectId === projectId
-                  const leafChildren = getLeafDescendants(node)
+                  const leafChildren = getDirectLeafChildren(node)
 
                   return (
                     <tr
