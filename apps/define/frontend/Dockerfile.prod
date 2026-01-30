@@ -17,8 +17,8 @@ COPY apps/define/frontend ./apps/define/frontend
 # Set working directory and install dependencies locally
 WORKDIR /app/apps/define/frontend
 
-# Update @expertly/ui to point to local package path
-RUN sed -i 's|"@expertly/ui": "\*"|"@expertly/ui": "file:../../packages/ui"|' package.json
+# Update @expertly/ui to point to local package path (3 levels up from /app/apps/define/frontend)
+RUN sed -i 's|"@expertly/ui": "\*"|"@expertly/ui": "file:../../../packages/ui"|' package.json
 
 # Install dependencies directly in the frontend directory
 # This ensures all deps (including devDeps like @vitejs/plugin-react) are in local node_modules
