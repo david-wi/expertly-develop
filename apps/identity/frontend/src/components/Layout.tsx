@@ -6,7 +6,7 @@ import {
   Building2,
   KeyRound,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization as UIOrganization } from '@expertly/ui'
 import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
 
 const navigation = [
@@ -59,12 +59,11 @@ export default function Layout() {
     fetchOrgs()
   }, [selectedOrgId])
 
-  const handleOrgChange = (orgId: string) => {
-    setSelectedOrgId(orgId)
+  const handleOrgChange = useCallback((orgId: string) => {
     setOrganizationId(orgId)
     // Reload the page to refresh data with new org
     window.location.reload()
-  }
+  }, [])
 
   const handleLogout = useCallback(() => {
     authApi.logout()
@@ -81,13 +80,27 @@ export default function Layout() {
       }
     : undefined
 
+  // Convert organizations to the format expected by UserMenu
+  const userMenuOrganizations: UIOrganization[] = useMemo(() =>
+    organizations.map(org => ({
+      id: org.id,
+      name: org.name,
+    })),
+    [organizations]
+  )
+
   // Create user menu config - no Profile link since this IS the identity app
   const userMenu = useMemo(() => createDefaultUserMenu({
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     includeProfile: false,
-  }), [handleLogout])
+    organizations: userMenuOrganizations.length > 1 ? {
+      items: userMenuOrganizations,
+      currentId: selectedOrgId,
+      onSwitch: handleOrgChange,
+    } : undefined,
+  }), [handleLogout, userMenuOrganizations, selectedOrgId, handleOrgChange])
 
   return (
     <div className="min-h-screen bg-theme-bg">
@@ -97,19 +110,6 @@ export default function Layout() {
         navigation={navigation}
         currentPath={location.pathname}
         user={userWithOrg}
-        orgSwitcher={organizations.length > 0 ? (
-          <select
-            value={selectedOrgId || ''}
-            onChange={(e) => handleOrgChange(e.target.value)}
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-          >
-            {organizations.map((org) => (
-              <option key={org.id} value={org.id}>
-                {org.name}
-              </option>
-            ))}
-          </select>
-        ) : undefined}
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">

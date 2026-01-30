@@ -11,11 +11,10 @@ import {
   Star,
   Link2,
   PersonStanding,
-  Building2,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
-import { api, Organization } from '../services/api'
+import { api, Organization as ApiOrganization } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -56,9 +55,8 @@ function setStoredOrgId(orgId: string | null) {
 export default function Layout() {
   const location = useLocation()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
-  const [organizations, setOrganizations] = useState<Organization[]>([])
+  const [organizations, setOrganizations] = useState<ApiOrganization[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getStoredOrgId())
-  const [showOrgDropdown, setShowOrgDropdown] = useState(false)
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => api.getCurrentUser(), [])
@@ -83,12 +81,11 @@ export default function Layout() {
     fetchOrgs()
   }, [selectedOrgId])
 
-  const handleOrgChange = (orgId: string) => {
-    setSelectedOrgId(orgId)
+  const handleOrgChange = useCallback((orgId: string) => {
     setStoredOrgId(orgId)
     // Reload the page to refresh data with new org
     window.location.reload()
-  }
+  }, [])
 
   const handleViewChange = (newState: ViewAsState) => {
     setViewAs(newState)
@@ -103,12 +100,28 @@ export default function Layout() {
     window.location.href = 'https://identity.ai.devintensive.com/login'
   }, [])
 
-  // Create user menu config
+  // Convert organizations to the format expected by UserMenu
+  const userMenuOrganizations: Organization[] = useMemo(() =>
+    organizations.map(org => ({
+      id: org.id,
+      name: org.name,
+      is_default: org.is_default,
+    })),
+    [organizations]
+  )
+
+  // Create user menu config with centralized organization switcher
   const userMenu = useMemo(() => createDefaultUserMenu({
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
-  }), [handleLogout])
+    organizations: userMenuOrganizations.length > 1 ? {
+      items: userMenuOrganizations,
+      currentId: selectedOrgId,
+      onSwitch: handleOrgChange,
+      storageKey: ORG_STORAGE_KEY,
+    } : undefined,
+  }), [handleLogout, userMenuOrganizations, selectedOrgId, handleOrgChange])
 
   // Merge organization name from selected org if not in user data
   const userWithOrg = sidebarUser
@@ -117,40 +130,6 @@ export default function Layout() {
         organization: sidebarUser.organization || selectedOrg?.name,
       }
     : undefined
-
-  // Organization switcher component for bottom section
-  const organizationSwitcher = organizations.length > 1 ? (
-    <div className="relative px-4 py-3">
-      <button
-        onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left rounded-lg hover:bg-theme-bg-elevated transition-colors"
-        title={selectedOrg?.name || 'Select organization'}
-      >
-        <Building2 className="w-5 h-5 text-theme-text-secondary flex-shrink-0" />
-        <span className="flex-1 truncate text-theme-text-primary">{selectedOrg?.name || 'Select Org'}</span>
-      </button>
-      {showOrgDropdown && (
-        <div className="absolute bottom-full left-4 right-4 mb-1 bg-theme-bg-surface border border-theme-border rounded-lg shadow-lg z-50">
-          {organizations.map((org) => (
-            <button
-              key={org.id}
-              onClick={() => {
-                handleOrgChange(org.id)
-                setShowOrgDropdown(false)
-              }}
-              className={`w-full text-left px-3 py-2 text-sm ${
-                org.id === selectedOrgId
-                  ? 'bg-primary-50 text-primary-700'
-                  : 'hover:bg-theme-bg-elevated text-theme-text-primary'
-              } first:rounded-t-lg last:rounded-b-lg`}
-            >
-              {org.name}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  ) : null
 
   return (
     <div className="min-h-screen bg-theme-bg">
@@ -162,7 +141,6 @@ export default function Layout() {
         orgSwitcher={
           <ViewAsSwitcher onViewChange={handleViewChange} />
         }
-        bottomSection={organizationSwitcher}
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">

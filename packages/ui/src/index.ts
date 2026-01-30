@@ -69,6 +69,8 @@ export {
   type UserMenuItem,
   type UserMenuSection,
   type UserMenuConfig,
+  type Organization,
+  type CreateDefaultUserMenuOptions,
 } from './components/UserMenu'
 
 // Changelog page
