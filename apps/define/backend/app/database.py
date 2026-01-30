@@ -1,66 +1,47 @@
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
-from contextlib import contextmanager
-import os
+"""Database connection and session management for async PostgreSQL."""
+
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.orm import DeclarativeBase
+from typing import AsyncGenerator
 
 from app.config import get_settings
 
 settings = get_settings()
 
-# Ensure data directory exists
-db_path = settings.database_url.replace("sqlite:///", "").replace("./", "")
-db_dir = os.path.dirname(db_path)
-if db_dir:
-    os.makedirs(db_dir, exist_ok=True)
-
-# Create SQLite engine with check_same_thread=False for FastAPI
-engine = create_engine(
+# Create async engine
+engine = create_async_engine(
     settings.database_url,
-    connect_args={"check_same_thread": False},
     echo=settings.debug,
+    future=True,
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# Session factory
+async_session_maker = async_sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
 
 
 class Base(DeclarativeBase):
+    """Base class for all models."""
     pass
 
 
-def get_db():
-    """Dependency for getting database sessions."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """Dependency that provides a database session."""
+    async with async_session_maker() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
 
 
-@contextmanager
-def get_db_context():
-    """Context manager for database sessions."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-def init_db():
+async def init_db() -> None:
     """Initialize database tables."""
-    from app.models import (
-        product, requirement, requirement_version,
-        code_link, test_link, delivery_link,
-        release_snapshot, jira_settings, jira_story_draft, attachment
-    )
-    Base.metadata.create_all(bind=engine)
-
-
-def check_database_connection() -> bool:
-    """Check if database is connected."""
-    try:
-        with get_db_context() as db:
-            db.execute(text("SELECT 1"))
-        return True
-    except Exception:
-        return False
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from sqlalchemy import func, and_
-from typing import List, Optional
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import func, and_, select
+from typing import List
 from uuid import uuid4
 from datetime import datetime
 import json
@@ -18,39 +18,42 @@ from app.schemas.requirement import (
 router = APIRouter()
 
 
-async def generate_stable_key(db: Session, product_id: str, prefix: str) -> str:
+async def generate_stable_key(db: AsyncSession, product_id: str, prefix: str) -> str:
     """Generate stable key for a requirement."""
-    count = db.query(func.count(Requirement.id)).filter(
-        Requirement.product_id == product_id
-    ).scalar() or 0
+    stmt = select(func.count(Requirement.id)).where(Requirement.product_id == product_id)
+    result = await db.execute(stmt)
+    count = result.scalar() or 0
     return f"{prefix}-{str(count + 1).zfill(3)}"
 
 
 @router.get("", response_model=List[RequirementResponse])
-def list_requirements(
+async def list_requirements(
     product_id: str = Query(..., description="Product ID to filter by"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """List requirements for a product."""
-    requirements = (
-        db.query(Requirement)
-        .filter(Requirement.product_id == product_id)
+    stmt = (
+        select(Requirement)
+        .where(Requirement.product_id == product_id)
         .order_by(Requirement.order_index)
-        .all()
     )
+    result = await db.execute(stmt)
+    requirements = result.scalars().all()
     return requirements
 
 
 @router.post("", response_model=RequirementResponse, status_code=201)
 async def create_requirement(
     data: RequirementCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create a new requirement."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == data.product_id).first()
+    stmt = select(Product).where(Product.id == data.product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -59,27 +62,27 @@ async def create_requirement(
 
     # Get max order index for siblings
     if data.parent_id:
-        max_order = (
-            db.query(func.max(Requirement.order_index))
-            .filter(
+        max_order_stmt = (
+            select(func.max(Requirement.order_index))
+            .where(
                 and_(
                     Requirement.product_id == data.product_id,
                     Requirement.parent_id == data.parent_id,
                 )
             )
-            .scalar()
         )
     else:
-        max_order = (
-            db.query(func.max(Requirement.order_index))
-            .filter(
+        max_order_stmt = (
+            select(func.max(Requirement.order_index))
+            .where(
                 and_(
                     Requirement.product_id == data.product_id,
                     Requirement.parent_id.is_(None),
                 )
             )
-            .scalar()
         )
+    max_order_result = await db.execute(max_order_stmt)
+    max_order = max_order_result.scalar()
     order_index = (max_order or -1) + 1
 
     requirement_id = str(uuid4())
@@ -126,34 +129,38 @@ async def create_requirement(
     )
     db.add(version)
 
-    db.commit()
-    db.refresh(requirement)
+    await db.flush()
+    await db.refresh(requirement)
 
     return requirement
 
 
 @router.get("/{requirement_id}", response_model=RequirementResponse)
-def get_requirement(
+async def get_requirement(
     requirement_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get a single requirement by ID."""
-    requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
+    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    result = await db.execute(stmt)
+    requirement = result.scalar_one_or_none()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
     return requirement
 
 
 @router.patch("/{requirement_id}", response_model=RequirementResponse)
-def update_requirement(
+async def update_requirement(
     requirement_id: str,
     data: RequirementUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update a requirement."""
-    requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
+    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    result = await db.execute(stmt)
+    requirement = result.scalar_one_or_none()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
 
@@ -217,31 +224,38 @@ def update_requirement(
         db.add(version)
 
         # Mark previous version as superseded
-        db.query(RequirementVersion).filter(
-            RequirementVersion.requirement_id == requirement_id,
-            RequirementVersion.version_number < requirement.current_version,
-            RequirementVersion.status == "active",
-        ).update({"status": "superseded"})
+        update_stmt = (
+            select(RequirementVersion)
+            .where(
+                RequirementVersion.requirement_id == requirement_id,
+                RequirementVersion.version_number < requirement.current_version,
+                RequirementVersion.status == "active",
+            )
+        )
+        prev_versions_result = await db.execute(update_stmt)
+        for prev_version in prev_versions_result.scalars().all():
+            prev_version.status = "superseded"
 
-    db.commit()
-    db.refresh(requirement)
+    await db.flush()
+    await db.refresh(requirement)
 
     return requirement
 
 
 @router.delete("/{requirement_id}", status_code=204)
-def delete_requirement(
+async def delete_requirement(
     requirement_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete a requirement and all related data."""
-    requirement = db.query(Requirement).filter(Requirement.id == requirement_id).first()
+    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    result = await db.execute(stmt)
+    requirement = result.scalar_one_or_none()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
 
-    db.delete(requirement)
-    db.commit()
+    await db.delete(requirement)
 
     return None
 
@@ -249,12 +263,14 @@ def delete_requirement(
 @router.post("/batch", response_model=List[RequirementResponse], status_code=201)
 async def create_requirements_batch(
     data: RequirementBatchCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create multiple requirements at once (for AI import)."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == data.product_id).first()
+    stmt = select(Product).where(Product.id == data.product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -289,7 +305,7 @@ async def create_requirements_batch(
         db.add(requirement)
         created_requirements.append((requirement, item))
 
-    db.flush()  # Get IDs assigned
+    await db.flush()  # Get IDs assigned
 
     # Second pass: resolve parent references and set order indices
     parent_order_counts = {}
@@ -307,29 +323,29 @@ async def create_requirements_batch(
         if parent_key not in parent_order_counts:
             # Get current max order for this parent
             if requirement.parent_id:
-                max_order = (
-                    db.query(func.max(Requirement.order_index))
-                    .filter(
+                max_order_stmt = (
+                    select(func.max(Requirement.order_index))
+                    .where(
                         and_(
                             Requirement.product_id == data.product_id,
                             Requirement.parent_id == requirement.parent_id,
                             Requirement.id != requirement.id,
                         )
                     )
-                    .scalar()
                 )
             else:
-                max_order = (
-                    db.query(func.max(Requirement.order_index))
-                    .filter(
+                max_order_stmt = (
+                    select(func.max(Requirement.order_index))
+                    .where(
                         and_(
                             Requirement.product_id == data.product_id,
                             Requirement.parent_id.is_(None),
                             Requirement.id != requirement.id,
                         )
                     )
-                    .scalar()
                 )
+            max_order_result = await db.execute(max_order_stmt)
+            max_order = max_order_result.scalar()
             parent_order_counts[parent_key] = (max_order or -1) + 1
 
         requirement.order_index = parent_order_counts[parent_key]
@@ -357,12 +373,12 @@ async def create_requirements_batch(
         )
         db.add(version)
 
-    db.commit()
+    await db.flush()
 
     # Refresh and return
     result = []
     for requirement, _ in created_requirements:
-        db.refresh(requirement)
+        await db.refresh(requirement)
         result.append(requirement)
 
     return result

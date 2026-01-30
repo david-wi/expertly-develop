@@ -76,13 +76,11 @@ services:
       context: .
       dockerfile: ./apps/admin/backend/Dockerfile
     environment:
-      - DATABASE_URL=postgresql+asyncpg://admin:admin@admin-db:5432/expertly_admin
+      - DATABASE_URL=postgresql+asyncpg://${DO_PG_USER:-doadmin}:${DO_PG_PASSWORD}@${DO_PG_HOST}:${DO_PG_PORT:-25060}/expertly_admin?ssl=require
       - ENVIRONMENT=production
       - DEBUG=false
     volumes:
       - ./config:/app/config:ro
-    depends_on:
-      - admin-db
     networks:
       - traefik
       - default
@@ -122,25 +120,13 @@ services:
       - "traefik.http.services.admin-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
-  admin-db:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=admin
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=expertly_admin
-    volumes:
-      - admin_postgres_data:/var/lib/postgresql/data
-    networks:
-      - default
-    restart: unless-stopped
-
   # ===================
   # EXPERTLY IDENTITY
   # ===================
   identity-backend:
     build: ./apps/identity/backend
     environment:
-      - DATABASE_URL=postgresql+asyncpg://identity:identity@identity-db:5432/identity
+      - DATABASE_URL=postgresql+asyncpg://${DO_PG_USER:-doadmin}:${DO_PG_PASSWORD}@${DO_PG_HOST}:${DO_PG_PORT:-25060}/expertly_identity?ssl=require
       - REDIS_URL=redis://expertly-shared-redis:6379
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - AUTH_COOKIE_DOMAIN=.ai.devintensive.com
@@ -153,8 +139,6 @@ services:
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     volumes:
       - identity_uploads:/app/uploads
-    depends_on:
-      - identity-db
     networks:
       - traefik
       - default
@@ -196,18 +180,6 @@ services:
       - "traefik.http.services.identity-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
     restart: unless-stopped
 
-  identity-db:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=identity
-      - POSTGRES_PASSWORD=identity
-      - POSTGRES_DB=identity
-    volumes:
-      - identity_postgres_data:/var/lib/postgresql/data
-    networks:
-      - default
-    restart: unless-stopped
-
   # ===================
   # EXPERTLY DEFINE
   # ===================
@@ -218,12 +190,11 @@ services:
     environment:
       - SKIP_AUTH=${SKIP_AUTH:-false}
       - LOG_LEVEL=INFO
-      - DATABASE_URL=sqlite:///./data/expertly-define.db
+      - DATABASE_URL=postgresql+asyncpg://${DO_PG_USER:-doadmin}:${DO_PG_PASSWORD}@${DO_PG_HOST}:${DO_PG_PORT:-25060}/expertly_define?ssl=require
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     volumes:
-      - define_data:/app/data
       - define_uploads:/app/uploads
     networks:
       - traefik
@@ -334,12 +305,10 @@ services:
       context: .
       dockerfile: ./apps/vibetest/backend/Dockerfile
     environment:
-      - DATABASE_URL=postgresql://vibetest:vibetest@vibetest-db:5432/vibetest
+      - DATABASE_URL=postgresql+asyncpg://${DO_PG_USER:-doadmin}:${DO_PG_PASSWORD}@${DO_PG_HOST}:${DO_PG_PORT:-25060}/vibeqa?ssl=require
       - SECRET_KEY=${VIBETEST_SECRET_KEY:-super-secret-key-change-in-production}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
-    depends_on:
-      - vibetest-db
     networks:
       - traefik
       - default
@@ -375,18 +344,6 @@ services:
       - "traefik.http.routers.vibetest-frontend${DEPLOY_COLOR:-}.tls=true"
       - "traefik.http.routers.vibetest-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
       - "traefik.http.services.vibetest-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
-    restart: unless-stopped
-
-  vibetest-db:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=vibetest
-      - POSTGRES_PASSWORD=vibetest
-      - POSTGRES_DB=vibetest
-    volumes:
-      - vibetest_postgres_data:/var/lib/postgresql/data
-    networks:
-      - default
     restart: unless-stopped
 
   # ===================
@@ -448,9 +405,7 @@ services:
       context: .
       dockerfile: ./apps/today/backend/Dockerfile
     environment:
-      - DATABASE_URL=postgresql+asyncpg://today:today@today-db:5432/expertly_today
-    depends_on:
-      - today-db
+      - DATABASE_URL=postgresql+asyncpg://${DO_PG_USER:-doadmin}:${DO_PG_PASSWORD}@${DO_PG_HOST}:${DO_PG_PORT:-25060}/expertly_today?ssl=require
     networks:
       - traefik
       - default
@@ -488,18 +443,6 @@ services:
       - "traefik.http.routers.today-frontend${DEPLOY_COLOR:-}.tls=true"
       - "traefik.http.routers.today-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
       - "traefik.http.services.today-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
-    restart: unless-stopped
-
-  today-db:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=today
-      - POSTGRES_PASSWORD=today
-      - POSTGRES_DB=expertly_today
-    volumes:
-      - today_postgres_data:/var/lib/postgresql/data
-    networks:
-      - default
     restart: unless-stopped
 
   # ===================
@@ -555,19 +498,10 @@ networks:
     name: expertly-shared
 
 volumes:
-  admin_postgres_data:
   artifacts_data:
   # Shared volumes - external to prevent blue/green prefixing
   # These persist across deployments so data survives blue-green switches
-  define_data:
-    external: true
-    name: shared_define_data
   define_uploads:
     external: true
     name: shared_define_uploads
-  identity_postgres_data:
-    external: true
-    name: shared_identity_postgres_data
   identity_uploads:
-  vibetest_postgres_data:
-  today_postgres_data:

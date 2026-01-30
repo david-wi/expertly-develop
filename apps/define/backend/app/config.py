@@ -1,10 +1,11 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    # SQLite
-    database_url: str = "sqlite:///./data/expertly-define.db"
+    # PostgreSQL (required for production)
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/expertly_define"
 
     # Auth
     skip_auth: bool = False
@@ -29,6 +30,13 @@ class Settings(BaseSettings):
     default_user_id: str = "dev-user-1"
     default_user_name: str = "David"
     default_user_email: str = "david@example.com"
+
+    @field_validator('database_url')
+    @classmethod
+    def validate_database_url(cls, v: str) -> str:
+        if v.startswith('sqlite'):
+            raise ValueError("SQLite is no longer supported. Use PostgreSQL with asyncpg.")
+        return v
 
     class Config:
         env_file = ".env"

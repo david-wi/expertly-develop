@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Project, Environment, TestCase, TestRun, User
@@ -28,31 +29,33 @@ router.include_router(runs.router, prefix="/{project_id}/runs", tags=["runs"])
 
 
 @router.get("", response_model=list[ProjectResponse])
-def list_projects(
+async def list_projects(
     status: Optional[str] = Query(None, pattern="^(active|archived)$"),
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """List all projects for the current user's organization."""
-    query = db.query(Project).filter(
+    query = select(Project).where(
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
     )
 
     if status:
-        query = query.filter(Project.status == status)
+        query = query.where(Project.status == status)
     else:
-        query = query.filter(Project.status == "active")
+        query = query.where(Project.status == "active")
 
-    projects = query.order_by(Project.updated_at.desc()).all()
+    query = query.order_by(Project.updated_at.desc())
+    result = await db.execute(query)
+    projects = result.scalars().all()
     return projects
 
 
 @router.post("", response_model=ProjectResponse, status_code=201)
-def create_project(
+async def create_project(
     project_in: ProjectCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Create a new project."""
     now = datetime.utcnow()
@@ -69,43 +72,44 @@ def create_project(
     )
 
     db.add(project)
-    db.commit()
-    db.refresh(project)
+    await db.flush()
+    await db.refresh(project)
 
     return project
 
 
 @router.get("/{project_id}", response_model=ProjectDetailResponse)
-def get_project(
+async def get_project(
     project: Project = Depends(get_project_with_access),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get project details with statistics."""
     # Get environments
-    environments = (
-        db.query(Environment)
-        .filter(Environment.project_id == project.id)
-        .all()
+    env_result = await db.execute(
+        select(Environment).where(Environment.project_id == project.id)
     )
+    environments_list = env_result.scalars().all()
 
     # Get test case stats
-    test_cases = (
-        db.query(TestCase)
-        .filter(TestCase.project_id == project.id, TestCase.deleted_at.is_(None))
-        .all()
+    test_result = await db.execute(
+        select(TestCase).where(
+            TestCase.project_id == project.id,
+            TestCase.deleted_at.is_(None)
+        )
     )
+    test_cases = test_result.scalars().all()
 
     approved_tests = len([t for t in test_cases if t.status == "approved"])
     draft_tests = len([t for t in test_cases if t.status == "draft"])
 
     # Get recent runs
-    recent_runs = (
-        db.query(TestRun)
-        .filter(TestRun.project_id == project.id)
+    runs_result = await db.execute(
+        select(TestRun)
+        .where(TestRun.project_id == project.id)
         .order_by(TestRun.created_at.desc())
         .limit(10)
-        .all()
     )
+    recent_runs = runs_result.scalars().all()
 
     passed_runs = len([r for r in recent_runs if r.status == "completed"])
     failed_runs = len([r for r in recent_runs if r.status == "failed"])
@@ -136,7 +140,7 @@ def get_project(
                 "base_url": e.base_url,
                 "is_default": e.is_default,
             }
-            for e in environments
+            for e in environments_list
         ],
         recent_runs=[
             {
@@ -152,10 +156,10 @@ def get_project(
 
 
 @router.patch("/{project_id}", response_model=ProjectResponse)
-def update_project(
+async def update_project(
     project_in: ProjectUpdate,
     project: Project = Depends(get_project_with_access),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Update a project."""
     update_data = project_in.model_dump(exclude_unset=True)
@@ -168,20 +172,20 @@ def update_project(
 
     project.updated_at = datetime.utcnow()
 
-    db.commit()
-    db.refresh(project)
+    await db.flush()
+    await db.refresh(project)
 
     return project
 
 
 @router.delete("/{project_id}", status_code=204)
-def delete_project(
+async def delete_project(
     project: Project = Depends(get_project_with_access),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Soft-delete a project."""
     project.deleted_at = datetime.utcnow()
     project.status = "archived"
     project.updated_at = datetime.utcnow()
 
-    db.commit()
+    await db.flush()

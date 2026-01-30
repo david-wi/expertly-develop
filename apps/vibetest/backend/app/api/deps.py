@@ -3,7 +3,8 @@
 from typing import Annotated, Optional
 
 from fastapi import Depends, HTTPException, status, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
 from app.database import get_db
 from app.models import User, Project, Organization
@@ -41,7 +42,7 @@ def get_identity_auth() -> IdentityAuth:
 
 async def get_current_user(
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> User:
     """Get the current authenticated user from Identity session.
 
@@ -51,10 +52,12 @@ async def get_current_user(
     identity_user = await auth.get_current_user(request)
 
     # Look up local user by email
-    user = db.query(User).filter(
+    stmt = select(User).where(
         User.email == identity_user.email,
         User.deleted_at.is_(None)
-    ).first()
+    )
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
 
     if user:
         if not user.is_active:
@@ -66,9 +69,9 @@ async def get_current_user(
 
     # If no local user exists, create one linked to this Identity user
     # First, ensure the organization exists
-    org = db.query(Organization).filter(
-        Organization.id == identity_user.organization_id
-    ).first()
+    org_stmt = select(Organization).where(Organization.id == identity_user.organization_id)
+    org_result = await db.execute(org_stmt)
+    org = org_result.scalar_one_or_none()
 
     if not org:
         # Create organization from Identity
@@ -92,15 +95,15 @@ async def get_current_user(
         is_verified=True,  # Identity users are already verified
     )
     db.add(user)
-    db.commit()
-    db.refresh(user)
+    await db.flush()
+    await db.refresh(user)
 
     return user
 
 
 async def get_optional_user(
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Optional[User]:
     """Get the current user if authenticated, None otherwise.
 
@@ -113,11 +116,13 @@ async def get_optional_user(
         return None
 
     # Look up local user by email
-    user = db.query(User).filter(
+    stmt = select(User).where(
         User.email == identity_user.email,
         User.deleted_at.is_(None),
         User.is_active == True
-    ).first()
+    )
+    result = await db.execute(stmt)
+    user = result.scalar_one_or_none()
 
     return user
 
@@ -132,7 +137,7 @@ def require_role(*allowed_roles: str):
     """
     async def role_checker(
         request: Request,
-        db: Session = Depends(get_db),
+        db: AsyncSession = Depends(get_db),
     ) -> User:
         current_user = await get_current_user(request, db)
         if current_user.role not in allowed_roles:
@@ -148,7 +153,7 @@ def require_role(*allowed_roles: str):
 async def get_project_with_access(
     project_id: str,
     request: Request,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ) -> Project:
     """Get a project and verify the user has access to it.
 
@@ -156,11 +161,13 @@ async def get_project_with_access(
     """
     current_user = await get_current_user(request, db)
 
-    project = db.query(Project).filter(
+    stmt = select(Project).where(
         Project.id == project_id,
         Project.organization_id == current_user.organization_id,
         Project.deleted_at.is_(None)
-    ).first()
+    )
+    result = await db.execute(stmt)
+    project = result.scalar_one_or_none()
 
     if not project:
         raise HTTPException(

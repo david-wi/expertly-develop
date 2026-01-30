@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from fastapi.responses import FileResponse
-from sqlalchemy.orm import Session
-from uuid import uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
@@ -39,12 +39,14 @@ def get_avatars_dir():
 @router.post("/generate", response_model=AvatarResponse)
 async def generate_avatar(
     data: GenerateAvatarRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Generate an AI avatar for a product using DALL-E 3."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == data.product_id).first()
+    stmt = select(Product).where(Product.id == data.product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -84,8 +86,8 @@ async def generate_avatar(
                     detail=f"OpenAI API error: {response.text}",
                 )
 
-            result = response.json()
-            image_data = result["data"][0]["b64_json"]
+            openai_result = response.json()
+            image_data = openai_result["data"][0]["b64_json"]
 
     except httpx.TimeoutException:
         raise HTTPException(status_code=504, detail="OpenAI API timeout")
@@ -106,7 +108,7 @@ async def generate_avatar(
     avatar_url = f"/api/v1/avatars/{filename}"
     product.avatar_url = avatar_url
     product.updated_at = datetime.utcnow().isoformat()
-    db.commit()
+    await db.flush()
 
     return AvatarResponse(avatar_url=avatar_url)
 
@@ -115,12 +117,14 @@ async def generate_avatar(
 async def upload_avatar(
     product_id: str,
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Upload a custom avatar for a product."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -147,7 +151,7 @@ async def upload_avatar(
     avatar_url = f"/api/v1/avatars/{filename}"
     product.avatar_url = avatar_url
     product.updated_at = datetime.utcnow().isoformat()
-    db.commit()
+    await db.flush()
 
     return AvatarResponse(avatar_url=avatar_url)
 
@@ -181,11 +185,13 @@ async def get_avatar(
 @router.delete("/{product_id}")
 async def remove_avatar(
     product_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Remove a product's avatar."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -198,6 +204,6 @@ async def remove_avatar(
 
         product.avatar_url = None
         product.updated_at = datetime.utcnow().isoformat()
-        db.commit()
+        await db.flush()
 
     return {"status": "ok"}

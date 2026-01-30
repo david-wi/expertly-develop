@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.api.deps import get_current_user, CurrentUser
@@ -13,7 +12,7 @@ router = APIRouter()
 @router.post("/parse-requirements", response_model=dict)
 async def parse_requirements(
     data: ParseRequirementsRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Parse requirements from text/files using AI."""

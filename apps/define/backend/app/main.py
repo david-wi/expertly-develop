@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     # Startup
     logger.info("Starting Expertly Define API")
-    init_db()
+    await init_db()
     logger.info("Database initialized")
 
     # Ensure uploads directory exists

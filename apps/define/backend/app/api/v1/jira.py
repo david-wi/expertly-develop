@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from typing import List, Optional
 from uuid import uuid4
 from datetime import datetime
@@ -22,31 +23,37 @@ router = APIRouter()
 
 # Jira Settings endpoints
 @router.get("/settings/{product_id}", response_model=Optional[JiraSettingsResponse])
-def get_jira_settings(
+async def get_jira_settings(
     product_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get Jira settings for a product."""
-    settings = db.query(JiraSettings).filter(JiraSettings.product_id == product_id).first()
+    stmt = select(JiraSettings).where(JiraSettings.product_id == product_id)
+    result = await db.execute(stmt)
+    settings = result.scalar_one_or_none()
     return settings
 
 
 @router.post("/settings/{product_id}", response_model=JiraSettingsResponse, status_code=201)
-def create_jira_settings(
+async def create_jira_settings(
     product_id: str,
     data: JiraSettingsCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create or update Jira settings for a product."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
     now = datetime.utcnow().isoformat()
-    existing = db.query(JiraSettings).filter(JiraSettings.product_id == product_id).first()
+    existing_stmt = select(JiraSettings).where(JiraSettings.product_id == product_id)
+    existing_result = await db.execute(existing_stmt)
+    existing = existing_result.scalar_one_or_none()
 
     if existing:
         # Update existing
@@ -55,8 +62,8 @@ def create_jira_settings(
         existing.jira_api_token = data.jira_api_token
         existing.default_project_key = data.default_project_key.strip().upper()
         existing.updated_at = now
-        db.commit()
-        db.refresh(existing)
+        await db.flush()
+        await db.refresh(existing)
         return existing
     else:
         # Create new
@@ -71,20 +78,22 @@ def create_jira_settings(
             updated_at=now,
         )
         db.add(settings)
-        db.commit()
-        db.refresh(settings)
+        await db.flush()
+        await db.refresh(settings)
         return settings
 
 
 @router.put("/settings/{product_id}", response_model=JiraSettingsResponse)
-def update_jira_settings(
+async def update_jira_settings(
     product_id: str,
     data: JiraSettingsUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update Jira settings for a product."""
-    settings = db.query(JiraSettings).filter(JiraSettings.product_id == product_id).first()
+    stmt = select(JiraSettings).where(JiraSettings.product_id == product_id)
+    result = await db.execute(stmt)
+    settings = result.scalar_one_or_none()
     if not settings:
         raise HTTPException(status_code=404, detail="Jira settings not found")
 
@@ -98,38 +107,41 @@ def update_jira_settings(
         settings.default_project_key = data.default_project_key.strip().upper()
 
     settings.updated_at = datetime.utcnow().isoformat()
-    db.commit()
-    db.refresh(settings)
+    await db.flush()
+    await db.refresh(settings)
 
     return settings
 
 
 # Jira Story Drafts endpoints
 @router.get("/drafts", response_model=List[JiraStoryDraftResponse])
-def list_drafts(
+async def list_drafts(
     product_id: str = Query(..., description="Product ID to filter by"),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """List Jira story drafts for a product."""
-    drafts = (
-        db.query(JiraStoryDraft)
-        .filter(JiraStoryDraft.product_id == product_id)
+    stmt = (
+        select(JiraStoryDraft)
+        .where(JiraStoryDraft.product_id == product_id)
         .order_by(JiraStoryDraft.created_at.desc())
-        .all()
     )
+    result = await db.execute(stmt)
+    drafts = result.scalars().all()
     return drafts
 
 
 @router.post("/drafts", response_model=JiraStoryDraftResponse, status_code=201)
-def create_draft(
+async def create_draft(
     data: JiraStoryDraftCreate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create a new Jira story draft."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == data.product_id).first()
+    stmt = select(Product).where(Product.id == data.product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -150,34 +162,38 @@ def create_draft(
     )
 
     db.add(draft)
-    db.commit()
-    db.refresh(draft)
+    await db.flush()
+    await db.refresh(draft)
 
     return draft
 
 
 @router.get("/drafts/{draft_id}", response_model=JiraStoryDraftResponse)
-def get_draft(
+async def get_draft(
     draft_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get a single Jira story draft by ID."""
-    draft = db.query(JiraStoryDraft).filter(JiraStoryDraft.id == draft_id).first()
+    stmt = select(JiraStoryDraft).where(JiraStoryDraft.id == draft_id)
+    result = await db.execute(stmt)
+    draft = result.scalar_one_or_none()
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
     return draft
 
 
 @router.put("/drafts/{draft_id}", response_model=JiraStoryDraftResponse)
-def update_draft(
+async def update_draft(
     draft_id: str,
     data: JiraStoryDraftUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update a Jira story draft."""
-    draft = db.query(JiraStoryDraft).filter(JiraStoryDraft.id == draft_id).first()
+    stmt = select(JiraStoryDraft).where(JiraStoryDraft.id == draft_id)
+    result = await db.execute(stmt)
+    draft = result.scalar_one_or_none()
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
 
@@ -195,25 +211,26 @@ def update_draft(
         draft.story_points = data.story_points
 
     draft.updated_at = datetime.utcnow().isoformat()
-    db.commit()
-    db.refresh(draft)
+    await db.flush()
+    await db.refresh(draft)
 
     return draft
 
 
 @router.delete("/drafts/{draft_id}", status_code=204)
-def delete_draft(
+async def delete_draft(
     draft_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete a Jira story draft."""
-    draft = db.query(JiraStoryDraft).filter(JiraStoryDraft.id == draft_id).first()
+    stmt = select(JiraStoryDraft).where(JiraStoryDraft.id == draft_id)
+    result = await db.execute(stmt)
+    draft = result.scalar_one_or_none()
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
 
-    db.delete(draft)
-    db.commit()
+    await db.delete(draft)
 
     return None
 
@@ -222,15 +239,19 @@ def delete_draft(
 @router.post("/send")
 async def send_to_jira(
     data: JiraSendRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Send a single draft to Jira."""
-    draft = db.query(JiraStoryDraft).filter(JiraStoryDraft.id == data.draft_id).first()
+    stmt = select(JiraStoryDraft).where(JiraStoryDraft.id == data.draft_id)
+    result = await db.execute(stmt)
+    draft = result.scalar_one_or_none()
     if not draft:
         raise HTTPException(status_code=404, detail="Draft not found")
 
-    settings = db.query(JiraSettings).filter(JiraSettings.product_id == draft.product_id).first()
+    settings_stmt = select(JiraSettings).where(JiraSettings.product_id == draft.product_id)
+    settings_result = await db.execute(settings_stmt)
+    settings = settings_result.scalar_one_or_none()
     if not settings:
         raise HTTPException(status_code=400, detail="Jira settings not configured for this product")
 
@@ -241,7 +262,7 @@ async def send_to_jira(
     )
 
     try:
-        result = await jira_service.create_issue(
+        jira_result = await jira_service.create_issue(
             project_key=settings.default_project_key,
             summary=draft.summary,
             description=draft.description,
@@ -252,13 +273,13 @@ async def send_to_jira(
         )
 
         draft.status = "sent"
-        draft.jira_issue_key = result["key"]
-        draft.jira_url = result["url"]
+        draft.jira_issue_key = jira_result["key"]
+        draft.jira_url = jira_result["url"]
         draft.error_message = None
         draft.updated_at = datetime.utcnow().isoformat()
 
-        db.commit()
-        db.refresh(draft)
+        await db.flush()
+        await db.refresh(draft)
 
         return {"success": True, "draft": draft}
 
@@ -266,7 +287,7 @@ async def send_to_jira(
         draft.status = "failed"
         draft.error_message = str(e)
         draft.updated_at = datetime.utcnow().isoformat()
-        db.commit()
+        await db.flush()
 
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -274,11 +295,13 @@ async def send_to_jira(
 @router.post("/send-all")
 async def send_all_to_jira(
     data: JiraSendAllRequest,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Send multiple drafts to Jira."""
-    settings = db.query(JiraSettings).filter(JiraSettings.product_id == data.product_id).first()
+    settings_stmt = select(JiraSettings).where(JiraSettings.product_id == data.product_id)
+    settings_result = await db.execute(settings_stmt)
+    settings = settings_result.scalar_one_or_none()
     if not settings:
         raise HTTPException(status_code=400, detail="Jira settings not configured for this product")
 
@@ -291,13 +314,15 @@ async def send_all_to_jira(
     results = {"success": [], "failed": []}
 
     for draft_id in data.draft_ids:
-        draft = db.query(JiraStoryDraft).filter(JiraStoryDraft.id == draft_id).first()
+        draft_stmt = select(JiraStoryDraft).where(JiraStoryDraft.id == draft_id)
+        draft_result = await db.execute(draft_stmt)
+        draft = draft_result.scalar_one_or_none()
         if not draft:
             results["failed"].append({"id": draft_id, "error": "Draft not found"})
             continue
 
         try:
-            result = await jira_service.create_issue(
+            jira_result = await jira_service.create_issue(
                 project_key=settings.default_project_key,
                 summary=draft.summary,
                 description=draft.description,
@@ -308,15 +333,15 @@ async def send_all_to_jira(
             )
 
             draft.status = "sent"
-            draft.jira_issue_key = result["key"]
-            draft.jira_url = result["url"]
+            draft.jira_issue_key = jira_result["key"]
+            draft.jira_url = jira_result["url"]
             draft.error_message = None
             draft.updated_at = datetime.utcnow().isoformat()
 
             results["success"].append({
                 "id": draft_id,
-                "jira_key": result["key"],
-                "jira_url": result["url"],
+                "jira_key": jira_result["key"],
+                "jira_url": jira_result["url"],
             })
 
         except Exception as e:
@@ -326,6 +351,6 @@ async def send_all_to_jira(
 
             results["failed"].append({"id": draft_id, "error": str(e)})
 
-    db.commit()
+    await db.flush()
 
     return results

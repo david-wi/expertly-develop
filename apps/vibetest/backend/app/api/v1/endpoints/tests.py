@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import TestCase, TestCaseHistory, Project, User
@@ -15,7 +16,7 @@ router = APIRouter()
 
 
 @router.get("", response_model=list[TestCaseResponse])
-def list_tests(
+async def list_tests(
     project_id: str,
     status: Optional[str] = Query(None, pattern="^(draft|approved|archived)$"),
     priority: Optional[str] = Query(None, pattern="^(critical|high|medium|low)$"),
@@ -23,33 +24,38 @@ def list_tests(
     tag: Optional[str] = None,
     search: Optional[str] = None,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """List test cases for a project."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    query = db.query(TestCase).filter(
+    query = select(TestCase).where(
         TestCase.project_id == project_id,
         TestCase.deleted_at.is_(None),
     )
 
     if status:
-        query = query.filter(TestCase.status == status)
+        query = query.where(TestCase.status == status)
 
     if priority:
-        query = query.filter(TestCase.priority == priority)
+        query = query.where(TestCase.priority == priority)
 
     if execution_type:
-        query = query.filter(TestCase.execution_type == execution_type)
+        query = query.where(TestCase.execution_type == execution_type)
 
-    tests = query.order_by(TestCase.updated_at.desc()).all()
+    query = query.order_by(TestCase.updated_at.desc())
+    result = await db.execute(query)
+    tests = result.scalars().all()
 
     # Filter by tag (JSON array)
     if tag:
@@ -68,19 +74,22 @@ def list_tests(
 
 
 @router.post("", response_model=TestCaseResponse, status_code=201)
-def create_test(
+async def create_test(
     project_id: str,
     test_in: TestCaseCreate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Create a new test case."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
@@ -105,38 +114,40 @@ def create_test(
     )
 
     db.add(test_case)
-    db.commit()
-    db.refresh(test_case)
+    await db.flush()
+    await db.refresh(test_case)
 
     return test_case
 
 
 @router.get("/{test_id}", response_model=TestCaseResponse)
-def get_test(
+async def get_test(
     project_id: str,
     test_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Get a test case by ID."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    test_case = (
-        db.query(TestCase)
-        .filter(
+    result = await db.execute(
+        select(TestCase).where(
             TestCase.id == test_id,
             TestCase.project_id == project_id,
             TestCase.deleted_at.is_(None),
         )
-        .first()
     )
+    test_case = result.scalar_one_or_none()
 
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
@@ -145,32 +156,34 @@ def get_test(
 
 
 @router.patch("/{test_id}", response_model=TestCaseResponse)
-def update_test(
+async def update_test(
     project_id: str,
     test_id: str,
     test_in: TestCaseUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Update a test case."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    test_case = (
-        db.query(TestCase)
-        .filter(
+    result = await db.execute(
+        select(TestCase).where(
             TestCase.id == test_id,
             TestCase.project_id == project_id,
             TestCase.deleted_at.is_(None),
         )
-        .first()
     )
+    test_case = result.scalar_one_or_none()
 
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
@@ -212,38 +225,40 @@ def update_test(
 
     test_case.updated_at = datetime.utcnow()
 
-    db.commit()
-    db.refresh(test_case)
+    await db.flush()
+    await db.refresh(test_case)
 
     return test_case
 
 
 @router.delete("/{test_id}", status_code=204)
-def delete_test(
+async def delete_test(
     project_id: str,
     test_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Soft-delete a test case."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    test_case = (
-        db.query(TestCase)
-        .filter(
+    result = await db.execute(
+        select(TestCase).where(
             TestCase.id == test_id,
             TestCase.project_id == project_id,
             TestCase.deleted_at.is_(None),
         )
-        .first()
     )
+    test_case = result.scalar_one_or_none()
 
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
@@ -266,35 +281,37 @@ def delete_test(
     test_case.status = "archived"
     test_case.updated_at = datetime.utcnow()
 
-    db.commit()
+    await db.flush()
 
 
 @router.post("/{test_id}/approve", response_model=TestCaseResponse)
-def approve_test(
+async def approve_test(
     project_id: str,
     test_id: str,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
 ):
     """Approve a test case."""
     # Validate project access
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == current_user.organization_id,
-        Project.deleted_at.is_(None)
-    ).first()
+    result = await db.execute(
+        select(Project).where(
+            Project.id == project_id,
+            Project.organization_id == current_user.organization_id,
+            Project.deleted_at.is_(None)
+        )
+    )
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    test_case = (
-        db.query(TestCase)
-        .filter(
+    result = await db.execute(
+        select(TestCase).where(
             TestCase.id == test_id,
             TestCase.project_id == project_id,
             TestCase.deleted_at.is_(None),
         )
-        .first()
     )
+    test_case = result.scalar_one_or_none()
 
     if not test_case:
         raise HTTPException(status_code=404, detail="Test case not found")
@@ -304,7 +321,7 @@ def approve_test(
     test_case.approved_by = current_user.email
     test_case.updated_at = datetime.utcnow()
 
-    db.commit()
-    db.refresh(test_case)
+    await db.flush()
+    await db.refresh(test_case)
 
     return test_case

@@ -9,7 +9,8 @@ from fastapi import (
     Form,
 )
 from fastapi.responses import FileResponse, PlainTextResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy import select
 from uuid import uuid4
 from datetime import datetime
 from typing import List, Optional
@@ -51,65 +52,69 @@ async def process_conversion(
     storage_dir: str,
 ):
     """Background task to convert file to markdown."""
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
+    # Create new async engine and session for background task
+    engine = create_async_engine(db_url)
+    async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-    # Create new session for background task
-    engine = create_engine(db_url, connect_args={"check_same_thread": False})
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
-
-    try:
-        version = db.query(ArtifactVersion).filter(ArtifactVersion.id == version_id).first()
-        if not version:
-            return
-
-        version.conversion_status = "processing"
-        db.commit()
-
-        # Convert to markdown
-        service = ArtifactConversionService()
-        markdown, success = await service.convert_to_markdown(file_content, filename, mime_type)
-
-        # Save markdown to file
-        markdown_path = os.path.join(storage_dir, "markdown.md")
-        async with aiofiles.open(markdown_path, "w") as f:
-            await f.write(markdown)
-
-        # Update version record
-        version.markdown_storage_path = os.path.join(
-            "artifacts", artifact_id, f"v{version.version_number}", "markdown.md"
-        )
-        # Store first 10k chars inline for quick preview
-        version.markdown_content = markdown[:10000] if len(markdown) > 10000 else markdown
-        version.conversion_status = "completed" if success else "failed"
-        if not success:
-            version.conversion_error = "Conversion completed with warnings - see markdown for details"
-        db.commit()
-
-    except Exception as e:
-        # Format a descriptive error message
-        error_message = str(e)
-        if "anthropic" in error_message.lower() or "api" in error_message.lower():
-            if "rate" in error_message.lower() or "429" in error_message:
-                error_message = "AI service rate limit exceeded. Please wait a moment and try again."
-            elif "401" in error_message or "auth" in error_message.lower():
-                error_message = "AI service authentication failed. Please check the API key configuration."
-            elif "400" in error_message:
-                error_message = f"Invalid request to AI service: {error_message}"
-            elif "500" in error_message or "502" in error_message or "503" in error_message:
-                error_message = "AI service is temporarily unavailable. Please try again in a few moments."
-
+    async with async_session() as db:
         try:
-            version = db.query(ArtifactVersion).filter(ArtifactVersion.id == version_id).first()
-            if version:
-                version.conversion_status = "failed"
-                version.conversion_error = error_message
-                db.commit()
-        except Exception:
-            pass
-    finally:
-        db.close()
+            stmt = select(ArtifactVersion).where(ArtifactVersion.id == version_id)
+            result = await db.execute(stmt)
+            version = result.scalar_one_or_none()
+            if not version:
+                return
+
+            version.conversion_status = "processing"
+            await db.commit()
+
+            # Convert to markdown
+            service = ArtifactConversionService()
+            markdown, success = await service.convert_to_markdown(file_content, filename, mime_type)
+
+            # Save markdown to file
+            markdown_path = os.path.join(storage_dir, "markdown.md")
+            async with aiofiles.open(markdown_path, "w") as f:
+                await f.write(markdown)
+
+            # Refresh version from db
+            await db.refresh(version)
+
+            # Update version record
+            version.markdown_storage_path = os.path.join(
+                "artifacts", artifact_id, f"v{version.version_number}", "markdown.md"
+            )
+            # Store first 10k chars inline for quick preview
+            version.markdown_content = markdown[:10000] if len(markdown) > 10000 else markdown
+            version.conversion_status = "completed" if success else "failed"
+            if not success:
+                version.conversion_error = "Conversion completed with warnings - see markdown for details"
+            await db.commit()
+
+        except Exception as e:
+            # Format a descriptive error message
+            error_message = str(e)
+            if "anthropic" in error_message.lower() or "api" in error_message.lower():
+                if "rate" in error_message.lower() or "429" in error_message:
+                    error_message = "AI service rate limit exceeded. Please wait a moment and try again."
+                elif "401" in error_message or "auth" in error_message.lower():
+                    error_message = "AI service authentication failed. Please check the API key configuration."
+                elif "400" in error_message:
+                    error_message = f"Invalid request to AI service: {error_message}"
+                elif "500" in error_message or "502" in error_message or "503" in error_message:
+                    error_message = "AI service is temporarily unavailable. Please try again in a few moments."
+
+            try:
+                stmt = select(ArtifactVersion).where(ArtifactVersion.id == version_id)
+                result = await db.execute(stmt)
+                version = result.scalar_one_or_none()
+                if version:
+                    version.conversion_status = "failed"
+                    version.conversion_error = error_message
+                    await db.commit()
+            except Exception:
+                pass
+        finally:
+            await engine.dispose()
 
 
 @router.post("", response_model=ArtifactResponse, status_code=201)
@@ -119,12 +124,14 @@ async def upload_artifact(
     name: str = Form(...),
     description: Optional[str] = Form(None),
     file: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Upload a new artifact for a product."""
     # Verify product exists
-    product = db.query(Product).filter(Product.id == product_id).first()
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
@@ -176,8 +183,8 @@ async def upload_artifact(
 
     db.add(artifact)
     db.add(version)
-    db.commit()
-    db.refresh(artifact)
+    await db.flush()
+    await db.refresh(artifact)
 
     # Start background conversion
     background_tasks.add_task(
@@ -195,16 +202,18 @@ async def upload_artifact(
 
 
 @router.post("/link", response_model=ArtifactResponse, status_code=201)
-def create_link_artifact(
+async def create_link_artifact(
     product_id: str = Query(...),
     data: ArtifactLinkCreate = ...,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Create a new link artifact for a product."""
     try:
         # Verify product exists
-        product = db.query(Product).filter(Product.id == product_id).first()
+        stmt = select(Product).where(Product.id == product_id)
+        result = await db.execute(stmt)
+        product = result.scalar_one_or_none()
         if not product:
             raise HTTPException(status_code=404, detail=f"Product not found with ID: {product_id}")
 
@@ -236,14 +245,14 @@ def create_link_artifact(
         )
 
         db.add(artifact)
-        db.commit()
-        db.refresh(artifact)
+        await db.flush()
+        await db.refresh(artifact)
 
         return artifact
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to create link artifact: {str(e)}",
@@ -251,39 +260,43 @@ def create_link_artifact(
 
 
 @router.get("", response_model=List[ArtifactResponse])
-def list_artifacts(
+async def list_artifacts(
     product_id: str = Query(...),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """List all artifacts for a product."""
-    artifacts = (
-        db.query(Artifact)
-        .filter(Artifact.product_id == product_id)
+    stmt = (
+        select(Artifact)
+        .where(Artifact.product_id == product_id)
         .order_by(Artifact.created_at.desc())
-        .all()
     )
+    result = await db.execute(stmt)
+    artifacts = result.scalars().all()
     return artifacts
 
 
 @router.get("/{artifact_id}", response_model=ArtifactWithVersions)
-def get_artifact(
+async def get_artifact(
     artifact_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get an artifact with all its versions."""
-    artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    stmt = select(Artifact).where(Artifact.id == artifact_id)
+    result = await db.execute(stmt)
+    artifact = result.scalar_one_or_none()
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
     # Get versions ordered by version number descending
-    versions = (
-        db.query(ArtifactVersion)
-        .filter(ArtifactVersion.artifact_id == artifact_id)
+    versions_stmt = (
+        select(ArtifactVersion)
+        .where(ArtifactVersion.artifact_id == artifact_id)
         .order_by(ArtifactVersion.version_number.desc())
-        .all()
     )
+    versions_result = await db.execute(versions_stmt)
+    versions = versions_result.scalars().all()
 
     return ArtifactWithVersions(
         id=artifact.id,
@@ -302,14 +315,16 @@ def get_artifact(
 
 
 @router.patch("/{artifact_id}", response_model=ArtifactResponse)
-def update_artifact(
+async def update_artifact(
     artifact_id: str,
     data: ArtifactUpdate,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update artifact metadata."""
-    artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    stmt = select(Artifact).where(Artifact.id == artifact_id)
+    result = await db.execute(stmt)
+    artifact = result.scalar_one_or_none()
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
@@ -325,20 +340,22 @@ def update_artifact(
         artifact.url = data.url
 
     artifact.updated_at = datetime.utcnow().isoformat()
-    db.commit()
-    db.refresh(artifact)
+    await db.flush()
+    await db.refresh(artifact)
 
     return artifact
 
 
 @router.delete("/{artifact_id}", status_code=204)
-def delete_artifact(
+async def delete_artifact(
     artifact_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Delete an artifact and all its versions."""
-    artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    stmt = select(Artifact).where(Artifact.id == artifact_id)
+    result = await db.execute(stmt)
+    artifact = result.scalar_one_or_none()
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
@@ -349,8 +366,7 @@ def delete_artifact(
         shutil.rmtree(artifact_dir)
 
     # Delete from database (versions cascade)
-    db.delete(artifact)
-    db.commit()
+    await db.delete(artifact)
 
     return None
 
@@ -361,11 +377,13 @@ async def upload_version(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     change_summary: Optional[str] = Form(None),
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Upload a new version of an artifact."""
-    artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    stmt = select(Artifact).where(Artifact.id == artifact_id)
+    result = await db.execute(stmt)
+    artifact = result.scalar_one_or_none()
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
@@ -408,8 +426,8 @@ async def upload_version(
     )
 
     db.add(version)
-    db.commit()
-    db.refresh(version)
+    await db.flush()
+    await db.refresh(version)
 
     # Start background conversion
     background_tasks.add_task(
@@ -430,19 +448,22 @@ async def upload_version(
 async def download_original(
     artifact_id: str,
     version_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Download the original file for a specific version."""
-    version = (
-        db.query(ArtifactVersion)
-        .filter(ArtifactVersion.id == version_id, ArtifactVersion.artifact_id == artifact_id)
-        .first()
+    version_stmt = (
+        select(ArtifactVersion)
+        .where(ArtifactVersion.id == version_id, ArtifactVersion.artifact_id == artifact_id)
     )
+    version_result = await db.execute(version_stmt)
+    version = version_result.scalar_one_or_none()
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
 
-    artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    artifact_stmt = select(Artifact).where(Artifact.id == artifact_id)
+    artifact_result = await db.execute(artifact_stmt)
+    artifact = artifact_result.scalar_one_or_none()
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
@@ -461,15 +482,16 @@ async def download_original(
 async def get_markdown(
     artifact_id: str,
     version_id: str,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get the markdown content for a specific version."""
-    version = (
-        db.query(ArtifactVersion)
-        .filter(ArtifactVersion.id == version_id, ArtifactVersion.artifact_id == artifact_id)
-        .first()
+    version_stmt = (
+        select(ArtifactVersion)
+        .where(ArtifactVersion.id == version_id, ArtifactVersion.artifact_id == artifact_id)
     )
+    version_result = await db.execute(version_stmt)
+    version = version_result.scalar_one_or_none()
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
 
@@ -499,19 +521,22 @@ async def reconvert_version(
     artifact_id: str,
     version_id: str,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_db),
+    db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Retry conversion for a failed version."""
-    version = (
-        db.query(ArtifactVersion)
-        .filter(ArtifactVersion.id == version_id, ArtifactVersion.artifact_id == artifact_id)
-        .first()
+    version_stmt = (
+        select(ArtifactVersion)
+        .where(ArtifactVersion.id == version_id, ArtifactVersion.artifact_id == artifact_id)
     )
+    version_result = await db.execute(version_stmt)
+    version = version_result.scalar_one_or_none()
     if not version:
         raise HTTPException(status_code=404, detail="Version not found")
 
-    artifact = db.query(Artifact).filter(Artifact.id == artifact_id).first()
+    artifact_stmt = select(Artifact).where(Artifact.id == artifact_id)
+    artifact_result = await db.execute(artifact_stmt)
+    artifact = artifact_result.scalar_one_or_none()
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
@@ -526,8 +551,8 @@ async def reconvert_version(
     # Reset conversion status
     version.conversion_status = "pending"
     version.conversion_error = None
-    db.commit()
-    db.refresh(version)
+    await db.flush()
+    await db.refresh(version)
 
     # Get storage directory
     storage_dir = get_artifact_storage_dir(artifact_id, version.version_number)
