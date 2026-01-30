@@ -13,6 +13,16 @@ Please review additional general instructions at /Users/david/Code/_common/CLAUD
 - Status indicators for at-a-glance monitoring
 - Layout persistence across sessions
 
+## Why Node.js (Not Python)
+
+This is intentional. Vibecode's architecture benefits from Node.js:
+
+- **Real-time WebSocket streaming** - Core feature is streaming Claude responses to multiple browser clients. Node's event-driven model handles concurrent WebSocket connections efficiently.
+- **Full-stack TypeScript** - Same language across React frontend, Express backend, and Tauri desktop agent. Shared types reduce bugs at client/server boundary.
+- **Event-driven architecture** - The app is fundamentally event-based (messages, broadcasts, tool execution callbacks). Maps naturally to Node's execution model.
+- **Tool execution bridge** - Server receives tool requests from Claude API, executes locally via `child_process`, returns results. Straightforward in Node.
+- **Lightweight deployment** - `node:20-slim` image is ~150MB vs Python at 200-300MB+.
+
 ## Architecture
 
 ```
