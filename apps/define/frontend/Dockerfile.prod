@@ -8,16 +8,22 @@ ARG VITE_IDENTITY_URL=https://identity.ai.devintensive.com
 ARG VITE_BUILD_TIMESTAMP
 ARG VITE_GIT_COMMIT
 
-# Copy everything needed for the build
+# Copy monorepo package files for workspace resolution
 COPY package.json package-lock.json ./
+
+# Copy the UI package (workspace dependency)
 COPY packages/ui ./packages/ui
+
+# Copy define frontend package files
+COPY apps/define/frontend/package*.json ./apps/define/frontend/
+
+# Install dependencies from monorepo root (resolves workspace packages)
+# Use --ignore-scripts to skip husky, then rebuild native modules
+RUN npm install --workspace=apps/define/frontend --ignore-scripts && \
+    npm install @rollup/rollup-linux-x64-musl --save-optional
+
+# Copy source code
 COPY apps/define/frontend ./apps/define/frontend
-
-# Install ALL monorepo dependencies (this ensures workspace resolution works)
-RUN npm ci --ignore-scripts || npm install --ignore-scripts
-
-# Install platform-specific rollup binding
-RUN npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Set environment variables for Vite build
 ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
