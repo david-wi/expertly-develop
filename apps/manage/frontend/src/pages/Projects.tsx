@@ -367,8 +367,10 @@ export default function Projects() {
     }
 
     try {
+      // Pass null explicitly to make a project top-level (removing parent)
+      // Pass the targetProjectId to make it a child of that project
       await api.updateProject(sourceProjectId, {
-        parent_project_id: targetProjectId || undefined,
+        parent_project_id: targetProjectId,
       })
       await loadData()
     } catch (err) {
