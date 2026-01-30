@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   User,
   UsersRound,
@@ -18,6 +18,7 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getOrganizationId())
 
@@ -121,11 +122,7 @@ export default function Layout() {
           currentCommit: import.meta.env.VITE_GIT_COMMIT,
         }}
         userMenu={userMenu}
-        renderLink={({ href, className, children, onClick }) => (
-          <Link to={href} className={className} onClick={onClick}>
-            {children}
-          </Link>
-        )}
+        navigate={navigate}
       />
 
       {/* Main content */}

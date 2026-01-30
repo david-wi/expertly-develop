@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   CheckSquare,
@@ -30,6 +30,7 @@ const navigation = [
 
 export function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Use shared hook for consistent user fetching - ensure name is never null for CurrentUser type
   const fetchCurrentUser = useCallback(async () => {
@@ -65,11 +66,7 @@ export function Sidebar() {
         )
       }
       userMenu={userMenu}
-      renderLink={({ href, className, children, onClick }) => (
-        <Link to={href} className={className} onClick={onClick}>
-          {children}
-        </Link>
-      )}
+      navigate={navigate}
     />
   );
 }

@@ -14,7 +14,7 @@ import {
   Eye,
   Bot,
 } from 'lucide-react'
-import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, createRenderLink, type Organization } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import NotificationBell from './NotificationBell'
 import { api, Organization as ApiOrganization } from '../services/api'
@@ -155,7 +155,7 @@ export default function Layout() {
           )
         }
         userMenu={userMenu}
-        renderLink={createRenderLink(navigate)}
+        navigate={navigate}
         user={userWithOrg}
       />
       <div className="pl-72 min-h-screen bg-theme-bg">
