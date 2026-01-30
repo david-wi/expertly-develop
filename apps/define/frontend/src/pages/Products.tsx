@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Plus, FolderTree, Loader2 } from 'lucide-react'
 import { productsApi, Product } from '@/api/client'
+import { ProductAvatar } from '@/components/products/ProductAvatar'
 
 function suggestPrefix(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)
@@ -172,8 +173,12 @@ export default function Products() {
             <Link key={product.id} to={`/products/${product.id}`}>
               <Card className="h-full hover:border-primary-300 hover:shadow-md transition-all cursor-pointer">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FolderTree className="h-5 w-5 text-primary-600" />
+                  <CardTitle className="flex items-center gap-3">
+                    <ProductAvatar
+                      name={product.name}
+                      avatarUrl={product.avatar_url}
+                      size="md"
+                    />
                     {product.name}
                   </CardTitle>
                 </CardHeader>

@@ -37,6 +37,8 @@ import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
 import { ArtifactList } from '@/components/artifacts'
 import { BulkImportDialog } from '@/components/BulkImportDialog'
+import { ProductAvatar } from '@/components/products/ProductAvatar'
+import { AvatarDialog } from '@/components/products/AvatarDialog'
 
 interface TreeNode extends Requirement {
   children: TreeNode[]
@@ -171,6 +173,7 @@ export default function ProductDetail() {
     parent_id: '',
   })
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
+  const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
 
   useEffect(() => {
     if (id) fetchProduct()
@@ -276,7 +279,16 @@ export default function ProductDetail() {
             Products
           </Link>
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">{product.name}</h1>
+        <div className="flex items-center gap-4 mb-6">
+          <ProductAvatar
+            name={product.name}
+            avatarUrl={product.avatar_url}
+            size="lg"
+            onClick={() => setAvatarDialogOpen(true)}
+            className="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 transition-all"
+          />
+          <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+        </div>
 
         <Tabs defaultValue="requirements">
           <TabsList>
@@ -556,6 +568,16 @@ export default function ProductDetail() {
           parent_id: r.parent_id,
         }))}
         onSuccess={fetchProduct}
+      />
+
+      {/* Avatar Dialog */}
+      <AvatarDialog
+        open={avatarDialogOpen}
+        onOpenChange={setAvatarDialogOpen}
+        product={product}
+        onAvatarChange={(avatarUrl) => {
+          setProduct({ ...product, avatar_url: avatarUrl })
+        }}
       />
     </div>
   )

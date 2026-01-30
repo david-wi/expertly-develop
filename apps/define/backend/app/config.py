@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     # Anthropic (for AI features)
     anthropic_api_key: str = ""
 
+    # OpenAI (for avatar generation)
+    openai_api_key: str = ""
+
     # Uploads
     uploads_dir: str = "./uploads"
 
