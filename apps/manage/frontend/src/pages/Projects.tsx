@@ -695,7 +695,7 @@ export default function Projects() {
                             onDragStart={(e) => handleDragStart(e, projectId)}
                             onDragEnd={handleDragEnd}
                           >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
                               <circle cx="15" cy="6" r="1.5" />
                               <circle cx="9" cy="12" r="1.5" />
@@ -824,7 +824,7 @@ export default function Projects() {
                             onDragStart={(e) => handleDragStart(e, projectId)}
                             onDragEnd={handleDragEnd}
                           >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-4 h-4 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
                               <circle cx="15" cy="6" r="1.5" />
                               <circle cx="9" cy="12" r="1.5" />
