@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, ChevronDown, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info } from 'lucide-react'
 
 export interface UserMenuItem {
   id: string
@@ -143,9 +143,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                   {Icon && <Icon className="w-4 h-4 flex-shrink-0" />}
                   <span className="flex-1">{item.label}</span>
                   {isSubmenu && (
-                    isExpanded
-                      ? <ChevronDown className="w-4 h-4 text-[var(--theme-text-muted)]" />
-                      : <ChevronRight className="w-4 h-4 text-[var(--theme-text-muted)]" />
+                    <ChevronRight className="w-4 h-4 text-[var(--theme-text-muted)]" />
                   )}
                 </>
               )
@@ -155,7 +153,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
 
               if (isSubmenu) {
                 return (
-                  <div key={item.id}>
+                  <div key={item.id} className="relative">
                     <button
                       onClick={() => toggleSubmenu(item.id)}
                       className={itemClassName}
@@ -163,60 +161,62 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                       {itemContent}
                     </button>
                     {isExpanded && item.children && (
-                      <div className="bg-[var(--theme-bg-elevated)]">
-                        {item.children.map((child) => {
-                          const ChildIcon = child.icon
-                          const childContent = (
-                            <>
-                              {ChildIcon && <ChildIcon className="w-4 h-4 flex-shrink-0" />}
-                              <span className="flex-1">{child.label}</span>
-                            </>
-                          )
+                      <div className="absolute left-full top-0 ml-1 min-w-48 bg-[var(--theme-bg-surface)] border border-[var(--theme-border-default)] rounded-lg shadow-lg overflow-hidden z-50">
+                        <div className="py-1">
+                          {item.children.map((child) => {
+                            const ChildIcon = child.icon
+                            const childContent = (
+                              <>
+                                {ChildIcon && <ChildIcon className="w-4 h-4 flex-shrink-0" />}
+                                <span className="flex-1">{child.label}</span>
+                              </>
+                            )
 
-                          if (child.type === 'link' && child.href) {
-                            if (child.external) {
+                            if (child.type === 'link' && child.href) {
+                              if (child.external) {
+                                return (
+                                  <a
+                                    key={child.id}
+                                    href={child.href}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className={itemClassName}
+                                    onClick={onClose}
+                                  >
+                                    {childContent}
+                                  </a>
+                                )
+                              }
                               return (
-                                <a
-                                  key={child.id}
-                                  href={child.href}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className={childItemClassName}
-                                  onClick={onClose}
-                                >
-                                  {childContent}
-                                </a>
+                                <div key={child.id}>
+                                  {renderLink({
+                                    href: child.href,
+                                    className: itemClassName,
+                                    children: childContent,
+                                    onClick: onClose,
+                                  })}
+                                </div>
                               )
                             }
-                            return (
-                              <div key={child.id}>
-                                {renderLink({
-                                  href: child.href,
-                                  className: childItemClassName,
-                                  children: childContent,
-                                  onClick: onClose,
-                                })}
-                              </div>
-                            )
-                          }
 
-                          if (child.type === 'callback' && child.onClick) {
-                            return (
-                              <button
-                                key={child.id}
-                                onClick={() => {
-                                  child.onClick?.()
-                                  onClose()
-                                }}
-                                className={childItemClassName}
-                              >
-                                {childContent}
-                              </button>
-                            )
-                          }
+                            if (child.type === 'callback' && child.onClick) {
+                              return (
+                                <button
+                                  key={child.id}
+                                  onClick={() => {
+                                    child.onClick?.()
+                                    onClose()
+                                  }}
+                                  className={itemClassName}
+                                >
+                                  {childContent}
+                                </button>
+                              )
+                            }
 
-                          return null
-                        })}
+                            return null
+                          })}
+                        </div>
                       </div>
                     )}
                   </div>
