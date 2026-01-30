@@ -5,6 +5,61 @@ import { db } from '@/lib/db';
 import { requirements } from '@/lib/db/schema';
 import { inArray } from 'drizzle-orm';
 
+// AI config types
+interface AIUseCaseConfig {
+  use_case: string;
+  model_id: string;
+  max_tokens: number;
+  temperature: number;
+}
+
+interface AIConfigResponse {
+  use_cases: AIUseCaseConfig[];
+}
+
+// Cache for AI config
+let aiConfigCache: AIConfigResponse | null = null;
+let aiConfigCacheTime = 0;
+const AI_CONFIG_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+async function getAIConfig(): Promise<AIConfigResponse> {
+  const now = Date.now();
+  if (aiConfigCache && now - aiConfigCacheTime < AI_CONFIG_CACHE_TTL) {
+    return aiConfigCache;
+  }
+
+  const adminApiUrl = process.env.ADMIN_API_URL || 'https://admin-api.ai.devintensive.com';
+  try {
+    const response = await fetch(`${adminApiUrl}/api/public/ai-config`, {
+      next: { revalidate: 300 },
+    });
+    if (response.ok) {
+      aiConfigCache = await response.json();
+      aiConfigCacheTime = now;
+      return aiConfigCache!;
+    }
+  } catch (error) {
+    console.warn('Failed to fetch AI config from Admin API:', error);
+  }
+
+  // Fallback to defaults
+  return {
+    use_cases: [
+      { use_case: 'requirements_parsing', model_id: 'claude-sonnet-4-0-latest', max_tokens: 8192, temperature: 0.3 },
+    ],
+  };
+}
+
+async function getModelForUseCase(useCase: string): Promise<AIUseCaseConfig> {
+  const config = await getAIConfig();
+  const useCaseConfig = config.use_cases.find((uc) => uc.use_case === useCase);
+  if (useCaseConfig) {
+    return useCaseConfig;
+  }
+  // Default fallback
+  return { use_case: useCase, model_id: 'claude-sonnet-4-0-latest', max_tokens: 4096, temperature: 0.7 };
+}
+
 // Dynamic import for pdf-parse (it has issues with static imports in Next.js)
 async function extractPdfText(
   base64Content: string,
@@ -267,11 +322,14 @@ Respond with ONLY the JSON array, no other text.`;
       text: userPromptText,
     });
 
+    // Get model configuration from Admin API
+    const modelConfig = await getModelForUseCase('requirements_parsing');
+
     // Initialize Anthropic client and call Claude with multimodal support
     const anthropic = new Anthropic();
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4096,
+      model: modelConfig.model_id,
+      max_tokens: modelConfig.max_tokens,
       system: systemPrompt,
       messages: [
         {

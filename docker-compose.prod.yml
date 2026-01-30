@@ -150,6 +150,7 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY:-}
       - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS:-donotreply@expertly.com}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Expertly}
+      - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     volumes:
       - identity_uploads:/app/uploads
     depends_on:
@@ -220,6 +221,7 @@ services:
       - DATABASE_URL=sqlite:///./data/expertly-define.db
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
+      - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     volumes:
       - define_data:/app/data
       - define_uploads:/app/uploads
@@ -282,6 +284,8 @@ services:
       - CONNECTION_ENCRYPTION_KEY=${CONNECTION_ENCRYPTION_KEY:-}
       # AI features
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     networks:
       - traefik
       - default
@@ -332,6 +336,8 @@ services:
     environment:
       - DATABASE_URL=postgresql://vibetest:vibetest@vibetest-db:5432/vibetest
       - SECRET_KEY=${VIBETEST_SECRET_KEY:-super-secret-key-change-in-production}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     depends_on:
       - vibetest-db
     networks:
@@ -510,6 +516,7 @@ services:
       - PORT=3001
       - REMOTE_SERVER_URL=${REMOTE_SERVER_URL:-}
       - DEFAULT_EXECUTION_MODE=${DEFAULT_EXECUTION_MODE:-local}
+      - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     volumes:
       - ./apps/vibecode/packages/server/downloads:/app/packages/server/downloads
     networks:

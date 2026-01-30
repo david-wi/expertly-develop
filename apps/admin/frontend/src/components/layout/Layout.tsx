@@ -1,12 +1,13 @@
 import { useCallback, useMemo } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio } from 'lucide-react'
+import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio, Bot } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import { usersApi } from '@/services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Themes', href: '/themes', icon: Palette },
+  { name: 'AI Config', href: '/ai-config', icon: Bot },
   { name: 'Error Logs', href: '/error-logs', icon: AlertTriangle },
   { name: 'Monitoring', href: '/monitoring', icon: Activity },
   { name: 'Live Monitor', href: '/monitor', icon: Radio },

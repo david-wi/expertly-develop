@@ -1,5 +1,6 @@
 """Image generation API endpoints."""
 
+import logging
 import uuid
 from pathlib import Path
 
@@ -9,9 +10,22 @@ from pydantic import BaseModel
 from openai import OpenAI
 
 from app.config import get_settings
+from ai_config import AIConfigClient
 
 router = APIRouter()
 settings = get_settings()
+logger = logging.getLogger(__name__)
+
+# Global AI config client
+_ai_config_client: AIConfigClient | None = None
+
+
+def get_ai_config_client() -> AIConfigClient:
+    """Get or create the global AI config client."""
+    global _ai_config_client
+    if _ai_config_client is None:
+        _ai_config_client = AIConfigClient()
+    return _ai_config_client
 
 
 class GenerateAvatarRequest(BaseModel):
@@ -79,8 +93,13 @@ Head and shoulders view, simple colored background, suitable as a profile avatar
 NOT a photograph - stylized vector art illustration."""
 
     try:
+        # Get model config for image generation
+        ai_config = get_ai_config_client()
+        use_case_config = await ai_config.get_use_case_config("image_generation")
+        logger.debug(f"Using model {use_case_config.model_id} for image generation")
+
         response = client.images.generate(
-            model="dall-e-3",
+            model=use_case_config.model_id,
             prompt=prompt,
             size="1024x1024",
             quality="standard",

@@ -17,6 +17,20 @@ import type {
   ErrorLogUpdate,
   ErrorLogFilters,
 } from '@/types/error_logs'
+import type {
+  AIProvider,
+  AIProviderListResponse,
+  AIProviderCreate,
+  AIProviderUpdate,
+  AIModel,
+  AIModelListResponse,
+  AIModelCreate,
+  AIModelUpdate,
+  AIUseCaseConfig,
+  AIUseCaseConfigListResponse,
+  AIUseCaseConfigCreate,
+  AIUseCaseConfigUpdate,
+} from '@/types/ai_config'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -153,6 +167,95 @@ export const errorLogsApi = {
   getApps: async (): Promise<string[]> => {
     const response = await api.get<string[]>('/error-logs/apps')
     return response.data
+  },
+}
+
+// AI Config API
+export const aiConfigApi = {
+  // Providers
+  listProviders: async (includeInactive = false): Promise<AIProviderListResponse> => {
+    const response = await api.get<AIProviderListResponse>('/ai-config/providers', {
+      params: { include_inactive: includeInactive },
+    })
+    return response.data
+  },
+
+  getProvider: async (id: string): Promise<AIProvider> => {
+    const response = await api.get<AIProvider>(`/ai-config/providers/${id}`)
+    return response.data
+  },
+
+  createProvider: async (data: AIProviderCreate): Promise<AIProvider> => {
+    const response = await api.post<AIProvider>('/ai-config/providers', data)
+    return response.data
+  },
+
+  updateProvider: async (id: string, data: AIProviderUpdate): Promise<AIProvider> => {
+    const response = await api.put<AIProvider>(`/ai-config/providers/${id}`, data)
+    return response.data
+  },
+
+  deleteProvider: async (id: string): Promise<void> => {
+    await api.delete(`/ai-config/providers/${id}`)
+  },
+
+  // Models
+  listModels: async (includeInactive = false, providerId?: string): Promise<AIModelListResponse> => {
+    const response = await api.get<AIModelListResponse>('/ai-config/models', {
+      params: { include_inactive: includeInactive, provider_id: providerId },
+    })
+    return response.data
+  },
+
+  getModel: async (id: string): Promise<AIModel> => {
+    const response = await api.get<AIModel>(`/ai-config/models/${id}`)
+    return response.data
+  },
+
+  createModel: async (data: AIModelCreate): Promise<AIModel> => {
+    const response = await api.post<AIModel>('/ai-config/models', data)
+    return response.data
+  },
+
+  updateModel: async (id: string, data: AIModelUpdate): Promise<AIModel> => {
+    const response = await api.put<AIModel>(`/ai-config/models/${id}`, data)
+    return response.data
+  },
+
+  deleteModel: async (id: string): Promise<void> => {
+    await api.delete(`/ai-config/models/${id}`)
+  },
+
+  // Use Cases
+  listUseCases: async (includeInactive = false): Promise<AIUseCaseConfigListResponse> => {
+    const response = await api.get<AIUseCaseConfigListResponse>('/ai-config/use-cases', {
+      params: { include_inactive: includeInactive },
+    })
+    return response.data
+  },
+
+  getUseCase: async (id: string): Promise<AIUseCaseConfig> => {
+    const response = await api.get<AIUseCaseConfig>(`/ai-config/use-cases/${id}`)
+    return response.data
+  },
+
+  createUseCase: async (data: AIUseCaseConfigCreate): Promise<AIUseCaseConfig> => {
+    const response = await api.post<AIUseCaseConfig>('/ai-config/use-cases', data)
+    return response.data
+  },
+
+  updateUseCase: async (id: string, data: AIUseCaseConfigUpdate): Promise<AIUseCaseConfig> => {
+    const response = await api.put<AIUseCaseConfig>(`/ai-config/use-cases/${id}`, data)
+    return response.data
+  },
+
+  updateUseCaseByName: async (name: string, data: AIUseCaseConfigUpdate): Promise<AIUseCaseConfig> => {
+    const response = await api.put<AIUseCaseConfig>(`/ai-config/use-cases/by-name/${name}`, data)
+    return response.data
+  },
+
+  deleteUseCase: async (id: string): Promise<void> => {
+    await api.delete(`/ai-config/use-cases/${id}`)
   },
 }
 
