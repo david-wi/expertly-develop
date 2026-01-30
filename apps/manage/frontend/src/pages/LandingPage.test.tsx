@@ -10,19 +10,18 @@ const renderWithRouter = (component: React.ReactNode) => {
 describe('LandingPage', () => {
   it('renders the main heading', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Queue-Driven Task Management/)).toBeInTheDocument()
-    expect(screen.getByText('Simplified')).toBeInTheDocument()
+    expect(screen.getByText(/Put Your Organization on/)).toBeInTheDocument()
+    expect(screen.getByText('Autopilot')).toBeInTheDocument()
   })
 
   it('renders the product name in navigation', () => {
     renderWithRouter(<LandingPage />)
-    // Product name appears in both header and footer
     expect(screen.getAllByText('Expertly Manage').length).toBeGreaterThan(0)
   })
 
   it('displays the tagline', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Your organization on autopilot')).toBeInTheDocument()
+    expect(screen.getByText('Scheduled and event-driven workflows that run themselves')).toBeInTheDocument()
   })
 
   it('renders Sign In link', () => {
@@ -47,47 +46,41 @@ describe('LandingPage', () => {
 
   it('displays all feature cards', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Task Queues')).toBeInTheDocument()
-    expect(screen.getByText('Team Assignments')).toBeInTheDocument()
-    expect(screen.getByText('Recurring Tasks')).toBeInTheDocument()
-    expect(screen.getByText('Priority Management')).toBeInTheDocument()
-    expect(screen.getByText('Progress Tracking')).toBeInTheDocument()
-    expect(screen.getByText('Team Collaboration')).toBeInTheDocument()
+    expect(screen.getByText('Scheduled Workflows')).toBeInTheDocument()
+    expect(screen.getByText('Event-Driven Triggers')).toBeInTheDocument()
+    expect(screen.getByText('Unified Inbox')).toBeInTheDocument()
+    expect(screen.getByText('Bot Execution')).toBeInTheDocument()
+    expect(screen.getByText('Human Approval Gates')).toBeInTheDocument()
+    expect(screen.getByText('Playbook Builder')).toBeInTheDocument()
   })
 
   it('displays feature descriptions', () => {
     renderWithRouter(<LandingPage />)
-    expect(
-      screen.getByText(
-        /Organize work into smart queues that automatically prioritize and distribute tasks/
-      )
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Set up recurring tasks that automatically regenerate on schedule/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Define what needs to happen and when/)).toBeInTheDocument()
+    expect(screen.getByText(/React instantly when things happen/)).toBeInTheDocument()
   })
 
   it('displays all benefits', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Reduce task chaos')).toBeInTheDocument()
-    expect(screen.getByText('Improve team visibility')).toBeInTheDocument()
-    expect(screen.getByText('Never drop the ball')).toBeInTheDocument()
-    expect(screen.getByText('Scale operations smoothly')).toBeInTheDocument()
-    expect(screen.getByText('Automate routine work')).toBeInTheDocument()
-    expect(screen.getByText('Track everything')).toBeInTheDocument()
+    expect(screen.getByText('Run on autopilot')).toBeInTheDocument()
+    expect(screen.getByText('Never miss a deadline')).toBeInTheDocument()
+    expect(screen.getByText('Unified task inbox')).toBeInTheDocument()
+    expect(screen.getByText('Bots do the work')).toBeInTheDocument()
+    expect(screen.getByText('You stay in control')).toBeInTheDocument()
+    expect(screen.getByText('Scale effortlessly')).toBeInTheDocument()
   })
 
   it('renders the How It Works section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Three steps to organized work')).toBeInTheDocument()
-    expect(screen.getByText("Getting started is simple. Here's how it works.")).toBeInTheDocument()
+    expect(screen.getByText('How It Works')).toBeInTheDocument()
+    expect(screen.getByText('Set it up once. Let it run forever.')).toBeInTheDocument()
   })
 
   it('displays the three steps', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Create Your Queues')).toBeInTheDocument()
-    expect(screen.getByText('Add Tasks')).toBeInTheDocument()
-    expect(screen.getByText('Work the Queue')).toBeInTheDocument()
+    expect(screen.getByText('Define Your Workflows')).toBeInTheDocument()
+    expect(screen.getByText('Bots Execute')).toBeInTheDocument()
+    expect(screen.getByText('You Approve')).toBeInTheDocument()
   })
 
   it('renders step numbers', () => {
@@ -99,7 +92,7 @@ describe('LandingPage', () => {
 
   it('renders the CTA section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText("Ready to bring order to your team's work?")).toBeInTheDocument()
+    expect(screen.getByText('Ready to put your organization on autopilot?')).toBeInTheDocument()
     expect(screen.getByText('Start Your Free Trial')).toBeInTheDocument()
   })
 
@@ -110,34 +103,28 @@ describe('LandingPage', () => {
 
   it('has correct navigation links', () => {
     renderWithRouter(<LandingPage />)
-
     const signInLink = screen.getByText('Sign In')
     expect(signInLink.closest('a')).toHaveAttribute('href', '/')
-
     const getStartedLink = screen.getByText('Get Started')
     expect(getStartedLink.closest('a')).toHaveAttribute('href', '/')
   })
 
   it('has features section anchor', () => {
     renderWithRouter(<LandingPage />)
-
     const howItWorksLink = screen.getByText('See How It Works')
     expect(howItWorksLink.closest('a')).toHaveAttribute('href', '#features')
   })
 
   it('renders feature icons', () => {
     renderWithRouter(<LandingPage />)
-
-    // Features section should have 6 feature cards
     const featureNames = [
-      'Task Queues',
-      'Team Assignments',
-      'Recurring Tasks',
-      'Priority Management',
-      'Progress Tracking',
-      'Team Collaboration',
+      'Scheduled Workflows',
+      'Event-Driven Triggers',
+      'Unified Inbox',
+      'Bot Execution',
+      'Human Approval Gates',
+      'Playbook Builder',
     ]
-
     featureNames.forEach((name) => {
       expect(screen.getByText(name)).toBeInTheDocument()
     })
@@ -145,24 +132,23 @@ describe('LandingPage', () => {
 
   it('renders the hero section with proper structure', () => {
     renderWithRouter(<LandingPage />)
-
-    // Check for the hero description
-    expect(
-      screen.getByText(/Stop chasing tasks across spreadsheets and chat threads/)
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Expertly Manage brings order to chaos with intelligent task queues/)
-    ).toBeInTheDocument()
+    expect(screen.getByText(/Schedule recurring tasks, react to events from email and Slack/)).toBeInTheDocument()
+    expect(screen.getByText(/let bots handle the routine work/)).toBeInTheDocument()
   })
 
   it('renders the features section heading', () => {
     renderWithRouter(<LandingPage />)
+    expect(screen.getByText('Automation that keeps you in control')).toBeInTheDocument()
+    expect(screen.getByText(/Schedule workflows, react to events, and let bots do the heavy lifting/)).toBeInTheDocument()
+  })
 
-    expect(
-      screen.getByText('Everything you need to manage work effectively')
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/Powerful features that bring clarity and control/)
-    ).toBeInTheDocument()
+  it('renders the integrations section', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('Connect Your Tools')).toBeInTheDocument()
+    expect(screen.getByText('Email')).toBeInTheDocument()
+    expect(screen.getByText('Slack')).toBeInTheDocument()
+    expect(screen.getByText('Jira')).toBeInTheDocument()
+    expect(screen.getByText('Teamwork')).toBeInTheDocument()
+    expect(screen.getByText('+ more coming')).toBeInTheDocument()
   })
 })
