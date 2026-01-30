@@ -11,6 +11,7 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import ChangePasswordPage from './pages/ChangePasswordPage'
 import ProfilePage from './pages/ProfilePage'
+import Changelog from './pages/Changelog'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
         <Route path="organizations" element={<OrganizationsPage />} />
         <Route path="change-password" element={<ChangePasswordPage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="changelog" element={<Changelog />} />
       </Route>
     </Routes>
   )

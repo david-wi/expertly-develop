@@ -9,6 +9,7 @@ import { Monitor } from './pages/Monitor'
 import { ErrorLogs } from './pages/ErrorLogs'
 import { AIConfig } from './pages/AIConfig'
 import LandingPage from './pages/LandingPage'
+import { Changelog } from './pages/Changelog'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/monitoring" element={<Monitoring />} />
         <Route path="/monitor" element={<Monitor />} />
         <Route path="/ai-config" element={<AIConfig />} />
+        <Route path="/changelog" element={<Changelog />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

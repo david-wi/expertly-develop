@@ -11,6 +11,7 @@ import EnvironmentSetup from './pages/EnvironmentSetup'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import LandingPage from './pages/LandingPage'
+import Changelog from './pages/Changelog'
 
 function App() {
   return (
@@ -78,6 +79,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <QuickStart />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/changelog"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Changelog />
               </Layout>
             </ProtectedRoute>
           }

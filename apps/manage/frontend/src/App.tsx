@@ -12,6 +12,7 @@ import Wins from './pages/Wins'
 import Backlog from './pages/Backlog'
 import IdeaBacklog from './pages/IdeaBacklog'
 import Connections from './pages/Connections'
+import Changelog from './pages/Changelog'
 import LandingPage from './pages/LandingPage'
 import Layout from './components/Layout'
 
@@ -34,6 +35,7 @@ function App() {
           <Route path="backlog" element={<Backlog />} />
           <Route path="idea-backlog" element={<IdeaBacklog />} />
           <Route path="connections" element={<Connections />} />
+          <Route path="changelog" element={<Changelog />} />
         </Route>
       </Routes>
     </BrowserRouter>
