@@ -343,6 +343,28 @@ export default function ProductDetail() {
                                   rows={2}
                                 />
                               </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                  Not included (out of scope)
+                                </label>
+                                <Textarea
+                                  placeholder="Things explicitly not part of this requirement..."
+                                  value={newReq.not_included}
+                                  onChange={(e) => setNewReq({ ...newReq, not_included: e.target.value })}
+                                  rows={2}
+                                />
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                  Acceptance criteria
+                                </label>
+                                <Textarea
+                                  placeholder="How we'll know this is done..."
+                                  value={newReq.acceptance_criteria}
+                                  onChange={(e) => setNewReq({ ...newReq, acceptance_criteria: e.target.value })}
+                                  rows={2}
+                                />
+                              </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -406,6 +428,19 @@ export default function ProductDetail() {
                                   </Select>
                                 </div>
                               )}
+                              <div>
+                                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                  Tags (optional)
+                                </label>
+                                <Input
+                                  placeholder="e.g., auth, security, mvp (comma-separated)"
+                                  value={newReq.tags.join(', ')}
+                                  onChange={(e) => setNewReq({
+                                    ...newReq,
+                                    tags: e.target.value.split(',').map(t => t.trim()).filter(Boolean)
+                                  })}
+                                />
+                              </div>
                             </div>
                             <DialogFooter>
                               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
