@@ -11,6 +11,41 @@ interface TreeNode {
   taskCount: number
 }
 
+// Get all descendant IDs of a project (to prevent circular references)
+function getDescendantIds(projectId: string, projects: Project[]): Set<string> {
+  const descendants = new Set<string>()
+  const findDescendants = (parentId: string) => {
+    for (const project of projects) {
+      const id = project._id || project.id
+      if (project.parent_project_id === parentId) {
+        descendants.add(id)
+        findDescendants(id)
+      }
+    }
+  }
+  findDescendants(projectId)
+  return descendants
+}
+
+// Get the display path for a project (shows hierarchy)
+function getProjectPath(projectId: string, projects: Project[]): string {
+  const projectMap = new Map<string, Project>()
+  for (const p of projects) {
+    const pId = p._id || p.id
+    projectMap.set(pId, p)
+  }
+
+  const path: string[] = []
+  let currentId: string | null | undefined = projectId
+  while (currentId) {
+    const currentProject: Project | undefined = projectMap.get(currentId)
+    if (!currentProject) break
+    path.unshift(currentProject.name)
+    currentId = currentProject.parent_project_id
+  }
+  return path.join(' → ')
+}
+
 // Build tree structure from flat list
 function buildTree(projects: Project[], taskCounts: Map<string, number>): TreeNode[] {
   const map = new Map<string, TreeNode>()
@@ -176,18 +211,126 @@ export default function Projects() {
   const treeNodes = buildTree(projects, taskCounts)
   const flatNodes = flattenTree(treeNodes)
 
-  // Get top-level projects for parent dropdown (exclude current project when editing)
+  // Get available parent projects (exclude current project and its descendants to prevent circular refs)
   const getAvailableParents = useCallback(
-    (excludeId?: string): Project[] => {
-      return projects.filter((p) => {
-        const id = p._id || p.id
-        if (excludeId && id === excludeId) return false
-        // Only allow top-level projects as parents for simplicity
-        return true
-      })
+    (excludeId?: string): { project: Project; path: string; depth: number }[] => {
+      // Get descendants of the excluded project to prevent circular references
+      const excludedIds = new Set<string>()
+      if (excludeId) {
+        excludedIds.add(excludeId)
+        const descendants = getDescendantIds(excludeId, projects)
+        descendants.forEach((id) => excludedIds.add(id))
+      }
+
+      // Build depth map
+      const depthMap = new Map<string, number>()
+      const getDepth = (projectId: string): number => {
+        if (depthMap.has(projectId)) return depthMap.get(projectId)!
+        const project = projects.find((p) => (p._id || p.id) === projectId)
+        if (!project || !project.parent_project_id) {
+          depthMap.set(projectId, 0)
+          return 0
+        }
+        const parentDepth = getDepth(project.parent_project_id)
+        const depth = parentDepth + 1
+        depthMap.set(projectId, depth)
+        return depth
+      }
+
+      return projects
+        .filter((p) => {
+          const id = p._id || p.id
+          return !excludedIds.has(id)
+        })
+        .map((p) => ({
+          project: p,
+          path: getProjectPath(p._id || p.id, projects),
+          depth: getDepth(p._id || p.id),
+        }))
+        .sort((a, b) => a.path.localeCompare(b.path))
     },
     [projects]
   )
+
+  // Drag and drop state
+  const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
+  const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null)
+  const [isDraggingToRoot, setIsDraggingToRoot] = useState(false)
+
+  const handleDragStart = (e: React.DragEvent, projectId: string) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', projectId)
+    setDraggedProjectId(projectId)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedProjectId(null)
+    setDragOverProjectId(null)
+    setIsDraggingToRoot(false)
+  }
+
+  const handleDragOver = (e: React.DragEvent, projectId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedProjectId && draggedProjectId !== projectId) {
+      // Check if target is not a descendant of dragged project
+      const descendants = getDescendantIds(draggedProjectId, projects)
+      if (!descendants.has(projectId)) {
+        setDragOverProjectId(projectId)
+        setIsDraggingToRoot(false)
+      }
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverProjectId(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetProjectId: string | null) => {
+    e.preventDefault()
+    const sourceProjectId = e.dataTransfer.getData('text/plain')
+    if (!sourceProjectId || sourceProjectId === targetProjectId) {
+      handleDragEnd()
+      return
+    }
+
+    // Prevent dropping onto descendants
+    if (targetProjectId) {
+      const descendants = getDescendantIds(sourceProjectId, projects)
+      if (descendants.has(targetProjectId)) {
+        handleDragEnd()
+        return
+      }
+    }
+
+    try {
+      await api.updateProject(sourceProjectId, {
+        parent_project_id: targetProjectId || undefined,
+      })
+      await loadData()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to move project'
+      setError(message)
+    }
+    handleDragEnd()
+  }
+
+  const handleRootDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (draggedProjectId) {
+      setIsDraggingToRoot(true)
+      setDragOverProjectId(null)
+    }
+  }
+
+  const handleRootDragLeave = () => {
+    setIsDraggingToRoot(false)
+  }
+
+  const handleRootDrop = (e: React.DragEvent) => {
+    handleDrop(e, null)
+  }
 
   const resetForm = () => {
     setFormData({
@@ -361,6 +504,22 @@ export default function Projects() {
         </select>
       </div>
 
+      {/* Drop zone for making projects top-level */}
+      {draggedProjectId && (
+        <div
+          className={`border-2 border-dashed rounded-lg p-3 text-center text-sm transition-colors ${
+            isDraggingToRoot
+              ? 'border-blue-400 bg-blue-50 text-blue-700'
+              : 'border-gray-300 text-gray-500'
+          }`}
+          onDragOver={handleRootDragOver}
+          onDragLeave={handleRootDragLeave}
+          onDrop={handleRootDrop}
+        >
+          Drop here to make a top-level project
+        </div>
+      )}
+
       {/* Projects Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         {loading ? (
@@ -387,22 +546,45 @@ export default function Projects() {
               {flatNodes.map((node) => {
                 const project = node.project
                 const projectId = project._id || project.id
+                const isDraggedOver = dragOverProjectId === projectId
+                const isDragging = draggedProjectId === projectId
 
                 return (
-                  <tr key={projectId} className="hover:bg-gray-50">
+                  <tr
+                    key={projectId}
+                    className={`hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, projectId)}
+                    onDragEnd={handleDragEnd}
+                    onDragOver={(e) => handleDragOver(e, projectId)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, projectId)}
+                  >
                     <td className="px-4 py-3">
-                      <div style={{ paddingLeft: node.depth * 24 }}>
-                        <Link
-                          to={`/projects/${projectId}`}
-                          className="font-medium text-blue-600 hover:text-blue-800"
-                        >
-                          {project.name}
-                        </Link>
-                        {project.description && (
-                          <p className="text-xs text-gray-500 truncate max-w-xs">
-                            {project.description}
-                          </p>
-                        )}
+                      <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
+                        <span className="cursor-grab mr-2 text-gray-400 hover:text-gray-600" title="Drag to reparent">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="9" cy="6" r="1.5" />
+                            <circle cx="15" cy="6" r="1.5" />
+                            <circle cx="9" cy="12" r="1.5" />
+                            <circle cx="15" cy="12" r="1.5" />
+                            <circle cx="9" cy="18" r="1.5" />
+                            <circle cx="15" cy="18" r="1.5" />
+                          </svg>
+                        </span>
+                        <div>
+                          <Link
+                            to={`/projects/${projectId}`}
+                            className="font-medium text-blue-600 hover:text-blue-800"
+                          >
+                            {project.name}
+                          </Link>
+                          {project.description && (
+                            <p className="text-xs text-gray-500 truncate max-w-xs">
+                              {project.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -538,9 +720,9 @@ export default function Projects() {
               className="w-full border border-gray-300 rounded-md px-3 py-2"
             >
               <option value="">None (top-level project)</option>
-              {getAvailableParents().map((p) => (
+              {getAvailableParents().map(({ project: p, depth }) => (
                 <option key={p._id || p.id} value={p._id || p.id}>
-                  {p.name}
+                  {'─'.repeat(depth)}{depth > 0 ? ' ' : ''}{p.name}
                 </option>
               ))}
             </select>
@@ -615,11 +797,13 @@ export default function Projects() {
               className="w-full border border-gray-300 rounded-md px-3 py-2"
             >
               <option value="">None (top-level project)</option>
-              {getAvailableParents(selectedProject?._id || selectedProject?.id).map((p) => (
-                <option key={p._id || p.id} value={p._id || p.id}>
-                  {p.name}
-                </option>
-              ))}
+              {getAvailableParents(selectedProject?._id || selectedProject?.id).map(
+                ({ project: p, depth }) => (
+                  <option key={p._id || p.id} value={p._id || p.id}>
+                    {'─'.repeat(depth)}{depth > 0 ? ' ' : ''}{p.name}
+                  </option>
+                )
+              )}
             </select>
           </div>
           <ModalFooter>

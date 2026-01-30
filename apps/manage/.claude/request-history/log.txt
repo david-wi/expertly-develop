@@ -1,2 +1,3 @@
 20260129 - Change sidebar 'Users' to 'Users and Bots'. Fix 'Add Subproject' which redirects to Projects page with parent query param but doesn't create anything.
 20260130 - In Projects view, add 'Add Subproject' icon button in Actions column, convert Edit and Delete to icons with tooltips
+20260130 - Projects page fixes: 1) Allow nesting beyond 2nd level (show hierarchy in parent dropdown, exclude descendants), 2) Add drag-and-drop to reparent projects
