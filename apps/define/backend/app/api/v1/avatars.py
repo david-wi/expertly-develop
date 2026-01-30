@@ -51,7 +51,10 @@ async def generate_avatar(
         raise HTTPException(status_code=404, detail="Product not found")
 
     if not settings.openai_api_key:
-        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+        raise HTTPException(
+            status_code=503,
+            detail="AI avatar generation is unavailable: OpenAI API key not configured. Please contact support."
+        )
 
     # Build prompt for DALL-E
     description_part = f" {data.product_description}." if data.product_description else ""
@@ -90,9 +93,17 @@ async def generate_avatar(
             image_data = openai_result["data"][0]["b64_json"]
 
     except httpx.TimeoutException:
-        raise HTTPException(status_code=504, detail="OpenAI API timeout")
+        raise HTTPException(
+            status_code=504,
+            detail="Avatar generation timed out after 60 seconds. Please try again."
+        )
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions as-is
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Avatar generation failed: {type(e).__name__}: {str(e)}"
+        )
 
     # Save the image
     avatars_dir = get_avatars_dir()

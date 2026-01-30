@@ -165,7 +165,10 @@ async def send_test_email(
     })
 
     if not config:
-        raise HTTPException(status_code=400, detail="Email not connected")
+        raise HTTPException(
+            status_code=400,
+            detail="Email not connected. Please connect your Gmail or Outlook account in Settings > Notifications first."
+        )
 
     salon = await salons_collection.find_one({"_id": current_user["salon_id"]})
     salon_name = salon.get("name", "Your Salon") if salon else "Your Salon"
@@ -192,6 +195,9 @@ async def send_test_email(
     )
 
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to send email")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to send email to {request.to}. Please check your email connection and try again."
+        )
 
     return {"message": f"Test email sent to {request.to}"}
