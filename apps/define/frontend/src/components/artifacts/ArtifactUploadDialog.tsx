@@ -10,7 +10,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { Upload, Loader2, File } from 'lucide-react'
+import { Upload, Loader2, File, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { artifactsApi } from '@/api/client'
 import { cn } from '@/lib/utils'
 
@@ -21,45 +21,62 @@ interface ArtifactUploadDialogProps {
   onSuccess: () => void
 }
 
+interface FileToUpload {
+  file: File
+  name: string
+  description: string
+  status: 'pending' | 'uploading' | 'success' | 'error'
+  error?: string
+}
+
 export function ArtifactUploadDialog({
   productId,
   open,
   onOpenChange,
   onSuccess,
 }: ArtifactUploadDialogProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [file, setFile] = useState<File | null>(null)
+  const [files, setFiles] = useState<FileToUpload[]>([])
   const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   function resetForm() {
-    setName('')
-    setDescription('')
-    setFile(null)
-    setError(null)
+    setFiles([])
     setIsDragging(false)
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
     }
   }
 
-  function handleFileSelect(selectedFile: File) {
-    setFile(selectedFile)
-    if (!name) {
-      // Auto-populate name from filename without extension
-      const nameWithoutExt = selectedFile.name.replace(/\.[^/.]+$/, '')
-      setName(nameWithoutExt)
-    }
+  function addFiles(selectedFiles: FileList | File[]) {
+    const newFiles: FileToUpload[] = Array.from(selectedFiles).map((file) => ({
+      file,
+      name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
+      description: '',
+      status: 'pending' as const,
+    }))
+    setFiles((prev) => [...prev, ...newFiles])
   }
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile) {
-      handleFileSelect(selectedFile)
+    const selectedFiles = e.target.files
+    if (selectedFiles && selectedFiles.length > 0) {
+      addFiles(selectedFiles)
     }
+    // Clear input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
+  function removeFile(index: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  function updateFile(index: number, updates: Partial<FileToUpload>) {
+    setFiles((prev) =>
+      prev.map((f, i) => (i === index ? { ...f, ...updates } : f))
+    )
   }
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
@@ -71,7 +88,6 @@ export function ArtifactUploadDialog({
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    // Only set dragging to false if we're leaving the drop zone entirely
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragging(false)
     }
@@ -87,31 +103,70 @@ export function ArtifactUploadDialog({
     e.stopPropagation()
     setIsDragging(false)
 
-    const droppedFile = e.dataTransfer.files?.[0]
-    if (droppedFile) {
-      handleFileSelect(droppedFile)
+    const droppedFiles = e.dataTransfer.files
+    if (droppedFiles && droppedFiles.length > 0) {
+      addFiles(droppedFiles)
     }
-  }, [name])
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!file || !name.trim()) return
+    if (files.length === 0) return
 
     setUploading(true)
-    setError(null)
+    let anySuccess = false
 
-    try {
-      await artifactsApi.upload(productId, name.trim(), file, description.trim() || undefined)
-      resetForm()
-      onOpenChange(false)
+    for (let i = 0; i < files.length; i++) {
+      const fileItem = files[i]
+      if (fileItem.status !== 'pending') continue
+
+      updateFile(i, { status: 'uploading' })
+
+      try {
+        await artifactsApi.upload(
+          productId,
+          fileItem.name.trim() || fileItem.file.name.replace(/\.[^/.]+$/, ''),
+          fileItem.file,
+          fileItem.description.trim() || undefined
+        )
+        updateFile(i, { status: 'success' })
+        anySuccess = true
+      } catch (err: any) {
+        console.error('Upload failed:', err)
+        let errorMessage = 'Upload failed'
+        if (err.response?.data?.detail) {
+          errorMessage = typeof err.response.data.detail === 'string'
+            ? err.response.data.detail
+            : JSON.stringify(err.response.data.detail)
+        } else if (err.message) {
+          errorMessage = err.message
+        }
+        updateFile(i, { status: 'error', error: errorMessage })
+      }
+    }
+
+    setUploading(false)
+
+    if (anySuccess) {
       onSuccess()
-    } catch (err) {
-      console.error('Upload failed:', err)
-      setError('Failed to upload artifact. Please try again.')
-    } finally {
-      setUploading(false)
+    }
+
+    // Check if all files are done (success or error)
+    const allDone = files.every((f) => f.status === 'success' || f.status === 'error')
+    const allSuccess = files.every((f) => f.status === 'success')
+
+    if (allDone && allSuccess) {
+      // Close dialog after a brief delay to show success
+      setTimeout(() => {
+        resetForm()
+        onOpenChange(false)
+      }, 500)
     }
   }
+
+  const pendingCount = files.filter((f) => f.status === 'pending').length
+  const successCount = files.filter((f) => f.status === 'success').length
+  const errorCount = files.filter((f) => f.status === 'error').length
 
   return (
     <Dialog
@@ -121,18 +176,19 @@ export function ArtifactUploadDialog({
         onOpenChange(isOpen)
       }}
     >
-      <DialogContent className="max-w-md">
-        <form onSubmit={handleSubmit}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <DialogHeader>
-            <DialogTitle>Upload Artifact</DialogTitle>
+            <DialogTitle>Upload Artifacts</DialogTitle>
             <DialogDescription>
-              Upload a document to be converted to markdown for easy viewing.
+              Upload documents to be converted to markdown for easy viewing.
+              You can upload multiple files at once.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 flex-1 overflow-y-auto">
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">File</label>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Files</label>
               <div
                 className={cn(
                   'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors',
@@ -146,20 +202,15 @@ export function ArtifactUploadDialog({
                 onDragOver={handleDragOver}
                 onDrop={handleDrop}
               >
-                {file ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <File className="h-5 w-5 text-gray-500" />
-                    <span className="text-sm text-gray-700">{file.name}</span>
-                  </div>
-                ) : isDragging ? (
+                {isDragging ? (
                   <>
                     <Upload className="h-8 w-8 text-purple-500 mx-auto mb-2" />
-                    <p className="text-sm text-purple-600 font-medium">Drop file here</p>
+                    <p className="text-sm text-purple-600 font-medium">Drop files here</p>
                   </>
                 ) : (
                   <>
                     <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">Drag and drop or click to select</p>
+                    <p className="text-sm text-gray-500">Drag and drop or click to select files</p>
                     <p className="text-xs text-gray-400 mt-1">
                       PDF, Word, Excel, PowerPoint, images, or text files
                     </p>
@@ -169,35 +220,78 @@ export function ArtifactUploadDialog({
               <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 className="hidden"
                 onChange={handleFileChange}
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.json,.xml,.html,.css,.js,.ts,.py,.java"
               />
             </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">Name</label>
-              <Input
-                placeholder="e.g., Functional Specification"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
+            {files.length > 0 && (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-sm text-gray-500">
+                  <span>{files.length} file{files.length !== 1 ? 's' : ''} selected</span>
+                  {(successCount > 0 || errorCount > 0) && (
+                    <span>
+                      {successCount > 0 && <span className="text-green-600">{successCount} uploaded</span>}
+                      {successCount > 0 && errorCount > 0 && ', '}
+                      {errorCount > 0 && <span className="text-red-600">{errorCount} failed</span>}
+                    </span>
+                  )}
+                </div>
 
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-1 block">
-                Description (optional)
-              </label>
-              <Textarea
-                placeholder="Brief description of this artifact..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-              />
-            </div>
+                {files.map((fileItem, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      'border rounded-lg p-3 space-y-2',
+                      fileItem.status === 'success' && 'border-green-200 bg-green-50',
+                      fileItem.status === 'error' && 'border-red-200 bg-red-50',
+                      fileItem.status === 'uploading' && 'border-purple-200 bg-purple-50'
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      {fileItem.status === 'pending' && <File className="h-4 w-4 text-gray-500 flex-shrink-0" />}
+                      {fileItem.status === 'uploading' && <Loader2 className="h-4 w-4 text-purple-600 animate-spin flex-shrink-0" />}
+                      {fileItem.status === 'success' && <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />}
+                      {fileItem.status === 'error' && <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />}
+                      <span className="text-sm text-gray-700 truncate flex-1">{fileItem.file.name}</span>
+                      {fileItem.status === 'pending' && (
+                        <button
+                          type="button"
+                          onClick={() => removeFile(index)}
+                          className="p-1 hover:bg-gray-200 rounded"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
+                    {fileItem.status === 'pending' && (
+                      <>
+                        <Input
+                          placeholder="Name (optional, defaults to filename)"
+                          value={fileItem.name}
+                          onChange={(e) => updateFile(index, { name: e.target.value })}
+                          className="text-sm"
+                        />
+                        <Textarea
+                          placeholder="Description (optional)"
+                          value={fileItem.description}
+                          onChange={(e) => updateFile(index, { description: e.target.value })}
+                          rows={1}
+                          className="text-sm"
+                        />
+                      </>
+                    )}
+
+                    {fileItem.status === 'error' && fileItem.error && (
+                      <p className="text-xs text-red-600">{fileItem.error}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -207,11 +301,11 @@ export function ArtifactUploadDialog({
               onClick={() => onOpenChange(false)}
               disabled={uploading}
             >
-              Cancel
+              {successCount > 0 && errorCount === 0 ? 'Done' : 'Cancel'}
             </Button>
-            <Button type="submit" disabled={uploading || !file || !name.trim()}>
+            <Button type="submit" disabled={uploading || pendingCount === 0}>
               {uploading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Upload
+              Upload {pendingCount > 0 ? `(${pendingCount})` : ''}
             </Button>
           </DialogFooter>
         </form>
