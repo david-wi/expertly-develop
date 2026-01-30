@@ -17,11 +17,11 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
-    # Anthropic (for AI features)
+    # AI Provider API Keys
     anthropic_api_key: str = ""
-
-    # OpenAI (for avatar generation)
     openai_api_key: str = ""
+    groq_api_key: str = ""
+    google_api_key: str = ""
 
     # Uploads
     uploads_dir: str = "./uploads"
