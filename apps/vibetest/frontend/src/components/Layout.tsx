@@ -1,5 +1,5 @@
-import React, { ReactNode, useState, useCallback, useMemo, useEffect } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { ReactNode, useState, useCallback, useMemo, useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   LayoutDashboard,
@@ -133,18 +133,7 @@ export default function Layout({ children }: LayoutProps) {
             )
           }
           userMenu={userMenu}
-          renderLink={(props) => (
-            <Link
-              to={props.href}
-              onClick={() => {
-                props.onClick?.()
-                setSidebarOpen(false)
-              }}
-              className={props.className}
-            >
-              {props.children as React.ReactNode}
-            </Link>
-          )}
+          navigate={navigate}
         />
         {/* Mobile close button */}
         <button

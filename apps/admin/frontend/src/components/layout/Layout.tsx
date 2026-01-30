@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio, Bot } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import { usersApi } from '@/services/api'
@@ -15,6 +15,7 @@ const navigation = [
 
 export function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => usersApi.me(), [])
@@ -47,11 +48,7 @@ export function Layout() {
           )
         }
         userMenu={userMenu}
-        renderLink={({ href, className, children, onClick }) => (
-          <Link to={href} className={className} onClick={onClick}>
-            {children}
-          </Link>
-        )}
+        navigate={navigate}
         user={sidebarUser}
       />
 
