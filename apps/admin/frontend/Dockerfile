@@ -17,9 +17,9 @@ COPY packages/ui ./packages/ui
 COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky, then rebuild native modules
+# Use --ignore-scripts to skip husky, then install native modules for Alpine/musl
 RUN npm install --workspace=apps/admin/frontend --ignore-scripts && \
-    npm install @rollup/rollup-linux-x64-musl --save-optional
+    npm install @rollup/rollup-linux-x64-musl lightningcss-linux-x64-musl --save-optional
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend
