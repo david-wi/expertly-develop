@@ -17,9 +17,9 @@ COPY packages/ui ./packages/ui
 # Copy define frontend package files
 COPY apps/define/frontend/package*.json ./apps/define/frontend/
 
-# Install dependencies from monorepo root (resolves workspace packages)
-# Use --ignore-scripts to skip husky, then rebuild native modules
-RUN npm install --workspace=apps/define/frontend --ignore-scripts && \
+# Install all dependencies from monorepo root
+# Use --ignore-scripts to skip husky, then install native modules for rollup
+RUN npm install --ignore-scripts && \
     npm install @rollup/rollup-linux-x64-musl --save-optional
 
 # Copy source code
