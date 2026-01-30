@@ -40,8 +40,11 @@ export function AvatarDialog({
         product.description
       )
       onAvatarChange(result.avatar_url)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate avatar')
+    } catch (err: unknown) {
+      // Extract error detail from API response if available
+      const axiosError = err as { response?: { data?: { detail?: string } } }
+      const detail = axiosError.response?.data?.detail
+      setError(detail || (err instanceof Error ? err.message : 'Failed to generate avatar'))
     } finally {
       setIsGenerating(false)
     }
