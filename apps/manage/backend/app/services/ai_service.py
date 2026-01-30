@@ -1,11 +1,11 @@
 """
-AI service for generating playbook steps using Claude.
+AI service for generating playbook steps using OpenAI.
 """
 import json
 import logging
 from typing import Optional
 
-import anthropic
+from openai import OpenAI
 
 from app.config import get_settings
 
@@ -49,20 +49,20 @@ Do not include any text before or after the JSON array."""
 
     def __init__(self):
         self.settings = get_settings()
-        self._client: Optional[anthropic.Anthropic] = None
+        self._client: Optional[OpenAI] = None
 
     @property
-    def client(self) -> anthropic.Anthropic:
-        """Lazy initialization of Anthropic client."""
+    def client(self) -> OpenAI:
+        """Lazy initialization of OpenAI client."""
         if self._client is None:
-            if not self.settings.anthropic_api_key:
-                raise ValueError("ANTHROPIC_API_KEY not configured")
-            self._client = anthropic.Anthropic(api_key=self.settings.anthropic_api_key)
+            if not self.settings.openai_api_key:
+                raise ValueError("OPENAI_API_KEY not configured")
+            self._client = OpenAI(api_key=self.settings.openai_api_key)
         return self._client
 
     def is_configured(self) -> bool:
         """Check if the AI service is properly configured."""
-        return bool(self.settings.anthropic_api_key)
+        return bool(self.settings.openai_api_key)
 
     async def generate_steps(
         self,
@@ -72,7 +72,7 @@ Do not include any text before or after the JSON array."""
         user_prompt: Optional[str] = None,
     ) -> list[dict]:
         """
-        Generate playbook steps using Claude.
+        Generate playbook steps using OpenAI.
 
         Args:
             playbook_name: Name of the playbook
@@ -104,16 +104,19 @@ Do not include any text before or after the JSON array."""
 
         logger.info(f"Generating steps for playbook: {playbook_name}")
 
-        # Call Claude API (synchronous - wrapped in async context)
-        response = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+        # Call OpenAI API
+        response = self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
             max_tokens=4096,
-            system=self.SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_message}],
+            temperature=0.7,
         )
 
         # Extract the response text
-        response_text = response.content[0].text.strip()
+        response_text = response.choices[0].message.content.strip()
 
         # Parse the JSON response
         try:
