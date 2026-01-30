@@ -13,7 +13,7 @@ import {
   PersonStanding,
   Eye,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, createRenderLink, type Organization } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import { api, Organization as ApiOrganization } from '../services/api'
 
@@ -152,7 +152,7 @@ export default function Layout() {
           )
         }
         userMenu={userMenu}
-        renderLink={createRenderLink(navigate)}
+        navigate={navigate}
         user={userWithOrg}
       />
       <MainContent>

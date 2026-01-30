@@ -5,6 +5,7 @@ import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { useTheme } from '../theme/useTheme'
 import { VersionChecker } from './VersionChecker'
 import { UserMenu, type UserMenuConfig } from './UserMenu'
+import { createRenderLink } from '../utils/createRenderLink'
 
 export interface NavItem {
   name: string
@@ -81,8 +82,18 @@ export interface SidebarProps {
   onLanguageChange?: (lang: SupportedLanguage) => void
   // Theme switcher visibility
   showThemeSwitcher?: boolean
-  // Router-agnostic link rendering
-  renderLink: (props: {
+  /**
+   * Router navigation function (e.g., from useNavigate()).
+   * When provided, Sidebar handles link rendering internally with proper href attributes
+   * for right-click "Open in New Tab" support.
+   */
+  navigate?: (path: string) => void
+  /**
+   * @deprecated Use `navigate` prop instead for simpler usage.
+   * Custom link rendering function. If not provided and `navigate` is set,
+   * Sidebar will use createRenderLink internally.
+   */
+  renderLink?: (props: {
     href: string
     className: string
     children: ReactNode
@@ -114,7 +125,8 @@ export function Sidebar({
   currentLanguage,
   onLanguageChange,
   showThemeSwitcher = true,
-  renderLink,
+  navigate,
+  renderLink: renderLinkProp,
   versionCheck,
   children,
   userMenu,
@@ -122,6 +134,13 @@ export function Sidebar({
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+
+  // Use provided renderLink or create one from navigate function
+  const renderLink = renderLinkProp ?? (navigate ? createRenderLink(navigate) : null)
+
+  if (!renderLink) {
+    throw new Error('Sidebar requires either `navigate` or `renderLink` prop')
+  }
 
   // Get current theme mode for styling
   let isDark = false

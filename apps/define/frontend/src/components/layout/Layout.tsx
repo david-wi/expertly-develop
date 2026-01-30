@@ -1,5 +1,5 @@
 import { useCallback, useState, useMemo, useEffect } from 'react'
-import { Outlet, Link, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   FolderTree,
@@ -16,6 +16,7 @@ const navigation = [
 
 export default function Layout() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(
     localStorage.getItem(TENANT_STORAGE_KEY)
   )
@@ -93,11 +94,7 @@ export default function Layout() {
           currentCommit: import.meta.env.VITE_GIT_COMMIT,
         }}
         userMenu={userMenu}
-        renderLink={({ href, className, children, onClick }) => (
-          <Link to={href} className={className} onClick={onClick}>
-            {children}
-          </Link>
-        )}
+        navigate={navigate}
         user={userWithOrg}
       />
 
