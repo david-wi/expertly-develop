@@ -10,6 +10,7 @@ import { ErrorLogs } from './pages/ErrorLogs'
 import { AIConfig } from './pages/AIConfig'
 import LandingPage from './pages/LandingPage'
 import { Changelog } from './pages/Changelog'
+import { TestScenarios } from './pages/TestScenarios'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/themes/new" element={<ThemeCreate />} />
         <Route path="/themes/:id" element={<ThemeDetail />} />
         <Route path="/error-logs" element={<ErrorLogs />} />
+        <Route path="/test-scenarios" element={<TestScenarios />} />
         <Route path="/monitoring" element={<Monitoring />} />
         <Route path="/monitor" element={<Monitor />} />
         <Route path="/ai-config" element={<AIConfig />} />

@@ -1,5 +1,11 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical } from 'lucide-react'
+
+export interface Organization {
+  id: string
+  name: string
+  is_default?: boolean
+}
 
 export interface UserMenuItem {
   id: string
@@ -22,6 +28,12 @@ export interface UserMenuConfig {
   versionInfo?: {
     buildTime?: string
     commit?: string
+  }
+  organizations?: {
+    items: Organization[]
+    currentId: string | null
+    onSwitch: (orgId: string) => void
+    storageKey?: string
   }
 }
 
@@ -82,15 +94,16 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
   if (!isOpen) return null
 
   const hasVersionInfo = config.versionInfo?.buildTime || config.versionInfo?.commit
+  const hasOrganizations = config.organizations && config.organizations.items.length > 1
 
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--theme-bg-surface)] border border-[var(--theme-border-default)] rounded-lg shadow-lg z-50"
+      className="absolute bottom-full left-0 right-0 mb-2 bg-[var(--theme-bg-elevated)] border-2 border-[var(--theme-border-default)] rounded-xl shadow-2xl z-50 ring-1 ring-black/5"
     >
       {/* Version Info Header */}
       {hasVersionInfo && (
-        <div className="px-3 py-2 bg-[var(--theme-bg-elevated)] border-b border-[var(--theme-border-default)]">
+        <div className="px-3 py-2 bg-[var(--theme-bg-surface)] border-b border-[var(--theme-border-default)] rounded-t-xl">
           <div className="text-xs text-[var(--theme-text-muted)] font-mono">
             {config.versionInfo?.buildTime && (
               <span>Build: {config.versionInfo.buildTime}</span>
@@ -101,6 +114,41 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
             {config.versionInfo?.commit && (
               <span>{config.versionInfo.commit.slice(0, 7)}</span>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Organization Switcher */}
+      {hasOrganizations && (
+        <div className="border-b border-[var(--theme-border-default)]">
+          <div className="px-3 pt-2 pb-1">
+            <span className="text-xs font-medium text-[var(--theme-text-muted)] uppercase tracking-wider">
+              Organization
+            </span>
+          </div>
+          <div className="py-1">
+            {config.organizations!.items.map((org) => (
+              <button
+                key={org.id}
+                onClick={() => {
+                  if (org.id !== config.organizations!.currentId) {
+                    config.organizations!.onSwitch(org.id)
+                  }
+                  onClose()
+                }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
+                  org.id === config.organizations!.currentId
+                    ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300'
+                    : 'text-[var(--theme-text-secondary)] hover:bg-[var(--theme-bg-surface)] hover:text-[var(--theme-text-primary)]'
+                }`}
+              >
+                <Building2 className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1 text-left truncate">{org.name}</span>
+                {org.id === config.organizations!.currentId && (
+                  <span className="text-xs text-primary-600 dark:text-primary-400">Current</span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -279,10 +327,16 @@ export interface CreateDefaultUserMenuOptions {
   gitCommit?: string
   includeProfile?: boolean  // false for Identity app itself
   aboutHref?: string  // Link to about/landing page (defaults to /landing)
+  organizations?: {
+    items: Organization[]
+    currentId: string | null
+    onSwitch: (orgId: string) => void
+    storageKey?: string
+  }
 }
 
 export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): UserMenuConfig {
-  const { onLogout, buildTimestamp, gitCommit, includeProfile = true, aboutHref = '/landing' } = options
+  const { onLogout, buildTimestamp, gitCommit, includeProfile = true, aboutHref = '/landing', organizations } = options
 
   const sections: UserMenuSection[] = []
 
@@ -312,7 +366,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
     })
   }
 
-  // Developer Tools section (as expandable submenu)
+  // Developer Tools section (as expandable submenu) - alphabetized
   sections.push({
     items: [
       {
@@ -322,11 +376,11 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
         type: 'submenu',
         children: [
           {
-            id: 'error-logs',
-            label: 'Error Logs',
-            icon: AlertTriangle,
+            id: 'backlog',
+            label: 'Backlog',
+            icon: ClipboardList,
             type: 'link',
-            href: 'https://admin.ai.devintensive.com/error-logs',
+            href: 'https://manage.ai.devintensive.com/backlog',
             external: true,
           },
           {
@@ -338,11 +392,11 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             external: false,
           },
           {
-            id: 'backlog',
-            label: 'Backlog',
-            icon: ClipboardList,
+            id: 'error-logs',
+            label: 'Error Logs',
+            icon: AlertTriangle,
             type: 'link',
-            href: 'https://manage.ai.devintensive.com/backlog',
+            href: 'https://admin.ai.devintensive.com/error-logs',
             external: true,
           },
           {
@@ -351,6 +405,14 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             icon: Lightbulb,
             type: 'link',
             href: 'https://manage.ai.devintensive.com/idea-backlog',
+            external: true,
+          },
+          {
+            id: 'test-scenarios',
+            label: 'Test Scenarios',
+            icon: FlaskConical,
+            type: 'link',
+            href: 'https://admin.ai.devintensive.com/test-scenarios',
             external: true,
           },
         ],
@@ -373,6 +435,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
 
   return {
     sections,
+    organizations,
     versionInfo: buildTimestamp || gitCommit ? {
       buildTime: buildTimestamp,
       commit: gitCommit,

@@ -1,13 +1,12 @@
-import { useCallback, useState, useMemo } from 'react'
+import { useCallback, useState, useMemo, useEffect } from 'react'
 import { Outlet, Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   FolderTree,
   Package,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
-import { usersApi, TENANT_STORAGE_KEY } from '../../api/client'
-import OrganizationSwitcher from './OrganizationSwitcher'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
+import { usersApi, organizationsApi, TENANT_STORAGE_KEY } from '../../api/client'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -20,28 +19,61 @@ export default function Layout() {
   const [currentTenantId, setCurrentTenantId] = useState<string | null>(
     localStorage.getItem(TENANT_STORAGE_KEY)
   )
+  const [organizations, setOrganizations] = useState<Organization[]>([])
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => usersApi.me(), [])
   const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
-  const handleOrgSwitch = () => {
-    // Update state and reload to fetch data for new org
-    setCurrentTenantId(localStorage.getItem(TENANT_STORAGE_KEY))
+  // Fetch organizations on mount
+  useEffect(() => {
+    const fetchOrgs = async () => {
+      try {
+        const { items } = await organizationsApi.list()
+        setOrganizations(items.map(org => ({
+          id: org.id,
+          name: org.name,
+        })))
+        // If no tenant selected, select the first one
+        if (!currentTenantId && items.length > 0) {
+          localStorage.setItem(TENANT_STORAGE_KEY, items[0].id)
+          setCurrentTenantId(items[0].id)
+        }
+      } catch {
+        // Ignore errors fetching organizations
+      }
+    }
+    fetchOrgs()
+  }, [currentTenantId])
+
+  const handleOrgSwitch = useCallback((orgId: string) => {
+    localStorage.setItem(TENANT_STORAGE_KEY, orgId)
     window.location.reload()
-  }
+  }, [])
 
   const handleLogout = useCallback(() => {
     // Redirect to identity login
     window.location.href = 'https://identity.ai.devintensive.com/login'
   }, [])
 
-  // Create user menu config
+  // Get current organization name for user display
+  const currentOrg = organizations.find(o => o.id === currentTenantId)
+  const userWithOrg = sidebarUser
+    ? { ...sidebarUser, organization: sidebarUser.organization || currentOrg?.name }
+    : undefined
+
+  // Create user menu config with centralized organization switcher
   const userMenu = useMemo(() => createDefaultUserMenu({
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
-  }), [handleLogout])
+    organizations: organizations.length > 1 ? {
+      items: organizations,
+      currentId: currentTenantId,
+      onSwitch: handleOrgSwitch,
+      storageKey: TENANT_STORAGE_KEY,
+    } : undefined,
+  }), [handleLogout, organizations, currentTenantId, handleOrgSwitch])
 
   return (
     <div className="min-h-screen bg-theme-bg">
@@ -50,12 +82,6 @@ export default function Layout() {
         productName="Define"
         navigation={navigation}
         currentPath={location.pathname}
-        orgSwitcher={
-          <OrganizationSwitcher
-            currentTenantId={currentTenantId}
-            onSwitch={handleOrgSwitch}
-          />
-        }
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">
@@ -72,7 +98,7 @@ export default function Layout() {
             {children}
           </Link>
         )}
-        user={sidebarUser}
+        user={userWithOrg}
       />
 
       <MainContent>
