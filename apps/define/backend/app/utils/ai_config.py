@@ -209,12 +209,24 @@ class MultiProviderAIClient:
                         text_parts.append(block)
                 messages.append({"role": "user", "content": "\n".join(text_parts)})
 
-        response = client.chat.completions.create(
-            model=config.model_id,
-            messages=messages,
-            max_tokens=config.max_tokens,
-            temperature=config.temperature,
-        )
+        # Newer OpenAI models (gpt-5.x, o1, o3, o4) use max_completion_tokens instead of max_tokens
+        model_lower = config.model_id.lower()
+        uses_new_params = any(x in model_lower for x in ['gpt-5', 'o1', 'o3', 'o4'])
+
+        if uses_new_params:
+            response = client.chat.completions.create(
+                model=config.model_id,
+                messages=messages,
+                max_completion_tokens=config.max_tokens,
+                temperature=config.temperature,
+            )
+        else:
+            response = client.chat.completions.create(
+                model=config.model_id,
+                messages=messages,
+                max_tokens=config.max_tokens,
+                temperature=config.temperature,
+            )
 
         return response.choices[0].message.content
 
