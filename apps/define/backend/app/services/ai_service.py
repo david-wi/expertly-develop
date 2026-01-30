@@ -150,7 +150,7 @@ Respond with ONLY the JSON array, no other text."""
 
         # Call Claude
         response = self.client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-3-5-sonnet-latest",
             max_tokens=4096,
             system=system_prompt,
             messages=[{"role": "user", "content": content_blocks}],
