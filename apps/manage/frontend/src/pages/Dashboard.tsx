@@ -2,10 +2,19 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { useWebSocket } from '../hooks/useWebSocket'
+import { api, User as UserType, Team, Queue } from '../services/api'
 
 export default function Dashboard() {
   const { user, queues, tasks, loading, wsConnected, fetchUser, fetchQueues, fetchTasks } = useAppStore()
   const [selectedQueueFilter, setSelectedQueueFilter] = useState<string>('all')
+  const [users, setUsers] = useState<UserType[]>([])
+  const [teams, setTeams] = useState<Team[]>([])
+
+  // Fetch users and teams for queue name resolution
+  useEffect(() => {
+    api.getUsers().then(setUsers).catch(console.error)
+    api.getTeams().then(setTeams).catch(console.error)
+  }, [])
 
   // Connect WebSocket
   useWebSocket(user?.organization_id)
@@ -24,6 +33,23 @@ export default function Dashboard() {
       inProgress: queueTasks.filter((t) => ['checked_out', 'in_progress'].includes(t.status)).length,
       completed: queueTasks.filter((t) => t.status === 'completed').length,
     }
+  }
+
+  // Get queue display name with owner: "Owner > Purpose"
+  const getQueueDisplayName = (queue: Queue): string => {
+    if (queue.scope_type === 'user') {
+      if (queue.scope_id === user?.id) {
+        return `${user?.name || 'You'} > ${queue.purpose}`
+      }
+      const owner = users.find((u) => (u._id || u.id) === queue.scope_id)
+      return owner ? `${owner.name} > ${queue.purpose}` : queue.purpose
+    }
+    if (queue.scope_type === 'team') {
+      const team = teams.find((t) => (t._id || t.id) === queue.scope_id)
+      return team ? `${team.name} > ${queue.purpose}` : queue.purpose
+    }
+    // Organization-wide
+    return `Everyone > ${queue.purpose}`
   }
 
   const allActiveTasks = tasks.filter((t) => ['queued', 'checked_out', 'in_progress'].includes(t.status))
@@ -120,7 +146,7 @@ export default function Dashboard() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {queue.purpose} ({count})
+                  {getQueueDisplayName(queue)} ({count})
                 </button>
               )
             })}
@@ -136,7 +162,7 @@ export default function Dashboard() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {queue.purpose} ({count})
+                  {getQueueDisplayName(queue)} ({count})
                 </button>
               )
             })}
@@ -152,7 +178,7 @@ export default function Dashboard() {
                       : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}
                 >
-                  {queue.purpose} ({count})
+                  {getQueueDisplayName(queue)} ({count})
                 </button>
               )
             })}
@@ -194,7 +220,7 @@ export default function Dashboard() {
                       </div>
                     </td>
                     <td className="px-4 py-4">
-                      <span className="text-sm text-gray-700">{queue?.purpose || 'Unknown'}</span>
+                      <span className="text-sm text-gray-700">{queue ? getQueueDisplayName(queue) : 'Unknown'}</span>
                     </td>
                     <td className="px-4 py-4">
                       <span

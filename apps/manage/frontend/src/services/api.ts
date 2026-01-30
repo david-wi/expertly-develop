@@ -137,6 +137,75 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateTask: (id: string, data: UpdateTaskRequest) =>
+    request<Task>(`/api/v1/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteTask: (id: string) =>
+    request<void>(`/api/v1/tasks/${id}`, {
+      method: 'DELETE',
+    }),
+
+  // Task Attachments
+  getTaskAttachments: (taskId: string) =>
+    request<TaskAttachment[]>(`/api/v1/tasks/${taskId}/attachments`),
+  uploadTaskAttachment: async (taskId: string, file: File, note?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (note) formData.append('note', note)
+
+    const response = await fetch(`${API_BASE}/api/v1/tasks/${taskId}/attachments/upload`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const returnUrl = encodeURIComponent(window.location.href)
+        window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`
+        throw new Error('Redirecting to login...')
+      }
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return response.json() as Promise<TaskAttachment>
+  },
+  addTaskLink: (taskId: string, data: CreateTaskLinkRequest) =>
+    request<TaskAttachment>(`/api/v1/tasks/${taskId}/attachments/link`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getAttachment: (attachmentId: string) =>
+    request<TaskAttachment>(`/api/v1/attachments/${attachmentId}`),
+  deleteAttachment: (attachmentId: string) =>
+    request<void>(`/api/v1/attachments/${attachmentId}`, {
+      method: 'DELETE',
+    }),
+  getAttachmentDownloadUrl: (attachmentId: string) =>
+    `${API_BASE}/api/v1/attachments/${attachmentId}/download`,
+
+  // Task Comments
+  getTaskComments: (taskId: string) =>
+    request<TaskComment[]>(`/api/v1/tasks/${taskId}/comments`),
+  createTaskComment: (taskId: string, data: CreateTaskCommentRequest) =>
+    request<TaskComment>(`/api/v1/tasks/${taskId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getComment: (commentId: string) =>
+    request<TaskComment>(`/api/v1/comments/${commentId}`),
+  updateTaskComment: (commentId: string, data: UpdateTaskCommentRequest) =>
+    request<TaskComment>(`/api/v1/comments/${commentId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteTaskComment: (commentId: string) =>
+    request<void>(`/api/v1/comments/${commentId}`, {
+      method: 'DELETE',
+    }),
 
   // Teams
   getTeams: () => request<Team[]>('/api/v1/teams'),
@@ -350,6 +419,13 @@ export interface Task {
   status: 'queued' | 'checked_out' | 'in_progress' | 'completed' | 'failed'
   priority: number
   assigned_to_id?: string
+  project_id?: string
+  sop_id?: string
+  // Approval fields
+  approver_type?: 'user' | 'team' | 'anyone'
+  approver_id?: string
+  approver_queue_id?: string
+  approval_required?: boolean
   created_at: string
   updated_at: string
 }
@@ -360,6 +436,27 @@ export interface CreateTaskRequest {
   description?: string
   priority?: number
   project_id?: string
+  sop_id?: string
+  // Approval fields
+  approver_type?: 'user' | 'team' | 'anyone'
+  approver_id?: string
+  approver_queue_id?: string
+  approval_required?: boolean
+}
+
+export interface UpdateTaskRequest {
+  title?: string
+  description?: string
+  priority?: number
+  queue_id?: string
+  assigned_to_id?: string
+  project_id?: string
+  sop_id?: string
+  // Approval fields
+  approver_type?: 'user' | 'team' | 'anyone'
+  approver_id?: string
+  approver_queue_id?: string
+  approval_required?: boolean
 }
 
 export interface CreateQueueRequest {
@@ -717,4 +814,55 @@ export interface GeneratedStep {
 
 export interface GenerateStepsResponse {
   steps: GeneratedStep[]
+}
+
+// Task Attachment types
+export type AttachmentType = 'file' | 'link'
+
+export interface TaskAttachment {
+  id: string
+  task_id: string
+  organization_id: string
+  attachment_type: AttachmentType
+  // File fields
+  filename?: string
+  original_filename?: string
+  mime_type?: string
+  size_bytes?: number
+  // Link fields
+  url?: string
+  link_title?: string
+  // Common fields
+  note?: string
+  uploaded_by_id: string
+  created_at: string
+}
+
+export interface CreateTaskLinkRequest {
+  url: string
+  link_title?: string
+  note?: string
+}
+
+// Task Comment types
+export interface TaskComment {
+  id: string
+  task_id: string
+  organization_id: string
+  user_id: string
+  user_name?: string
+  content: string
+  attachment_ids: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTaskCommentRequest {
+  content: string
+  attachment_ids?: string[]
+}
+
+export interface UpdateTaskCommentRequest {
+  content?: string
+  attachment_ids?: string[]
 }

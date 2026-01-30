@@ -23,6 +23,12 @@ from app.models.connection import (
     Connection, ConnectionCreate, ConnectionResponse,
     ConnectionProvider, ConnectionStatus, OAuthStartResponse
 )
+from app.models.task_attachment import (
+    TaskAttachment, TaskAttachmentCreate, TaskAttachmentResponse, AttachmentType
+)
+from app.models.task_comment import (
+    TaskComment, TaskCommentCreate, TaskCommentUpdate, TaskCommentResponse
+)
 
 __all__ = [
     "PyObjectId",
@@ -89,4 +95,12 @@ __all__ = [
     "ConnectionProvider",
     "ConnectionStatus",
     "OAuthStartResponse",
+    "TaskAttachment",
+    "TaskAttachmentCreate",
+    "TaskAttachmentResponse",
+    "AttachmentType",
+    "TaskComment",
+    "TaskCommentCreate",
+    "TaskCommentUpdate",
+    "TaskCommentResponse",
 ]

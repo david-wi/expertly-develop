@@ -11,6 +11,7 @@ import {
   Star,
   Link2,
   BotMessageSquare,
+  Building2,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -57,6 +58,7 @@ export default function Layout() {
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getStoredOrgId())
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false)
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => api.getCurrentUser(), [])
@@ -116,6 +118,40 @@ export default function Layout() {
       }
     : undefined
 
+  // Organization switcher component for bottom section
+  const organizationSwitcher = organizations.length > 1 ? (
+    <div className="relative px-4 py-3">
+      <button
+        onClick={() => setShowOrgDropdown(!showOrgDropdown)}
+        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left rounded-lg hover:bg-theme-bg-elevated transition-colors"
+        title={selectedOrg?.name || 'Select organization'}
+      >
+        <Building2 className="w-5 h-5 text-theme-text-secondary flex-shrink-0" />
+        <span className="flex-1 truncate text-theme-text-primary">{selectedOrg?.name || 'Select Org'}</span>
+      </button>
+      {showOrgDropdown && (
+        <div className="absolute bottom-full left-4 right-4 mb-1 bg-theme-bg-surface border border-theme-border rounded-lg shadow-lg z-50">
+          {organizations.map((org) => (
+            <button
+              key={org.id}
+              onClick={() => {
+                handleOrgChange(org.id)
+                setShowOrgDropdown(false)
+              }}
+              className={`w-full text-left px-3 py-2 text-sm ${
+                org.id === selectedOrgId
+                  ? 'bg-primary-50 text-primary-700'
+                  : 'hover:bg-theme-bg-elevated text-theme-text-primary'
+              } first:rounded-t-lg last:rounded-b-lg`}
+            >
+              {org.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  ) : null
+
   return (
     <div className="min-h-screen bg-theme-bg">
       <Sidebar
@@ -124,25 +160,9 @@ export default function Layout() {
         navigation={navigation}
         currentPath={location.pathname}
         orgSwitcher={
-          <div className="space-y-2">
-            {/* Organization Selector */}
-            {organizations.length > 0 && (
-              <select
-                value={selectedOrgId || ''}
-                onChange={(e) => handleOrgChange(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                {organizations.map((org) => (
-                  <option key={org.id} value={org.id}>
-                    {org.name}
-                  </option>
-                ))}
-              </select>
-            )}
-            {/* View As Switcher (for admins) */}
-            <ViewAsSwitcher onViewChange={handleViewChange} />
-          </div>
+          <ViewAsSwitcher onViewChange={handleViewChange} />
         }
+        bottomSection={organizationSwitcher}
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">

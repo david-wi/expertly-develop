@@ -10,9 +10,10 @@ from app.utils.auth import generate_api_key, hash_api_key
 router = APIRouter()
 
 
-async def create_inbox_queue(db, organization_id, scope_type: ScopeType, scope_id):
-    """Create an Inbox queue for a user, bot, or team."""
-    queue = Queue(
+async def create_system_queues(db, organization_id, scope_type: ScopeType, scope_id):
+    """Create system queues (Inbox and Approvals) for a user, bot, or team."""
+    # Create Inbox queue
+    inbox_queue = Queue(
         organization_id=organization_id,
         purpose="Inbox",
         description="Default queue for incoming tasks",
@@ -21,7 +22,19 @@ async def create_inbox_queue(db, organization_id, scope_type: ScopeType, scope_i
         is_system=True,
         system_type="inbox"
     )
-    await db.queues.insert_one(queue.model_dump_mongo())
+    await db.queues.insert_one(inbox_queue.model_dump_mongo())
+
+    # Create Approvals queue
+    approvals_queue = Queue(
+        organization_id=organization_id,
+        purpose="Approvals",
+        description="Queue for tasks requiring approval",
+        scope_type=scope_type,
+        scope_id=scope_id,
+        is_system=True,
+        system_type="approvals"
+    )
+    await db.queues.insert_one(approvals_queue.model_dump_mongo())
 
 
 @router.get("")
@@ -123,8 +136,8 @@ async def create_user(
 
     await db.users.insert_one(user.model_dump_mongo())
 
-    # Create Inbox queue for the new user/bot
-    await create_inbox_queue(db, current_user.organization_id, ScopeType.USER, user.id)
+    # Create system queues (Inbox and Approvals) for the new user/bot
+    await create_system_queues(db, current_user.organization_id, ScopeType.USER, user.id)
 
     result = {
         **{k: v for k, v in user.model_dump_mongo().items() if k not in ["api_key_hash", "password_hash"]},

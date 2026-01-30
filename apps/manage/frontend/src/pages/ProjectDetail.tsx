@@ -15,6 +15,8 @@ import {
   RecurrenceType,
   ProjectStatus,
 } from '../services/api'
+import TaskDetailModal from '../components/TaskDetailModal'
+import Breadcrumbs, { buildProjectBreadcrumbs } from '../components/Breadcrumbs'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -64,6 +66,7 @@ export default function ProjectDetail() {
   // Data states
   const [project, setProject] = useState<Project | null>(null)
   const [subprojects, setSubprojects] = useState<Project[]>([])
+  const [allProjects, setAllProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [completedTasks, setCompletedTasks] = useState<Task[]>([])
   const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([])
@@ -81,6 +84,7 @@ export default function ProjectDetail() {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [showEditProjectModal, setShowEditProjectModal] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   // Task form state
   const [taskForm, setTaskForm] = useState<{
@@ -137,6 +141,7 @@ export default function ProjectDetail() {
       const [
         projectData,
         subprojectsData,
+        allProjectsData,
         tasksData,
         completedTasksData,
         recurringTasksData,
@@ -147,6 +152,7 @@ export default function ProjectDetail() {
       ] = await Promise.all([
         api.getProject(id),
         api.getProjectChildren(id),
+        api.getProjects(), // Fetch all projects for breadcrumbs and typeahead
         api.getProjectTasks(id, { status: undefined }), // Get non-completed tasks
         api.getProjectTasks(id, { status: 'completed' }),
         api.getProjectRecurringTasks(id),
@@ -158,6 +164,7 @@ export default function ProjectDetail() {
 
       setProject(projectData)
       setSubprojects(subprojectsData)
+      setAllProjects(allProjectsData)
       // Filter out completed tasks from the main tasks list
       setTasks(tasksData.filter((t) => t.status !== 'completed'))
       setCompletedTasks(completedTasksData)
@@ -338,22 +345,31 @@ export default function ProjectDetail() {
 
   const activeTasks = tasks.filter((t) => t.status !== 'completed')
 
+  // Build breadcrumb items
+  const breadcrumbItems = useMemo(() => {
+    if (!project) return []
+    const projectForBreadcrumb = {
+      ...project,
+      id: project._id || project.id,
+    }
+    const allProjectsForBreadcrumb = allProjects.map((p) => ({
+      ...p,
+      id: p._id || p.id,
+    }))
+    return buildProjectBreadcrumbs(projectForBreadcrumb, allProjectsForBreadcrumb)
+  }, [project, allProjects])
+
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs */}
+      {breadcrumbItems.length > 0 && (
+        <Breadcrumbs items={breadcrumbItems} className="mb-2" />
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center space-x-3">
-            <Link to="/projects" className="text-gray-500 hover:text-gray-700">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-            </Link>
             <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProjectStatusBadgeColor(project.status)}`}
@@ -478,7 +494,11 @@ export default function ProjectDetail() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {activeTasks.map((task) => (
-                <tr key={task._id || task.id} className="hover:bg-gray-50">
+                <tr
+                  key={task._id || task.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedTaskId(task._id || task.id)}
+                >
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium text-gray-900">{task.title}</p>
@@ -532,7 +552,11 @@ export default function ProjectDetail() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {completedTasks.map((task) => (
-                <tr key={task._id || task.id} className="hover:bg-gray-50">
+                <tr
+                  key={task._id || task.id}
+                  className="hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedTaskId(task._id || task.id)}
+                >
                   <td className="px-4 py-3">
                     <div>
                       <p className="font-medium text-gray-900">{task.title}</p>
@@ -626,6 +650,16 @@ export default function ProjectDetail() {
           </table>
         )}
       </div>
+
+      {/* Task Detail Modal */}
+      {selectedTaskId && (
+        <TaskDetailModal
+          taskId={selectedTaskId}
+          isOpen={!!selectedTaskId}
+          onClose={() => setSelectedTaskId(null)}
+          onUpdate={() => loadData()}
+        />
+      )}
 
       {/* Create Task Modal */}
       <Modal
