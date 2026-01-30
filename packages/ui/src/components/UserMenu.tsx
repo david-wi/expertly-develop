@@ -86,7 +86,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
   return (
     <div
       ref={menuRef}
-      className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--theme-bg-surface)] border border-[var(--theme-border-default)] rounded-lg shadow-lg overflow-hidden z-50"
+      className="absolute bottom-full left-0 right-0 mb-1 bg-[var(--theme-bg-surface)] border border-[var(--theme-border-default)] rounded-lg shadow-lg z-50"
     >
       {/* Version Info Header */}
       {hasVersionInfo && (
