@@ -16,8 +16,8 @@ async def parse_requirements(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Parse requirements from text/files using AI."""
-    if not data.description.strip():
-        raise HTTPException(status_code=400, detail="Description is required")
+    if not data.description.strip() and not data.files:
+        raise HTTPException(status_code=400, detail="Description or files are required")
 
     ai_service = AIService()
 
