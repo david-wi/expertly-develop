@@ -553,16 +553,19 @@ export default function Projects() {
                   <tr
                     key={projectId}
                     className={`hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, projectId)}
-                    onDragEnd={handleDragEnd}
                     onDragOver={(e) => handleDragOver(e, projectId)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, projectId)}
                   >
                     <td className="px-4 py-3">
                       <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
-                        <span className="cursor-grab active:cursor-grabbing mr-2 text-gray-400 hover:text-gray-600" title="Drag to reparent">
+                        <span
+                          className="cursor-grab active:cursor-grabbing mr-2 text-gray-400 hover:text-gray-600"
+                          title="Drag to reparent"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, projectId)}
+                          onDragEnd={handleDragEnd}
+                        >
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                             <circle cx="9" cy="6" r="1.5" />
                             <circle cx="15" cy="6" r="1.5" />
