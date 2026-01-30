@@ -22,6 +22,17 @@ class Settings(BaseSettings):
     # OpenAI (for avatar generation)
     openai_api_key: str = ""
 
+    # OAuth - Google
+    google_client_id: str = ""
+    google_client_secret: str = ""
+
+    # Encryption key for tokens (Fernet key)
+    connection_encryption_key: str = ""
+
+    # App URLs (for OAuth redirects)
+    app_base_url: str = "https://manage.ai.devintensive.com"
+    frontend_url: str = "https://manage.ai.devintensive.com"
+
     # Default user settings (for dev/seed)
     default_org_name: str = "David"
     default_org_slug: str = "david"

@@ -11,6 +11,7 @@ import RecurringTasks from './pages/RecurringTasks'
 import Wins from './pages/Wins'
 import Backlog from './pages/Backlog'
 import IdeaBacklog from './pages/IdeaBacklog'
+import Connections from './pages/Connections'
 import LandingPage from './pages/LandingPage'
 import Layout from './components/Layout'
 
@@ -32,6 +33,7 @@ function App() {
           <Route path="wins" element={<Wins />} />
           <Route path="backlog" element={<Backlog />} />
           <Route path="idea-backlog" element={<IdeaBacklog />} />
+          <Route path="connections" element={<Connections />} />
         </Route>
       </Routes>
     </BrowserRouter>

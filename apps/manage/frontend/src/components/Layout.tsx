@@ -10,6 +10,7 @@ import {
   Users2,
   BookOpen,
   Star,
+  Link2,
 } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Tasks', href: '/tasks', icon: ListTodo },
   { name: 'Teams', href: '/teams', icon: Users2 },
   { name: 'Users', href: '/users', icon: Users },
+  { name: 'Connections', href: '/connections', icon: Link2 },
   { name: 'Wins', href: '/wins', icon: Star, spacerBefore: true },
 ]
 
