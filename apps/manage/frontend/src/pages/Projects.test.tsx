@@ -223,7 +223,7 @@ describe('Projects', () => {
     renderWithRouter(<Projects />)
 
     await waitFor(() => {
-      const editButtons = screen.getAllByText('Edit')
+      const editButtons = screen.getAllByTitle('Edit')
       fireEvent.click(editButtons[0])
     })
 
@@ -241,7 +241,7 @@ describe('Projects', () => {
       expect(screen.getByText('Test Project')).toBeInTheDocument()
     })
 
-    const editButtons = screen.getAllByText('Edit')
+    const editButtons = screen.getAllByTitle('Edit')
     fireEvent.click(editButtons[0])
 
     await waitFor(() => {
@@ -264,7 +264,7 @@ describe('Projects', () => {
       expect(screen.getByText('Test Project')).toBeInTheDocument()
     })
 
-    const editButtons = screen.getAllByText('Edit')
+    const editButtons = screen.getAllByTitle('Edit')
     fireEvent.click(editButtons[0])
 
     await waitFor(() => {
@@ -290,7 +290,7 @@ describe('Projects', () => {
     renderWithRouter(<Projects />)
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('Delete')
+      const deleteButtons = screen.getAllByTitle('Delete')
       fireEvent.click(deleteButtons[0])
     })
 
@@ -309,7 +309,7 @@ describe('Projects', () => {
       expect(screen.getByText('Test Project')).toBeInTheDocument()
     })
 
-    const deleteButtons = screen.getAllByText('Delete')
+    const deleteButtons = screen.getAllByTitle('Delete')
     fireEvent.click(deleteButtons[0])
 
     await waitFor(() => {
@@ -335,7 +335,7 @@ describe('Projects', () => {
     renderWithRouter(<Projects />)
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('Delete')
+      const deleteButtons = screen.getAllByTitle('Delete')
       fireEvent.click(deleteButtons[0])
     })
 
@@ -359,7 +359,7 @@ describe('Projects', () => {
     renderWithRouter(<Projects />)
 
     await waitFor(() => {
-      const deleteButtons = screen.getAllByText('Delete')
+      const deleteButtons = screen.getAllByTitle('Delete')
       fireEvent.click(deleteButtons[0])
     })
 
@@ -431,5 +431,63 @@ describe('Projects', () => {
     await waitFor(() => {
       expect(screen.queryByText('Create New Project')).not.toBeInTheDocument()
     })
+  })
+
+  it('opens create modal with parent pre-selected when clicking Add Subproject', async () => {
+    vi.mocked(api.getProjects).mockResolvedValue([mockProject])
+    vi.mocked(api.getProjectTasks).mockResolvedValue([])
+
+    renderWithRouter(<Projects />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Project')).toBeInTheDocument()
+    })
+
+    const addSubprojectButtons = screen.getAllByTitle('Add Subproject')
+    fireEvent.click(addSubprojectButtons[0])
+
+    await waitFor(() => {
+      expect(screen.getByText('Create New Project')).toBeInTheDocument()
+    })
+
+    // The parent project dropdown should have the parent pre-selected
+    const parentSelects = screen.getAllByRole('combobox')
+    const parentSelect = parentSelects.find(
+      (select) => (select as HTMLSelectElement).value === 'project-1'
+    )
+    expect(parentSelect).toBeTruthy()
+  })
+
+  it('supports multiple levels of nesting in hierarchy display', async () => {
+    const grandchildProject: Project = {
+      id: 'project-grandchild',
+      _id: 'project-grandchild',
+      organization_id: 'org-1',
+      name: 'Grandchild Project',
+      description: 'A grandchild project',
+      status: 'active',
+      parent_project_id: 'project-2', // Child of subproject
+      created_at: '2024-01-03T00:00:00Z',
+    }
+
+    vi.mocked(api.getProjects).mockResolvedValue([
+      mockProject, // Root
+      mockSubproject, // Child of root
+      grandchildProject, // Grandchild
+    ])
+    vi.mocked(api.getProjectTasks).mockResolvedValue([])
+
+    renderWithRouter(<Projects />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Project')).toBeInTheDocument()
+      expect(screen.getByText('Test Subproject')).toBeInTheDocument()
+      expect(screen.getByText('Grandchild Project')).toBeInTheDocument()
+    })
+
+    // All three levels should be visible in the table
+    const rows = screen.getAllByRole('row')
+    // Header row + 3 project rows
+    expect(rows.length).toBe(4)
   })
 })
