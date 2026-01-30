@@ -440,6 +440,22 @@ export default function ProjectDetail() {
     }
   }
 
+  const activeTasks = tasks.filter((t) => t.status !== 'completed')
+
+  // Build breadcrumb items - must be before early returns to follow rules of hooks
+  const breadcrumbItems = useMemo(() => {
+    if (!project) return []
+    const projectForBreadcrumb = {
+      ...project,
+      id: project._id || project.id,
+    }
+    const allProjectsForBreadcrumb = allProjects.map((p) => ({
+      ...p,
+      id: p._id || p.id,
+    }))
+    return buildProjectBreadcrumbs(projectForBreadcrumb, allProjectsForBreadcrumb)
+  }, [project, allProjects])
+
   if (loading) {
     return (
       <div className="p-4">
@@ -460,22 +476,6 @@ export default function ProjectDetail() {
       </div>
     )
   }
-
-  const activeTasks = tasks.filter((t) => t.status !== 'completed')
-
-  // Build breadcrumb items
-  const breadcrumbItems = useMemo(() => {
-    if (!project) return []
-    const projectForBreadcrumb = {
-      ...project,
-      id: project._id || project.id,
-    }
-    const allProjectsForBreadcrumb = allProjects.map((p) => ({
-      ...p,
-      id: p._id || p.id,
-    }))
-    return buildProjectBreadcrumbs(projectForBreadcrumb, allProjectsForBreadcrumb)
-  }, [project, allProjects])
 
   return (
     <div className="space-y-6">
