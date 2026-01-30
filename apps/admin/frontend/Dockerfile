@@ -18,7 +18,9 @@ COPY apps/admin/frontend/package*.json ./apps/admin/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
 # Husky is conditional on .git existing (see root package.json prepare script)
-RUN npm install --workspace=apps/admin/frontend
+# After install, add the musl-specific native bindings needed for Alpine Linux
+RUN npm install --workspace=apps/admin/frontend && \
+    npm install --no-save lightningcss-linux-x64-musl
 
 # Copy source code
 COPY apps/admin/frontend ./apps/admin/frontend
