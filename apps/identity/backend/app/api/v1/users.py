@@ -85,7 +85,11 @@ async def create_user(
     org: Organization = Depends(get_organization),
     db: AsyncSession = Depends(get_db),
 ):
-    """Create a new user or bot."""
+    """Create a new user or bot.
+
+    Note: If this is the first non-default (real) user being added to the organization,
+    they will automatically be assigned the 'owner' role.
+    """
     # Check for duplicate email in organization
     if user_data.email:
         existing = await db.execute(
@@ -100,6 +104,20 @@ async def create_user(
                 detail="A user with this email already exists in the organization"
             )
 
+    # Check if this is the first real (non-default) user in the organization
+    # If so, automatically make them the owner
+    role = user_data.role
+    if user_data.user_type == "human":
+        non_default_users = await db.execute(
+            select(func.count(User.id)).where(
+                User.organization_id == org.id,
+                User.is_default == False  # noqa: E712
+            )
+        )
+        if non_default_users.scalar() == 0:
+            # This is the first real user - make them owner
+            role = "owner"
+
     # Generate API key
     api_key = secrets.token_urlsafe(32)
     api_key_hash = bcrypt.hash(api_key)
@@ -109,7 +127,7 @@ async def create_user(
         name=user_data.name,
         email=user_data.email,
         user_type=user_data.user_type,
-        role=user_data.role,
+        role=role,
         avatar_url=user_data.avatar_url,
         title=user_data.title,
         responsibilities=user_data.responsibilities,
