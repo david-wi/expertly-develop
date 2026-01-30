@@ -1,26 +1,12 @@
 import anthropic
 import base64
-import logging
 from typing import Tuple, Optional
 from io import BytesIO
 from pypdf import PdfReader
 
 from app.config import get_settings
-from ai_config import AIConfigClient
 
 settings = get_settings()
-logger = logging.getLogger(__name__)
-
-# Global AI config client
-_ai_config_client: Optional[AIConfigClient] = None
-
-
-def get_ai_config_client() -> AIConfigClient:
-    """Get or create the global AI config client."""
-    global _ai_config_client
-    if _ai_config_client is None:
-        _ai_config_client = AIConfigClient()
-    return _ai_config_client
 
 
 class ArtifactConversionService:
@@ -28,7 +14,6 @@ class ArtifactConversionService:
 
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        self.ai_config = get_ai_config_client()
 
     async def convert_to_markdown(
         self,
@@ -81,13 +66,9 @@ class ArtifactConversionService:
         base64_content = base64.b64encode(file_content).decode("utf-8")
 
         try:
-            # Get model config for file conversion
-            use_case_config = await self.ai_config.get_use_case_config("file_conversion")
-            logger.debug(f"Using model {use_case_config.model_id} for image conversion")
-
             response = self.client.messages.create(
-                model=use_case_config.model_id,
-                max_tokens=use_case_config.max_tokens,
+                model="claude-sonnet-4-20250514",
+                max_tokens=4096,
                 messages=[
                     {
                         "role": "user",

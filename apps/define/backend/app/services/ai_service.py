@@ -1,34 +1,19 @@
 import anthropic
 import json
 import base64
-import logging
 from typing import List, Optional
 from pypdf import PdfReader
 from io import BytesIO
 
 from app.config import get_settings
 from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, ContextUrl
-from ai_config import AIConfigClient
 
 settings = get_settings()
-logger = logging.getLogger(__name__)
-
-# Global AI config client
-_ai_config_client: Optional[AIConfigClient] = None
-
-
-def get_ai_config_client() -> AIConfigClient:
-    """Get or create the global AI config client."""
-    global _ai_config_client
-    if _ai_config_client is None:
-        _ai_config_client = AIConfigClient()
-    return _ai_config_client
 
 
 class AIService:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
-        self.ai_config = get_ai_config_client()
 
     def _extract_pdf_text(self, base64_content: str) -> str:
         """Extract text from PDF content."""
@@ -191,14 +176,10 @@ Respond with ONLY the JSON array, no other text."""
             content_blocks.append(image_block)
         content_blocks.append({"type": "text", "text": user_prompt_text})
 
-        # Get model config for requirements parsing
-        use_case_config = await self.ai_config.get_use_case_config("requirements_parsing")
-        logger.debug(f"Using model {use_case_config.model_id} for requirements parsing")
-
         # Call Claude
         response = self.client.messages.create(
-            model=use_case_config.model_id,
-            max_tokens=use_case_config.max_tokens,
+            model="claude-sonnet-4-20250514",
+            max_tokens=4096,
             system=system_prompt,
             messages=[{"role": "user", "content": content_blocks}],
         )
