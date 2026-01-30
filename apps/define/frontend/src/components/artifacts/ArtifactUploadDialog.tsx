@@ -29,6 +29,104 @@ interface FileToUpload {
   error?: string
 }
 
+/**
+ * Suggests a description based on the filename.
+ * Parses common naming conventions and generates human-readable descriptions.
+ */
+function suggestDescription(filename: string): string {
+  // Remove extension
+  const nameWithoutExt = filename.replace(/\.[^/.]+$/, '')
+
+  // Return empty if filename is too short or generic
+  if (nameWithoutExt.length < 3) return ''
+  if (/^(file|document|image|untitled|new|temp)/i.test(nameWithoutExt)) return ''
+
+  // Replace common separators with spaces
+  let description = nameWithoutExt
+    .replace(/[-_]+/g, ' ')
+    .replace(/([a-z])([A-Z])/g, '$1 $2') // camelCase to spaces
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2') // Handle acronyms like "APISpec" -> "API Spec"
+
+  // Handle version numbers (v1, v2, V1.0, etc.)
+  description = description.replace(/\s*[vV](\d+(?:\.\d+)?)\s*/g, ' v$1 ')
+
+  // Handle dates in various formats
+  description = description
+    .replace(/(\d{4})[.\s](\d{2})[.\s](\d{2})/g, (_, y, m, d) => {
+      const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      }
+      return `${y}-${m}-${d}`
+    })
+    .replace(/(\d{2})[.\s](\d{2})[.\s](\d{4})/g, (_, m, d, y) => {
+      const date = new Date(parseInt(y), parseInt(m) - 1, parseInt(d))
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+      }
+      return `${m}/${d}/${y}`
+    })
+
+  // Expand common abbreviations
+  const abbreviations: Record<string, string> = {
+    'spec': 'specification',
+    'specs': 'specifications',
+    'req': 'requirements',
+    'reqs': 'requirements',
+    'doc': 'document',
+    'docs': 'documents',
+    'img': 'image',
+    'imgs': 'images',
+    'cfg': 'configuration',
+    'config': 'configuration',
+    'api': 'API',
+    'ui': 'UI',
+    'ux': 'UX',
+    'db': 'database',
+    'auth': 'authentication',
+    'admin': 'administration',
+    'mgmt': 'management',
+    'dev': 'development',
+    'prod': 'production',
+    'env': 'environment',
+    'info': 'information',
+    'ref': 'reference',
+    'tech': 'technical',
+    'prd': 'PRD',
+    'brd': 'BRD',
+    'srs': 'SRS',
+    'erd': 'ERD',
+  }
+
+  description = description
+    .split(' ')
+    .map(word => {
+      const lower = word.toLowerCase()
+      if (abbreviations[lower]) {
+        return abbreviations[lower]
+      }
+      return word
+    })
+    .join(' ')
+
+  // Clean up whitespace and capitalize first letter of each sentence
+  description = description
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  // Capitalize first letter, lowercase the rest unless it's an acronym
+  if (description.length > 0) {
+    description = description.charAt(0).toUpperCase() + description.slice(1)
+  }
+
+  // Don't return if it's basically just the filename cleaned up minimally
+  if (description.toLowerCase() === nameWithoutExt.toLowerCase()) {
+    return ''
+  }
+
+  return description
+}
+
 export function ArtifactUploadDialog({
   productId,
   open,
@@ -52,7 +150,7 @@ export function ArtifactUploadDialog({
     const newFiles: FileToUpload[] = Array.from(selectedFiles).map((file) => ({
       file,
       name: file.name.replace(/\.[^/.]+$/, ''), // Remove extension
-      description: '',
+      description: suggestDescription(file.name),
       status: 'pending' as const,
     }))
     setFiles((prev) => [...prev, ...newFiles])
