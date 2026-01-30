@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db
-from app.api.v1 import users, teams, organizations, images, auth
+from app.api.v1 import users, teams, organizations, images, auth, admin
 from app.core.redis import close_redis
 
 settings = get_settings()
@@ -59,6 +59,7 @@ app.include_router(organizations.router, prefix="/api/v1/organizations", tags=["
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(teams.router, prefix="/api/v1/teams", tags=["Teams"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["Images"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 
 # Static file serving for uploaded avatars
 uploads_path = Path(settings.uploads_dir)

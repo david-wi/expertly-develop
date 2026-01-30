@@ -19,3 +19,9 @@
 20250129 - Fix: Added ANTHROPIC_API_KEY to server .env for Expertly Define AI import feature
 20250129 - Fix: Changed AI model from invalid 'claude-sonnet-4-20250514' to 'claude-3-5-sonnet-latest'
 20260129 - Fixed Connections page to always show Add Connection button with all providers (Google, Slack). Unconfigured providers now show setup instructions instead of being hidden. Added Slack OAuth support.
+20260130 - Expertly Define products not showing - Database data loss (3rd time)
+- Root cause: Migration commit (9a728ba) converted Define from SQLite to PostgreSQL
+- SQLite data in container volume was not migrated to managed PostgreSQL
+- Product restored from shared_define_data volume
+- 1 product recovered: Expertly Reply (4131c1b9-3d2b-42f0-841f-0701ebb76e17)
+
