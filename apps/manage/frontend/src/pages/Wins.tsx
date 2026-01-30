@@ -147,9 +147,8 @@ export default function Wins() {
         if (!userTeams.some(team => team.id === selectedTeamId)) return false
       }
 
-      // Playbook filter - TODO: Tasks don't currently have playbook_id
-      // This would need backend support to track which playbook a task came from
-      // For now, we'll skip this filter if a playbook is selected
+      // Playbook filter - filter by task.playbook_id
+      if (selectedPlaybookId && t.playbook_id !== selectedPlaybookId) return false
 
       return true
     })

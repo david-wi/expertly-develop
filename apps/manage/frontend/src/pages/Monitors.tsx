@@ -21,6 +21,7 @@ const PROVIDER_LABELS: Record<MonitorProviderType, string> = {
   gmail: 'Gmail',
   outlook: 'Outlook',
   teamwork: 'Teamwork',
+  github: 'GitHub',
 }
 
 const POLL_INTERVAL_OPTIONS = [

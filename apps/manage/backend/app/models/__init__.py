@@ -32,7 +32,13 @@ from app.models.task_comment import (
 from app.models.monitor import (
     Monitor, MonitorCreate, MonitorUpdate, MonitorEvent,
     MonitorProvider, MonitorStatus, SlackConfig, GoogleDriveConfig,
-    GmailConfig, OutlookConfig, TeamworkConfig
+    GmailConfig, OutlookConfig, TeamworkConfig, GitHubConfig
+)
+from app.models.notification import (
+    Notification, NotificationCreate, NotificationResponse, NotificationType
+)
+from app.models.bot_activity import (
+    BotActivity, BotActivityType, BotStatus, BotWithStatus, BotStats, BotConfigUpdate
 )
 
 __all__ = [
@@ -119,4 +125,15 @@ __all__ = [
     "GmailConfig",
     "OutlookConfig",
     "TeamworkConfig",
+    "GitHubConfig",
+    "Notification",
+    "NotificationCreate",
+    "NotificationResponse",
+    "NotificationType",
+    "BotActivity",
+    "BotActivityType",
+    "BotStatus",
+    "BotWithStatus",
+    "BotStats",
+    "BotConfigUpdate",
 ]
