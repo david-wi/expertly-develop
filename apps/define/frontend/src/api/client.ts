@@ -45,6 +45,7 @@ export interface Product {
   name: string
   prefix: string
   description: string | null
+  avatar_url: string | null
   created_at: string
   updated_at: string
   requirement_count?: number
@@ -334,6 +335,27 @@ export const artifactsApi = {
 
   reconvert: (artifactId: string, versionId: string) =>
     api.post<ArtifactVersion>(`/artifacts/${artifactId}/versions/${versionId}/reconvert`).then((r) => r.data),
+}
+
+// Avatars API
+export const avatarsApi = {
+  generate: (productId: string, productName: string, productDescription?: string | null) =>
+    api.post<{ avatar_url: string }>('/avatars/generate', {
+      product_id: productId,
+      product_name: productName,
+      product_description: productDescription,
+    }).then((r) => r.data),
+
+  upload: (productId: string, file: File) => {
+    const formData = new FormData()
+    formData.append('product_id', productId)
+    formData.append('file', file)
+    return api.post<{ avatar_url: string }>('/avatars/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data)
+  },
+
+  remove: (productId: string) => api.delete(`/avatars/${productId}`),
 }
 
 export default api

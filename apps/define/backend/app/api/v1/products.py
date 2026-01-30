@@ -45,6 +45,7 @@ def list_products(
             name=product.name,
             prefix=product.prefix,
             description=product.description,
+            avatar_url=product.avatar_url,
             created_at=product.created_at,
             updated_at=product.updated_at,
             requirement_count=count,
@@ -129,6 +130,8 @@ def update_product(
         product.prefix = new_prefix
     if data.description is not None:
         product.description = data.description.strip() if data.description else None
+    if data.avatar_url is not None:
+        product.avatar_url = data.avatar_url if data.avatar_url else None
 
     product.updated_at = datetime.utcnow().isoformat()
     db.commit()
