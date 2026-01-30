@@ -10,6 +10,12 @@ from app.utils.auth import hash_api_key
 logger = logging.getLogger(__name__)
 
 
+async def ensure_indexes() -> None:
+    """Ensure all required indexes exist. Safe to call multiple times."""
+    db = get_database()
+    await create_indexes(db)
+
+
 async def seed_database() -> None:
     """
     Seed the database with default data for development.
@@ -21,6 +27,9 @@ async def seed_database() -> None:
     """
     settings = get_settings()
     db = get_database()
+
+    # Always ensure indexes exist (idempotent)
+    await create_indexes(db)
 
     # Check if already seeded
     existing_org = await db.organizations.find_one({"is_default": True})
@@ -77,9 +86,6 @@ async def seed_database() -> None:
         )
         await db.queues.insert_one(queue.model_dump_mongo())
         logger.info(f"Created queue for {user.name}: {purpose}")
-
-    # Create indexes
-    await create_indexes(db)
 
     logger.info("Database seeding complete!")
     logger.info(f"Default API key: {settings.default_api_key}")

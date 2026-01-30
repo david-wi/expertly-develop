@@ -5,7 +5,7 @@ import logging
 
 from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection, check_database_connection
-from app.utils.seed import seed_database
+from app.utils.seed import seed_database, ensure_indexes
 from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images, backlog
 
 settings = get_settings()
@@ -24,6 +24,9 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting Expertly Manage API")
     await connect_to_mongo()
+
+    # Always ensure indexes exist (idempotent, safe to run on every startup)
+    await ensure_indexes()
 
     # Seed database in dev mode
     if settings.skip_auth:
