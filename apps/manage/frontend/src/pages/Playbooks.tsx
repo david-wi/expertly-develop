@@ -275,12 +275,23 @@ function StepEditor({
         <span className="flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex-shrink-0">
           {index + 1}
         </span>
-        <input
-          type="text"
+        <textarea
           value={step.title}
           onChange={(e) => updateField('title', e.target.value)}
-          className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-medium text-gray-900 placeholder-gray-400 px-1 py-0.5"
+          onInput={(e) => {
+            const target = e.target as HTMLTextAreaElement
+            target.style.height = 'auto'
+            target.style.height = target.scrollHeight + 'px'
+          }}
+          ref={(el) => {
+            if (el) {
+              el.style.height = 'auto'
+              el.style.height = el.scrollHeight + 'px'
+            }
+          }}
+          className="flex-1 bg-transparent border-0 focus:ring-0 text-sm font-medium text-gray-900 placeholder-gray-400 px-1 py-0.5 resize-none overflow-hidden min-h-[1.5rem]"
           placeholder="Step title..."
+          rows={1}
         />
         {step.description && !expanded && (
           <span
