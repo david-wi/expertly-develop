@@ -1,11 +1,22 @@
-import { LayoutDashboard, ListTodo, Inbox, Activity } from 'lucide-react'
+import { LayoutDashboard, ListTodo, Inbox, Activity, Users } from 'lucide-react'
 import { WidgetDefinition } from './types'
 import { StatsOverviewWidget } from './StatsOverviewWidget'
 import { MyActiveTasksWidget } from './MyActiveTasksWidget'
 import { MyQueuesWidget } from './MyQueuesWidget'
 import { MonitorsSummaryWidget } from './MonitorsSummaryWidget'
+import { TeamMembersWidget } from './TeamMembersWidget'
 
 export const widgetRegistry: Record<string, WidgetDefinition> = {
+  'team-members': {
+    id: 'team-members',
+    name: 'Team Members',
+    description: 'View your team members with avatars',
+    icon: Users,
+    defaultSize: { w: 12, h: 2 },
+    minSize: { w: 6, h: 2 },
+    maxSize: { w: 12, h: 3 },
+    component: TeamMembersWidget,
+  },
   'stats-overview': {
     id: 'stats-overview',
     name: 'Stats Overview',
