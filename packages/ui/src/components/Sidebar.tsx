@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useState } from 'react'
-import type { ReactNode, ComponentType } from 'react'
+import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { useTheme } from '../theme/useTheme'
 import { VersionChecker } from './VersionChecker'
@@ -97,7 +97,7 @@ export interface SidebarProps {
     href: string
     className: string
     children: ReactNode
-    onClick?: () => void
+    onClick?: (event: ReactMouseEvent) => void
   }) => ReactNode
   // Version checking - shows banner when newer version is available
   versionCheck?: {

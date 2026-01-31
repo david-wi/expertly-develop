@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, MouseEvent } from 'react'
 
 export interface RenderLinkProps {
   href: string
   className: string
   children: ReactNode
-  onClick?: () => void
+  onClick?: (event: MouseEvent) => void
 }
 
 /**
@@ -36,8 +36,8 @@ export function createRenderLink(navigate: (path: string) => void) {
       href={href}
       className={className}
       onClick={(e) => {
-        // Call the onClick handler first (e.g., close menu)
-        onClick?.()
+        // Call the onClick handler with event (so it can check for modifier keys)
+        onClick?.(e)
 
         // Allow modifier keys and right-click to work naturally
         // Only intercept normal left-clicks for SPA navigation
