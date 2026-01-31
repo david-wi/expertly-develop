@@ -350,21 +350,49 @@ export default function Projects() {
     [projects]
   )
 
-  // Drag and drop state
+  // ==========================================================================
+  // DRAG AND DROP FOR PROJECT REPARENTING
+  // ==========================================================================
+  // This implementation uses native HTML5 drag-and-drop to allow users to
+  // drag projects onto other projects to change their parent (reparenting).
+  //
+  // KEY IMPLEMENTATION DETAILS (solving issues that took many attempts):
+  //
+  // 1. REACT RE-RENDER CANCELLATION FIX:
+  //    HTML5 drag-and-drop has a known issue with React: if you call setState()
+  //    during the dragstart event, React re-renders the component, which cancels
+  //    the drag operation. The browser fires dragstart, then dragend immediately.
+  //
+  //    Solution: Use a ref (draggedIdRef) to store the dragged ID immediately
+  //    (no re-render), then use requestAnimationFrame() to delay the setState()
+  //    until after the drag has been established. The ref serves as a fallback
+  //    in event handlers since the state may not have updated yet.
+  //
+  // 2. LARGER DRAG TARGET AREA:
+  //    Originally, only a small 28x28px grip icon was draggable, making it hard
+  //    to initiate drags. Now the entire <td> cell (project name column) is
+  //    draggable, with the grip icon serving as a visual indicator only.
+  //    This matches the fix applied to the dashboard widget drag-and-drop.
+  //
+  // 3. PREVENTING INVALID DROPS:
+  //    - Can't drop a project onto itself
+  //    - Can't drop a project onto its own descendants (would create a cycle)
+  //    - The getDescendantIds() helper finds all descendants to check this
+  // ==========================================================================
+
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null)
   const [isDraggingToRoot, setIsDraggingToRoot] = useState(false)
-  // Use ref to track dragged ID without triggering re-renders during drag
+  // Ref to track dragged ID without triggering re-renders (see explanation above)
   const draggedIdRef = useRef<string | null>(null)
 
   const handleDragStart = (e: React.DragEvent, projectId: string) => {
     // Set data transfer first - required for drag to work
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', projectId)
-    // Store in ref immediately (no re-render)
+    // Store in ref immediately (no re-render) - critical for drag to not cancel
     draggedIdRef.current = projectId
     // Delay React state update to avoid re-render cancelling the drag
-    // This is a known issue with HTML5 drag-and-drop in React
     requestAnimationFrame(() => {
       setDraggedProjectId(projectId)
     })
@@ -683,6 +711,8 @@ export default function Projects() {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
                     >
+                      {/* Entire cell is draggable (not just the grip icon) for easier drag initiation.
+                          The grip icon is just a visual indicator. See comment block above for details. */}
                       <td
                         className="px-4 py-3 cursor-grab active:cursor-grabbing"
                         draggable={true}
@@ -833,6 +863,7 @@ export default function Projects() {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
                     >
+                      {/* Entire cell is draggable - see tree view comment above */}
                       <td
                         className="px-4 py-3 cursor-grab active:cursor-grabbing"
                         draggable={true}
