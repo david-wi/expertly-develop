@@ -120,7 +120,7 @@ export const usersApi = {
     const { data } = await api.get('/users', { params })
     return data.items
   },
-  create: async (user: CreateUserRequest): Promise<{ user: User; api_key: string }> => {
+  create: async (user: CreateUserRequest): Promise<{ user: User }> => {
     const { data } = await api.post('/users', user)
     return data
   },
