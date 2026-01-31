@@ -1,0 +1,6 @@
+export * from './types'
+export * from './registry'
+export { StatsOverviewWidget } from './StatsOverviewWidget'
+export { MyActiveTasksWidget } from './MyActiveTasksWidget'
+export { MyQueuesWidget } from './MyQueuesWidget'
+export { MonitorsSummaryWidget } from './MonitorsSummaryWidget'

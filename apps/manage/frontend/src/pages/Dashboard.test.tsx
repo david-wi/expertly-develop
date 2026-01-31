@@ -1,19 +1,38 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import Dashboard from './Dashboard'
 import { useAppStore } from '../stores/appStore'
-import { Queue, Task, User } from '../services/api'
+import { useDashboardStore } from '../stores/dashboardStore'
+import { api, Queue, Task, User } from '../services/api'
 
 // Mock the app store
 vi.mock('../stores/appStore', () => ({
   useAppStore: vi.fn(),
 }))
 
+// Mock the dashboard store
+vi.mock('../stores/dashboardStore', () => ({
+  useDashboardStore: vi.fn(),
+}))
+
 // Mock the useWebSocket hook
 vi.mock('../hooks/useWebSocket', () => ({
   useWebSocket: vi.fn(),
 }))
+
+// Mock the API module
+vi.mock('../services/api', async () => {
+  const actual = await vi.importActual('../services/api')
+  return {
+    ...actual,
+    api: {
+      getUsers: vi.fn(() => Promise.resolve([])),
+      getTeams: vi.fn(() => Promise.resolve([])),
+      getMonitorStats: vi.fn(() => Promise.resolve({ total: 0 })),
+    },
+  }
+})
 
 const mockUser: User = {
   id: 'user-1',
@@ -85,10 +104,19 @@ const renderWithRouter = (component: React.ReactNode) => {
   return render(<BrowserRouter>{component}</BrowserRouter>)
 }
 
+const defaultDashboardWidgets = [
+  { id: 'stats-overview', type: 'stats-overview', config: {}, layout: { x: 0, y: 0, w: 12, h: 2 } },
+  { id: 'my-active-tasks', type: 'my-active-tasks', config: {}, layout: { x: 0, y: 2, w: 8, h: 5 } },
+  { id: 'my-queues', type: 'my-queues', config: {}, layout: { x: 8, y: 2, w: 4, h: 5 } },
+  { id: 'monitors-summary', type: 'monitors-summary', config: {}, layout: { x: 0, y: 7, w: 12, h: 3 } },
+]
+
 describe('Dashboard', () => {
   const mockFetchUser = vi.fn()
   const mockFetchQueues = vi.fn()
   const mockFetchTasks = vi.fn()
+  const mockSetEditMode = vi.fn()
+  const mockLoadFromStorage = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -102,6 +130,19 @@ describe('Dashboard', () => {
       fetchQueues: mockFetchQueues,
       fetchTasks: mockFetchTasks,
     } as ReturnType<typeof useAppStore>)
+
+    vi.mocked(useDashboardStore).mockReturnValue({
+      widgets: defaultDashboardWidgets,
+      editMode: false,
+      setEditMode: mockSetEditMode,
+      addWidget: vi.fn(),
+      removeWidget: vi.fn(),
+      updateWidgetLayout: vi.fn(),
+      updateWidgetConfig: vi.fn(),
+      updateAllLayouts: vi.fn(),
+      resetToDefault: vi.fn(),
+      loadFromStorage: mockLoadFromStorage,
+    })
   })
 
   it('renders dashboard title', () => {
@@ -206,10 +247,12 @@ describe('Dashboard', () => {
     expect(screen.getByText('In Progress Task')).toBeInTheDocument()
   })
 
-  it('shows task status badges', () => {
+  it('shows task titles without status badges (compact view)', () => {
     renderWithRouter(<Dashboard />)
-    expect(screen.getByText('queued')).toBeInTheDocument()
-    expect(screen.getByText('in progress')).toBeInTheDocument()
+    // In the compact widget view, status badges are not shown
+    // Tasks are displayed but without the status column
+    expect(screen.getByText('Test Task')).toBeInTheDocument()
+    expect(screen.getByText('In Progress Task')).toBeInTheDocument()
   })
 
   it('displays queue information in queues section', async () => {
