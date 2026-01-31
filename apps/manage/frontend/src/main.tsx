@@ -1,3 +1,4 @@
+// Expertly Manage - Task Management Application
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { ThemeProvider } from '@expertly/ui'
