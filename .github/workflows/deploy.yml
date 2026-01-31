@@ -409,7 +409,7 @@ jobs:
             done
 
             echo "=== \$APP deployed successfully ==="
-ENDSSH
+          ENDSSH
             then
               echo "✓ ${{ matrix.app }} deployed successfully"
               echo "status=success" >> $GITHUB_OUTPUT
