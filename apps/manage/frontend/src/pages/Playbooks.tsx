@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import { FolderPlus } from 'lucide-react'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem, GeneratedStep } from '../services/api'
 import { useAppStore } from '../stores/appStore'
@@ -1113,10 +1114,22 @@ export default function Playbooks() {
     setShowCreateModal(true)
   }
 
-  const openCreateGroupModal = () => {
+  const openCreateGroupModal = useCallback(() => {
     setGroupName('')
     setShowCreateGroupModal(true)
-  }
+  }, [])
+
+  // Keyboard shortcut for new group (Cmd/Ctrl+Shift+G)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g') {
+        e.preventDefault()
+        openCreateGroupModal()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [openCreateGroupModal])
 
   const openEditor = (playbook: Playbook) => {
     setEditingPlaybook(playbook)
@@ -1707,9 +1720,10 @@ export default function Playbooks() {
           </button>
           <button
             onClick={openCreateGroupModal}
-            className="text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-100 border border-gray-300 transition-colors"
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-md transition-colors"
+            title={`New Group (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+G)`}
           >
-            New Group
+            <FolderPlus className="w-5 h-5" />
           </button>
           <button
             onClick={openCreateModal}
