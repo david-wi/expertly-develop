@@ -178,4 +178,13 @@ async def create_indexes(db) -> None:
     await db.bot_activities.create_index([("organization_id", 1), ("bot_id", 1), ("created_at", -1)])
     await db.bot_activities.create_index([("bot_id", 1), ("activity_type", 1), ("created_at", -1)])
 
+    # Documents
+    await db.documents.create_index("organization_id")
+    await db.documents.create_index("project_id")
+    await db.documents.create_index("task_id")
+    await db.documents.create_index("purpose")
+    await db.documents.create_index([("organization_id", 1), ("project_id", 1), ("deleted_at", 1)])
+    await db.documents.create_index([("organization_id", 1), ("task_id", 1), ("deleted_at", 1)])
+    await db.documents.create_index([("organization_id", 1), ("purpose", 1), ("deleted_at", 1)])
+
     logger.info("Created database indexes")

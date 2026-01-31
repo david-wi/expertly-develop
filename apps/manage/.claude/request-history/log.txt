@@ -4,3 +4,5 @@
 20260130 - Add recurring task assignments UI within projects at any hierarchical level; relabel Tasks as Assignments in UI only
 20260130 - Expertly Manage Projects: Make Compact view default, fix view toggle button label to show current view, change task count badge to indigo, make description hover-only, fix drag-drop by moving draggable to handle
 20260130 - Expand landing page vision: process management, bot army, proactive Chief of Staff concept
+20260131 Deploy new Robot Office image to Expertly Manage landing page - replacing /images/bot-office.png
+20260131 Add Documents entity with versioning, attachable to Projects/Tasks, supports MD content and external links, with document purpose codes

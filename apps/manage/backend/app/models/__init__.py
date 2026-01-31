@@ -40,6 +40,9 @@ from app.models.notification import (
 from app.models.bot_activity import (
     BotActivity, BotActivityType, BotStatus, BotWithStatus, BotStats, BotConfigUpdate
 )
+from app.models.document import (
+    Document, DocumentCreate, DocumentUpdate, DocumentResponse, DocumentHistoryEntry
+)
 
 __all__ = [
     "PyObjectId",
@@ -136,4 +139,9 @@ __all__ = [
     "BotWithStatus",
     "BotStats",
     "BotConfigUpdate",
+    "Document",
+    "DocumentCreate",
+    "DocumentUpdate",
+    "DocumentResponse",
+    "DocumentHistoryEntry",
 ]
