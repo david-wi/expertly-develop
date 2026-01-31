@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { UseActiveElementReturn } from '../components/VoiceTranscription/types'
 export function useActiveElement(): UseActiveElementReturn {
   const [activeElement, setActiveElement] = useState<HTMLElement | null>(null)

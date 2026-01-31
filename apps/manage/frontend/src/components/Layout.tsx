@@ -14,7 +14,7 @@ import {
   Eye,
   Bot,
 } from 'lucide-react'
-import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, VoiceTranscription, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import NotificationBell from './NotificationBell'
 import { api, Organization as ApiOrganization } from '../services/api'
@@ -140,6 +140,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-theme-bg">
+      <VoiceTranscription wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe" />
       <Sidebar
         productCode="manage"
         productName="Manage"
