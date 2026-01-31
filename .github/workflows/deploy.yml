@@ -30,7 +30,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       apps_to_deploy: ${{ steps.detect.outputs.apps_to_deploy }}
-      apps_to_typecheck: ${{ steps.detect.outputs.apps_to_typecheck }}
       should_deploy: ${{ steps.detect.outputs.should_deploy }}
     steps:
       - uses: actions/checkout@v4
@@ -44,9 +43,7 @@ jobs:
           if [ "${{ github.event.inputs.deploy_all }}" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual dispatch - deploying all apps"
             APPS='["define","develop","identity","admin","manage","salon","today","vibetest","vibecode"]'
-            TYPECHECK='["admin","define","develop","identity","manage","salon","today"]'
             echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
-            echo "apps_to_typecheck=$TYPECHECK" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -58,9 +55,7 @@ jobs:
           else
             echo "First commit - deploying all apps"
             APPS='["define","develop","identity","admin","manage","salon","today","vibetest","vibecode"]'
-            TYPECHECK='["admin","define","develop","identity","manage","salon","today"]'
             echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
-            echo "apps_to_typecheck=$TYPECHECK" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -84,9 +79,7 @@ jobs:
 
           if [ "$DEPLOY_ALL" = "true" ]; then
             APPS='["define","develop","identity","admin","manage","salon","today","vibetest","vibecode"]'
-            TYPECHECK='["admin","define","develop","identity","manage","salon","today"]'
             echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
-            echo "apps_to_typecheck=$TYPECHECK" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             exit 0
           fi
@@ -96,49 +89,29 @@ jobs:
           if [ -z "$DEPLOY_FILES" ]; then
             echo "Only documentation/non-deployment files changed - skipping deployment"
             echo "apps_to_deploy=[]" >> $GITHUB_OUTPUT
-            echo "apps_to_typecheck=[]" >> $GITHUB_OUTPUT
             echo "should_deploy=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           # Detect which specific apps changed
           APPS_TO_DEPLOY=()
-          APPS_TO_TYPECHECK=()
-
-          # Map of apps and whether they have typecheck
-          # Apps with typecheck: admin, define, develop, identity, manage, salon, today
-          # Apps without typecheck (TODO): vibetest, vibecode
 
           for app in admin define develop identity manage salon today vibetest vibecode; do
             if echo "$CHANGED_FILES" | grep -q "^apps/${app}/"; then
               APPS_TO_DEPLOY+=("$app")
-              # Only add to typecheck if it's in the typecheck list
-              case $app in
-                admin|define|develop|identity|manage|salon|today)
-                  APPS_TO_TYPECHECK+=("$app")
-                  ;;
-              esac
             fi
           done
 
-          # Convert bash arrays to JSON
+          # Convert bash array to JSON
           if [ ${#APPS_TO_DEPLOY[@]} -eq 0 ]; then
             APPS_JSON="[]"
           else
             APPS_JSON=$(printf '%s\n' "${APPS_TO_DEPLOY[@]}" | jq -R . | jq -s -c .)
           fi
 
-          if [ ${#APPS_TO_TYPECHECK[@]} -eq 0 ]; then
-            TYPECHECK_JSON="[]"
-          else
-            TYPECHECK_JSON=$(printf '%s\n' "${APPS_TO_TYPECHECK[@]}" | jq -R . | jq -s -c .)
-          fi
-
           echo "Apps to deploy: $APPS_JSON"
-          echo "Apps to typecheck: $TYPECHECK_JSON"
 
           echo "apps_to_deploy=$APPS_JSON" >> $GITHUB_OUTPUT
-          echo "apps_to_typecheck=$TYPECHECK_JSON" >> $GITHUB_OUTPUT
 
           if [ "$APPS_JSON" = "[]" ]; then
             echo "should_deploy=false" >> $GITHUB_OUTPUT
@@ -146,47 +119,11 @@ jobs:
             echo "should_deploy=true" >> $GITHUB_OUTPUT
           fi
 
-  # Pre-flight check: TypeScript compilation for changed frontends
-  typecheck:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.apps_to_typecheck != '[]'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        app: ${{ fromJson(needs.detect-changes.outputs.apps_to_typecheck) }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-      - name: TypeScript check
-        run: |
-          # Map app name to path
-          case "${{ matrix.app }}" in
-            admin)    APP_PATH="apps/admin/frontend" ;;
-            define)   APP_PATH="apps/define/frontend" ;;
-            develop)  APP_PATH="apps/develop/frontend" ;;
-            identity) APP_PATH="apps/identity/frontend" ;;
-            manage)   APP_PATH="apps/manage/frontend" ;;
-            salon)    APP_PATH="apps/salon/frontend" ;;
-            today)    APP_PATH="apps/today/frontend" ;;
-            *)        echo "Unknown app: ${{ matrix.app }}"; exit 1 ;;
-          esac
-          cd "$APP_PATH"
-          npm run typecheck
-        continue-on-error: false
-
   # Initialize deployment state and build shared infrastructure
+  # Note: Typecheck is enforced by CI on PRs before merge, so not needed here
   init-deploy:
-    needs: [detect-changes, typecheck]
-    if: |
-      always() &&
-      needs.detect-changes.outputs.should_deploy == 'true' &&
-      (needs.typecheck.result == 'success' || needs.typecheck.result == 'skipped')
+    needs: detect-changes
+    if: needs.detect-changes.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
     outputs:
       git_commit: ${{ steps.init.outputs.git_commit }}
@@ -298,9 +235,8 @@ jobs:
 
   # Build and deploy each changed app independently
   deploy-app:
-    needs: [detect-changes, typecheck, init-deploy]
+    needs: [detect-changes, init-deploy]
     if: |
-      always() &&
       needs.detect-changes.outputs.apps_to_deploy != '[]' &&
       needs.init-deploy.result == 'success'
     runs-on: ubuntu-latest
