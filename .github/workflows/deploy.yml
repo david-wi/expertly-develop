@@ -11,6 +11,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      deploy_all:
+        description: 'Deploy all apps (override change detection)'
+        required: false
+        default: 'false'
+        type: boolean
 
 # Queue deployments but don't cancel in-progress ones (let them finish)
 concurrency:
@@ -20,23 +25,136 @@ env:
   DEPLOY_PATH: /opt/expertly-develop
 
 jobs:
-  # Pre-flight check: TypeScript compilation for all frontends
+  # Detect which apps have changed to enable selective deployment
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      apps_to_deploy: ${{ steps.detect.outputs.apps_to_deploy }}
+      apps_to_typecheck: ${{ steps.detect.outputs.apps_to_typecheck }}
+      should_deploy: ${{ steps.detect.outputs.should_deploy }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Need at least 2 commits to compare
+
+      - name: Detect changed files
+        id: detect
+        run: |
+          # If workflow_dispatch with deploy_all, or if this is a forced deployment
+          if [ "${{ github.event.inputs.deploy_all }}" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual dispatch - deploying all apps"
+            APPS='["define","develop","identity","admin","manage","salon","today","vibetest","vibecode"]'
+            TYPECHECK='["admin","define","develop","identity","manage","salon","today"]'
+            echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
+            echo "apps_to_typecheck=$TYPECHECK" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Get changed files between HEAD and HEAD~1
+          # Handle case where HEAD~1 doesn't exist (first commit)
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          else
+            echo "First commit - deploying all apps"
+            APPS='["define","develop","identity","admin","manage","salon","today","vibetest","vibecode"]'
+            TYPECHECK='["admin","define","develop","identity","manage","salon","today"]'
+            echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
+            echo "apps_to_typecheck=$TYPECHECK" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo ""
+
+          # Check for infrastructure changes that require full deployment
+          DEPLOY_ALL=false
+          if echo "$CHANGED_FILES" | grep -qE '^(docker-compose.*\.yml|package\.json|package-lock\.json|\.github/workflows/deploy\.yml)$'; then
+            echo "Infrastructure files changed - deploying all apps"
+            DEPLOY_ALL=true
+          fi
+
+          # Check for shared package changes
+          if echo "$CHANGED_FILES" | grep -q '^packages/ui/'; then
+            echo "Shared UI package changed - deploying all apps"
+            DEPLOY_ALL=true
+          fi
+
+          if [ "$DEPLOY_ALL" = "true" ]; then
+            APPS='["define","develop","identity","admin","manage","salon","today","vibetest","vibecode"]'
+            TYPECHECK='["admin","define","develop","identity","manage","salon","today"]'
+            echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
+            echo "apps_to_typecheck=$TYPECHECK" >> $GITHUB_OUTPUT
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if only docs/non-deployment files changed
+          DEPLOY_FILES=$(echo "$CHANGED_FILES" | grep -vE '^(README\.md|CLAUDE\.md|docs/|scripts/|\.claude/)' || true)
+          if [ -z "$DEPLOY_FILES" ]; then
+            echo "Only documentation/non-deployment files changed - skipping deployment"
+            echo "apps_to_deploy=[]" >> $GITHUB_OUTPUT
+            echo "apps_to_typecheck=[]" >> $GITHUB_OUTPUT
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Detect which specific apps changed
+          APPS_TO_DEPLOY=()
+          APPS_TO_TYPECHECK=()
+
+          # Map of apps and whether they have typecheck
+          # Apps with typecheck: admin, define, develop, identity, manage, salon, today
+          # Apps without typecheck (TODO): vibetest, vibecode
+
+          for app in admin define develop identity manage salon today vibetest vibecode; do
+            if echo "$CHANGED_FILES" | grep -q "^apps/${app}/"; then
+              APPS_TO_DEPLOY+=("$app")
+              # Only add to typecheck if it's in the typecheck list
+              case $app in
+                admin|define|develop|identity|manage|salon|today)
+                  APPS_TO_TYPECHECK+=("$app")
+                  ;;
+              esac
+            fi
+          done
+
+          # Convert bash arrays to JSON
+          if [ ${#APPS_TO_DEPLOY[@]} -eq 0 ]; then
+            APPS_JSON="[]"
+          else
+            APPS_JSON=$(printf '%s\n' "${APPS_TO_DEPLOY[@]}" | jq -R . | jq -s -c .)
+          fi
+
+          if [ ${#APPS_TO_TYPECHECK[@]} -eq 0 ]; then
+            TYPECHECK_JSON="[]"
+          else
+            TYPECHECK_JSON=$(printf '%s\n' "${APPS_TO_TYPECHECK[@]}" | jq -R . | jq -s -c .)
+          fi
+
+          echo "Apps to deploy: $APPS_JSON"
+          echo "Apps to typecheck: $TYPECHECK_JSON"
+
+          echo "apps_to_deploy=$APPS_JSON" >> $GITHUB_OUTPUT
+          echo "apps_to_typecheck=$TYPECHECK_JSON" >> $GITHUB_OUTPUT
+
+          if [ "$APPS_JSON" = "[]" ]; then
+            echo "should_deploy=false" >> $GITHUB_OUTPUT
+          else
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Pre-flight check: TypeScript compilation for changed frontends
   typecheck:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.apps_to_typecheck != '[]'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        app:
-          - { name: admin, path: apps/admin/frontend }
-          - { name: define, path: apps/define/frontend }
-          - { name: develop, path: apps/develop/frontend }
-          - { name: identity, path: apps/identity/frontend }
-          - { name: manage, path: apps/manage/frontend }
-          - { name: salon, path: apps/salon/frontend }
-          - { name: today, path: apps/today/frontend }
-          # TODO: Fix type issues in these apps:
-          # - { name: vibetest, path: apps/vibetest/frontend }
-          # - { name: vibecode, path: apps/vibecode/packages/client }
+        app: ${{ fromJson(needs.detect-changes.outputs.apps_to_typecheck) }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -46,13 +164,29 @@ jobs:
       - name: Install dependencies
         run: npm ci --ignore-scripts
       - name: TypeScript check
-        working-directory: ${{ matrix.app.path }}
-        run: npm run typecheck
+        run: |
+          # Map app name to path
+          case "${{ matrix.app }}" in
+            admin)    APP_PATH="apps/admin/frontend" ;;
+            define)   APP_PATH="apps/define/frontend" ;;
+            develop)  APP_PATH="apps/develop/frontend" ;;
+            identity) APP_PATH="apps/identity/frontend" ;;
+            manage)   APP_PATH="apps/manage/frontend" ;;
+            salon)    APP_PATH="apps/salon/frontend" ;;
+            today)    APP_PATH="apps/today/frontend" ;;
+            *)        echo "Unknown app: ${{ matrix.app }}"; exit 1 ;;
+          esac
+          cd "$APP_PATH"
+          npm run typecheck
         continue-on-error: false
 
   # Initialize deployment state and build shared infrastructure
   init-deploy:
-    needs: typecheck
+    needs: [detect-changes, typecheck]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.should_deploy == 'true' &&
+      (needs.typecheck.result == 'success' || needs.typecheck.result == 'skipped')
     runs-on: ubuntu-latest
     outputs:
       git_commit: ${{ steps.init.outputs.git_commit }}
@@ -162,24 +296,19 @@ jobs:
           GIT_COMMIT=$(grep "^GIT_COMMIT=" init-deploy.log | cut -d= -f2 | tr -d '[:space:]')
           echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
 
-  # Build and deploy each app independently
+  # Build and deploy each changed app independently
   deploy-app:
-    needs: [typecheck, init-deploy]
+    needs: [detect-changes, typecheck, init-deploy]
+    if: |
+      always() &&
+      needs.detect-changes.outputs.apps_to_deploy != '[]' &&
+      needs.init-deploy.result == 'success'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       max-parallel: 3
       matrix:
-        app:
-          - { name: define, services: "define-frontend define-backend", health: "define-backend" }
-          - { name: develop, services: "develop-frontend develop-backend", health: "develop-backend" }
-          - { name: identity, services: "identity-frontend identity-backend", health: "identity-backend" }
-          - { name: admin, services: "admin-frontend admin-backend", health: "admin-backend" }
-          - { name: manage, services: "manage-frontend manage-backend", health: "manage-backend" }
-          - { name: salon, services: "salon-frontend salon-backend", health: "salon-backend" }
-          - { name: today, services: "today-frontend today-backend", health: "today-backend" }
-          - { name: vibetest, services: "vibetest-frontend vibetest-backend", health: "vibetest-backend" }
-          - { name: vibecode, services: "vibecode-client vibecode-server", health: "vibecode-server" }
+        app: ${{ fromJson(needs.detect-changes.outputs.apps_to_deploy) }}
 
     steps:
       - name: Setup SSH
@@ -189,26 +318,40 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy ${{ matrix.app.name }}
+      - name: Deploy ${{ matrix.app }}
         id: deploy
         run: |
+          # Map app name to services and health container
+          case "${{ matrix.app }}" in
+            define)   SERVICES="define-frontend define-backend"; HEALTH_CONTAINER="define-backend" ;;
+            develop)  SERVICES="develop-frontend develop-backend"; HEALTH_CONTAINER="develop-backend" ;;
+            identity) SERVICES="identity-frontend identity-backend"; HEALTH_CONTAINER="identity-backend" ;;
+            admin)    SERVICES="admin-frontend admin-backend"; HEALTH_CONTAINER="admin-backend" ;;
+            manage)   SERVICES="manage-frontend manage-backend"; HEALTH_CONTAINER="manage-backend" ;;
+            salon)    SERVICES="salon-frontend salon-backend"; HEALTH_CONTAINER="salon-backend" ;;
+            today)    SERVICES="today-frontend today-backend"; HEALTH_CONTAINER="today-backend" ;;
+            vibetest) SERVICES="vibetest-frontend vibetest-backend"; HEALTH_CONTAINER="vibetest-backend" ;;
+            vibecode) SERVICES="vibecode-client vibecode-server"; HEALTH_CONTAINER="vibecode-server" ;;
+            *)        echo "Unknown app: ${{ matrix.app }}"; exit 1 ;;
+          esac
+
           # SSH with retry logic
           MAX_RETRIES=3
           RETRY_DELAY=10
           for i in $(seq 1 $MAX_RETRIES); do
-            echo "Attempt $i of $MAX_RETRIES for ${{ matrix.app.name }}..."
-            if ssh -o ConnectTimeout=30 -o ServerAliveInterval=15 -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH' 2>&1 | tee deploy-${{ matrix.app.name }}.log
+            echo "Attempt $i of $MAX_RETRIES for ${{ matrix.app }}..."
+            if ssh -o ConnectTimeout=30 -o ServerAliveInterval=15 -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << ENDSSH 2>&1 | tee deploy-${{ matrix.app }}.log
             set -e
             cd /opt/expertly-develop
 
             STATE_FILE="/opt/deployment-state.json"
-            APP="${{ matrix.app.name }}"
-            SERVICES="${{ matrix.app.services }}"
-            HEALTH_CONTAINER="${{ matrix.app.health }}"
+            APP="${{ matrix.app }}"
+            SERVICES="$SERVICES"
+            HEALTH_CONTAINER="$HEALTH_CONTAINER"
 
             # Get this app's current color and determine target
-            CURRENT=$(jq -r ".services.${APP}.active" "$STATE_FILE")
-            if [ "$CURRENT" = "blue" ]; then
+            CURRENT=\$(jq -r ".services.\${APP}.active" "\$STATE_FILE")
+            if [ "\$CURRENT" = "blue" ]; then
                 TARGET="green"
                 OLD="blue"
             else
@@ -216,69 +359,69 @@ jobs:
                 OLD="green"
             fi
 
-            echo "=== Deploying $APP: $OLD -> $TARGET ==="
+            echo "=== Deploying \$APP: \$OLD -> \$TARGET ==="
 
-            export GIT_COMMIT=$(git rev-parse --short HEAD)
-            export BUILD_TIMESTAMP=$(date +%s)
-            export DEPLOY_COLOR="-${TARGET}"
+            export GIT_COMMIT=\$(git rev-parse --short HEAD)
+            export BUILD_TIMESTAMP=\$(date +%s)
+            export DEPLOY_COLOR="-\${TARGET}"
 
             # Build this app's services
-            echo "Building $SERVICES..."
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                docker compose -f docker-compose.prod.yml build $SERVICES
+            echo "Building \$SERVICES..."
+            COMPOSE_PROJECT_NAME="expertly-\${TARGET}" DEPLOY_COLOR="-\${TARGET}" \
+                docker compose -f docker-compose.prod.yml build \$SERVICES
 
             # Start this app's services
-            echo "Starting $SERVICES..."
-            COMPOSE_PROJECT_NAME="expertly-${TARGET}" DEPLOY_COLOR="-${TARGET}" \
-                docker compose -f docker-compose.prod.yml up -d $SERVICES
+            echo "Starting \$SERVICES..."
+            COMPOSE_PROJECT_NAME="expertly-\${TARGET}" DEPLOY_COLOR="-\${TARGET}" \
+                docker compose -f docker-compose.prod.yml up -d \$SERVICES
 
             # Wait for containers to be ready
             echo "Waiting for containers..."
             sleep 10
 
             # Health check
-            CONTAINER="expertly-${TARGET}-${HEALTH_CONTAINER}-1"
-            echo "Health checking $CONTAINER..."
-            if docker ps --filter "name=$CONTAINER" --filter "status=running" -q | grep -q .; then
-                echo "✓ $CONTAINER is running"
+            CONTAINER="expertly-\${TARGET}-\${HEALTH_CONTAINER}-1"
+            echo "Health checking \$CONTAINER..."
+            if docker ps --filter "name=\$CONTAINER" --filter "status=running" -q | grep -q .; then
+                echo "✓ \$CONTAINER is running"
             else
-                echo "✗ $CONTAINER failed to start"
+                echo "✗ \$CONTAINER failed to start"
                 echo "Container logs:"
-                docker logs "$CONTAINER" 2>&1 | tail -50 || true
+                docker logs "\$CONTAINER" 2>&1 | tail -50 || true
                 exit 1
             fi
 
             # Update state for this app
-            jq --arg app "$APP" --arg color "$TARGET" --arg time "$(date -Iseconds)" \
-                '.services[$app].active = $color | .services[$app].last_deploy = $time' \
-                "$STATE_FILE" > "${STATE_FILE}.tmp"
-            mv "${STATE_FILE}.tmp" "$STATE_FILE"
+            jq --arg app "\$APP" --arg color "\$TARGET" --arg time "\$(date -Iseconds)" \
+                '.services[\$app].active = \$color | .services[\$app].last_deploy = \$time' \
+                "\$STATE_FILE" > "\${STATE_FILE}.tmp"
+            mv "\${STATE_FILE}.tmp" "\$STATE_FILE"
 
             # Stop old version of this app (if running)
-            echo "Stopping old $APP containers on $OLD..."
-            for svc in $SERVICES; do
-                OLD_CONTAINER="expertly-${OLD}-${svc}-1"
-                if docker ps -a --filter "name=$OLD_CONTAINER" -q | grep -q .; then
-                    docker stop "$OLD_CONTAINER" 2>/dev/null || true
-                    docker rm "$OLD_CONTAINER" 2>/dev/null || true
-                    echo "  Stopped $OLD_CONTAINER"
+            echo "Stopping old \$APP containers on \$OLD..."
+            for svc in \$SERVICES; do
+                OLD_CONTAINER="expertly-\${OLD}-\${svc}-1"
+                if docker ps -a --filter "name=\$OLD_CONTAINER" -q | grep -q .; then
+                    docker stop "\$OLD_CONTAINER" 2>/dev/null || true
+                    docker rm "\$OLD_CONTAINER" 2>/dev/null || true
+                    echo "  Stopped \$OLD_CONTAINER"
                 fi
             done
 
-            echo "=== $APP deployed successfully ==="
-          ENDSSH
+            echo "=== \$APP deployed successfully ==="
+ENDSSH
             then
-              echo "✓ ${{ matrix.app.name }} deployed successfully"
+              echo "✓ ${{ matrix.app }} deployed successfully"
               echo "status=success" >> $GITHUB_OUTPUT
               break
             else
-              echo "✗ Attempt $i failed for ${{ matrix.app.name }}"
+              echo "✗ Attempt $i failed for ${{ matrix.app }}"
               if [ $i -lt $MAX_RETRIES ]; then
                 echo "Waiting ${RETRY_DELAY}s before retry..."
                 sleep $RETRY_DELAY
                 RETRY_DELAY=$((RETRY_DELAY * 2))
               else
-                echo "All attempts failed for ${{ matrix.app.name }}"
+                echo "All attempts failed for ${{ matrix.app }}"
                 echo "status=failed" >> $GITHUB_OUTPUT
                 exit 1
               fi
@@ -289,15 +432,19 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: deploy-log-${{ matrix.app.name }}
-          path: deploy-${{ matrix.app.name }}.log
+          name: deploy-log-${{ matrix.app }}
+          path: deploy-${{ matrix.app }}.log
           retention-days: 7
 
   # Visual verification of deployed apps
   visual-verification:
-    needs: deploy-app
+    needs: [detect-changes, deploy-app]
     runs-on: ubuntu-latest
-    if: always() && !cancelled() && github.event.inputs.skip_visual_verification != 'true'
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.deploy-app.result == 'success' &&
+      github.event.inputs.skip_visual_verification != 'true'
 
     steps:
       - name: Setup Node.js
@@ -313,6 +460,8 @@ jobs:
 
       - name: Take screenshots and verify
         id: visual
+        env:
+          APPS_TO_VERIFY: ${{ needs.detect-changes.outputs.apps_to_deploy }}
         run: |
           mkdir -p screenshots
 
@@ -342,8 +491,16 @@ jobs:
             fi
           }
 
-          # Verify all apps
-          for app in define develop identity admin manage salon today vibetest vibecode; do
+          # Parse the apps to verify from JSON array
+          APPS=$(echo "$APPS_TO_VERIFY" | jq -r '.[]' 2>/dev/null || echo "")
+
+          if [ -z "$APPS" ]; then
+            echo "No apps to verify"
+            exit 0
+          fi
+
+          # Verify only the deployed apps
+          for app in $APPS; do
             if verify_site "$app"; then
               VERIFIED=$((VERIFIED+1))
             else
@@ -369,9 +526,9 @@ jobs:
 
   # Cleanup old images
   cleanup:
-    needs: [deploy-app, visual-verification]
+    needs: [detect-changes, deploy-app, visual-verification]
     runs-on: ubuntu-latest
-    if: always() && !cancelled()
+    if: always() && !cancelled() && needs.deploy-app.result == 'success'
 
     steps:
       - name: Setup SSH
@@ -411,9 +568,20 @@ jobs:
           ENDSSH
 
       - name: Final health check
+        env:
+          APPS_TO_CHECK: ${{ needs.detect-changes.outputs.apps_to_deploy }}
         run: |
           echo "=== Final health check ==="
-          for app in define develop identity admin manage salon today vibetest vibecode; do
+
+          # Parse the apps to check from JSON array
+          APPS=$(echo "$APPS_TO_CHECK" | jq -r '.[]' 2>/dev/null || echo "")
+
+          if [ -z "$APPS" ]; then
+            echo "No apps to check"
+            exit 0
+          fi
+
+          for app in $APPS; do
             status=$(curl -s -o /dev/null -w "%{http_code}" "https://${app}.ai.devintensive.com/" || echo "000")
             if [ "$status" = "200" ]; then
               echo "✓ $app: HTTP $status"
