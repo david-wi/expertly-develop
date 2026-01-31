@@ -12,6 +12,7 @@ import LandingPage from './pages/LandingPage'
 import { Changelog } from './pages/Changelog'
 import { TestScenarios } from './pages/TestScenarios'
 import { KnownIssues } from './pages/KnownIssues'
+import { IdeaBacklog } from './pages/IdeaBacklog'
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
         <Route path="/monitor" element={<Monitor />} />
         <Route path="/ai-config" element={<AIConfig />} />
         <Route path="/changelog" element={<Changelog />} />
+        <Route path="/idea-backlog" element={<IdeaBacklog />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

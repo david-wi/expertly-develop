@@ -44,6 +44,15 @@ from app.schemas.ai_config import (
     PublicAIUseCaseConfigResponse,
     PublicAIConfigResponse,
 )
+from app.schemas.idea import (
+    IdeaCreate,
+    IdeaUpdate,
+    IdeaResponse,
+    IdeaListResponse,
+    IdeaStatusEnum,
+    IdeaPriorityEnum,
+    VALID_PRODUCTS,
+)
 
 __all__ = [
     "ThemeCreate",
@@ -84,4 +93,11 @@ __all__ = [
     "PublicAIModelResponse",
     "PublicAIUseCaseConfigResponse",
     "PublicAIConfigResponse",
+    "IdeaCreate",
+    "IdeaUpdate",
+    "IdeaResponse",
+    "IdeaListResponse",
+    "IdeaStatusEnum",
+    "IdeaPriorityEnum",
+    "VALID_PRODUCTS",
 ]
