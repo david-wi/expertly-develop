@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, VoiceTranscription, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
+import OrgSwitcher from './OrgSwitcher'
 import NotificationBell from './NotificationBell'
 import { api, Organization as ApiOrganization } from '../services/api'
 
@@ -145,7 +146,14 @@ export default function Layout() {
         navigation={navigation}
         currentPath={location.pathname}
         orgSwitcher={
-          <ViewAsSwitcher onViewChange={handleViewChange} />
+          <>
+            <OrgSwitcher
+              organizations={organizations}
+              selectedOrgId={selectedOrgId}
+              onOrgChange={handleOrgChange}
+            />
+            <ViewAsSwitcher onViewChange={handleViewChange} />
+          </>
         }
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
