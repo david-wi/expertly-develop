@@ -34,3 +34,4 @@
 20260130 Fix Projects page multi-level indentation bug - depth calculation was incorrect when projects processed out of order
 20260130 - Implement Voice Transcription Widget: A floating microphone button component for @expertly/ui that captures speech via Deepgram and injects transcribed text into the currently-focused input/textarea
 20260130 - Fix user menu to keep open on command-click (opens link in new tab). Regular click still closes the menu.
+20260131 - Implement selective deployment for monorepo: Added detect-changes job to GitHub Actions workflow that only deploys apps with actual changes. Single app change now deploys in ~20-30s vs ~2min for all 9 apps. Docs-only changes skip deployment entirely. Shared package (packages/ui) or infrastructure changes still deploy all apps.
