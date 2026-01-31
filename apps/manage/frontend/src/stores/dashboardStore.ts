@@ -19,28 +19,34 @@ export interface DashboardState {
 
 const DEFAULT_WIDGETS: WidgetInstance[] = [
   {
+    id: 'team-members',
+    type: 'team-members',
+    config: {},
+    layout: { x: 0, y: 0, w: 12, h: 2 },
+  },
+  {
     id: 'stats-overview',
     type: 'stats-overview',
     config: {},
-    layout: { x: 0, y: 0, w: 12, h: 2 },
+    layout: { x: 0, y: 2, w: 12, h: 2 },
   },
   {
     id: 'my-active-tasks',
     type: 'my-active-tasks',
     config: {},
-    layout: { x: 0, y: 2, w: 8, h: 5 },
+    layout: { x: 0, y: 4, w: 8, h: 5 },
   },
   {
     id: 'my-queues',
     type: 'my-queues',
     config: {},
-    layout: { x: 8, y: 2, w: 4, h: 5 },
+    layout: { x: 8, y: 4, w: 4, h: 5 },
   },
   {
     id: 'monitors-summary',
     type: 'monitors-summary',
     config: {},
-    layout: { x: 0, y: 7, w: 12, h: 3 },
+    layout: { x: 0, y: 9, w: 12, h: 3 },
   },
 ]
 

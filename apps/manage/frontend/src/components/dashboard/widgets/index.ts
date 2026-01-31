@@ -1,5 +1,6 @@
 export * from './types'
 export * from './registry'
+export { TeamMembersWidget } from './TeamMembersWidget'
 export { StatsOverviewWidget } from './StatsOverviewWidget'
 export { MyActiveTasksWidget } from './MyActiveTasksWidget'
 export { MyQueuesWidget } from './MyQueuesWidget'
