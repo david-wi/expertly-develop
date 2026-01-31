@@ -29,6 +29,46 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   getHealth: () => request<{ status: string; database: string }>('/health'),
 
+  // Documents
+  getDocuments: (params?: { project_id?: string; task_id?: string; purpose?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.project_id) searchParams.set('project_id', params.project_id)
+    if (params?.task_id) searchParams.set('task_id', params.task_id)
+    if (params?.purpose) searchParams.set('purpose', params.purpose)
+    const query = searchParams.toString()
+    return request<Document[]>(`/api/v1/documents${query ? `?${query}` : ''}`)
+  },
+  getDocument: (id: string, includeHistory?: boolean) => {
+    const query = includeHistory ? '?include_history=true' : ''
+    return request<Document>(`/api/v1/documents/${id}${query}`)
+  },
+  getDocumentVersion: (id: string, version: number) =>
+    request<DocumentVersionEntry>(`/api/v1/documents/${id}/version/${version}`),
+  getDocumentHistory: (id: string) =>
+    request<DocumentVersionEntry[]>(`/api/v1/documents/${id}/history`),
+  createDocument: (data: CreateDocumentRequest) =>
+    request<Document>('/api/v1/documents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateDocument: (id: string, data: UpdateDocumentRequest) =>
+    request<Document>(`/api/v1/documents/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteDocument: (id: string) =>
+    request<void>(`/api/v1/documents/${id}`, {
+      method: 'DELETE',
+    }),
+  restoreDocument: (id: string) =>
+    request<Document>(`/api/v1/documents/${id}/restore`, {
+      method: 'POST',
+    }),
+  revertDocumentToVersion: (id: string, version: number) =>
+    request<Document>(`/api/v1/documents/${id}/revert/${version}`, {
+      method: 'POST',
+    }),
+
   // Backlog
   getBacklogItems: (params?: { category?: string; status?: string; priority?: string }) => {
     const searchParams = new URLSearchParams()
@@ -1222,4 +1262,55 @@ export interface BotConfigUpdate {
   allowed_queue_ids?: string[]
   capabilities?: string[]
   what_i_can_help_with?: string
+}
+
+// Document types
+export interface Document {
+  id: string
+  organization_id: string
+  title: string
+  description?: string
+  content?: string
+  purpose?: string
+  project_id?: string
+  task_id?: string
+  external_url?: string
+  external_title?: string
+  version: number
+  created_by?: string
+  updated_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DocumentVersionEntry {
+  version: number
+  title: string
+  description?: string
+  content?: string
+  changed_at: string
+  changed_by?: string
+  is_current: boolean
+}
+
+export interface CreateDocumentRequest {
+  title: string
+  description?: string
+  content?: string
+  purpose?: string
+  project_id?: string
+  task_id?: string
+  external_url?: string
+  external_title?: string
+}
+
+export interface UpdateDocumentRequest {
+  title?: string
+  description?: string
+  content?: string
+  purpose?: string
+  project_id?: string
+  task_id?: string
+  external_url?: string
+  external_title?: string
 }
