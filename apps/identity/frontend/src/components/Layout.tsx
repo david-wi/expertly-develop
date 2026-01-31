@@ -97,7 +97,7 @@ export default function Layout() {
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     includeProfile: false,
     currentAppCode: 'identity',
-    organizations: userMenuOrganizations.length > 1 ? {
+    organizations: userMenuOrganizations.length > 0 ? {
       items: userMenuOrganizations,
       currentId: selectedOrgId,
       onSwitch: handleOrgChange,

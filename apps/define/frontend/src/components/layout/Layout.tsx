@@ -69,7 +69,7 @@ export default function Layout() {
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'define',
-    organizations: organizations.length > 1 ? {
+    organizations: organizations.length > 0 ? {
       items: organizations,
       currentId: currentTenantId,
       onSwitch: handleOrgSwitch,

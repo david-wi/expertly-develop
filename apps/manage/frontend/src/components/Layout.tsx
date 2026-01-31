@@ -120,7 +120,7 @@ export default function Layout() {
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'manage',
-    organizations: userMenuOrganizations.length > 1 ? {
+    organizations: userMenuOrganizations.length > 0 ? {
       items: userMenuOrganizations,
       currentId: selectedOrgId,
       onSwitch: handleOrgChange,
