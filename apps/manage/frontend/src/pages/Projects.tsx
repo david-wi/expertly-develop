@@ -96,7 +96,7 @@ function buildTree(projects: Project[], taskCounts: Map<string, number>): TreeNo
   const map = new Map<string, TreeNode>()
   const roots: TreeNode[] = []
 
-  // Create nodes for all projects
+  // Create nodes for all projects (depth will be set later)
   for (const project of projects) {
     const id = project._id || project.id
     map.set(id, {
@@ -107,18 +107,27 @@ function buildTree(projects: Project[], taskCounts: Map<string, number>): TreeNo
     })
   }
 
-  // Build tree structure
+  // Build tree structure (parent-child relationships)
   for (const project of projects) {
     const id = project._id || project.id
     const node = map.get(id)!
     if (project.parent_project_id && map.has(project.parent_project_id)) {
       const parent = map.get(project.parent_project_id)!
-      node.depth = parent.depth + 1
       parent.children.push(node)
     } else {
       roots.push(node)
     }
   }
+
+  // Calculate depths recursively after tree is built
+  // This ensures correct depth even if projects were processed out of order
+  const setDepths = (nodes: TreeNode[], depth: number) => {
+    for (const node of nodes) {
+      node.depth = depth
+      setDepths(node.children, depth + 1)
+    }
+  }
+  setDepths(roots, 0)
 
   // Sort children by name
   const sortChildren = (nodes: TreeNode[]) => {
