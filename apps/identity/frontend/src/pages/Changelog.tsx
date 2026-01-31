@@ -1,4 +1,5 @@
-import { ChangelogPage, type ChangelogEntry } from '@expertly/ui'
+import { useEffect, useState } from 'react'
+import { ChangelogPage, type ChangelogEntry, type GitCommitEntry } from '@expertly/ui'
 import { Users } from 'lucide-react'
 
 const changelog: ChangelogEntry[] = [
@@ -38,10 +39,20 @@ const changelog: ChangelogEntry[] = [
 ]
 
 export default function ChangelogRoute() {
+  const [gitCommits, setGitCommits] = useState<GitCommitEntry[]>([])
+
+  useEffect(() => {
+    fetch('/commits.json')
+      .then(res => res.ok ? res.json() : [])
+      .then(setGitCommits)
+      .catch(() => setGitCommits([]))
+  }, [])
+
   return (
     <ChangelogPage
       appName="Expertly Identity"
       entries={changelog}
+      gitCommits={gitCommits}
       appIcon={
         <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center">
           <Users className="w-5 h-5 text-white" />

@@ -79,4 +79,5 @@ export {
   ChangelogPage,
   type ChangelogEntry,
   type ChangelogPageProps,
+  type GitCommitEntry,
 } from './components/ChangelogPage'

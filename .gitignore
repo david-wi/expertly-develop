@@ -34,5 +34,8 @@ htmlcov/
 data/
 venv/
 
+# Generated at deploy time
+**/public/commits.json
+
 # Claude credentials
 .claude/gitignore/
