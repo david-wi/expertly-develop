@@ -683,7 +683,12 @@ export default function Projects() {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
                     >
-                      <td className="px-4 py-3">
+                      <td
+                        className="px-4 py-3 cursor-grab active:cursor-grabbing"
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, projectId)}
+                        onDragEnd={handleDragEnd}
+                      >
                         <div style={{ paddingLeft: node.depth * 24 }} className="flex items-center">
                           {/* Expand/Collapse toggle */}
                           {node.children.length > 0 ? (
@@ -693,6 +698,7 @@ export default function Projects() {
                                 toggleCollapse(projectId)
                               }}
                               className="mr-1 p-0.5 rounded hover:bg-gray-200 transition-transform"
+                              draggable={false}
                             >
                               <ChevronRight
                                 className={`w-4 h-4 text-gray-500 transition-transform ${
@@ -704,13 +710,10 @@ export default function Projects() {
                             <span className="w-5 mr-1" /> // Spacer for alignment
                           )}
                           <div
-                            className="mr-2 p-1 text-gray-400 select-none cursor-grab active:cursor-grabbing hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            title="Drag to reparent"
-                            draggable={true}
-                            onDragStart={(e) => handleDragStart(e, projectId)}
-                            onDragEnd={handleDragEnd}
+                            className="mr-2 p-1 text-gray-400 select-none"
+                            title="Drag to reparent this project"
                           >
-                            <svg className="w-5 h-5 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
                               <circle cx="15" cy="6" r="1.5" />
                               <circle cx="9" cy="12" r="1.5" />
@@ -830,16 +833,18 @@ export default function Projects() {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
                     >
-                      <td className="px-4 py-3">
+                      <td
+                        className="px-4 py-3 cursor-grab active:cursor-grabbing"
+                        draggable={true}
+                        onDragStart={(e) => handleDragStart(e, projectId)}
+                        onDragEnd={handleDragEnd}
+                      >
                         <div style={{ paddingLeft: node.depth * 24 }} className="flex items-start">
                           <div
-                            className="mr-2 mt-0.5 p-1 text-gray-400 select-none flex-shrink-0 cursor-grab active:cursor-grabbing hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            title="Drag to reparent"
-                            draggable={true}
-                            onDragStart={(e) => handleDragStart(e, projectId)}
-                            onDragEnd={handleDragEnd}
+                            className="mr-2 mt-0.5 p-1 text-gray-400 select-none flex-shrink-0"
+                            title="Drag to reparent this project"
                           >
-                            <svg className="w-5 h-5 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
                               <circle cx="15" cy="6" r="1.5" />
                               <circle cx="9" cy="12" r="1.5" />
