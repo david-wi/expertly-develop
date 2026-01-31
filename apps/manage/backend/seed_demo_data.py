@@ -6,12 +6,12 @@ import uuid
 from datetime import datetime, timedelta
 from bson import ObjectId
 
-from app.database import get_database, connect_database
+from app.database import get_database, connect_to_mongo
 from app.models import Organization, OrganizationSettings, User, UserType, UserRole, Queue, Team
 from app.models.queue import ScopeType
 from app.models.project import Project, ProjectStatus
 from app.models.task import Task, TaskStatus, RecurringTask, RecurrenceType
-from app.models.playbook import Playbook, PlaybookStep, ScopeType as PlaybookScopeType, ItemType, AssigneeType
+from app.models.playbook import Playbook, PlaybookStep, ScopeType as PlaybookScopeType, PlaybookItemType, AssigneeType
 from app.utils.auth import hash_api_key
 
 logging.basicConfig(level=logging.INFO)
@@ -24,7 +24,7 @@ DEMO_ORG_NAME = "Acme Corporation"
 
 async def seed_demo_data():
     """Create comprehensive demo data for Acme Corporation."""
-    await connect_database()
+    await connect_to_mongo()
     db = get_database()
 
     # Check if demo org already exists
@@ -67,11 +67,11 @@ async def seed_demo_data():
         # Support
         {"name": "Michelle Torres", "email": "michelle.torres@acme.demo", "role": UserRole.MEMBER, "user_type": UserType.HUMAN},
         {"name": "Chris Anderson", "email": "chris.anderson@acme.demo", "role": UserRole.MEMBER, "user_type": UserType.HUMAN},
-        # Bots
-        {"name": "Acme Assistant", "email": None, "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
-        {"name": "Deploy Bot", "email": None, "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
-        {"name": "Monitor Bot", "email": None, "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
-        {"name": "Sales Bot", "email": None, "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
+        # Bots (use generated emails since Manage requires email)
+        {"name": "Acme Assistant", "email": "acme-assistant@bot.acme.demo", "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
+        {"name": "Deploy Bot", "email": "deploy-bot@bot.acme.demo", "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
+        {"name": "Monitor Bot", "email": "monitor-bot@bot.acme.demo", "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
+        {"name": "Sales Bot", "email": "sales-bot@bot.acme.demo", "role": UserRole.MEMBER, "user_type": UserType.VIRTUAL},
         # David (for testing)
         {"name": "David", "email": "david@example.com", "role": UserRole.OWNER, "user_type": UserType.HUMAN},
     ]
@@ -318,7 +318,7 @@ async def seed_demo_data():
                 organization_id=str(org_id),
                 name=pb["name"],
                 description=pb["description"],
-                item_type=ItemType.PLAYBOOK,
+                item_type=PlaybookItemType.PLAYBOOK,
                 scope_type=pb["scope_type"],
                 scope_id=str(pb.get("scope_id")) if pb.get("scope_id") else None,
                 steps=steps,
@@ -409,7 +409,7 @@ async def seed_demo_data():
                 title=r["title"],
                 description=r["description"],
                 recurrence_type=r["recurrence_type"],
-                days_of_week=r.get("days_of_week"),
+                days_of_week=r.get("days_of_week") or [],
                 day_of_month=r.get("day_of_month"),
                 queue_id=queue_map.get(r["queue"]),
                 assigned_to_id=user_map.get(r.get("assigned_to")),
