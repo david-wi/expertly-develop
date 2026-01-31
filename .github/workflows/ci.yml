@@ -24,12 +24,34 @@ jobs:
           # - { name: vibecode, path: apps/vibecode/packages/client }  # Missing module types
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Check if app changed
+        id: check
+        run: |
+          # Get files changed in this PR
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+          # Check if this app or shared packages changed
+          APP_PATH="${{ matrix.app.path }}"
+          if echo "$CHANGED_FILES" | grep -qE "^(${APP_PATH}/|packages/ui/)"; then
+            echo "needs_check=true" >> $GITHUB_OUTPUT
+            echo "App ${{ matrix.app.name }} needs typecheck"
+          else
+            echo "needs_check=false" >> $GITHUB_OUTPUT
+            echo "App ${{ matrix.app.name }} unchanged - skipping typecheck"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.check.outputs.needs_check == 'true'
         with:
           node-version: '20'
           cache: 'npm'
       - name: Install dependencies
+        if: steps.check.outputs.needs_check == 'true'
         run: npm ci --ignore-scripts
       - name: TypeScript check
+        if: steps.check.outputs.needs_check == 'true'
         working-directory: ${{ matrix.app.path }}
         run: npm run typecheck
