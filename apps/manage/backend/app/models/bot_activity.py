@@ -93,3 +93,12 @@ class BotStats(BaseModel):
 
     uptime_percentage: Optional[float] = None
     last_activity_at: Optional[datetime] = None
+
+
+class BotConfigUpdate(BaseModel):
+    """Schema for updating bot configuration."""
+    poll_interval_seconds: Optional[int] = None
+    max_concurrent_tasks: Optional[int] = None
+    allowed_queue_ids: Optional[list[str]] = None
+    capabilities: Optional[list[str]] = None
+    what_i_can_help_with: Optional[str] = None

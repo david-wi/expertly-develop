@@ -8,19 +8,10 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.database import get_database
-from app.models import User, UserType, UserRole, TaskStatus, BotActivity, BotActivityType, BotStatus
+from app.models import User, UserType, UserRole, TaskStatus, BotActivity, BotActivityType, BotStatus, BotConfigUpdate
 from app.api.deps import get_current_user
 
 router = APIRouter()
-
-
-class BotConfigUpdate(BaseModel):
-    """Schema for updating bot configuration."""
-    poll_interval_seconds: Optional[int] = None
-    max_concurrent_tasks: Optional[int] = None
-    allowed_queue_ids: Optional[list[str]] = None
-    capabilities: Optional[list[str]] = None
-    what_i_can_help_with: Optional[str] = None
 
 
 def serialize_bot_with_status(
