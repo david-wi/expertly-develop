@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   User,
@@ -6,8 +6,8 @@ import {
   Building2,
   KeyRound,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type Organization as UIOrganization } from '@expertly/ui'
-import { authApi, organizationsApi, Organization, getOrganizationId, setOrganizationId } from '../services/api'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
+import { authApi } from '../services/api'
 
 const navigation = [
   { name: 'Users and Bots', href: '/users', icon: User },
@@ -19,17 +19,10 @@ const navigation = [
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getOrganizationId())
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(async () => {
     const user = await authApi.me('')
-    // If user has an organization and none is selected, select it
-    if (user.organization_id && !selectedOrgId) {
-      setSelectedOrgId(user.organization_id)
-      setOrganizationId(user.organization_id)
-    }
     // Transform AuthUser to CurrentUser format
     return {
       id: user.id,
@@ -39,56 +32,26 @@ export default function Layout() {
       organization_id: user.organization_id,
       organization_name: user.organization_name,
     }
-  }, [selectedOrgId])
+  }, [])
   const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
-  useEffect(() => {
-    // Fetch organizations
-    const fetchOrgs = async () => {
-      try {
-        const orgs = await organizationsApi.list()
-        setOrganizations(orgs)
-        // If we have orgs but none selected, select the first one
-        if (orgs.length > 0 && !selectedOrgId) {
-          setSelectedOrgId(orgs[0].id)
-          setOrganizationId(orgs[0].id)
-        }
-      } catch {
-        // Error fetching orgs - ignore
-      }
-    }
-    fetchOrgs()
-  }, [selectedOrgId])
-
-  const handleOrgChange = useCallback((orgId: string) => {
-    setOrganizationId(orgId)
-    // Reload the page to refresh data with new org
-    window.location.reload()
-  }, [])
+  // Use shared organizations hook
+  const { organizationsConfig, currentOrg } = useOrganizations({
+    storageKey: 'identity_selected_org_id',
+  })
 
   const handleLogout = useCallback(() => {
     authApi.logout()
     window.location.href = '/login'
   }, [])
 
-  const selectedOrg = organizations.find(o => o.id === selectedOrgId)
-
   // Merge organization name from selected org if not in user data
   const userWithOrg = sidebarUser
     ? {
         ...sidebarUser,
-        organization: sidebarUser.organization || selectedOrg?.name,
+        organization: sidebarUser.organization || currentOrg?.name,
       }
     : undefined
-
-  // Convert organizations to the format expected by UserMenu
-  const userMenuOrganizations: UIOrganization[] = useMemo(() =>
-    organizations.map(org => ({
-      id: org.id,
-      name: org.name,
-    })),
-    [organizations]
-  )
 
   // Create user menu config - no Profile link since this IS the identity app
   const userMenu = useMemo(() => createDefaultUserMenu({
@@ -97,12 +60,8 @@ export default function Layout() {
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     includeProfile: false,
     currentAppCode: 'identity',
-    organizations: userMenuOrganizations.length > 0 ? {
-      items: userMenuOrganizations,
-      currentId: selectedOrgId,
-      onSwitch: handleOrgChange,
-    } : undefined,
-  }), [handleLogout, userMenuOrganizations, selectedOrgId, handleOrgChange])
+    organizations: organizationsConfig,
+  }), [handleLogout, organizationsConfig])
 
   return (
     <div className="min-h-screen bg-theme-bg">

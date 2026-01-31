@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -13,11 +13,11 @@ import {
   PersonStanding,
   Eye,
 } from 'lucide-react'
-import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, VoiceTranscription, type Organization } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, VoiceTranscription } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import OrgSwitcher from './OrgSwitcher'
 import NotificationBell from './NotificationBell'
-import { api, Organization as ApiOrganization } from '../services/api'
+import { api } from '../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -36,61 +36,19 @@ const navigation = [
 // Local storage key for selected organization
 const ORG_STORAGE_KEY = 'manage_selected_org_id'
 
-function getStoredOrgId(): string | null {
-  try {
-    return localStorage.getItem(ORG_STORAGE_KEY)
-  } catch {
-    return null
-  }
-}
-
-function setStoredOrgId(orgId: string | null) {
-  try {
-    if (orgId) {
-      localStorage.setItem(ORG_STORAGE_KEY, orgId)
-    } else {
-      localStorage.removeItem(ORG_STORAGE_KEY)
-    }
-  } catch {
-    // Ignore storage errors
-  }
-}
-
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
-  const [organizations, setOrganizations] = useState<ApiOrganization[]>([])
-  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(getStoredOrgId())
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => api.getCurrentUser(), [])
   const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
-  // Fetch organizations on mount
-  useEffect(() => {
-    const fetchOrgs = async () => {
-      try {
-        const orgs = await api.getOrganizations()
-        setOrganizations(orgs)
-        // If we have orgs but none selected, select the first one
-        if (orgs.length > 0 && !selectedOrgId) {
-          const defaultOrg = orgs.find(o => o.is_default) || orgs[0]
-          setSelectedOrgId(defaultOrg.id)
-          setStoredOrgId(defaultOrg.id)
-        }
-      } catch {
-        // Error fetching orgs - ignore
-      }
-    }
-    fetchOrgs()
-  }, [selectedOrgId])
-
-  const handleOrgChange = useCallback((orgId: string) => {
-    setStoredOrgId(orgId)
-    // Reload the page to refresh data with new org
-    window.location.reload()
-  }, [])
+  // Use shared organizations hook
+  const { organizationsConfig, currentOrg, organizations, handleOrgSwitch } = useOrganizations({
+    storageKey: ORG_STORAGE_KEY,
+  })
 
   const handleViewChange = (newState: ViewAsState) => {
     setViewAs(newState)
@@ -98,22 +56,10 @@ export default function Layout() {
     window.location.reload()
   }
 
-  const selectedOrg = organizations.find(o => o.id === selectedOrgId)
-
   const handleLogout = useCallback(() => {
     // Redirect to identity login
     window.location.href = 'https://identity.ai.devintensive.com/login'
   }, [])
-
-  // Convert organizations to the format expected by UserMenu
-  const userMenuOrganizations: Organization[] = useMemo(() =>
-    organizations.map(org => ({
-      id: org.id,
-      name: org.name,
-      is_default: org.is_default,
-    })),
-    [organizations]
-  )
 
   // Create user menu config with centralized organization switcher
   const userMenu = useMemo(() => createDefaultUserMenu({
@@ -121,19 +67,14 @@ export default function Layout() {
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'manage',
-    organizations: userMenuOrganizations.length > 0 ? {
-      items: userMenuOrganizations,
-      currentId: selectedOrgId,
-      onSwitch: handleOrgChange,
-      storageKey: ORG_STORAGE_KEY,
-    } : undefined,
-  }), [handleLogout, userMenuOrganizations, selectedOrgId, handleOrgChange])
+    organizations: organizationsConfig,
+  }), [handleLogout, organizationsConfig])
 
   // Merge organization name from selected org if not in user data
   const userWithOrg = sidebarUser
     ? {
         ...sidebarUser,
-        organization: sidebarUser.organization || selectedOrg?.name,
+        organization: sidebarUser.organization || currentOrg?.name,
       }
     : undefined
 
@@ -148,9 +89,9 @@ export default function Layout() {
         orgSwitcher={
           <>
             <OrgSwitcher
-              organizations={organizations}
-              selectedOrgId={selectedOrgId}
-              onOrgChange={handleOrgChange}
+              organizations={organizations.map(o => ({ id: o.id, name: o.name, is_default: false }))}
+              selectedOrgId={currentOrg?.id ?? null}
+              onOrgChange={handleOrgSwitch}
             />
             <ViewAsSwitcher onViewChange={handleViewChange} />
           </>
@@ -171,7 +112,7 @@ export default function Layout() {
           <NotificationBell />
         </header>
         <main className="p-8">
-          <Outlet context={{ viewAs, selectedOrgId }} />
+          <Outlet context={{ viewAs, selectedOrgId: currentOrg?.id ?? null }} />
         </main>
       </div>
     </div>

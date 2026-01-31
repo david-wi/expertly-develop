@@ -1,4 +1,4 @@
-import { ReactNode, useState, useCallback, useMemo, useEffect } from 'react'
+import { ReactNode, useState, useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,8 +10,8 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser, type Organization } from '@expertly/ui'
-import { authApi, organizationsApi, TENANT_STORAGE_KEY } from '../api/client'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, type CurrentUser } from '@expertly/ui'
+import { authApi, TENANT_STORAGE_KEY } from '../api/client'
 
 interface LayoutProps {
   children: ReactNode
@@ -23,10 +23,6 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [organizations, setOrganizations] = useState<Organization[]>([])
-  const [currentTenantId, setCurrentTenantId] = useState<string | null>(
-    localStorage.getItem(TENANT_STORAGE_KEY)
-  )
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
@@ -42,26 +38,10 @@ export default function Layout({ children }: LayoutProps) {
   }, [])
   const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
-  // Fetch organizations on mount
-  useEffect(() => {
-    const fetchOrgs = async () => {
-      try {
-        const { items } = await organizationsApi.list()
-        setOrganizations(items.map(org => ({
-          id: org.id,
-          name: org.name,
-        })))
-        // If no tenant selected, select the first one
-        if (!localStorage.getItem(TENANT_STORAGE_KEY) && items.length > 0) {
-          localStorage.setItem(TENANT_STORAGE_KEY, items[0].id)
-          setCurrentTenantId(items[0].id)
-        }
-      } catch {
-        // Ignore errors fetching organizations
-      }
-    }
-    fetchOrgs()
-  }, [])
+  // Use shared organizations hook
+  const { organizationsConfig, currentOrg } = useOrganizations({
+    storageKey: TENANT_STORAGE_KEY,
+  })
 
   const navItems = [
     { name: t('nav.dashboard'), href: '/', icon: LayoutDashboard },
@@ -78,13 +58,7 @@ export default function Layout({ children }: LayoutProps) {
     navigate('/login')
   }, [logout, navigate])
 
-  const handleOrgSwitch = useCallback((orgId: string) => {
-    localStorage.setItem(TENANT_STORAGE_KEY, orgId)
-    window.location.reload()
-  }, [])
-
   // Get current organization name for user display
-  const currentOrg = organizations.find(o => o.id === currentTenantId)
   const userWithOrg = sidebarUser
     ? { ...sidebarUser, organization: sidebarUser.organization || currentOrg?.name }
     : undefined
@@ -95,13 +69,8 @@ export default function Layout({ children }: LayoutProps) {
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'vibetest',
-    organizations: organizations.length > 0 ? {
-      items: organizations,
-      currentId: currentTenantId,
-      onSwitch: handleOrgSwitch,
-      storageKey: TENANT_STORAGE_KEY,
-    } : undefined,
-  }), [handleLogout, organizations, currentTenantId, handleOrgSwitch])
+    organizations: organizationsConfig,
+  }), [handleLogout, organizationsConfig])
 
   return (
     <div className="min-h-screen bg-theme-bg">
