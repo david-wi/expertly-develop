@@ -13,11 +13,11 @@ export function WidgetWrapper({ widgetId, title, children, headerAction }: Widge
 
   return (
     <div className="bg-white shadow rounded-lg h-full flex flex-col overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
+      <div className={`px-4 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0 ${editMode ? 'drag-handle cursor-grab active:cursor-grabbing' : ''}`}>
         <div className="flex items-center gap-2">
           {editMode && (
-            <div className="drag-handle cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 p-1 -ml-1 rounded hover:bg-gray-100">
-              <GripVertical className="w-5 h-5 pointer-events-none" />
+            <div className="text-gray-400 hover:text-gray-600 p-1 -ml-1 rounded hover:bg-gray-100">
+              <GripVertical className="w-5 h-5" />
             </div>
           )}
           <h3 className="text-lg font-medium text-gray-900">{title}</h3>
