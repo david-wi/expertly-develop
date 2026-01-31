@@ -356,8 +356,19 @@ export default function Projects() {
   const [isDraggingToRoot, setIsDraggingToRoot] = useState(false)
 
   const handleDragStart = (e: React.DragEvent, projectId: string) => {
+    console.log('[Drag] dragstart fired for project:', projectId)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', projectId)
+    setDraggedProjectId(projectId)
+  }
+
+  // Mouse-based drag fallback for browsers where HTML5 drag doesn't work
+  const handleMouseDown = (e: React.MouseEvent, projectId: string) => {
+    console.log('[Drag] mousedown fired for project:', projectId)
+    // Only trigger on left click
+    if (e.button !== 0) return
+
+    // Store the project ID in a ref for the mousemove handler
     setDraggedProjectId(projectId)
   }
 
@@ -691,10 +702,12 @@ export default function Projects() {
                           )}
                           <div
                             className="mr-2 p-1 text-gray-400 select-none cursor-grab active:cursor-grabbing hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            title="Drag to reparent"
+                            title="Drag to reparent (or use Edit to change parent)"
                             draggable={true}
                             onDragStart={(e) => handleDragStart(e, projectId)}
                             onDragEnd={handleDragEnd}
+                            onMouseDown={(e) => handleMouseDown(e, projectId)}
+                            onClick={() => console.log('[Drag] click on handle for project:', projectId)}
                           >
                             <svg className="w-5 h-5 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
@@ -820,10 +833,12 @@ export default function Projects() {
                         <div style={{ paddingLeft: node.depth * 24 }} className="flex items-start">
                           <div
                             className="mr-2 mt-0.5 p-1 text-gray-400 select-none flex-shrink-0 cursor-grab active:cursor-grabbing hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                            title="Drag to reparent"
+                            title="Drag to reparent (or use Edit to change parent)"
                             draggable={true}
                             onDragStart={(e) => handleDragStart(e, projectId)}
                             onDragEnd={handleDragEnd}
+                            onMouseDown={(e) => handleMouseDown(e, projectId)}
+                            onClick={() => console.log('[Drag] click on handle for project:', projectId)}
                           >
                             <svg className="w-5 h-5 pointer-events-none" fill="currentColor" viewBox="0 0 24 24">
                               <circle cx="9" cy="6" r="1.5" />
