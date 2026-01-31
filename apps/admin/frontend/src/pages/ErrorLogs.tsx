@@ -405,6 +405,12 @@ export function ErrorLogs() {
             className="px-3 py-1.5 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary"
           >
             <option value="">All Apps</option>
+            {/* Include the URL filter value if it's not in the apps list */}
+            {filters.app_name && !apps?.includes(filters.app_name) && (
+              <option key={filters.app_name} value={filters.app_name}>
+                {formatAppName(filters.app_name)}
+              </option>
+            )}
             {apps?.map((app) => (
               <option key={app} value={app}>{app}</option>
             ))}
