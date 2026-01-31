@@ -10,8 +10,8 @@ const renderWithRouter = (component: React.ReactNode) => {
 describe('LandingPage', () => {
   it('renders the main heading', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Put Your Organization on/)).toBeInTheDocument()
-    expect(screen.getByText('Autopilot')).toBeInTheDocument()
+    expect(screen.getByText(/Your AI-Powered/)).toBeInTheDocument()
+    expect(screen.getAllByText('Chief of Staff').length).toBeGreaterThan(0)
   })
 
   it('renders the product name in navigation', () => {
@@ -21,7 +21,7 @@ describe('LandingPage', () => {
 
   it('displays the tagline', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Scheduled and event-driven workflows that run themselves')).toBeInTheDocument()
+    expect(screen.getByText(/Map your processes. Build your bot army. Let AI push everything forward./)).toBeInTheDocument()
   })
 
   it('renders Sign In link', () => {
@@ -44,43 +44,47 @@ describe('LandingPage', () => {
     expect(screen.getByText('See How It Works')).toBeInTheDocument()
   })
 
-  it('displays all feature cards', () => {
+  it('displays all capability cards', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Scheduled Workflows')).toBeInTheDocument()
-    expect(screen.getByText('Event-Driven Triggers')).toBeInTheDocument()
-    expect(screen.getByText('Unified Inbox')).toBeInTheDocument()
-    expect(screen.getByText('Bot Execution')).toBeInTheDocument()
-    expect(screen.getByText('Human Approval Gates')).toBeInTheDocument()
-    expect(screen.getByText('Playbook Builder')).toBeInTheDocument()
+    // "Map Your Processes" appears in capabilities and steps section
+    expect(screen.getAllByText('Map Your Processes').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Build Your Bot Army')).toBeInTheDocument()
+    expect(screen.getByText('Unified Task Hub')).toBeInTheDocument()
+    expect(screen.getByText('Proactive Head Starts')).toBeInTheDocument()
+    expect(screen.getByText('Multiply Leadership')).toBeInTheDocument()
+    expect(screen.getByText('Follow-Up Intelligence')).toBeInTheDocument()
   })
 
-  it('displays feature descriptions', () => {
+  it('displays capability descriptions', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Define what needs to happen and when/)).toBeInTheDocument()
-    expect(screen.getByText(/React instantly when things happen/)).toBeInTheDocument()
+    // These descriptions appear in multiple places
+    expect(screen.getAllByText(/Define who does what/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Gradually delegate steps to specialized bots/).length).toBeGreaterThan(0)
   })
 
   it('displays all benefits', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Run on autopilot')).toBeInTheDocument()
-    expect(screen.getByText('Never miss a deadline')).toBeInTheDocument()
-    expect(screen.getByText('Unified task inbox')).toBeInTheDocument()
-    expect(screen.getByText('Bots do the work')).toBeInTheDocument()
-    expect(screen.getByText('You stay in control')).toBeInTheDocument()
-    expect(screen.getByText('Scale effortlessly')).toBeInTheDocument()
+    expect(screen.getByText('Your AI Chief of Staff')).toBeInTheDocument()
+    expect(screen.getByText('Processes on autopilot')).toBeInTheDocument()
+    expect(screen.getByText('Bots that multiply you')).toBeInTheDocument()
+    expect(screen.getByText('Full context everywhere')).toBeInTheDocument()
+    expect(screen.getByText('Nothing falls through')).toBeInTheDocument()
+    expect(screen.getByText('Scale without chaos')).toBeInTheDocument()
   })
 
   it('renders the How It Works section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('How It Works')).toBeInTheDocument()
-    expect(screen.getByText('Set it up once. Let it run forever.')).toBeInTheDocument()
+    expect(screen.getByText('From chaos to autopilot')).toBeInTheDocument()
+    expect(screen.getByText('Four steps to transform how your organization operates')).toBeInTheDocument()
   })
 
-  it('displays the three steps', () => {
+  it('displays the four steps', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Define Your Workflows')).toBeInTheDocument()
-    expect(screen.getByText('Bots Execute')).toBeInTheDocument()
-    expect(screen.getByText('You Approve')).toBeInTheDocument()
+    // Map Your Processes appears in both capabilities and steps
+    expect(screen.getAllByText('Map Your Processes').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Build Your Bots')).toBeInTheDocument()
+    expect(screen.getByText('Centralize Everything')).toBeInTheDocument()
+    expect(screen.getByText('Let AI Push Forward')).toBeInTheDocument()
   })
 
   it('renders step numbers', () => {
@@ -88,11 +92,12 @@ describe('LandingPage', () => {
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByText('4')).toBeInTheDocument()
   })
 
   it('renders the CTA section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Ready to put your organization on autopilot?')).toBeInTheDocument()
+    expect(screen.getByText('Ready for your AI Chief of Staff?')).toBeInTheDocument()
     expect(screen.getByText('Start Your Free Trial')).toBeInTheDocument()
   })
 
@@ -109,42 +114,35 @@ describe('LandingPage', () => {
     expect(getStartedLink.closest('a')).toHaveAttribute('href', '/')
   })
 
-  it('has features section anchor', () => {
+  it('has how-it-works section anchor', () => {
     renderWithRouter(<LandingPage />)
     const howItWorksLink = screen.getByText('See How It Works')
-    expect(howItWorksLink.closest('a')).toHaveAttribute('href', '#features')
+    expect(howItWorksLink.closest('a')).toHaveAttribute('href', '#how-it-works')
   })
 
-  it('renders feature icons', () => {
+  it('renders the vision section', () => {
     renderWithRouter(<LandingPage />)
-    const featureNames = [
-      'Scheduled Workflows',
-      'Event-Driven Triggers',
-      'Unified Inbox',
-      'Bot Execution',
-      'Human Approval Gates',
-      'Playbook Builder',
-    ]
-    featureNames.forEach((name) => {
-      expect(screen.getByText(name)).toBeInTheDocument()
-    })
+    expect(screen.getByText('Imagine this...')).toBeInTheDocument()
+    expect(screen.getByText('For You')).toBeInTheDocument()
+    expect(screen.getByText('For Your Bots')).toBeInTheDocument()
+    expect(screen.getByText('For Your Leaders')).toBeInTheDocument()
   })
 
   it('renders the hero section with proper structure', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Schedule recurring tasks, react to events from email and Slack/)).toBeInTheDocument()
-    expect(screen.getByText(/let bots handle the routine work/)).toBeInTheDocument()
+    expect(screen.getByText(/Define how your organization works/)).toBeInTheDocument()
+    expect(screen.getByText(/watch as bots take over more and more steps/)).toBeInTheDocument()
   })
 
-  it('renders the features section heading', () => {
+  it('renders the capabilities section heading', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Automation that keeps you in control')).toBeInTheDocument()
-    expect(screen.getByText(/Schedule workflows, react to events, and let bots do the heavy lifting/)).toBeInTheDocument()
+    expect(screen.getByText('Everything you need to run on autopilot')).toBeInTheDocument()
+    expect(screen.getByText('From process mapping to proactive AI assistance')).toBeInTheDocument()
   })
 
   it('renders the integrations section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Connect Your Tools')).toBeInTheDocument()
+    expect(screen.getByText('Pull work from everywhere')).toBeInTheDocument()
     expect(screen.getByText('Email')).toBeInTheDocument()
     expect(screen.getByText('Slack')).toBeInTheDocument()
     expect(screen.getByText('Jira')).toBeInTheDocument()
