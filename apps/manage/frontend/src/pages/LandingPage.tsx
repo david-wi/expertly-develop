@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom'
 import {
-  Calendar,
-  Zap,
-  Inbox,
+  Users,
   Bot,
+  Inbox,
+  Zap,
   ShieldCheck,
   Workflow,
   ArrowRight,
@@ -13,38 +13,41 @@ import {
   Mail,
   MessageSquare,
   Ticket,
+  Brain,
+  TrendingUp,
+  Bell,
 } from 'lucide-react'
 
-const features = [
+const capabilities = [
   {
-    name: 'Scheduled Workflows',
-    description: 'Define what needs to happen and when. Daily reports, weekly reviews, monthly audits — all running automatically on your schedule.',
-    icon: Calendar,
+    name: 'Map Your Processes',
+    description: 'Define who does what, when, and how. Capture every workflow, approval chain, and handoff across your entire organization.',
+    icon: Workflow,
   },
   {
-    name: 'Event-Driven Triggers',
-    description: 'React instantly when things happen. New email? Slack message? Jira ticket? Trigger the right workflow automatically.',
-    icon: Zap,
-  },
-  {
-    name: 'Unified Inbox',
-    description: 'One place for everything. Pull in tasks from email, Slack, Teamwork, Jira, and more. Never miss what matters.',
-    icon: Inbox,
-  },
-  {
-    name: 'Bot Execution',
-    description: 'Let bots handle the routine work. They follow your playbooks, execute tasks, and escalate when needed.',
+    name: 'Build Your Bot Army',
+    description: 'Gradually delegate steps to specialized bots. SalesBot, MarketingBot, SupportBot — each follows your playbooks and seeks approval when you want.',
     icon: Bot,
   },
   {
-    name: 'Human Approval Gates',
-    description: 'Stay in control. Review and approve bot actions before they go live. Automation with oversight.',
-    icon: ShieldCheck,
+    name: 'Unified Task Hub',
+    description: 'Every todo from email, Slack, Jira, and more — all in one place, mapped to the projects they belong to. Full context, always.',
+    icon: Inbox,
   },
   {
-    name: 'Playbook Builder',
-    description: 'Define exactly how work should be done. Step-by-step procedures that bots and humans follow consistently.',
-    icon: Workflow,
+    name: 'Proactive Head Starts',
+    description: 'Even for tasks you\'ll do yourself, the system gathers info, drafts content, and pushes work forward before you even start.',
+    icon: Zap,
+  },
+  {
+    name: 'Multiply Leadership',
+    description: 'Bots seek approval from your leads when needed. Extend their span of control exponentially while maintaining oversight.',
+    icon: TrendingUp,
+  },
+  {
+    name: 'Follow-Up Intelligence',
+    description: 'Someone hasn\'t replied? The system notices and suggests nudges. Nothing falls through the cracks.',
+    icon: Bell,
   },
 ]
 
@@ -56,12 +59,12 @@ const integrations = [
 ]
 
 const benefits = [
-  'Run on autopilot',
-  'Never miss a deadline',
-  'Unified task inbox',
-  'Bots do the work',
-  'You stay in control',
-  'Scale effortlessly',
+  'Your AI Chief of Staff',
+  'Processes on autopilot',
+  'Bots that multiply you',
+  'Full context everywhere',
+  'Nothing falls through',
+  'Scale without chaos',
 ]
 
 export default function LandingPage() {
@@ -99,18 +102,18 @@ export default function LandingPage() {
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-primary-50 via-white to-primary-50" />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="text-center max-w-3xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
-              Put Your Organization on{' '}
-              <span className="text-primary-600">Autopilot</span>
+              Your AI-Powered{' '}
+              <span className="text-primary-600">Chief of Staff</span>
             </h1>
             <p className="mt-3 text-lg font-medium text-primary-600 italic">
-              Scheduled and event-driven workflows that run themselves
+              Map your processes. Build your bot army. Let AI push everything forward.
             </p>
-            <p className="mt-6 text-xl text-gray-600 leading-relaxed">
-              Schedule recurring tasks, react to events from email and Slack,
-              let bots handle the routine work — while you stay in control as the approver.
-              One unified inbox for everything that needs your attention.
+            <p className="mt-6 text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
+              Define how your organization works — who does what, when, with what approvals.
+              Then watch as bots take over more and more steps, your leaders multiply their reach,
+              and every one of your initiatives gets proactively pushed forward.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -121,7 +124,7 @@ export default function LandingPage() {
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
-                href="#features"
+                href="#how-it-works"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-gray-700 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors font-medium text-lg"
               >
                 See How It Works
@@ -157,31 +160,86 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Features Section */}
-      <div id="features" className="py-24 bg-gray-50">
+      {/* The Vision Section */}
+      <div className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Imagine this...
+            </h2>
+            <p className="mt-6 text-xl text-gray-600 leading-relaxed">
+              You have <span className="font-semibold text-gray-900">dozens of initiatives</span> to push forward.
+              Emails to follow up on. Approvals waiting. Tasks scattered across tools.
+            </p>
+            <p className="mt-4 text-xl text-gray-600 leading-relaxed">
+              Now imagine a <span className="font-semibold text-primary-600">Chief of Staff</span> who knows every project,
+              proactively gathers what you need, drafts responses, reminds you to nudge people,
+              and keeps everything moving — <span className="italic">even while you sleep</span>.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                <Users className="w-7 h-7 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">For You</h3>
+              <p className="text-gray-600">
+                Every task you own gets a head start. Context gathered, drafts prepared, next steps suggested.
+                Iterate from AI's work or ignore it — but you're never starting from zero.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+                <Bot className="w-7 h-7 text-purple-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">For Your Bots</h3>
+              <p className="text-gray-600">
+                SalesBot handles outreach. MarketingBot manages campaigns. SupportBot triages tickets.
+                Each follows your playbooks precisely and escalates when you want.
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-6">
+                <ShieldCheck className="w-7 h-7 text-green-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">For Your Leaders</h3>
+              <p className="text-gray-600">
+                Your managers approve bot work instead of doing it themselves.
+                Their span of control expands exponentially. Quality stays high.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Capabilities Grid */}
+      <div id="features" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Automation that keeps you in control
+              Everything you need to run on autopilot
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Schedule workflows, react to events, and let bots do the heavy lifting — with your approval.
+              From process mapping to proactive AI assistance
             </p>
           </div>
 
           <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature) => (
+            {capabilities.map((capability) => (
               <div
-                key={feature.name}
-                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+                key={capability.name}
+                className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors"
               >
                 <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <feature.icon className="w-6 h-6 text-primary-600" />
+                  <capability.icon className="w-6 h-6 text-primary-600" />
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-gray-900">
-                  {feature.name}
+                  {capability.name}
                 </h3>
-                <p className="mt-2 text-gray-600">{feature.description}</p>
+                <p className="mt-2 text-gray-600">{capability.description}</p>
               </div>
             ))}
           </div>
@@ -189,24 +247,24 @@ export default function LandingPage() {
       </div>
 
       {/* Integrations Section */}
-      <div className="py-16 bg-white border-b border-gray-100">
+      <div className="py-16 bg-gray-50 border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center">
             <h2 className="text-2xl font-bold text-gray-900">
-              Connect Your Tools
+              Pull work from everywhere
             </h2>
             <p className="mt-2 text-gray-600">
-              Pull tasks from the tools your team already uses
+              One unified inbox for all your scattered tasks
             </p>
           </div>
           <div className="mt-8 flex flex-wrap justify-center gap-8">
             {integrations.map((integration) => (
-              <div key={integration.name} className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+              <div key={integration.name} className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
                 <integration.icon className="w-5 h-5 text-gray-600" />
                 <span className="font-medium text-gray-700">{integration.name}</span>
               </div>
             ))}
-            <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
               <span className="font-medium text-gray-500">+ more coming</span>
             </div>
           </div>
@@ -214,27 +272,27 @@ export default function LandingPage() {
       </div>
 
       {/* How It Works */}
-      <div className="py-24 bg-white">
+      <div id="how-it-works" className="py-24 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              How It Works
+              From chaos to autopilot
             </h2>
             <p className="mt-4 text-lg text-gray-600">
-              Set it up once. Let it run forever.
+              Four steps to transform how your organization operates
             </p>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
                 1
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Define Your Workflows
+                Map Your Processes
               </h3>
               <p className="mt-3 text-gray-600">
-                Schedule recurring tasks or set up event triggers. Connect your email, Slack, and project tools. Build playbooks for how work gets done.
+                Define who does what, when, and how. Capture approval flows and handoffs.
               </p>
             </div>
             <div className="text-center">
@@ -242,10 +300,10 @@ export default function LandingPage() {
                 2
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Bots Execute
+                Build Your Bots
               </h3>
               <p className="mt-3 text-gray-600">
-                Tasks arrive automatically. Bots pick them up and follow your playbooks. Routine work happens without you lifting a finger.
+                Gradually delegate steps to specialized bots that follow your playbooks.
               </p>
             </div>
             <div className="text-center">
@@ -253,10 +311,21 @@ export default function LandingPage() {
                 3
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                You Approve
+                Centralize Everything
               </h3>
               <p className="mt-3 text-gray-600">
-                Review bot work in your unified inbox. Approve, adjust, or escalate. Stay in control while automation does the heavy lifting.
+                Pull todos from everywhere into one hub, mapped to projects for full context.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
+                4
+              </div>
+              <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                Let AI Push Forward
+              </h3>
+              <p className="mt-3 text-gray-600">
+                Watch as your AI Chief of Staff proactively advances every initiative.
               </p>
             </div>
           </div>
@@ -264,17 +333,19 @@ export default function LandingPage() {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-primary-600 py-16">
+      <div className="bg-gradient-to-r from-primary-600 to-primary-700 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-white">
-            Ready to put your organization on autopilot?
+          <Brain className="w-16 h-16 text-white/80 mx-auto mb-6" />
+          <h2 className="text-3xl sm:text-4xl font-bold text-white">
+            Ready for your AI Chief of Staff?
           </h2>
-          <p className="mt-4 text-lg text-primary-100">
-            Join teams who run scheduled workflows, react to events automatically, and let bots handle the routine.
+          <p className="mt-4 text-xl text-primary-100 max-w-2xl mx-auto">
+            Stop chasing tasks. Start building an organization that runs itself —
+            with you and your leaders in control.
           </p>
           <Link
             to="/"
-            className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-white text-primary-600 rounded-lg hover:bg-primary-50 transition-colors font-medium text-lg"
+            className="mt-8 inline-flex items-center gap-2 px-8 py-4 bg-white text-primary-600 rounded-lg hover:bg-primary-50 transition-colors font-semibold text-lg"
           >
             Start Your Free Trial
             <ArrowRight className="w-5 h-5" />

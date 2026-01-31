@@ -3,3 +3,4 @@
 20260130 - Projects page fixes: 1) Allow nesting beyond 2nd level (show hierarchy in parent dropdown, exclude descendants), 2) Add drag-and-drop to reparent projects
 20260130 - Add recurring task assignments UI within projects at any hierarchical level; relabel Tasks as Assignments in UI only
 20260130 - Expertly Manage Projects: Make Compact view default, fix view toggle button label to show current view, change task count badge to indigo, make description hover-only, fix drag-drop by moving draggable to handle
+20260130 - Expand landing page vision: process management, bot army, proactive Chief of Staff concept
