@@ -12,6 +12,13 @@ import {
   Image,
   Film,
   Music,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  CheckCircle,
+  PlayCircle,
+  PauseCircle,
+  XCircle,
 } from 'lucide-react'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest } from '../services/api'
 import MarkdownEditor from './MarkdownEditor'
@@ -25,14 +32,30 @@ interface TaskDetailModalProps {
   onUpdate?: () => void
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  queued: 'bg-blue-100 text-blue-800',
-  blocked: 'bg-orange-100 text-orange-800',
-  checked_out: 'bg-primary-100 text-primary-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  completed: 'bg-green-100 text-green-800',
-  failed: 'bg-red-100 text-red-800',
+const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; icon: typeof Clock }> = {
+  queued: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-l-blue-500', icon: Clock },
+  blocked: { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-l-orange-500', icon: PauseCircle },
+  checked_out: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-l-purple-500', icon: PlayCircle },
+  in_progress: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-l-yellow-500', icon: PlayCircle },
+  completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-l-green-500', icon: CheckCircle },
+  failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500', icon: XCircle },
 }
+
+const TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Phoenix',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+  'UTC',
+]
 
 const getFileIcon = (mimeType?: string) => {
   if (!mimeType) return FileText
@@ -47,6 +70,21 @@ const formatFileSize = (bytes?: number) => {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+const formatRelativeTime = (dateStr: string) => {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
 }
 
 export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: TaskDetailModalProps) {
@@ -69,6 +107,14 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const [editedApproverId, setEditedApproverId] = useState<string | null>(null)
   const [editedApproverQueueId, setEditedApproverQueueId] = useState<string | null>(null)
   const [hasChanges, setHasChanges] = useState(false)
+
+  // Scheduling state
+  const [scheduledStartDate, setScheduledStartDate] = useState('')
+  const [scheduledStartTime, setScheduledStartTime] = useState('')
+  const [scheduledEndDate, setScheduledEndDate] = useState('')
+  const [scheduledEndTime, setScheduledEndTime] = useState('')
+  const [scheduleTimezone, setScheduleTimezone] = useState('')
+  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
 
   // Attachment state
   const [showAddAttachment, setShowAddAttachment] = useState(false)
@@ -111,6 +157,28 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       setEditedApproverType(taskData.approver_type as ApproverType || null)
       setEditedApproverId(taskData.approver_id || null)
       setEditedApproverQueueId(taskData.approver_queue_id || null)
+
+      // Initialize scheduling state
+      if (taskData.scheduled_start) {
+        const startDate = new Date(taskData.scheduled_start)
+        setScheduledStartDate(startDate.toISOString().split('T')[0])
+        setScheduledStartTime(startDate.toTimeString().slice(0, 5))
+        setShowAdvancedSettings(true)
+      } else {
+        setScheduledStartDate('')
+        setScheduledStartTime('')
+      }
+      if (taskData.scheduled_end) {
+        const endDate = new Date(taskData.scheduled_end)
+        setScheduledEndDate(endDate.toISOString().split('T')[0])
+        setScheduledEndTime(endDate.toTimeString().slice(0, 5))
+        setShowAdvancedSettings(true)
+      } else {
+        setScheduledEndDate('')
+        setScheduledEndTime('')
+      }
+      setScheduleTimezone(taskData.schedule_timezone || '')
+
       setHasChanges(false)
     } catch (err) {
       console.error('Failed to fetch task details:', err)
@@ -126,9 +194,30 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     }
   }, [isOpen, fetchData])
 
+  // Build scheduled datetime strings
+  const buildScheduledStart = () => {
+    if (scheduledStartDate && scheduledStartTime) {
+      return `${scheduledStartDate}T${scheduledStartTime}:00`
+    }
+    return null
+  }
+
+  const buildScheduledEnd = () => {
+    if (scheduledEndDate && scheduledEndTime) {
+      return `${scheduledEndDate}T${scheduledEndTime}:00`
+    }
+    return null
+  }
+
   // Track changes
   useEffect(() => {
     if (!task) return
+
+    const newScheduledStart = buildScheduledStart()
+    const newScheduledEnd = buildScheduledEnd()
+    const originalScheduledStart = task.scheduled_start ? new Date(task.scheduled_start).toISOString().slice(0, 19) : null
+    const originalScheduledEnd = task.scheduled_end ? new Date(task.scheduled_end).toISOString().slice(0, 19) : null
+
     const changed =
       editedTitle !== task.title ||
       editedDescription !== (task.description || '') ||
@@ -136,9 +225,12 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       editedPriority !== task.priority ||
       editedPlaybookId !== (task.sop_id || null) ||
       editedApproverType !== (task.approver_type as ApproverType || null) ||
-      editedApproverId !== (task.approver_id || null)
+      editedApproverId !== (task.approver_id || null) ||
+      newScheduledStart !== originalScheduledStart ||
+      newScheduledEnd !== originalScheduledEnd ||
+      scheduleTimezone !== (task.schedule_timezone || '')
     setHasChanges(changed)
-  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId])
+  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone])
 
   const handleSave = async () => {
     if (!task || !hasChanges) return
@@ -155,6 +247,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         approver_id: editedApproverId || undefined,
         approver_queue_id: editedApproverQueueId || undefined,
         approval_required: editedApproverType !== null,
+        scheduled_start: buildScheduledStart(),
+        scheduled_end: buildScheduledEnd(),
+        schedule_timezone: scheduleTimezone || null,
       }
       await api.updateTask(taskId, updateData)
       setHasChanges(false)
@@ -255,6 +350,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
 
   if (!isOpen) return null
 
+  const statusConfig = task ? STATUS_CONFIG[task.status] || STATUS_CONFIG.queued : STATUS_CONFIG.queued
+  const StatusIcon = statusConfig.icon
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
@@ -262,19 +360,20 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
 
       {/* Slide-over panel */}
       <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-theme-bg-surface shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-theme-border flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        {/* Header with status accent */}
+        <div className={`px-4 py-3 border-b border-theme-border flex items-center justify-between border-l-4 ${statusConfig.border}`}>
+          <div className="flex items-center gap-2">
             {task && (
-              <span className={`px-2 py-1 text-xs font-medium rounded-full ${STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'}`}>
+              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
+                <StatusIcon className="w-3 h-3" />
                 {task.status.replace('_', ' ')}
               </span>
             )}
-            <h2 className="text-lg font-semibold text-theme-text-primary">Assignment Details</h2>
+            <h2 className="text-base font-semibold text-theme-text-primary">Assignment Details</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg hover:bg-theme-bg-elevated transition-colors"
+            className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors"
           >
             <X className="w-5 h-5 text-theme-text-secondary" />
           </button>
@@ -287,40 +386,40 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               <div className="text-theme-text-secondary">Loading...</div>
             </div>
           ) : error ? (
-            <div className="p-6 text-red-600">{error}</div>
+            <div className="p-4 text-red-600">{error}</div>
           ) : task ? (
-            <div className="p-6 space-y-6">
+            <div className="p-4 space-y-4">
               {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-theme-text-secondary mb-2">Title</label>
+                <label className="block text-xs font-medium text-theme-text-secondary mb-1">Title</label>
                 <input
                   type="text"
                   value={editedTitle}
                   onChange={(e) => setEditedTitle(e.target.value)}
-                  className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-theme-text-secondary mb-2">Description</label>
+                <label className="block text-xs font-medium text-theme-text-secondary mb-1">Description</label>
                 <textarea
                   value={editedDescription}
                   onChange={(e) => setEditedDescription(e.target.value)}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  rows={2}
+                  className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-sm"
                   placeholder="Add a description..."
                 />
               </div>
 
-              {/* Queue & Priority */}
-              <div className="grid grid-cols-2 gap-4">
+              {/* Queue, Priority, Playbook - 3 column */}
+              <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-theme-text-secondary mb-2">Queue</label>
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Queue</label>
                   <select
                     value={editedQueueId}
                     onChange={(e) => setEditedQueueId(e.target.value)}
-                    className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   >
                     {queues.map((queue) => (
                       <option key={queue.id || queue._id} value={queue.id || queue._id}>
@@ -330,41 +429,39 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-theme-text-secondary mb-2">Priority</label>
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Priority</label>
                   <select
                     value={editedPriority}
                     onChange={(e) => setEditedPriority(Number(e.target.value))}
-                    className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
                       <option key={p} value={p}>
-                        {p} {p === 1 ? '(Highest)' : p === 10 ? '(Lowest)' : ''}
+                        {p} {p === 1 ? '(High)' : p === 10 ? '(Low)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Playbook</label>
+                  <select
+                    value={editedPlaybookId || ''}
+                    onChange={(e) => setEditedPlaybookId(e.target.value || null)}
+                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    <option value="">None</option>
+                    {playbooks.map((playbook) => (
+                      <option key={playbook.id} value={playbook.id}>
+                        {playbook.name}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
 
-              {/* Playbook */}
-              <div>
-                <label className="block text-sm font-medium text-theme-text-secondary mb-2">Playbook</label>
-                <select
-                  value={editedPlaybookId || ''}
-                  onChange={(e) => setEditedPlaybookId(e.target.value || null)}
-                  className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">No playbook</option>
-                  {playbooks.map((playbook) => (
-                    <option key={playbook.id} value={playbook.id}>
-                      {playbook.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Approver */}
-              <div>
-                <label className="block text-sm font-medium text-theme-text-secondary mb-2">Approval</label>
+              {/* Approval Section */}
+              <div className="bg-theme-bg-elevated rounded-lg p-3 border border-theme-border">
+                <label className="block text-xs font-medium text-theme-text-secondary mb-2">Approval</label>
                 <ApproverSelector
                   approverType={editedApproverType}
                   approverId={editedApproverId}
@@ -377,33 +474,137 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 />
               </div>
 
+              {/* Advanced Settings - Collapsible */}
+              <div className="border border-theme-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+                  className="w-full px-3 py-2 flex items-center justify-between bg-theme-bg-elevated hover:bg-theme-bg-surface transition-colors"
+                >
+                  <span className="text-xs font-medium text-theme-text-secondary flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5" />
+                    Advanced Settings
+                    {(scheduledStartDate || scheduledEndDate) && (
+                      <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded text-[10px]">
+                        Scheduled
+                      </span>
+                    )}
+                  </span>
+                  {showAdvancedSettings ? (
+                    <ChevronDown className="w-4 h-4 text-theme-text-secondary" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-theme-text-secondary" />
+                  )}
+                </button>
+
+                {showAdvancedSettings && (
+                  <div className="p-3 space-y-3 border-t border-theme-border bg-theme-bg-surface">
+                    {/* Scheduled Start */}
+                    <div>
+                      <label className="block text-xs font-medium text-theme-text-secondary mb-1">
+                        Don't start before
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={scheduledStartDate}
+                          onChange={(e) => setScheduledStartDate(e.target.value)}
+                          className="flex-1 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
+                        <input
+                          type="time"
+                          value={scheduledStartTime}
+                          onChange={(e) => setScheduledStartTime(e.target.value)}
+                          className="w-28 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Scheduled End */}
+                    <div>
+                      <label className="block text-xs font-medium text-theme-text-secondary mb-1">
+                        Work window closes (optional)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={scheduledEndDate}
+                          onChange={(e) => setScheduledEndDate(e.target.value)}
+                          className="flex-1 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
+                        <input
+                          type="time"
+                          value={scheduledEndTime}
+                          onChange={(e) => setScheduledEndTime(e.target.value)}
+                          className="w-28 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Timezone */}
+                    <div>
+                      <label className="block text-xs font-medium text-theme-text-secondary mb-1">
+                        Timezone
+                      </label>
+                      <select
+                        value={scheduleTimezone}
+                        onChange={(e) => setScheduleTimezone(e.target.value)}
+                        className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      >
+                        <option value="">Browser default</option>
+                        {TIMEZONES.map((tz) => (
+                          <option key={tz} value={tz}>
+                            {tz}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Clear scheduling button */}
+                    {(scheduledStartDate || scheduledEndDate) && (
+                      <button
+                        onClick={() => {
+                          setScheduledStartDate('')
+                          setScheduledStartTime('')
+                          setScheduledEndDate('')
+                          setScheduledEndTime('')
+                          setScheduleTimezone('')
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Clear scheduling
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Attachments Section */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-medium text-theme-text-secondary flex items-center gap-2">
-                    <Paperclip className="w-4 h-4" />
+              <div className="border-t border-theme-border pt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-theme-text-secondary flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5" />
                     Attachments ({attachments.length})
                   </label>
                   <button
                     onClick={() => setShowAddAttachment(!showAddAttachment)}
-                    className="text-sm text-primary-600 hover:text-primary-700"
+                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
                   >
                     {showAddAttachment ? 'Cancel' : 'Add'}
                   </button>
                 </div>
 
                 {showAddAttachment && (
-                  <div className="mb-4 p-4 bg-theme-bg-elevated rounded-lg border border-theme-border">
-                    <div className="flex gap-2 mb-3">
+                  <div className="mb-3 p-3 bg-theme-bg-elevated rounded-lg border border-theme-border">
+                    <div className="flex gap-2 mb-2">
                       <button
                         onClick={() => setAttachmentType('file')}
-                        className={`flex-1 py-2 text-sm rounded-lg ${attachmentType === 'file' ? 'bg-primary-100 text-primary-700' : 'bg-theme-bg-surface text-theme-text-secondary'}`}
+                        className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${attachmentType === 'file' ? 'bg-primary-100 text-primary-700' : 'bg-theme-bg-surface text-theme-text-secondary hover:bg-theme-bg-elevated'}`}
                       >
                         File
                       </button>
                       <button
                         onClick={() => setAttachmentType('link')}
-                        className={`flex-1 py-2 text-sm rounded-lg ${attachmentType === 'link' ? 'bg-primary-100 text-primary-700' : 'bg-theme-bg-surface text-theme-text-secondary'}`}
+                        className={`flex-1 py-1.5 text-xs rounded-lg transition-colors ${attachmentType === 'link' ? 'bg-primary-100 text-primary-700' : 'bg-theme-bg-surface text-theme-text-secondary hover:bg-theme-bg-elevated'}`}
                       >
                         Link
                       </button>
@@ -415,25 +616,25 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                         disabled={uploadingFile}
                       />
                     ) : (
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <input
                           type="url"
                           value={linkUrl}
                           onChange={(e) => setLinkUrl(e.target.value)}
                           placeholder="https://..."
-                          className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary"
+                          className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary text-sm"
                         />
                         <input
                           type="text"
                           value={linkTitle}
                           onChange={(e) => setLinkTitle(e.target.value)}
                           placeholder="Link title (optional)"
-                          className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary"
+                          className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary text-sm"
                         />
                         <button
                           onClick={handleAddLink}
                           disabled={!linkUrl}
-                          className="w-full py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                          className="w-full py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
                         >
                           Add Link
                         </button>
@@ -443,7 +644,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 )}
 
                 {attachments.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     {attachments.map((attachment) => {
                       const FileIcon = getFileIcon(attachment.mime_type)
                       const isFile = attachment.attachment_type === 'file'
@@ -451,47 +652,47 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       return (
                         <div
                           key={attachment.id}
-                          className="flex items-center gap-3 p-3 bg-theme-bg-elevated rounded-lg"
+                          className="flex items-center gap-2 p-2 bg-theme-bg-elevated rounded-lg"
                         >
                           {isFile ? (
-                            <FileIcon className="w-5 h-5 text-theme-text-secondary flex-shrink-0" />
+                            <FileIcon className="w-4 h-4 text-theme-text-secondary flex-shrink-0" />
                           ) : (
-                            <LinkIcon className="w-5 h-5 text-theme-text-secondary flex-shrink-0" />
+                            <LinkIcon className="w-4 h-4 text-theme-text-secondary flex-shrink-0" />
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-theme-text-primary truncate">
+                            <p className="text-xs font-medium text-theme-text-primary truncate">
                               {isFile ? attachment.original_filename : attachment.link_title || attachment.url}
                             </p>
                             {isFile && attachment.size_bytes && (
-                              <p className="text-xs text-theme-text-secondary">
+                              <p className="text-[10px] text-theme-text-secondary">
                                 {formatFileSize(attachment.size_bytes)}
                               </p>
                             )}
                           </div>
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-0.5">
                             {isFile ? (
                               <a
                                 href={api.getAttachmentDownloadUrl(attachment.id)}
-                                className="p-1.5 rounded hover:bg-theme-bg-surface transition-colors"
+                                className="p-1 rounded hover:bg-theme-bg-surface transition-colors"
                                 download
                               >
-                                <Download className="w-4 h-4 text-theme-text-secondary" />
+                                <Download className="w-3.5 h-3.5 text-theme-text-secondary" />
                               </a>
                             ) : (
                               <a
                                 href={attachment.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-1.5 rounded hover:bg-theme-bg-surface transition-colors"
+                                className="p-1 rounded hover:bg-theme-bg-surface transition-colors"
                               >
-                                <ExternalLink className="w-4 h-4 text-theme-text-secondary" />
+                                <ExternalLink className="w-3.5 h-3.5 text-theme-text-secondary" />
                               </a>
                             )}
                             <button
                               onClick={() => handleDeleteAttachment(attachment.id)}
-                              className="p-1.5 rounded hover:bg-red-100 transition-colors"
+                              className="p-1 rounded hover:bg-red-100 transition-colors"
                             >
-                              <Trash2 className="w-4 h-4 text-red-500" />
+                              <Trash2 className="w-3.5 h-3.5 text-red-500" />
                             </button>
                           </div>
                         </div>
@@ -499,70 +700,80 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     })}
                   </div>
                 ) : (
-                  <p className="text-sm text-theme-text-secondary">No attachments yet</p>
+                  <p className="text-xs text-theme-text-secondary">No attachments</p>
                 )}
               </div>
 
               {/* Comments Section */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <MessageSquare className="w-4 h-4 text-theme-text-secondary" />
-                  <label className="text-sm font-medium text-theme-text-secondary">
+              <div className="border-t border-theme-border pt-4">
+                <div className="flex items-center gap-1.5 mb-3">
+                  <MessageSquare className="w-3.5 h-3.5 text-theme-text-secondary" />
+                  <label className="text-xs font-medium text-theme-text-secondary">
                     Comments ({comments.length})
                   </label>
                 </div>
 
-                {/* Add comment */}
-                <div className="mb-4">
+                {/* Add comment - compact compose area */}
+                <div className="mb-3 bg-theme-bg-elevated rounded-lg border border-theme-border p-2">
                   <MarkdownEditor
                     value={newComment}
                     onChange={setNewComment}
                     placeholder="Add a comment..."
-                    rows={3}
+                    rows={2}
                   />
-                  <button
-                    onClick={handleAddComment}
-                    disabled={!newComment.trim() || addingComment}
-                    className="mt-2 px-4 py-2 bg-primary-600 text-white text-sm rounded-lg hover:bg-primary-700 disabled:opacity-50"
-                  >
-                    {addingComment ? 'Adding...' : 'Add Comment'}
-                  </button>
+                  <div className="flex justify-end mt-2">
+                    <button
+                      onClick={handleAddComment}
+                      disabled={!newComment.trim() || addingComment}
+                      className="px-3 py-1 bg-primary-600 text-white text-xs rounded-lg hover:bg-primary-700 disabled:opacity-50"
+                    >
+                      {addingComment ? 'Adding...' : 'Add'}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Comments list */}
+                {/* Comments list - scrollable */}
                 {comments.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
                     {comments.map((comment) => (
-                      <div key={comment.id} className="p-3 bg-theme-bg-elevated rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 bg-primary-100 rounded-full flex items-center justify-center">
-                              <span className="text-xs font-medium text-primary-700">
-                                {comment.user_name?.charAt(0) || 'U'}
+                      <div
+                        key={comment.id}
+                        className="relative pl-3 border-l-2 border-theme-border hover:border-primary-300 transition-colors"
+                      >
+                        <div className="p-2 bg-theme-bg-elevated rounded-r-lg">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <div className="w-5 h-5 bg-gradient-to-br from-primary-400 to-primary-600 rounded-full flex items-center justify-center">
+                                <span className="text-[10px] font-medium text-white">
+                                  {comment.user_name?.charAt(0).toUpperCase() || 'U'}
+                                </span>
+                              </div>
+                              <span className="text-xs font-medium text-theme-text-primary">
+                                {comment.user_name || 'Unknown'}
+                              </span>
+                              <span
+                                className="text-[10px] text-theme-text-secondary cursor-help"
+                                title={new Date(comment.created_at).toLocaleString()}
+                              >
+                                {formatRelativeTime(comment.created_at)}
                               </span>
                             </div>
-                            <span className="text-sm font-medium text-theme-text-primary">
-                              {comment.user_name || 'Unknown'}
-                            </span>
-                            <span className="text-xs text-theme-text-secondary">
-                              {new Date(comment.created_at).toLocaleString()}
-                            </span>
+                            <button
+                              onClick={() => handleDeleteComment(comment.id)}
+                              className="p-0.5 rounded hover:bg-red-100 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="w-3 h-3 text-red-500" />
+                            </button>
                           </div>
-                          <button
-                            onClick={() => handleDeleteComment(comment.id)}
-                            className="p-1 rounded hover:bg-red-100 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                          </button>
-                        </div>
-                        <div className="text-sm text-theme-text-primary whitespace-pre-wrap">
-                          {comment.content}
+                          <div className="text-xs text-theme-text-primary whitespace-pre-wrap leading-relaxed">
+                            {comment.content}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-theme-text-secondary">No comments yet</p>
+                  <p className="text-xs text-theme-text-secondary text-center py-4">No comments yet. Start the conversation!</p>
                 )}
               </div>
             </div>
@@ -570,27 +781,27 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-theme-border flex items-center justify-between">
+        <div className="px-4 py-3 border-t border-theme-border flex items-center justify-between bg-theme-bg-elevated">
           <button
             onClick={handleDelete}
-            className="px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-sm"
+            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium"
           >
-            Delete Assignment
+            Delete
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg transition-colors text-sm"
+              className="px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-surface rounded-lg transition-colors text-xs"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={!hasChanges || saving}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 text-xs font-medium"
             >
-              <Save className="w-4 h-4" />
-              {saving ? 'Saving...' : 'Save Changes'}
+              <Save className="w-3.5 h-3.5" />
+              {saving ? 'Saving...' : 'Save'}
             </button>
           </div>
         </div>

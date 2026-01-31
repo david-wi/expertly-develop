@@ -56,6 +56,11 @@ class Task(MongoModel):
     approver_queue_id: Optional[PyObjectId] = None  # Queue where approval task goes
     approval_required: bool = False
 
+    # Scheduling (Advanced Settings)
+    scheduled_start: Optional[datetime] = None  # Don't start before this date/time
+    scheduled_end: Optional[datetime] = None  # Optional: work window closes
+    schedule_timezone: Optional[str] = None  # Timezone for scheduling
+
 
 class TaskCreate(BaseModel):
     """Schema for creating a task."""
@@ -73,6 +78,10 @@ class TaskCreate(BaseModel):
     approver_id: Optional[str] = None
     approver_queue_id: Optional[str] = None
     approval_required: bool = False
+    # Scheduling fields
+    scheduled_start: Optional[datetime] = None
+    scheduled_end: Optional[datetime] = None
+    schedule_timezone: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -89,6 +98,10 @@ class TaskUpdate(BaseModel):
     approver_id: Optional[str] = None
     approver_queue_id: Optional[str] = None
     approval_required: Optional[bool] = None
+    # Scheduling fields
+    scheduled_start: Optional[datetime] = None
+    scheduled_end: Optional[datetime] = None
+    schedule_timezone: Optional[str] = None
 
 
 class TaskCheckout(BaseModel):

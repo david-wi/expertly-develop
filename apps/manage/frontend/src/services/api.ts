@@ -549,6 +549,10 @@ export interface Task {
   // Playbook tracking
   playbook_id?: string
   source_monitor_id?: string
+  // Scheduling fields
+  scheduled_start?: string
+  scheduled_end?: string
+  schedule_timezone?: string
   created_at: string
   updated_at: string
 }
@@ -586,6 +590,10 @@ export interface UpdateTaskRequest {
   approval_required?: boolean
   // Dependencies
   depends_on?: string[]
+  // Scheduling fields
+  scheduled_start?: string | null
+  scheduled_end?: string | null
+  schedule_timezone?: string | null
 }
 
 export interface CreateQueueRequest {
