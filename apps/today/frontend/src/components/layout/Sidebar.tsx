@@ -49,6 +49,7 @@ export function Sidebar() {
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
+    currentAppCode: 'today',
   }), [handleLogout]);
 
   return (

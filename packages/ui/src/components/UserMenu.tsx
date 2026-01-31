@@ -333,10 +333,17 @@ export interface CreateDefaultUserMenuOptions {
     onSwitch: (orgId: string) => void
     storageKey?: string
   }
+  /** Current app's product code (e.g., 'manage', 'define'). When set, error logs link will filter to this app. */
+  currentAppCode?: string
 }
 
 export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): UserMenuConfig {
-  const { onLogout, buildTimestamp, gitCommit, includeProfile = true, aboutHref = '/landing', organizations } = options
+  const { onLogout, buildTimestamp, gitCommit, includeProfile = true, aboutHref = '/landing', organizations, currentAppCode } = options
+
+  // Build error logs URL with optional app filter
+  const errorLogsUrl = currentAppCode
+    ? `https://admin.ai.devintensive.com/error-logs?app=expertly-${currentAppCode}`
+    : 'https://admin.ai.devintensive.com/error-logs'
 
   const sections: UserMenuSection[] = []
 
@@ -396,7 +403,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             label: 'Error Logs',
             icon: AlertTriangle,
             type: 'link',
-            href: 'https://admin.ai.devintensive.com/error-logs',
+            href: errorLogsUrl,
             external: true,
           },
           {

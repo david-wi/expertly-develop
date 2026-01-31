@@ -96,6 +96,7 @@ export default function Layout() {
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     includeProfile: false,
+    currentAppCode: 'identity',
     organizations: userMenuOrganizations.length > 1 ? {
       items: userMenuOrganizations,
       currentId: selectedOrgId,

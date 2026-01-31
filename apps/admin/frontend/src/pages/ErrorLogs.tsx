@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle,
   AlertCircle,
@@ -246,14 +247,41 @@ function ErrorDetailModal({
   )
 }
 
+// Convert app code like "expertly-manage" to display name "Expertly Manage"
+function formatAppName(appCode: string): string {
+  return appCode
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
 export function ErrorLogs() {
   const queryClient = useQueryClient()
+  const [searchParams] = useSearchParams()
+
+  // Initialize filters from URL params
+  const initialAppFilter = searchParams.get('app') || undefined
+
   const [filters, setFilters] = useState<ErrorLogFilters>({
     limit: 50,
     skip: 0,
+    app_name: initialAppFilter,
   })
   const [selectedError, setSelectedError] = useState<ErrorLog | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(false)
+
+  // Compute the page heading based on current filter
+  const pageHeading = useMemo(() => {
+    if (filters.app_name) {
+      return `Error Logs for ${formatAppName(filters.app_name)}`
+    }
+    return 'Error Logs'
+  }, [filters.app_name])
+
+  // Update document title when filter changes
+  useEffect(() => {
+    document.title = `${pageHeading} - Expertly Admin`
+  }, [pageHeading])
 
   // Fetch stats
   const { data: stats } = useQuery({
@@ -310,9 +338,11 @@ export function ErrorLogs() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-theme-text-primary">Error Logs</h1>
+          <h1 className="text-2xl font-bold text-theme-text-primary">{pageHeading}</h1>
           <p className="text-theme-text-secondary mt-1">
-            Centralized error tracking across all Expertly applications
+            {filters.app_name
+              ? `Showing errors from ${formatAppName(filters.app_name)}`
+              : 'Centralized error tracking across all Expertly applications'}
           </p>
         </div>
         <div className="flex items-center gap-3">

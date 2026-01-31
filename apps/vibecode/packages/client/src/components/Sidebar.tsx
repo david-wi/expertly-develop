@@ -423,6 +423,7 @@ export function Sidebar({ ws }: SidebarProps) {
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
+    currentAppCode: 'vibecode',
   }), [handleLogout]);
 
   return (
