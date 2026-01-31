@@ -11,7 +11,7 @@ from sqlalchemy.orm import joinedload
 
 from app.database import get_db
 from app.config import get_settings
-from app.models import User, Session, MagicCode
+from app.models import User, Session, MagicCode, Organization, OrganizationMembership
 from app.schemas.auth import (
     LoginRequest,
     LoginResponse,
@@ -27,6 +27,8 @@ from app.schemas.auth import (
     ForgotPasswordResponse,
     ResetPasswordRequest,
     ResetPasswordResponse,
+    AccessibleOrganization,
+    AccessibleOrganizationsResponse,
 )
 from app.core.redis import (
     cache_session,
@@ -71,6 +73,7 @@ def _user_to_auth_response(user: User) -> AuthUserResponse:
         organization_name=user.organization.name if user.organization else None,
         role=user.role,
         avatar_url=user.avatar_url,
+        is_expertly_admin=user.is_expertly_admin or False,
     )
 
 
@@ -146,6 +149,7 @@ async def login(
         "organization_name": user.organization.name if user.organization else None,
         "role": user.role,
         "avatar_url": user.avatar_url,
+        "is_expertly_admin": user.is_expertly_admin or False,
     }
     await cache_session(session.session_token, user_data)
 
@@ -220,6 +224,7 @@ async def validate_session(
                 organization_name=cached.get("organization_name"),
                 role=cached["role"],
                 avatar_url=cached.get("avatar_url"),
+                is_expertly_admin=cached.get("is_expertly_admin", False),
             ),
             expires_at=None,  # Not stored in cache
         )
@@ -256,6 +261,7 @@ async def validate_session(
         "organization_name": user.organization.name if user.organization else None,
         "role": user.role,
         "avatar_url": user.avatar_url,
+        "is_expertly_admin": user.is_expertly_admin or False,
     }
     await cache_session(session_token, user_data)
 
@@ -286,6 +292,99 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="Session invalid or expired")
 
     return validation.user
+
+
+@router.get("/me/organizations", response_model=AccessibleOrganizationsResponse)
+async def get_accessible_organizations(
+    session_token: Optional[str] = Header(None, alias="X-Session-Token"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get all organizations the current user can access.
+
+    Returns organizations based on:
+    1. User's primary organization
+    2. Organization memberships
+    3. All organizations if user is an Expertly Admin
+    """
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Validate session and get user
+    validation = await validate_session(session_token, db)
+    if not validation.valid or not validation.user:
+        raise HTTPException(status_code=401, detail="Session invalid or expired")
+
+    user_id = validation.user.id
+
+    # Get the full user record to check is_expertly_admin
+    user_query = select(User).where(User.id == user_id)
+    user_result = await db.execute(user_query)
+    user = user_result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    accessible_orgs = []
+
+    # If Expertly Admin, return all organizations
+    if user.is_expertly_admin:
+        orgs_query = select(Organization).where(Organization.is_active == True).order_by(Organization.name)
+        orgs_result = await db.execute(orgs_query)
+        all_orgs = orgs_result.scalars().all()
+
+        for org in all_orgs:
+            accessible_orgs.append(AccessibleOrganization(
+                id=org.id,
+                name=org.name,
+                slug=org.slug,
+                role="admin",  # Expertly admins have admin access to all orgs
+                is_primary=(org.id == user.organization_id),
+            ))
+    else:
+        # Get user's primary organization
+        primary_org_query = (
+            select(Organization)
+            .where(Organization.id == user.organization_id)
+            .where(Organization.is_active == True)
+        )
+        primary_org_result = await db.execute(primary_org_query)
+        primary_org = primary_org_result.scalar_one_or_none()
+
+        if primary_org:
+            accessible_orgs.append(AccessibleOrganization(
+                id=primary_org.id,
+                name=primary_org.name,
+                slug=primary_org.slug,
+                role=user.role,
+                is_primary=True,
+            ))
+
+        # Get additional organizations via memberships
+        memberships_query = (
+            select(OrganizationMembership)
+            .options(joinedload(OrganizationMembership.organization))
+            .where(OrganizationMembership.user_id == user_id)
+        )
+        memberships_result = await db.execute(memberships_query)
+        memberships = memberships_result.scalars().all()
+
+        for membership in memberships:
+            org = membership.organization
+            # Skip if already added (could be same as primary org)
+            if org and org.is_active and org.id != user.organization_id:
+                accessible_orgs.append(AccessibleOrganization(
+                    id=org.id,
+                    name=org.name,
+                    slug=org.slug,
+                    role=membership.role,
+                    is_primary=False,
+                ))
+
+    return AccessibleOrganizationsResponse(
+        organizations=accessible_orgs,
+        is_expertly_admin=user.is_expertly_admin or False,
+    )
 
 
 @router.get("/sessions", response_model=list[SessionInfo])
@@ -519,6 +618,7 @@ async def verify_magic_code(
         "organization_name": user.organization.name if user.organization else None,
         "role": user.role,
         "avatar_url": user.avatar_url,
+        "is_expertly_admin": user.is_expertly_admin or False,
     }
     await cache_session(session.session_token, user_data)
 

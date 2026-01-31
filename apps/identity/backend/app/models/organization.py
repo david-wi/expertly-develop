@@ -22,3 +22,4 @@ class Organization(Base):
     # Relationships
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
     teams = relationship("Team", back_populates="organization", cascade="all, delete-orphan")
+    memberships = relationship("OrganizationMembership", back_populates="organization", cascade="all, delete-orphan")

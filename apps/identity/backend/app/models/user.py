@@ -51,6 +51,9 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_default = Column(Boolean, default=False)
 
+    # Expertly Admin flag - gives access to all organizations
+    is_expertly_admin = Column(Boolean, default=False)
+
     # Profile
     avatar_url = Column(Text, nullable=True)
     title = Column(String(255), nullable=True)
@@ -71,6 +74,7 @@ class User(Base):
     organization = relationship("Organization", back_populates="users")
     team_memberships = relationship("TeamMember", back_populates="user", cascade="all, delete-orphan")
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    organization_memberships = relationship("OrganizationMembership", back_populates="user", cascade="all, delete-orphan")
 
     def set_password(self, password: str) -> None:
         """Hash and set the user's password."""

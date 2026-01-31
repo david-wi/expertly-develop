@@ -26,9 +26,28 @@ class AuthUserResponse(BaseModel):
     organization_name: Optional[str] = None
     role: str
     avatar_url: Optional[str] = None
+    is_expertly_admin: bool = False
 
     class Config:
         from_attributes = True
+
+
+class AccessibleOrganization(BaseModel):
+    """Organization that a user has access to."""
+    id: UUID
+    name: str
+    slug: str
+    role: str  # Role within this organization
+    is_primary: bool = False
+
+    class Config:
+        from_attributes = True
+
+
+class AccessibleOrganizationsResponse(BaseModel):
+    """Response containing all organizations a user can access."""
+    organizations: List[AccessibleOrganization]
+    is_expertly_admin: bool = False  # If true, user has access to all orgs
 
 
 class ValidateResponse(BaseModel):
