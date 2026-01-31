@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio, Bot } from 'lucide-react'
+import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio, Bot, Lightbulb } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
 import { usersApi } from '@/services/api'
 
@@ -8,6 +8,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Themes', href: '/themes', icon: Palette },
   { name: 'AI Config', href: '/ai-config', icon: Bot },
+  { name: 'Idea Backlog', href: '/idea-backlog', icon: Lightbulb },
   { name: 'Error Logs', href: '/error-logs', icon: AlertTriangle },
   { name: 'Monitoring', href: '/monitoring', icon: Activity },
   { name: 'Live Monitor', href: '/monitor', icon: Radio },
@@ -18,6 +19,7 @@ const pageTitles: Record<string, string> = {
   '/': 'Dashboard',
   '/themes': 'Themes',
   '/ai-config': 'AI Config',
+  '/idea-backlog': 'Idea Backlog',
   '/error-logs': 'Error Logs',
   '/monitoring': 'Monitoring',
   '/monitor': 'Live Monitor',
