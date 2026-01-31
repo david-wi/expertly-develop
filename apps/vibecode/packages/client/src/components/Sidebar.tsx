@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Download, ExternalLink, MessageCircle, Building2, ChevronDown } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { Plus, Trash2, Terminal, Wifi, WifiOff, Cpu, HardDrive, Activity, Download, ExternalLink, MessageCircle } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useDashboardStore } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
-import { Sidebar as SharedSidebar, createDefaultUserMenu } from '@expertly/ui';
+import { Sidebar as SharedSidebar, createDefaultUserMenu, useOrganizations } from '@expertly/ui';
 
 // Try to launch the desktop agent via custom URL scheme
 const tryLaunchAgent = () => {
@@ -11,14 +11,7 @@ const tryLaunchAgent = () => {
 };
 
 // Storage key for tenant ID override
-const TENANT_STORAGE_KEY = 'expertly-tenant-id';
-
-// Organization type (simplified - no backend API for Vibecode yet)
-interface Organization {
-  id: string;
-  name: string;
-  slug: string;
-}
+const TENANT_STORAGE_KEY = 'vibecode_selected_org_id';
 
 interface SidebarProps {
   ws: ReturnType<typeof useWebSocket>;
@@ -297,134 +290,26 @@ function AgentStatus() {
   );
 }
 
-// Organization Switcher Component (placeholder - Vibecode doesn't have org API yet)
-function OrganizationSwitcher({ currentTenantId, onSwitch }: { currentTenantId: string | null; onSwitch: () => void }) {
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const currentOrg = organizations.find((org) => org.id === currentTenantId) || organizations[0];
-
-  useEffect(() => {
-    // Vibecode doesn't have its own organizations API yet
-    // For now, just show loading briefly then hide
-    const timer = setTimeout(() => {
-      setLoading(false);
-      // When Vibecode gets an organizations API, fetch here:
-      // const { items } = await organizationsApi.list();
-      // setOrganizations(items);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const handleSelect = (org: Organization) => {
-    if (org.id === currentTenantId) {
-      setIsOpen(false);
-      return;
-    }
-
-    localStorage.setItem(TENANT_STORAGE_KEY, org.id);
-    setIsOpen(false);
-    onSwitch();
-  };
-
-  const handleClearOverride = () => {
-    localStorage.removeItem(TENANT_STORAGE_KEY);
-    setIsOpen(false);
-    onSwitch();
-  };
-
-  if (loading) {
-    return null;
-  }
-
-  if (organizations.length <= 1) {
-    return null;
-  }
-
-  const hasOverride = localStorage.getItem(TENANT_STORAGE_KEY) !== null;
-
-  return (
-    <div className="px-3 mb-4" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-      >
-        <div className="flex items-center gap-2 truncate">
-          <Building2 className="w-4 h-4 text-gray-500 flex-shrink-0" />
-          <span className="truncate">{currentOrg?.name || 'Select Organization'}</span>
-        </div>
-        <ChevronDown className={`w-4 h-4 text-gray-500 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      {isOpen && (
-        <div className="absolute left-3 right-3 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
-          {organizations.map((org) => (
-            <button
-              key={org.id}
-              onClick={() => handleSelect(org)}
-              className={`w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-gray-100 transition-colors ${
-                org.id === currentTenantId ? 'bg-violet-50 text-violet-700' : 'text-gray-600'
-              }`}
-            >
-              <Building2 className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">{org.name}</span>
-              {org.id === currentTenantId && (
-                <span className="ml-auto text-xs text-violet-600">Current</span>
-              )}
-            </button>
-          ))}
-          {hasOverride && (
-            <>
-              <div className="border-t border-gray-200" />
-              <button
-                onClick={handleClearOverride}
-                className="w-full px-3 py-2 text-sm text-left text-gray-500 hover:bg-gray-100 transition-colors"
-              >
-                Reset to default
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export function Sidebar({ ws }: SidebarProps) {
-  const [currentTenantId, setCurrentTenantId] = useState<string | null>(
-    localStorage.getItem(TENANT_STORAGE_KEY)
-  );
-
-  const handleOrgSwitch = () => {
-    setCurrentTenantId(localStorage.getItem(TENANT_STORAGE_KEY));
-    window.location.reload();
-  };
+  // Use shared organizations hook
+  const { organizationsConfig, currentOrg } = useOrganizations({
+    storageKey: TENANT_STORAGE_KEY,
+  });
 
   const handleLogout = useCallback(() => {
     // Redirect to identity login
     window.location.href = 'https://identity.ai.devintensive.com/login';
   }, []);
 
-  // Create user menu config
+  // Create user menu config with organization switcher
   const userMenu = useMemo(() => createDefaultUserMenu({
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'vibecode',
-  }), [handleLogout]);
+    organizations: organizationsConfig,
+  }), [handleLogout, organizationsConfig]);
 
   return (
     <SharedSidebar
@@ -433,12 +318,6 @@ export function Sidebar({ ws }: SidebarProps) {
       navigation={[]} // Vibecode has no standard navigation links
       currentPath="/"
       showThemeSwitcher={false}
-      orgSwitcher={
-        <OrganizationSwitcher
-          currentTenantId={currentTenantId}
-          onSwitch={handleOrgSwitch}
-        />
-      }
       bottomSection={<AgentStatus />}
       userMenu={userMenu}
       renderLink={({ href, className, children, onClick }) => (

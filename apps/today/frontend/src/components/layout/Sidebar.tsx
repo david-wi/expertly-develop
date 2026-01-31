@@ -12,7 +12,7 @@ import {
   Archive,
   Settings,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui';
 import { api } from '../../services/api';
 
 const navigation = [
@@ -39,18 +39,29 @@ export function Sidebar() {
   }, []);
   const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
+  // Use shared organizations hook
+  const { organizationsConfig, currentOrg } = useOrganizations({
+    storageKey: 'today_selected_org_id',
+  });
+
+  // Merge organization name into user display
+  const userWithOrg = sidebarUser
+    ? { ...sidebarUser, organization: sidebarUser.organization || currentOrg?.name }
+    : undefined;
+
   const handleLogout = useCallback(() => {
     // Redirect to identity login
     window.location.href = 'https://identity.ai.devintensive.com/login';
   }, []);
 
-  // Create user menu config
+  // Create user menu config with organization switcher
   const userMenu = useMemo(() => createDefaultUserMenu({
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'today',
-  }), [handleLogout]);
+    organizations: organizationsConfig,
+  }), [handleLogout, organizationsConfig]);
 
   return (
     <SharedSidebar
@@ -58,7 +69,7 @@ export function Sidebar() {
       productName="Today"
       navigation={navigation}
       currentPath={location.pathname}
-      user={sidebarUser}
+      user={userWithOrg}
       buildInfo={
         formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
           <span className="text-[10px] text-gray-400 block text-right">

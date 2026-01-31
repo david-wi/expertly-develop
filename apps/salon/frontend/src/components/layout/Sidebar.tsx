@@ -11,7 +11,7 @@ import {
   Gift,
   Globe,
 } from 'lucide-react';
-import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, type CurrentUser } from '@expertly/ui';
+import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, type CurrentUser } from '@expertly/ui';
 import { useAuthStore } from '../../stores/authStore';
 import { auth, salon } from '../../services/api';
 
@@ -49,13 +49,24 @@ export function Sidebar() {
   }, []);
   const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
-  // Create user menu config
+  // Use shared organizations hook
+  const { organizationsConfig, currentOrg } = useOrganizations({
+    storageKey: 'salon_selected_org_id',
+  });
+
+  // Merge organization name into user display
+  const userWithOrg = sidebarUser
+    ? { ...sidebarUser, organization: sidebarUser.organization || currentOrg?.name }
+    : undefined;
+
+  // Create user menu config with organization switcher
   const userMenu = useMemo(() => createDefaultUserMenu({
     onLogout: logout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'salon',
-  }), [logout]);
+    organizations: organizationsConfig,
+  }), [logout, organizationsConfig]);
 
   return (
     <SharedSidebar
@@ -63,7 +74,7 @@ export function Sidebar() {
       productName="Salon"
       navigation={navItems}
       currentPath={location.pathname}
-      user={sidebarUser}
+      user={userWithOrg}
       buildInfo={
         formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
           <span className="text-[10px] text-gray-400 block text-right">

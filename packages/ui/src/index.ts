@@ -20,6 +20,14 @@ export {
   type SidebarUser,
 } from './hooks/useCurrentUser'
 
+// Organizations hook for org switching across all apps
+export {
+  useOrganizations,
+  type UseOrganizationsOptions,
+  type UseOrganizationsReturn,
+  type OrganizationItem,
+} from './hooks/useOrganizations'
+
 // Build info utilities
 export { formatBuildTimestamp } from './utils/buildInfo'
 
