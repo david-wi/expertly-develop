@@ -15,7 +15,6 @@ import {
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, VoiceTranscription } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
-import OrgSwitcher from './OrgSwitcher'
 import NotificationBell from './NotificationBell'
 import { api } from '../services/api'
 
@@ -46,7 +45,7 @@ export default function Layout() {
   const { sidebarUser } = useCurrentUser(fetchCurrentUser)
 
   // Use shared organizations hook
-  const { organizationsConfig, currentOrg, organizations, handleOrgSwitch } = useOrganizations({
+  const { organizationsConfig, currentOrg } = useOrganizations({
     storageKey: ORG_STORAGE_KEY,
   })
 
@@ -86,16 +85,7 @@ export default function Layout() {
         productName="Manage"
         navigation={navigation}
         currentPath={location.pathname}
-        orgSwitcher={
-          <>
-            <OrgSwitcher
-              organizations={organizations.map(o => ({ id: o.id, name: o.name, is_default: false }))}
-              selectedOrgId={currentOrg?.id ?? null}
-              onOrgChange={handleOrgSwitch}
-            />
-            <ViewAsSwitcher onViewChange={handleViewChange} />
-          </>
-        }
+        orgSwitcher={<ViewAsSwitcher onViewChange={handleViewChange} />}
         buildInfo={
           formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
             <span className="text-[10px] text-gray-400 block text-right">
