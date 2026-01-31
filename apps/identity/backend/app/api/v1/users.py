@@ -118,10 +118,6 @@ async def create_user(
             # This is the first real user - make them owner
             role = "owner"
 
-    # Generate API key
-    api_key = secrets.token_urlsafe(32)
-    api_key_hash = bcrypt.hash(api_key)
-
     user = User(
         organization_id=org.id,
         name=user_data.name,
@@ -132,14 +128,13 @@ async def create_user(
         title=user_data.title,
         responsibilities=user_data.responsibilities,
         bot_config=user_data.bot_config.model_dump() if user_data.bot_config else None,
-        api_key_hash=api_key_hash,
     )
 
     db.add(user)
     await db.commit()
     await db.refresh(user)
 
-    return UserCreateResponse(user=user, api_key=api_key)
+    return UserCreateResponse(user=user)
 
 
 @router.get("/{user_id}", response_model=UserResponse)

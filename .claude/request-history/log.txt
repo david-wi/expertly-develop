@@ -30,3 +30,4 @@
 20260130 - Manage backend crashing with ModuleNotFoundError: aiofiles. Added aiofiles to requirements.txt.
 20260130 - Sidebar UI improvements across all apps: (a) Centralized organization switcher in UserMenu - clicking username now shows org dropdown, (b) Improved UserMenu visual distinction with stronger borders/shadows, (c) Alphabetized Developer Tools menu, (d) Added Test Scenarios page to admin app and menu link
 20260130 Fix Developer Tools submenu positioning (goes down and gets cut off - should go up) + Add System Health link across all Expertly projects
+20260130 - Don't auto-generate API key when creating bot; generate on-demand when user requests it

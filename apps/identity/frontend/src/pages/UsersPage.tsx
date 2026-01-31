@@ -89,7 +89,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
 
     setSaving(true)
     try {
-      const result = await usersApi.create({
+      await usersApi.create({
         ...formData,
         name: formData.name.trim(),
         email: formData.email?.trim() || undefined,
@@ -98,9 +98,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
         responsibilities: formData.responsibilities?.trim() || undefined,
         bot_config: formData.user_type === 'bot' ? formData.bot_config : undefined,
       })
-      setNewApiKey(result.api_key)
       setShowCreateModal(false)
-      setShowApiKeyModal(true)
       await loadUsers()
       resetForm()
     } catch (error: unknown) {
