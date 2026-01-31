@@ -137,6 +137,8 @@ services:
       - EMAIL_FROM_ADDRESS=${EMAIL_FROM_ADDRESS:-donotreply@expertly.com}
       - EMAIL_FROM_NAME=${EMAIL_FROM_NAME:-Expertly}
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
+      # Deepgram for voice transcription
+      - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY:-}
     volumes:
       - identity_uploads:/app/uploads
     networks:
