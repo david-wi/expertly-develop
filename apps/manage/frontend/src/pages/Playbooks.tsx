@@ -163,9 +163,9 @@ function buildTree(playbooks: Playbook[]): TreeNode[] {
     }
   }
 
-  // Sort children by order_index
+  // Sort children alphabetically by name
   const sortChildren = (nodes: TreeNode[]) => {
-    nodes.sort((a, b) => a.playbook.order_index - b.playbook.order_index)
+    nodes.sort((a, b) => a.playbook.name.localeCompare(b.playbook.name))
     for (const node of nodes) {
       sortChildren(node.children)
     }

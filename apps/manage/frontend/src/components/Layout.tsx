@@ -12,7 +12,6 @@ import {
   Link2,
   PersonStanding,
   Eye,
-  Bot,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu, VoiceTranscription, type Organization } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
@@ -22,16 +21,15 @@ import { api, Organization as ApiOrganization } from '../services/api'
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Assignments', href: '/tasks', icon: ListTodo },
-  { name: 'Bots', href: '/bots', icon: Bot },
   { name: 'Connections', href: '/connections', icon: Link2 },
   { name: 'Monitors', href: '/monitors', icon: Eye },
   { name: 'Playbooks', href: '/playbooks', icon: BookOpen },
   { name: 'Projects', href: '/projects', icon: FolderKanban },
   { name: 'Queues', href: '/queues', icon: Layers },
   { name: 'Recurring', href: '/recurring', icon: RefreshCw },
-  { name: 'Teams', href: '/teams', icon: Users2 },
+  { name: 'Teams', href: '/teams', icon: Users2, spacerBefore: true },
   { name: 'Users and Bots', href: '/users', icon: PersonStanding },
-  { name: 'Wins', href: '/wins', icon: Star, spacerBefore: true },
+  { name: 'Wins', href: '/wins', icon: Star },
 ]
 
 // Local storage key for selected organization
