@@ -9,6 +9,8 @@ export interface OrganizationItem {
   name: string
   slug?: string
   is_default?: boolean
+  role?: string
+  is_primary?: boolean
 }
 
 export interface UseOrganizationsOptions {
@@ -83,7 +85,8 @@ export function useOrganizations(options: UseOrganizationsOptions = {}): UseOrga
 
     const fetchOrgs = async () => {
       try {
-        const response = await fetch(`${identityApiUrl}/api/v1/organizations`, {
+        // Fetch only organizations the user has access to
+        const response = await fetch(`${identityApiUrl}/api/v1/auth/me/organizations`, {
           credentials: 'include', // Send session cookie
         })
 
@@ -92,10 +95,12 @@ export function useOrganizations(options: UseOrganizationsOptions = {}): UseOrga
         }
 
         const data = await response.json()
-        const orgs: Organization[] = (data.items || data || []).map((org: OrganizationItem) => ({
+        // Response format: { organizations: [...], is_expertly_admin: bool }
+        const orgItems = data.organizations || data.items || data || []
+        const orgs: Organization[] = orgItems.map((org: OrganizationItem) => ({
           id: org.id,
           name: org.name,
-          is_default: org.is_default,
+          is_default: org.is_primary || org.is_default,
         }))
 
         setOrganizations(orgs)
