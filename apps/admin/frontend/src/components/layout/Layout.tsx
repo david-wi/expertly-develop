@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio, Bot } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
@@ -13,9 +13,33 @@ const navigation = [
   { name: 'Live Monitor', href: '/monitor', icon: Radio },
 ]
 
+// Page titles for each route
+const pageTitles: Record<string, string> = {
+  '/': 'Dashboard',
+  '/themes': 'Themes',
+  '/ai-config': 'AI Config',
+  '/error-logs': 'Error Logs',
+  '/monitoring': 'Monitoring',
+  '/monitor': 'Live Monitor',
+  '/known-issues': 'Known Issues',
+  '/test-scenarios': 'Test Scenarios',
+  '/changelog': 'Changelog',
+}
+
 export function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
+
+  // Update page title based on current route
+  useEffect(() => {
+    const basePath = location.pathname.split('/').slice(0, 2).join('/') || '/'
+    const pageTitle = pageTitles[basePath] || pageTitles[location.pathname]
+    if (pageTitle) {
+      document.title = `${pageTitle} - Expertly Admin`
+    } else {
+      document.title = 'Expertly Admin'
+    }
+  }, [location.pathname])
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => usersApi.me(), [])
@@ -31,6 +55,7 @@ export function Layout() {
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
+    currentAppCode: 'admin',
   }), [handleLogout])
 
   return (

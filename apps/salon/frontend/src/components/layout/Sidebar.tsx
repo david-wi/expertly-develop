@@ -54,6 +54,7 @@ export function Sidebar() {
     onLogout: logout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
+    currentAppCode: 'salon',
   }), [logout]);
 
   return (

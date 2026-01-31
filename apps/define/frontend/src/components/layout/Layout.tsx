@@ -68,6 +68,7 @@ export default function Layout() {
     onLogout: handleLogout,
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
+    currentAppCode: 'define',
     organizations: organizations.length > 1 ? {
       items: organizations,
       currentId: currentTenantId,
