@@ -771,6 +771,10 @@ export default function Playbooks() {
   const [aiSuggestions, setAISuggestions] = useState<GeneratedStep[] | null>(null)
   const [aiError, setAIError] = useState<string | null>(null)
 
+  // Auto-save state
+  const [autoSave, setAutoSave] = useState(true)
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+
   // Track unsaved changes in editor
   const hasEditorChanges = useMemo(() => {
     if (!isEditing || !editingPlaybook) return false
@@ -824,6 +828,54 @@ export default function Playbooks() {
   useEffect(() => {
     loadData()
   }, [])
+
+  // Auto-save effect with debounce
+  useEffect(() => {
+    if (!autoSave || !isEditing || !editingPlaybook || !hasEditorChanges) {
+      return
+    }
+
+    // Don't auto-save if there's a validation error (e.g., step without title)
+    const invalidSteps = steps.filter(s => !s.title.trim())
+    if (invalidSteps.length > 0) {
+      return
+    }
+
+    // Don't auto-save if name is empty
+    if (!formData.name.trim()) {
+      return
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setAutoSaveStatus('saving')
+      try {
+        await api.updatePlaybook(editingPlaybook.id, {
+          name: formData.name.trim(),
+          description: formData.description.trim() || undefined,
+          inputs_template: formData.inputs_template.trim() || undefined,
+          steps: steps.map((s, idx) => stepFormToCreate(s, idx + 1)),
+          scope_type: formData.scope_type,
+          scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
+        })
+        // Refresh the editing playbook to sync with saved state
+        const updated = await api.getPlaybooks()
+        const refreshed = updated.find(p => p.id === editingPlaybook.id)
+        if (refreshed) {
+          setEditingPlaybook(refreshed)
+        }
+        setPlaybooks(updated)
+        setAutoSaveStatus('saved')
+        // Reset status after a short delay
+        setTimeout(() => setAutoSaveStatus('idle'), 2000)
+      } catch (err) {
+        setAutoSaveStatus('error')
+        logger.error(err, { action: 'autoSavePlaybook', additionalContext: { playbookId: editingPlaybook.id } })
+        setTimeout(() => setAutoSaveStatus('idle'), 3000)
+      }
+    }, 1500) // 1.5 second debounce
+
+    return () => clearTimeout(timeoutId)
+  }, [autoSave, isEditing, editingPlaybook, hasEditorChanges, formData, steps])
 
 
   // Build tree structure
@@ -1400,6 +1452,78 @@ export default function Playbooks() {
   if (isEditing && editingPlaybook) {
     return (
       <div className="space-y-4">
+        {/* Sticky header */}
+        <div className="sticky top-0 z-10 bg-white -mx-4 px-4 py-3 border-b border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={confirmClose(() => {
+                  setIsEditing(false)
+                  setEditingPlaybook(null)
+                })}
+                className="text-gray-600 hover:text-gray-800"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <h2 className="text-2xl font-bold text-gray-900">Edit Playbook</h2>
+            </div>
+            <div className="flex items-center space-x-4">
+              {/* Auto-save toggle */}
+              <div className="flex items-center space-x-2">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoSave}
+                    onChange={(e) => setAutoSave(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+                <span className="text-sm text-gray-600">Auto-save</span>
+                {/* Auto-save status indicator */}
+                {autoSaveStatus === 'saving' && (
+                  <span className="text-xs text-gray-500 flex items-center gap-1">
+                    <svg className="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Saving...
+                  </span>
+                )}
+                {autoSaveStatus === 'saved' && (
+                  <span className="text-xs text-green-600 flex items-center gap-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Saved
+                  </span>
+                )}
+                {autoSaveStatus === 'error' && (
+                  <span className="text-xs text-red-600">Save failed</span>
+                )}
+              </div>
+              <button
+                onClick={confirmClose(() => {
+                  setIsEditing(false)
+                  setEditingPlaybook(null)
+                })}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                disabled={saving || autoSaveStatus === 'saving'}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Error banner */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start justify-between">
@@ -1422,41 +1546,6 @@ export default function Playbooks() {
             </button>
           </div>
         )}
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={confirmClose(() => {
-                setIsEditing(false)
-                setEditingPlaybook(null)
-              })}
-              className="text-gray-600 hover:text-gray-800"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <h2 className="text-2xl font-bold text-gray-900">Edit Playbook</h2>
-          </div>
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={confirmClose(() => {
-                setIsEditing(false)
-                setEditingPlaybook(null)
-              })}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSaveEdit}
-              disabled={saving}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </button>
-          </div>
-        </div>
 
         <form onSubmit={handleSaveEdit} className="space-y-6">
           {/* Basic Info */}

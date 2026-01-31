@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Modal, ModalFooter } from '@expertly/ui'
 import {
   api,
@@ -7,6 +7,7 @@ import {
   CreateRecurringTaskRequest,
   RecurrenceType,
 } from '../services/api'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -36,6 +37,36 @@ export default function RecurringTasks() {
     timezone: 'UTC',
     max_retries: 3,
   })
+
+  // Track unsaved changes for create modal
+  const hasCreateChanges = useMemo(() => {
+    if (!showCreateModal) return false
+    return formData.title.trim() !== '' ||
+           (formData.description?.trim() || '') !== '' ||
+           formData.queue_id !== ''
+  }, [showCreateModal, formData.title, formData.description, formData.queue_id])
+
+  // Track unsaved changes for edit modal
+  const hasEditChanges = useMemo(() => {
+    if (!showEditModal || !selectedTask) return false
+    const arraysEqual = (a: number[] | undefined, b: number[] | undefined) => {
+      if (!a && !b) return true
+      if (!a || !b) return false
+      if (a.length !== b.length) return false
+      return a.every((val, idx) => val === b[idx])
+    }
+    return formData.title !== selectedTask.title ||
+           (formData.description || '') !== (selectedTask.description || '') ||
+           formData.priority !== selectedTask.priority ||
+           formData.queue_id !== selectedTask.queue_id ||
+           formData.recurrence_type !== selectedTask.recurrence_type ||
+           formData.interval !== selectedTask.interval ||
+           !arraysEqual(formData.days_of_week, selectedTask.days_of_week) ||
+           formData.day_of_month !== (selectedTask.day_of_month || 1)
+  }, [showEditModal, selectedTask, formData])
+
+  const hasUnsavedChanges = hasCreateChanges || hasEditChanges
+  const { confirmClose } = useUnsavedChanges(hasUnsavedChanges)
 
   useEffect(() => {
     loadData()
@@ -363,7 +394,7 @@ export default function RecurringTasks() {
       {/* Create Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={confirmClose(() => setShowCreateModal(false))}
         title="Create Recurring Assignment"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -512,7 +543,7 @@ export default function RecurringTasks() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={confirmClose(() => setShowCreateModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
@@ -531,7 +562,7 @@ export default function RecurringTasks() {
       {/* Edit Modal */}
       <Modal
         isOpen={showEditModal && !!selectedTask}
-        onClose={() => setShowEditModal(false)}
+        onClose={confirmClose(() => setShowEditModal(false))}
         title="Edit Recurring Assignment"
       >
         <form onSubmit={handleEdit} className="space-y-4">
@@ -677,7 +708,7 @@ export default function RecurringTasks() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowEditModal(false)}
+              onClick={confirmClose(() => setShowEditModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel

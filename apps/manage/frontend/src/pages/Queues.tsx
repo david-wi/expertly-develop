@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { useAppStore } from '../stores/appStore'
 import { api, Queue, CreateQueueRequest } from '../services/api'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface QueueStats {
   _id: string
@@ -30,6 +31,22 @@ export default function Queues() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [formData, setFormData] = useState({ purpose: '', description: '' })
   const [saving, setSaving] = useState(false)
+
+  // Track unsaved changes for create modal
+  const hasCreateChanges = useMemo(() => {
+    if (!showCreateModal) return false
+    return formData.purpose.trim() !== '' || formData.description.trim() !== ''
+  }, [showCreateModal, formData.purpose, formData.description])
+
+  // Track unsaved changes for edit modal
+  const hasEditChanges = useMemo(() => {
+    if (!showEditModal || !selectedQueue) return false
+    return formData.purpose !== selectedQueue.purpose ||
+           formData.description !== (selectedQueue.description || '')
+  }, [showEditModal, selectedQueue, formData.purpose, formData.description])
+
+  const hasUnsavedChanges = hasCreateChanges || hasEditChanges
+  const { confirmClose } = useUnsavedChanges(hasUnsavedChanges)
 
   useEffect(() => {
     fetchQueues()
@@ -271,7 +288,7 @@ export default function Queues() {
       {/* Create Queue Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={confirmClose(() => setShowCreateModal(false))}
         title="Create New Queue"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -303,7 +320,7 @@ export default function Queues() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={confirmClose(() => setShowCreateModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
@@ -322,7 +339,7 @@ export default function Queues() {
       {/* Edit Queue Modal */}
       <Modal
         isOpen={showEditModal && !!selectedQueue}
-        onClose={() => setShowEditModal(false)}
+        onClose={confirmClose(() => setShowEditModal(false))}
         title="Edit Queue"
       >
         <form onSubmit={handleEdit} className="space-y-4">
@@ -352,7 +369,7 @@ export default function Queues() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowEditModal(false)}
+              onClick={confirmClose(() => setShowEditModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel

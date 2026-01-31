@@ -37,3 +37,14 @@
 20260131 - Implement selective deployment for monorepo: Added detect-changes job to GitHub Actions workflow that only deploys apps with actual changes. Single app change now deploys in ~20-30s vs ~2min for all 9 apps. Docs-only changes skip deployment entirely. Shared package (packages/ui) or infrastructure changes still deploy all apps.
 20260131 - Optimize CI typechecks: Made ci.yml typecheck jobs selective - each job checks if its app changed and skips expensive npm ci/typecheck if not. Also removed redundant typecheck from deploy.yml since CI enforces it before merge. Result: workflow-only changes complete in ~25s instead of ~2min.
 20260131 - Expertly Manage sidebar changes: (1) Remove Bots link (Users and Bots already exists), (2) Alphabetize playbooks at each hierarchy level, (3) Add spacer before Teams to visually separate Teams/Users and Bots/Wins section
+20260131 17:39 - Add Team Members widget to Expertly Manage dashboard as the top widget. Displays user avatars with names below and titles/roles on hover.
+20260131 18:44:34 EST - Continuing multi-org user access implementation: Add organizations endpoint, update auth flow, implement multi-session cookies
+20260131 - Add unsaved changes detection/warning to all Manage app screens:
+- Created useUnsavedChanges hook for reusable unsaved changes tracking
+- Updated Playbooks.tsx: editor, create modal, and group modal
+- Updated TaskDetailModal.tsx: uses existing hasChanges tracking
+- Updated Queues.tsx: create and edit modals
+- Updated Teams.tsx: create and edit modals  
+- Updated Projects.tsx: create and edit modals
+- Updated RecurringTasks.tsx: create and edit modals
+Warns users before losing changes on modal close or page refresh.
