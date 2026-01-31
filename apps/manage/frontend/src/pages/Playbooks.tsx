@@ -1,9 +1,10 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { FolderPlus } from 'lucide-react'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem, GeneratedStep } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { createErrorLogger } from '../utils/errorLogger'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 const logger = createErrorLogger('Playbooks')
 
@@ -770,6 +771,56 @@ export default function Playbooks() {
   const [aiSuggestions, setAISuggestions] = useState<GeneratedStep[] | null>(null)
   const [aiError, setAIError] = useState<string | null>(null)
 
+  // Track unsaved changes in editor
+  const hasEditorChanges = useMemo(() => {
+    if (!isEditing || !editingPlaybook) return false
+    // Check form data changes
+    if (formData.name !== editingPlaybook.name) return true
+    if (formData.description !== (editingPlaybook.description || '')) return true
+    if (formData.inputs_template !== (editingPlaybook.inputs_template || '')) return true
+    if (formData.scope_type !== editingPlaybook.scope_type) return true
+    if (formData.scope_id !== (editingPlaybook.scope_id || '')) return true
+    // Check steps changes
+    const originalSteps = editingPlaybook.steps.map(playbookStepToForm)
+    if (steps.length !== originalSteps.length) return true
+    for (let i = 0; i < steps.length; i++) {
+      const current = steps[i]
+      const original = originalSteps[i]
+      if (!original) return true
+      if (current.title !== original.title) return true
+      if (current.description !== original.description) return true
+      if (current.when_to_perform !== original.when_to_perform) return true
+      if (current.parallel_group !== original.parallel_group) return true
+      if (current.nested_playbook_id !== original.nested_playbook_id) return true
+      if (current.assignee_type !== original.assignee_type) return true
+      if (current.assignee_id !== original.assignee_id) return true
+      if (current.queue_id !== original.queue_id) return true
+      if (current.approval_required !== original.approval_required) return true
+      if (current.approver_type !== original.approver_type) return true
+      if (current.approver_id !== original.approver_id) return true
+      if (current.approver_queue_id !== original.approver_queue_id) return true
+    }
+    return false
+  }, [isEditing, editingPlaybook, formData, steps])
+
+  // Track unsaved changes in create modal
+  const hasCreateChanges = useMemo(() => {
+    if (!showCreateModal) return false
+    return formData.name.trim() !== '' || formData.description.trim() !== ''
+  }, [showCreateModal, formData.name, formData.description])
+
+  // Track unsaved changes in create group modal
+  const hasGroupChanges = useMemo(() => {
+    if (!showCreateGroupModal) return false
+    return groupName.trim() !== ''
+  }, [showCreateGroupModal, groupName])
+
+  // Combined unsaved changes state for beforeunload
+  const hasAnyUnsavedChanges = hasEditorChanges || hasCreateChanges || hasGroupChanges
+
+  // Hook for browser beforeunload warning
+  const { confirmClose } = useUnsavedChanges(hasAnyUnsavedChanges)
+
   useEffect(() => {
     loadData()
   }, [])
@@ -1130,10 +1181,10 @@ export default function Playbooks() {
     setShowCreateGroupModal(true)
   }, [])
 
-  // Keyboard shortcut for new group (Cmd/Ctrl+Shift+G)
+  // Keyboard shortcut for new folder (Cmd/Ctrl+Shift+F)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'g') {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
         e.preventDefault()
         openCreateGroupModal()
       }
@@ -1377,10 +1428,10 @@ export default function Playbooks() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => {
+              onClick={confirmClose(() => {
                 setIsEditing(false)
                 setEditingPlaybook(null)
-              }}
+              })}
               className="text-gray-600 hover:text-gray-800"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1391,10 +1442,10 @@ export default function Playbooks() {
           </div>
           <div className="flex items-center space-x-3">
             <button
-              onClick={() => {
+              onClick={confirmClose(() => {
                 setIsEditing(false)
                 setEditingPlaybook(null)
-              }}
+              })}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
@@ -1730,13 +1781,6 @@ export default function Playbooks() {
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
           <button
-            onClick={openCreateGroupModal}
-            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100 p-2 rounded-md transition-colors"
-            title={`New Group (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+G)`}
-          >
-            <FolderPlus className="w-5 h-5" />
-          </button>
-          <button
             onClick={openCreateModal}
             className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"
           >
@@ -1746,6 +1790,16 @@ export default function Playbooks() {
       </div>
 
       {/* Playbooks Tree View */}
+      <div className="flex justify-end mb-2">
+        <button
+          onClick={openCreateGroupModal}
+          className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 p-1.5 rounded-md transition-colors flex items-center gap-1 text-sm"
+          title={`New Folder (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+F)`}
+        >
+          <FolderPlus className="w-4 h-4" />
+          <span>New Folder</span>
+        </button>
+      </div>
       <div
         className="bg-white shadow rounded-lg overflow-hidden"
         onDragEnd={handleTreeDragEnd}
@@ -1801,7 +1855,7 @@ export default function Playbooks() {
       {/* Create Playbook Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={confirmClose(() => setShowCreateModal(false))}
         title="Create New Playbook"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -1889,7 +1943,7 @@ export default function Playbooks() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={confirmClose(() => setShowCreateModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
@@ -1905,17 +1959,17 @@ export default function Playbooks() {
         </form>
       </Modal>
 
-      {/* Create Group Modal */}
+      {/* Create Folder Modal */}
       <Modal
         isOpen={showCreateGroupModal}
-        onClose={() => setShowCreateGroupModal(false)}
-        title="Create New Group"
+        onClose={confirmClose(() => setShowCreateGroupModal(false))}
+        title="Create New Folder"
         size="sm"
       >
         <form onSubmit={handleCreateGroup} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Group Name
+              Folder Name
             </label>
             <input
               type="text"
@@ -1930,7 +1984,7 @@ export default function Playbooks() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowCreateGroupModal(false)}
+              onClick={confirmClose(() => setShowCreateGroupModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
