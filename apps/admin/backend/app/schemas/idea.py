@@ -75,3 +75,15 @@ class IdeaResponse(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class IdeaListResponse(BaseModel):
+    """Schema for list of ideas response."""
+
+    items: List[IdeaResponse]
+    total: int
+
+
+# Aliases for consistency with other schemas
+IdeaStatusEnum = IdeaStatus
+IdeaPriorityEnum = IdeaPriority
