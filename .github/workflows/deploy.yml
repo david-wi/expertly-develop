@@ -85,6 +85,10 @@ jobs:
             cd /opt/expertly-develop
             git pull origin main
 
+            # Generate commits.json for changelog pages
+            echo "=== Generating commits.json for each app ==="
+            node scripts/generate-commits.js
+
             # Initialize per-service state file if needed
             STATE_FILE="/opt/deployment-state.json"
             if [ ! -f "$STATE_FILE" ] || ! jq -e '.services' "$STATE_FILE" >/dev/null 2>&1; then
