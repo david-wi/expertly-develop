@@ -79,7 +79,8 @@ jobs:
       - name: Initialize deployment
         id: init
         run: |
-          ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
+          # Use subshell to capture output and avoid second SSH connection (rate limiting)
+          (ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} << 'ENDSSH'
             set -e
             cd /opt/expertly-develop
             git pull origin main
@@ -147,11 +148,14 @@ jobs:
                 '.shared.active = "running" | .shared.last_deploy = $time' "$STATE_FILE" > "${STATE_FILE}.tmp"
             mv "${STATE_FILE}.tmp" "$STATE_FILE"
 
-            export GIT_COMMIT=$(git rev-parse --short HEAD)
-            echo "GIT_COMMIT=$GIT_COMMIT" > /tmp/init_output
+            # Output GIT_COMMIT for capture (avoid second SSH connection that gets rate-limited)
+            GIT_COMMIT=$(git rev-parse --short HEAD)
+            echo "GIT_COMMIT=$GIT_COMMIT"
           ENDSSH
+          ) | tee init-deploy.log
 
-          GIT_COMMIT=$(ssh -i ~/.ssh/deploy_key root@${{ secrets.SERVER_HOST }} "grep GIT_COMMIT /tmp/init_output | cut -d= -f2")
+          # Extract GIT_COMMIT from the captured output
+          GIT_COMMIT=$(grep "^GIT_COMMIT=" init-deploy.log | cut -d= -f2 | tr -d '[:space:]')
           echo "git_commit=${GIT_COMMIT}" >> $GITHUB_OUTPUT
 
   # Build and deploy each app independently
