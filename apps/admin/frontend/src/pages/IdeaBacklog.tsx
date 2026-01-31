@@ -39,6 +39,7 @@ const VALID_PRODUCTS = [
   'admin',
   'define',
   'develop',
+  'identity',
   'manage',
   'salon',
   'today',
