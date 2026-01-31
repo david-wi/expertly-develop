@@ -936,8 +936,6 @@ export default function Playbooks() {
       // Drop inside the target
       newParentId = targetId
       siblings = playbooks.filter(p => p.parent_id === targetId && p.id !== draggedId)
-      // Expand the target so the dropped item is visible
-      setExpandedIds(prev => new Set([...prev, targetId]))
     } else {
       // Drop before or after the target
       newParentId = target.parent_id || null
