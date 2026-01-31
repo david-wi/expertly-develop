@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     # OpenAI for avatar generation
     openai_api_key: str = ""
 
+    # Deepgram for speech-to-text transcription
+    deepgram_api_key: str = ""
+
     # Auth settings
     auth_cookie_domain: str = ".ai.devintensive.com"
     session_expiry_days: int = 30

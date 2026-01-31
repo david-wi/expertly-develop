@@ -1,0 +1,7 @@
+import { Mic, Loader2, AlertCircle } from 'lucide-react'
+import { cn } from '../../utils/cn'
+import type { VoiceTranscriptionButtonProps } from './types'
+export function VoiceTranscriptionButton({ status, onClick, disabled, className }: VoiceTranscriptionButtonProps) {
+  const isListening = status === 'listening', isConnecting = status === 'connecting', isError = status === 'error'
+  return (<button type="button" onClick={onClick} disabled={disabled || isConnecting} aria-label={status === 'idle' ? 'Start' : status === 'connecting' ? 'Connecting' : status === 'listening' ? 'Stop' : 'Error'} className={cn('relative flex items-center justify-center w-14 h-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 focus:outline-none focus-visible:ring-2', isListening && 'bg-red-500 hover:bg-red-600', isConnecting && 'bg-blue-500 cursor-wait', isError && 'bg-red-100 text-red-600', !isListening && !isConnecting && !isError && 'bg-[var(--theme-bg-elevated,#f5f5f5)] text-[var(--theme-text-secondary,#666)]', disabled && 'opacity-50 cursor-not-allowed', className)}>{isListening && <span className="absolute inset-0 rounded-full bg-red-500 animate-ping opacity-40" />}<span className="relative z-10">{isConnecting ? <Loader2 className="w-6 h-6 text-white animate-spin" /> : isError ? <AlertCircle className="w-6 h-6" /> : <Mic className={cn('w-6 h-6', isListening && 'text-white')} />}</span></button>)
+}
