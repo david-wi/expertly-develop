@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import GridLayout from 'react-grid-layout'
 import { Plus, Settings, RotateCcw, Check } from 'lucide-react'
 import { useDashboardStore } from '../../stores/dashboardStore'
@@ -11,14 +11,26 @@ interface DashboardGridProps {
 
 const COLS = 12
 const ROW_HEIGHT = 60
-const GRID_WIDTH = 1200
 
 export function DashboardGrid({ onAddWidget }: DashboardGridProps) {
   const { widgets, editMode, setEditMode, updateAllLayouts, resetToDefault, loadFromStorage } = useDashboardStore()
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(1200)
 
   useEffect(() => {
     loadFromStorage()
   }, [loadFromStorage])
+
+  useEffect(() => {
+    const updateWidth = () => {
+      if (containerRef.current) {
+        setContainerWidth(containerRef.current.offsetWidth)
+      }
+    }
+    updateWidth()
+    window.addEventListener('resize', updateWidth)
+    return () => window.removeEventListener('resize', updateWidth)
+  }, [])
 
   const layout = widgets.map(widget => ({
     i: widget.id,
@@ -80,7 +92,10 @@ export function DashboardGrid({ onAddWidget }: DashboardGridProps) {
         )}
       </div>
 
-      <div className={`relative ${editMode ? 'ring-2 ring-primary-200 ring-offset-2 rounded-lg' : ''}`}>
+      <div
+        ref={containerRef}
+        className={`relative ${editMode ? 'ring-2 ring-primary-200 ring-offset-2 rounded-lg' : ''}`}
+      >
         {editMode && (
           <div className="absolute inset-0 bg-gray-50/50 pointer-events-none rounded-lg" style={{ zIndex: 0 }} />
         )}
@@ -89,7 +104,7 @@ export function DashboardGrid({ onAddWidget }: DashboardGridProps) {
           layout={layout}
           cols={COLS}
           rowHeight={ROW_HEIGHT}
-          width={GRID_WIDTH}
+          width={containerWidth}
           onLayoutChange={handleLayoutChange}
           isDraggable={editMode}
           isResizable={editMode}
