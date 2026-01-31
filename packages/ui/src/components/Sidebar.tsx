@@ -290,7 +290,7 @@ export function Sidebar({
 
                 return (
                   <li key={item.name}>
-                    {item.spacerBefore && <div className="my-2" />}
+                    {item.spacerBefore && <div className="mt-4 mb-2 border-t border-theme-border" />}
                     {renderLink({
                       href: fullHref,
                       className: `

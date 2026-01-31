@@ -101,7 +101,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
   if (!isOpen) return null
 
   const hasVersionInfo = config.versionInfo?.buildTime || config.versionInfo?.commit
-  const hasOrganizations = config.organizations && config.organizations.items.length > 1
+  const hasOrganizations = config.organizations && config.organizations.items.length > 0
 
   return (
     <div

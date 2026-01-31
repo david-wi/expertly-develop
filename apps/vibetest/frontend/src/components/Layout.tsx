@@ -95,7 +95,7 @@ export default function Layout({ children }: LayoutProps) {
     buildTimestamp: import.meta.env.VITE_BUILD_TIMESTAMP,
     gitCommit: import.meta.env.VITE_GIT_COMMIT,
     currentAppCode: 'vibetest',
-    organizations: organizations.length > 1 ? {
+    organizations: organizations.length > 0 ? {
       items: organizations,
       currentId: currentTenantId,
       onSwitch: handleOrgSwitch,
