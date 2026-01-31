@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, type ComponentType, type ReactNode } from 'react'
+import { useRef, useEffect, useState, type ComponentType, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
 import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity, Bug } from 'lucide-react'
 
 export interface Organization {
@@ -45,13 +45,20 @@ interface UserMenuProps {
     href: string
     className: string
     children: ReactNode
-    onClick?: () => void
+    onClick?: (event: ReactMouseEvent) => void
   }) => ReactNode
 }
 
 export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null)
   const [expandedSubmenus, setExpandedSubmenus] = useState<Set<string>>(new Set())
+
+  // Only close menu on regular click, not on cmd/ctrl+click (opening in new tab)
+  const handleLinkClick = (event: ReactMouseEvent) => {
+    if (!event.metaKey && !event.ctrlKey) {
+      onClose()
+    }
+  }
 
   const toggleSubmenu = (id: string) => {
     setExpandedSubmenus(prev => {
@@ -228,7 +235,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className={itemClassName}
-                                    onClick={onClose}
+                                    onClick={handleLinkClick}
                                   >
                                     {childContent}
                                   </a>
@@ -240,7 +247,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                                     href: child.href,
                                     className: itemClassName,
                                     children: childContent,
-                                    onClick: onClose,
+                                    onClick: handleLinkClick,
                                   })}
                                 </div>
                               )
@@ -279,7 +286,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                       target="_blank"
                       rel="noopener noreferrer"
                       className={itemClassName}
-                      onClick={onClose}
+                      onClick={handleLinkClick}
                     >
                       {itemContent}
                     </a>
@@ -291,7 +298,7 @@ export function UserMenu({ config, isOpen, onClose, renderLink }: UserMenuProps)
                       href: item.href,
                       className: itemClassName,
                       children: itemContent,
-                      onClick: onClose,
+                      onClick: handleLinkClick,
                     })}
                   </div>
                 )
