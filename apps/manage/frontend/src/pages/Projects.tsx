@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { ChevronRight } from 'lucide-react'
@@ -354,14 +354,24 @@ export default function Projects() {
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null)
   const [isDraggingToRoot, setIsDraggingToRoot] = useState(false)
+  // Use ref to track dragged ID without triggering re-renders during drag
+  const draggedIdRef = useRef<string | null>(null)
 
   const handleDragStart = (e: React.DragEvent, projectId: string) => {
+    // Set data transfer first - required for drag to work
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', projectId)
-    setDraggedProjectId(projectId)
+    // Store in ref immediately (no re-render)
+    draggedIdRef.current = projectId
+    // Delay React state update to avoid re-render cancelling the drag
+    // This is a known issue with HTML5 drag-and-drop in React
+    requestAnimationFrame(() => {
+      setDraggedProjectId(projectId)
+    })
   }
 
   const handleDragEnd = () => {
+    draggedIdRef.current = null
     setDraggedProjectId(null)
     setDragOverProjectId(null)
     setIsDraggingToRoot(false)
@@ -370,9 +380,11 @@ export default function Projects() {
   const handleDragOver = (e: React.DragEvent, projectId: string) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    if (draggedProjectId && draggedProjectId !== projectId) {
+    // Use ref as fallback since state may not have updated yet
+    const currentDraggedId = draggedProjectId || draggedIdRef.current
+    if (currentDraggedId && currentDraggedId !== projectId) {
       // Check if target is not a descendant of dragged project
-      const descendants = getDescendantIds(draggedProjectId, projects)
+      const descendants = getDescendantIds(currentDraggedId, projects)
       if (!descendants.has(projectId)) {
         setDragOverProjectId(projectId)
         setIsDraggingToRoot(false)
@@ -418,7 +430,9 @@ export default function Projects() {
   const handleRootDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    if (draggedProjectId) {
+    // Use ref as fallback since state may not have updated yet
+    const currentDraggedId = draggedProjectId || draggedIdRef.current
+    if (currentDraggedId) {
       setIsDraggingToRoot(true)
       setDragOverProjectId(null)
     }
