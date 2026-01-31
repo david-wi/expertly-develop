@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Check,
   Layers,
-  Sparkles,
   Mail,
   MessageSquare,
   Ticket,
@@ -132,15 +131,15 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Hero Image Placeholder */}
+          {/* Hero Image */}
           <div className="mt-16 relative">
             <div className="bg-gradient-to-b from-primary-100 to-primary-50 rounded-2xl shadow-xl overflow-hidden border border-primary-200">
-              <div className="aspect-video flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-800 m-4 rounded-lg">
-                <div className="text-center">
-                  <Sparkles className="w-16 h-16 text-white/80 mx-auto" />
-                  <p className="mt-4 text-white/60 text-sm">Product Demo</p>
-                </div>
-              </div>
+              <img
+                src="/images/bot-office.png"
+                alt="A friendly robot office where bots handle tasks like organizing papers, typing, serving coffee, and checking off task boards"
+                className="w-full h-auto m-4 rounded-lg"
+                style={{ maxWidth: 'calc(100% - 2rem)' }}
+              />
             </div>
           </div>
         </div>
