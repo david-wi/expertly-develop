@@ -21,6 +21,8 @@ export interface ExpertlyProduct {
   href: string
   icon: string
   description: string
+  /** If true, renders a horizontal rule before this item */
+  separatorBefore?: boolean
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
@@ -32,6 +34,7 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: '📅', description: 'Daily workflow' },
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '💻', description: 'AI coding assistant' },
   { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'AI testing platform' },
+  { name: 'Expertly Admin', code: 'admin', href: 'https://admin.ai.devintensive.com', icon: '⚙️', description: 'Platform administration', separatorBefore: true },
 ]
 
 export type SupportedLanguage = 'en' | 'es'
@@ -244,24 +247,28 @@ export function Sidebar({
               <div className="p-2">
                 <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
                 {EXPERTLY_PRODUCTS.map((product) => (
-                  <a
-                    key={product.code}
-                    href={product.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                      product.code === productCode
-                        ? `${activeBg} ${activeText}`
-                        : `${textSecondary} ${hoverBg} hover:${textPrimary}`
-                    }`}
-                    onClick={() => setShowProductSwitcher(false)}
-                  >
-                    <div className="w-8 h-8 border-2 border-primary-500 rounded-lg flex items-center justify-center">
-                      <span>{product.icon}</span>
-                    </div>
-                    <div>
-                      <p className="font-medium">{product.name}</p>
-                      <p className={`text-xs ${textMuted}`}>{product.description}</p>
-                    </div>
-                  </a>
+                  <div key={product.code}>
+                    {product.separatorBefore && (
+                      <hr className={`my-2 border-t ${borderColor}`} />
+                    )}
+                    <a
+                      href={product.href}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        product.code === productCode
+                          ? `${activeBg} ${activeText}`
+                          : `${textSecondary} ${hoverBg} hover:${textPrimary}`
+                      }`}
+                      onClick={() => setShowProductSwitcher(false)}
+                    >
+                      <div className="w-8 h-8 border-2 border-primary-500 rounded-lg flex items-center justify-center">
+                        <span>{product.icon}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium">{product.name}</p>
+                        <p className={`text-xs ${textMuted}`}>{product.description}</p>
+                      </div>
+                    </a>
+                  </div>
                 ))}
               </div>
             </div>

@@ -67,6 +67,7 @@ describe('EXPERTLY_PRODUCTS', () => {
     'today',
     'vibecode',
     'vibetest',
+    'admin',
   ]
 
   it('should only include deployed products', () => {
