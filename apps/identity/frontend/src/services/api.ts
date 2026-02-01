@@ -35,6 +35,7 @@ export interface User {
   role: 'owner' | 'admin' | 'member'
   is_active: boolean
   is_default: boolean
+  is_expertly_admin: boolean
   avatar_url: string | null
   title: string | null
   responsibilities: string | null
@@ -59,6 +60,7 @@ export interface UpdateUserRequest {
   email?: string
   role?: 'owner' | 'admin' | 'member'
   is_active?: boolean
+  is_expertly_admin?: boolean
   avatar_url?: string
   title?: string
   responsibilities?: string
@@ -96,6 +98,30 @@ export interface TeamMember {
 
 export interface TeamDetail extends Team {
   members: TeamMember[]
+}
+
+// Organization Membership types
+export interface OrganizationMember {
+  id: string
+  user_id: string
+  organization_id: string
+  role: 'owner' | 'admin' | 'member'
+  is_primary: boolean
+  joined_at: string
+  user_name: string
+  user_email: string | null
+  user_avatar_url: string | null
+  user_type: 'human' | 'bot'
+}
+
+export interface UserOrganization {
+  id: string
+  organization_id: string
+  organization_name: string
+  organization_slug: string
+  role: 'owner' | 'admin' | 'member'
+  is_primary: boolean
+  joined_at: string
 }
 
 // API functions
@@ -182,6 +208,36 @@ export const imagesApi = {
       name,
     })
     return data
+  },
+}
+
+// Organization Memberships API
+export const membershipsApi = {
+  listOrgMembers: async (orgId: string): Promise<OrganizationMember[]> => {
+    const { data } = await api.get(`/memberships/${orgId}/members`)
+    return data.items
+  },
+  addMember: async (
+    orgId: string,
+    params: { user_id?: string; email?: string; role?: string; is_primary?: boolean }
+  ): Promise<OrganizationMember> => {
+    const { data } = await api.post(`/memberships/${orgId}/members`, params)
+    return data
+  },
+  updateMember: async (
+    orgId: string,
+    userId: string,
+    params: { role?: string; is_primary?: boolean }
+  ): Promise<OrganizationMember> => {
+    const { data } = await api.patch(`/memberships/${orgId}/members/${userId}`, params)
+    return data
+  },
+  removeMember: async (orgId: string, userId: string): Promise<void> => {
+    await api.delete(`/memberships/${orgId}/members/${userId}`)
+  },
+  listUserOrgs: async (userId: string): Promise<UserOrganization[]> => {
+    const { data } = await api.get(`/memberships/users/${userId}/organizations`)
+    return data.items
   },
 }
 

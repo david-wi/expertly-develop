@@ -37,7 +37,7 @@ const mockUser = {
   user_type: 'human' as const,
   role: 'member' as const,
   is_active: true,
-  is_default: false,
+  is_default: false, is_expertly_admin: false,
   avatar_url: null,
   title: 'Developer',
   responsibilities: null,

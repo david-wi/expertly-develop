@@ -31,6 +31,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[str] = None
     is_active: Optional[bool] = None
+    is_expertly_admin: Optional[bool] = None  # Requires Expertly Admin to set
     avatar_url: Optional[str] = None
     title: Optional[str] = None
     responsibilities: Optional[str] = None
@@ -48,6 +49,7 @@ class UserResponse(BaseModel):
     role: str
     is_active: bool
     is_default: bool
+    is_expertly_admin: bool = False
     avatar_url: Optional[str]
     title: Optional[str]
     responsibilities: Optional[str]

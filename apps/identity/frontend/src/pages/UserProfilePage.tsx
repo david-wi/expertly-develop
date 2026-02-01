@@ -4,8 +4,10 @@ import { Modal, ModalFooter } from '@expertly/ui'
 import {
   usersApi,
   imagesApi,
+  membershipsApi,
   User,
   UpdateUserRequest,
+  UserOrganization,
   getOrganizationId,
 } from '../services/api'
 
@@ -40,6 +42,14 @@ export default function UserProfilePage() {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [newApiKey, setNewApiKey] = useState<string | null>(null)
 
+  // Organization memberships
+  const [userOrgs, setUserOrgs] = useState<UserOrganization[]>([])
+  const [loadingOrgs, setLoadingOrgs] = useState(false)
+
+  // Expertly Admin toggle
+  const [isExpertlyAdmin, setIsExpertlyAdmin] = useState(false)
+  const [savingAdmin, setSavingAdmin] = useState(false)
+
   const orgId = getOrganizationId()
 
   useEffect(() => {
@@ -54,6 +64,7 @@ export default function UserProfilePage() {
     try {
       const data = await usersApi.get(userId)
       setUser(data)
+      setIsExpertlyAdmin(data.is_expertly_admin || false)
       setFormData({
         name: data.name,
         email: data.email || '',
@@ -63,11 +74,41 @@ export default function UserProfilePage() {
         responsibilities: data.responsibilities || '',
         bot_config: data.bot_config || undefined,
       })
+      // Load user's organization memberships
+      loadUserOrgs(userId)
     } catch (error) {
       console.error('Failed to load user:', error)
       navigate('/users')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadUserOrgs = async (uid: string) => {
+    setLoadingOrgs(true)
+    try {
+      const orgs = await membershipsApi.listUserOrgs(uid)
+      setUserOrgs(orgs)
+    } catch (error) {
+      console.error('Failed to load user organizations:', error)
+    } finally {
+      setLoadingOrgs(false)
+    }
+  }
+
+  const handleToggleExpertlyAdmin = async () => {
+    if (!user) return
+    setSavingAdmin(true)
+    try {
+      const newValue = !isExpertlyAdmin
+      await usersApi.update(user.id, { is_expertly_admin: newValue })
+      setIsExpertlyAdmin(newValue)
+      setUser({ ...user, is_expertly_admin: newValue })
+    } catch (error) {
+      console.error('Failed to update Expertly Admin status:', error)
+      alert('Failed to update Expertly Admin status')
+    } finally {
+      setSavingAdmin(false)
     }
   }
 
@@ -478,6 +519,11 @@ export default function UserProfilePage() {
                         Default
                       </span>
                     )}
+                    {user.is_expertly_admin && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        Expertly Admin
+                      </span>
+                    )}
                   </div>
 
                   {user.title && (
@@ -545,6 +591,79 @@ export default function UserProfilePage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Expertly Admin Section */}
+      {user.user_type === 'human' && (
+        <div className="bg-white shadow rounded-lg overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Expertly Admin Access</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-gray-700">Grant access to all organizations</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Expertly Admins can access and manage all organizations in the system.
+                </p>
+              </div>
+              <button
+                onClick={handleToggleExpertlyAdmin}
+                disabled={savingAdmin}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${
+                  isExpertlyAdmin ? 'bg-purple-600' : 'bg-gray-200'
+                } ${savingAdmin ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    isExpertlyAdmin ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Organization Memberships Section */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h3 className="text-lg font-medium text-gray-900">Organization Memberships</h3>
+        </div>
+        <div className="p-6">
+          {loadingOrgs ? (
+            <p className="text-gray-500">Loading organizations...</p>
+          ) : userOrgs.length === 0 ? (
+            <p className="text-gray-500">
+              No additional organization memberships.
+              {user.is_expertly_admin && (
+                <span className="block mt-1 text-sm">
+                  As an Expertly Admin, this user has access to all organizations.
+                </span>
+              )}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {userOrgs.map((org) => (
+                <div
+                  key={org.id}
+                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">{org.organization_name}</p>
+                    <p className="text-sm text-gray-500">
+                      {org.organization_slug} • {org.role}
+                      {org.is_primary && ' • Primary'}
+                    </p>
+                  </div>
+                  <span className="text-sm text-gray-400">
+                    Joined {new Date(org.joined_at).toLocaleDateString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Delete Confirmation Modal */}
