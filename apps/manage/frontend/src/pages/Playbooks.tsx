@@ -203,7 +203,7 @@ interface StepEditorProps {
   index: number
   totalSteps: number
   expanded: boolean
-  onToggleExpand: () => void
+  onFocus: () => void
   onChange: (step: StepFormData) => void
   onMoveUp: () => void
   onMoveDown: () => void
@@ -414,7 +414,7 @@ function StepEditor({
   index,
   totalSteps,
   expanded,
-  onToggleExpand,
+  onFocus,
   onChange,
   onMoveUp,
   onMoveDown,
@@ -432,6 +432,13 @@ function StepEditor({
   currentPlaybookId,
 }: StepEditorProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
+
+  // Check if step has content beyond title (to show indicator when collapsed)
+  const hasDetails = step.description.trim().length > 0 ||
+    step.when_to_perform.trim().length > 0 ||
+    !!step.nested_playbook_id ||
+    step.assignee_type !== 'anyone' ||
+    step.approval_required
 
   const updateField = <K extends keyof StepFormData>(field: K, value: StepFormData[K]) => {
     onChange({ ...step, [field]: value })
@@ -471,13 +478,19 @@ function StepEditor({
       onDragEnd={onDragEnd}
     >
       {/* Header - always visible, inline editing */}
-      <div className="flex items-center gap-2 px-3 py-2 bg-primary-50 rounded-t-lg border-b cursor-grab active:cursor-grabbing">
+      <div
+        className={`flex items-center gap-2 px-3 py-2 rounded-t-lg border-b cursor-grab active:cursor-grabbing ${
+          expanded ? 'bg-primary-100' : 'bg-primary-50'
+        }`}
+        onClick={() => !expanded && onFocus()}
+      >
         <span className="flex items-center justify-center w-6 h-6 bg-primary-100 text-primary-700 text-xs font-medium rounded-full flex-shrink-0">
           {index + 1}
         </span>
         <textarea
           value={step.title}
           onChange={(e) => updateField('title', e.target.value)}
+          onFocus={onFocus}
           onInput={(e) => {
             const target = e.target as HTMLTextAreaElement
             target.style.height = 'auto'
@@ -493,17 +506,24 @@ function StepEditor({
           placeholder="Step title..."
           rows={1}
         />
-        {step.description && !expanded && (
-          <span
-            className="text-gray-400 cursor-help"
-            title={step.description}
+        {/* Show indicator when collapsed and has details */}
+        {!expanded && hasDetails && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onFocus()
+            }}
+            className="flex items-center gap-1 px-1.5 py-0.5 text-xs text-primary-600 bg-primary-100 rounded hover:bg-primary-200"
+            title="Click to expand and see details"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-          </span>
+            details
+          </button>
         )}
-        {!expanded && (
+        {!expanded && !hasDetails && (
           <span className="text-xs text-gray-400 hidden sm:inline">
             {getAssigneeLabel()}
           </span>
@@ -511,7 +531,10 @@ function StepEditor({
         <div className="flex items-center gap-0.5 flex-shrink-0">
           <button
             type="button"
-            onClick={onMoveUp}
+            onClick={(e) => {
+              e.stopPropagation()
+              onMoveUp()
+            }}
             disabled={index === 0}
             className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
             title="Move up"
@@ -522,7 +545,10 @@ function StepEditor({
           </button>
           <button
             type="button"
-            onClick={onMoveDown}
+            onClick={(e) => {
+              e.stopPropagation()
+              onMoveDown()
+            }}
             disabled={index === totalSteps - 1}
             className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
             title="Move down"
@@ -533,9 +559,12 @@ function StepEditor({
           </button>
           <button
             type="button"
-            onClick={onToggleExpand}
-            className="p-1 text-gray-400 hover:text-gray-600"
-            title={expanded ? 'Collapse' : 'Expand'}
+            onClick={(e) => {
+              e.stopPropagation()
+              onFocus()
+            }}
+            className={`p-1 hover:text-gray-600 ${expanded ? 'text-primary-600' : 'text-gray-400'}`}
+            title={expanded ? 'Editing' : 'Expand to edit details'}
           >
             <svg className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -543,7 +572,10 @@ function StepEditor({
           </button>
           <button
             type="button"
-            onClick={onDelete}
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete()
+            }}
             className="p-1 text-gray-400 hover:text-red-600"
             title="Delete step"
           >
@@ -941,7 +973,7 @@ export default function Playbooks() {
     parent_id: '',
   })
   const [steps, setSteps] = useState<StepFormData[]>([])
-  const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set())
+  const [focusedStepId, setFocusedStepId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -1454,7 +1486,7 @@ export default function Playbooks() {
       parent_id: playbook.parent_id || '',
     })
     setSteps(playbook.steps.map(playbookStepToForm))
-    setExpandedSteps(new Set())
+    setFocusedStepId(null)
     setIsEditing(true)
   }
 
@@ -1478,7 +1510,7 @@ export default function Playbooks() {
       parent_id: '',
     })
     setSteps([])
-    setExpandedSteps(new Set())
+    setFocusedStepId(null)
   }
 
   const toggleExpand = (playbookId: string) => {
@@ -1496,7 +1528,7 @@ export default function Playbooks() {
   const addStep = useCallback(() => {
     const newStep = createEmptyStep()
     setSteps(prev => [...prev, newStep])
-    setExpandedSteps(prev => new Set([...prev, newStep.id]))
+    setFocusedStepId(newStep.id)
   }, [])
 
   // Keyboard shortcut for add step (Cmd/Ctrl+Shift+S) - only when editing
@@ -1552,16 +1584,6 @@ export default function Playbooks() {
     }
     setDragIndex(null)
     setDragOverIndex(null)
-  }
-
-  const toggleStepExpand = (stepId: string) => {
-    const newExpanded = new Set(expandedSteps)
-    if (newExpanded.has(stepId)) {
-      newExpanded.delete(stepId)
-    } else {
-      newExpanded.add(stepId)
-    }
-    setExpandedSteps(newExpanded)
   }
 
   // AI Assist handlers
@@ -1627,7 +1649,7 @@ export default function Playbooks() {
     }))
 
     setSteps(newSteps)
-    setExpandedSteps(new Set())
+    setFocusedStepId(newSteps[0]?.id || null)
     closeAIModal()
   }
 
@@ -1889,8 +1911,8 @@ export default function Playbooks() {
                     step={step}
                     index={index}
                     totalSteps={steps.length}
-                    expanded={expandedSteps.has(step.id)}
-                    onToggleExpand={() => toggleStepExpand(step.id)}
+                    expanded={focusedStepId === step.id}
+                    onFocus={() => setFocusedStepId(step.id)}
                     onChange={(updated) => updateStep(index, updated)}
                     onMoveUp={() => moveStep(index, 'up')}
                     onMoveDown={() => moveStep(index, 'down')}

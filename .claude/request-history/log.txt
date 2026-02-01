@@ -51,3 +51,4 @@ Warns users before losing changes on modal close or page refresh.
 20260131 18:59:46 EST - Implementing org membership management APIs and UI, plus Expertly Admin flag management
 20260131 - Manage Edit Playbook: Change step header background from gray-50 to primary-50 (theme-aware color) for visual variety and skimmability
 20260131 Implement task phase system (workflow phases like Dynamics CRM - planning, ready, in_progress, pending_review, in_review, changes_requested, approved, waiting_on_subplaybook)
+20260131 - Improve playbook step editing UX: auto-expand on focus, auto-collapse when moving to next step
