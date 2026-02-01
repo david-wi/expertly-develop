@@ -419,8 +419,23 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 />
               </div>
 
-              {/* Queue, Priority, Playbook - 3 column */}
+              {/* Playbook, Queue, Priority - 3 column */}
               <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Playbook</label>
+                  <select
+                    value={editedPlaybookId || ''}
+                    onChange={(e) => setEditedPlaybookId(e.target.value || null)}
+                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    <option value="">None</option>
+                    {playbooks.map((playbook) => (
+                      <option key={playbook.id} value={playbook.id}>
+                        {playbook.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Queue</label>
                   <select
@@ -445,21 +460,6 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
                       <option key={p} value={p}>
                         {p} {p === 1 ? '(High)' : p === 10 ? '(Low)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Playbook</label>
-                  <select
-                    value={editedPlaybookId || ''}
-                    onChange={(e) => setEditedPlaybookId(e.target.value || null)}
-                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  >
-                    <option value="">None</option>
-                    {playbooks.map((playbook) => (
-                      <option key={playbook.id} value={playbook.id}>
-                        {playbook.name}
                       </option>
                     ))}
                   </select>
