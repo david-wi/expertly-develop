@@ -19,8 +19,12 @@ import {
   PlayCircle,
   PauseCircle,
   XCircle,
+  Send,
+  Eye,
+  RotateCcw,
+  Check,
 } from 'lucide-react'
-import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest } from '../services/api'
+import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase } from '../services/api'
 import MarkdownEditor from './MarkdownEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
@@ -40,6 +44,17 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
   in_progress: { bg: 'bg-yellow-50', text: 'text-yellow-700', border: 'border-l-yellow-500', icon: PlayCircle },
   completed: { bg: 'bg-green-50', text: 'text-green-700', border: 'border-l-green-500', icon: CheckCircle },
   failed: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500', icon: XCircle },
+}
+
+const PHASE_CONFIG: Record<TaskPhase, { bg: string; text: string; label: string }> = {
+  planning: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Planning' },
+  ready: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Ready' },
+  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'In Progress' },
+  pending_review: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Pending Review' },
+  in_review: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'In Review' },
+  changes_requested: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Changes Requested' },
+  approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
+  waiting_on_subplaybook: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Waiting' },
 }
 
 const TIMEZONES = [
@@ -127,6 +142,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   // Comment state
   const [newComment, setNewComment] = useState('')
   const [addingComment, setAddingComment] = useState(false)
+
+  // Phase transition state
+  const [transitioning, setTransitioning] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!taskId) return
@@ -352,10 +370,33 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     }
   }
 
+  // Phase transition handlers
+  const handlePhaseTransition = async (action: () => Promise<Task>) => {
+    setTransitioning(true)
+    try {
+      await action()
+      onUpdate?.()
+      fetchData()
+    } catch (err) {
+      console.error('Failed to transition phase:', err)
+      setError('Failed to change phase')
+    } finally {
+      setTransitioning(false)
+    }
+  }
+
+  const handleMarkReady = () => handlePhaseTransition(() => api.markTaskReady(taskId))
+  const handleSubmitForReview = () => handlePhaseTransition(() => api.submitForReview(taskId))
+  const handleStartReview = () => handlePhaseTransition(() => api.startReview(taskId))
+  const handleRequestChanges = () => handlePhaseTransition(() => api.requestChanges(taskId))
+  const handleApprove = () => handlePhaseTransition(() => api.approveTask(taskId))
+  const handleResumeWork = () => handlePhaseTransition(() => api.resumeWork(taskId))
+
   if (!isOpen) return null
 
   const statusConfig = task ? STATUS_CONFIG[task.status] || STATUS_CONFIG.queued : STATUS_CONFIG.queued
   const StatusIcon = statusConfig.icon
+  const phaseConfig = task?.phase ? PHASE_CONFIG[task.phase] : PHASE_CONFIG.planning
 
   // Wrap onClose to check for unsaved changes
   const handleClose = confirmClose(onClose)
@@ -371,10 +412,15 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         <div className={`px-4 py-3 border-b border-theme-border flex items-center justify-between border-l-4 ${statusConfig.border}`}>
           <div className="flex items-center gap-2">
             {task && (
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
-                <StatusIcon className="w-3 h-3" />
-                {task.status.replace('_', ' ')}
-              </span>
+              <>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${phaseConfig.bg} ${phaseConfig.text}`}>
+                  {phaseConfig.label}
+                </span>
+                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
+                  <StatusIcon className="w-3 h-3" />
+                  {task.status.replace('_', ' ')}
+                </span>
+              </>
             )}
             <h2 className="text-base font-semibold text-theme-text-primary">Assignment Details</h2>
           </div>
@@ -831,6 +877,77 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
             Delete
           </button>
           <div className="flex items-center gap-2">
+            {/* Phase-aware action buttons */}
+            {task?.phase === 'planning' && (
+              <button
+                onClick={handleMarkReady}
+                disabled={transitioning}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-xs font-medium"
+              >
+                <Send className="w-3.5 h-3.5" />
+                {transitioning ? 'Updating...' : 'Ready for Assignment'}
+              </button>
+            )}
+            {task?.phase === 'in_progress' && task.approval_required && (
+              <button
+                onClick={handleSubmitForReview}
+                disabled={transitioning}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 text-xs font-medium"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                {transitioning ? 'Updating...' : 'Submit for Review'}
+              </button>
+            )}
+            {task?.phase === 'in_progress' && !task.approval_required && (
+              <button
+                onClick={handleApprove}
+                disabled={transitioning}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-xs font-medium"
+              >
+                <Check className="w-3.5 h-3.5" />
+                {transitioning ? 'Updating...' : 'Complete'}
+              </button>
+            )}
+            {task?.phase === 'pending_review' && (
+              <button
+                onClick={handleStartReview}
+                disabled={transitioning}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-xs font-medium"
+              >
+                <Eye className="w-3.5 h-3.5" />
+                {transitioning ? 'Updating...' : 'Start Review'}
+              </button>
+            )}
+            {task?.phase === 'in_review' && (
+              <>
+                <button
+                  onClick={handleRequestChanges}
+                  disabled={transitioning}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 text-xs font-medium"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  {transitioning ? 'Updating...' : 'Request Changes'}
+                </button>
+                <button
+                  onClick={handleApprove}
+                  disabled={transitioning}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 text-xs font-medium"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {transitioning ? 'Updating...' : 'Approve'}
+                </button>
+              </>
+            )}
+            {task?.phase === 'changes_requested' && (
+              <button
+                onClick={handleResumeWork}
+                disabled={transitioning}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:opacity-50 text-xs font-medium"
+              >
+                <PlayCircle className="w-3.5 h-3.5" />
+                {transitioning ? 'Updating...' : 'Resume Work'}
+              </button>
+            )}
             <button
               onClick={handleClose}
               className="px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-surface rounded-lg transition-colors text-xs"

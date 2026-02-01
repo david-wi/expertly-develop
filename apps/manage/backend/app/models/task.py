@@ -12,6 +12,36 @@ class TaskStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
     FAILED = "failed"
+    BLOCKED = "blocked"
+
+
+class TaskPhase(str, Enum):
+    """Workflow phase representing the lifecycle stage of a task.
+
+    Phases are separate from operational status - a task can be
+    in phase=in_review with status=in_progress (reviewer actively working).
+    """
+    PLANNING = "planning"
+    READY = "ready"
+    IN_PROGRESS = "in_progress"
+    PENDING_REVIEW = "pending_review"
+    IN_REVIEW = "in_review"
+    CHANGES_REQUESTED = "changes_requested"
+    APPROVED = "approved"
+    WAITING_ON_SUBPLAYBOOK = "waiting_on_subplaybook"
+
+
+# Valid phase transitions
+VALID_PHASE_TRANSITIONS: dict[TaskPhase, list[TaskPhase]] = {
+    TaskPhase.PLANNING: [TaskPhase.READY],
+    TaskPhase.READY: [TaskPhase.IN_PROGRESS, TaskPhase.WAITING_ON_SUBPLAYBOOK],
+    TaskPhase.IN_PROGRESS: [TaskPhase.PENDING_REVIEW, TaskPhase.APPROVED],
+    TaskPhase.PENDING_REVIEW: [TaskPhase.IN_REVIEW],
+    TaskPhase.IN_REVIEW: [TaskPhase.CHANGES_REQUESTED, TaskPhase.APPROVED],
+    TaskPhase.CHANGES_REQUESTED: [TaskPhase.IN_PROGRESS],
+    TaskPhase.APPROVED: [],  # Terminal state
+    TaskPhase.WAITING_ON_SUBPLAYBOOK: [TaskPhase.IN_PROGRESS],
+}
 
 
 class Task(MongoModel):
@@ -21,12 +51,17 @@ class Task(MongoModel):
     title: str
     description: Optional[str] = None
     status: TaskStatus = TaskStatus.QUEUED
+    phase: TaskPhase = TaskPhase.PLANNING
     priority: int = 5  # 1-10, lower is higher priority
 
     # Assignment
     assigned_to_id: Optional[PyObjectId] = None
     checked_out_at: Optional[datetime] = None
     checked_out_by_id: Optional[PyObjectId] = None
+
+    # Review assignment
+    reviewer_id: Optional[PyObjectId] = None
+    review_requested_at: Optional[datetime] = None
 
     # Hierarchy
     parent_task_id: Optional[PyObjectId] = None
@@ -93,6 +128,7 @@ class TaskUpdate(BaseModel):
     assigned_to_id: Optional[str] = None
     project_id: Optional[str] = None
     sop_id: Optional[str] = None
+    phase: Optional[TaskPhase] = None
     # Approval fields
     approver_type: Optional[str] = None
     approver_id: Optional[str] = None

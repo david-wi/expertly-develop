@@ -4,7 +4,7 @@ from bson import ObjectId
 
 from app.database import get_database
 from app.models import (
-    Task, TaskCreate, TaskUpdate, TaskStatus,
+    Task, TaskCreate, TaskUpdate, TaskStatus, TaskPhase, VALID_PHASE_TRANSITIONS,
     TaskComplete, TaskFail,
     TaskProgressUpdate, TaskProgressUpdateCreate,
     User
@@ -19,7 +19,8 @@ def serialize_task(task: dict) -> dict:
     result = {**task, "_id": str(task["_id"])}
 
     for field in ["organization_id", "queue_id", "assigned_to_id", "checked_out_by_id",
-                  "parent_task_id", "project_id", "sop_id", "approver_id", "approver_queue_id"]:
+                  "parent_task_id", "project_id", "sop_id", "approver_id", "approver_queue_id",
+                  "reviewer_id"]:
         if task.get(field):
             result[field] = str(task[field])
 
@@ -30,6 +31,7 @@ def serialize_task(task: dict) -> dict:
 async def list_tasks(
     queue_id: str | None = None,
     status: str | None = None,
+    phase: str | None = None,
     assigned_to_me: bool = False,
     project_id: str | None = None,
     limit: int = 100,
@@ -47,6 +49,9 @@ async def list_tasks(
 
     if status:
         query["status"] = status
+
+    if phase:
+        query["phase"] = phase
 
     if assigned_to_me:
         query["assigned_to_id"] = current_user.id
@@ -187,7 +192,7 @@ async def checkout_task(
     task_id: str,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Check out a task for processing. Transitions: queued -> checked_out"""
+    """Check out a task for processing. Transitions: queued -> checked_out, phase: ready -> in_progress"""
     db = get_database()
 
     if not ObjectId.is_valid(task_id):
@@ -195,7 +200,7 @@ async def checkout_task(
 
     now = datetime.now(timezone.utc)
 
-    # Atomically claim the task
+    # Atomically claim the task - also transition phase to in_progress if it's ready
     result = await db.tasks.find_one_and_update(
         {
             "_id": ObjectId(task_id),
@@ -205,6 +210,7 @@ async def checkout_task(
         {
             "$set": {
                 "status": TaskStatus.CHECKED_OUT.value,
+                "phase": TaskPhase.IN_PROGRESS.value,
                 "checked_out_by_id": current_user.id,
                 "checked_out_at": now,
                 "assigned_to_id": current_user.id,
@@ -232,7 +238,7 @@ async def start_task(
     task_id: str,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Start working on a checked-out task. Transitions: checked_out -> in_progress"""
+    """Start working on a checked-out task. Transitions: checked_out -> in_progress, phase -> in_progress"""
     db = get_database()
 
     if not ObjectId.is_valid(task_id):
@@ -250,6 +256,7 @@ async def start_task(
         {
             "$set": {
                 "status": TaskStatus.IN_PROGRESS.value,
+                "phase": TaskPhase.IN_PROGRESS.value,
                 "started_at": now,
                 "updated_at": now
             }
@@ -411,6 +418,253 @@ async def release_task(
 
     if not result:
         raise HTTPException(status_code=404, detail="Task not found or not checked out by you")
+
+    return serialize_task(result)
+
+
+# Phase transition endpoints
+
+@router.post("/{task_id}/mark-ready")
+async def mark_task_ready(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Mark a task as ready for assignment. Transitions: planning -> ready"""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "phase": TaskPhase.PLANNING.value
+        },
+        {
+            "$set": {
+                "phase": TaskPhase.READY.value,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot mark as ready")
+
+    return serialize_task(result)
+
+
+@router.post("/{task_id}/submit-for-review")
+async def submit_for_review(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Submit task for review. Transitions: in_progress -> pending_review"""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "phase": TaskPhase.IN_PROGRESS.value
+        },
+        {
+            "$set": {
+                "phase": TaskPhase.PENDING_REVIEW.value,
+                "review_requested_at": now,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot submit for review")
+
+    return serialize_task(result)
+
+
+@router.post("/{task_id}/start-review")
+async def start_review(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Start reviewing a task. Transitions: pending_review -> in_review"""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "phase": TaskPhase.PENDING_REVIEW.value
+        },
+        {
+            "$set": {
+                "phase": TaskPhase.IN_REVIEW.value,
+                "reviewer_id": current_user.id,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot start review")
+
+    return serialize_task(result)
+
+
+@router.post("/{task_id}/request-changes")
+async def request_changes(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Request changes on a task. Transitions: in_review -> changes_requested"""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "phase": TaskPhase.IN_REVIEW.value
+        },
+        {
+            "$set": {
+                "phase": TaskPhase.CHANGES_REQUESTED.value,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot request changes")
+
+    return serialize_task(result)
+
+
+@router.post("/{task_id}/approve")
+async def approve_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Approve a task. Transitions: in_review -> approved OR in_progress -> approved (if no review needed)"""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    # Try to approve from in_review first
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "phase": {"$in": [TaskPhase.IN_REVIEW.value, TaskPhase.IN_PROGRESS.value]}
+        },
+        {
+            "$set": {
+                "phase": TaskPhase.APPROVED.value,
+                "status": TaskStatus.COMPLETED.value,
+                "completed_at": now,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot approve")
+
+    return serialize_task(result)
+
+
+@router.post("/{task_id}/resume-work")
+async def resume_work(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Resume work on a task after changes requested. Transitions: changes_requested -> in_progress"""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "phase": TaskPhase.CHANGES_REQUESTED.value
+        },
+        {
+            "$set": {
+                "phase": TaskPhase.IN_PROGRESS.value,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot resume work")
 
     return serialize_task(result)
 
