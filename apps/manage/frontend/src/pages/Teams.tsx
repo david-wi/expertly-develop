@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { api, Team, User, CreateTeamRequest } from '../services/api'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 export default function Teams() {
   const [teams, setTeams] = useState<Team[]>([])
@@ -22,6 +23,23 @@ export default function Teams() {
     member_ids: [],
     lead_id: undefined,
   })
+
+  // Track unsaved changes for create modal
+  const hasCreateChanges = useMemo(() => {
+    if (!showCreateModal) return false
+    return formData.name.trim() !== '' || (formData.description?.trim() || '') !== ''
+  }, [showCreateModal, formData.name, formData.description])
+
+  // Track unsaved changes for edit modal
+  const hasEditChanges = useMemo(() => {
+    if (!showEditModal || !selectedTeam) return false
+    return formData.name !== selectedTeam.name ||
+           (formData.description || '') !== (selectedTeam.description || '') ||
+           formData.lead_id !== selectedTeam.lead_id
+  }, [showEditModal, selectedTeam, formData.name, formData.description, formData.lead_id])
+
+  const hasUnsavedChanges = hasCreateChanges || hasEditChanges
+  const { confirmClose } = useUnsavedChanges(hasUnsavedChanges)
 
   useEffect(() => {
     loadData()
@@ -323,7 +341,7 @@ export default function Teams() {
       {/* Create Team Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={confirmClose(() => setShowCreateModal(false))}
         title="Create New Team"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -368,7 +386,7 @@ export default function Teams() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={confirmClose(() => setShowCreateModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
@@ -387,7 +405,7 @@ export default function Teams() {
       {/* Edit Team Modal */}
       <Modal
         isOpen={showEditModal && !!selectedTeam}
-        onClose={() => setShowEditModal(false)}
+        onClose={confirmClose(() => setShowEditModal(false))}
         title="Edit Team"
       >
         <form onSubmit={handleEdit} className="space-y-4">
@@ -430,7 +448,7 @@ export default function Teams() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowEditModal(false)}
+              onClick={confirmClose(() => setShowEditModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel

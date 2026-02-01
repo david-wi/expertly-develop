@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { ChevronRight } from 'lucide-react'
 import { api, Project, ProjectStatus, CreateProjectRequest } from '../services/api'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 // Local storage keys
 const COLLAPSED_KEY = 'expertly-manage-collapsed-projects'
@@ -196,6 +197,24 @@ export default function Projects() {
     description: '',
     parent_project_id: null,
   })
+
+  // Track unsaved changes for create modal
+  const hasCreateChanges = useMemo(() => {
+    if (!showCreateModal) return false
+    return formData.name.trim() !== '' || (formData.description?.trim() || '') !== ''
+  }, [showCreateModal, formData.name, formData.description])
+
+  // Track unsaved changes for edit modal
+  const hasEditChanges = useMemo(() => {
+    if (!showEditModal || !selectedProject) return false
+    return formData.name !== selectedProject.name ||
+           (formData.description || '') !== (selectedProject.description || '') ||
+           formData.status !== selectedProject.status ||
+           formData.parent_project_id !== (selectedProject.parent_project_id || null)
+  }, [showEditModal, selectedProject, formData.name, formData.description, formData.status, formData.parent_project_id])
+
+  const hasUnsavedChanges = hasCreateChanges || hasEditChanges
+  const { confirmClose } = useUnsavedChanges(hasUnsavedChanges)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -1014,7 +1033,7 @@ export default function Projects() {
       {/* Create Project Modal */}
       <Modal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
+        onClose={confirmClose(() => setShowCreateModal(false))}
         title="Create New Project"
       >
         <form onSubmit={handleCreate} className="space-y-4">
@@ -1059,7 +1078,7 @@ export default function Projects() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowCreateModal(false)}
+              onClick={confirmClose(() => setShowCreateModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel
@@ -1078,7 +1097,7 @@ export default function Projects() {
       {/* Edit Project Modal */}
       <Modal
         isOpen={showEditModal && !!selectedProject}
-        onClose={() => setShowEditModal(false)}
+        onClose={confirmClose(() => setShowEditModal(false))}
         title="Edit Project"
       >
         <form onSubmit={handleEdit} className="space-y-4">
@@ -1138,7 +1157,7 @@ export default function Projects() {
           <ModalFooter>
             <button
               type="button"
-              onClick={() => setShowEditModal(false)}
+              onClick={confirmClose(() => setShowEditModal(false))}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
               Cancel

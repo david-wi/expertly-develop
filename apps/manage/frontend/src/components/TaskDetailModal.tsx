@@ -24,6 +24,7 @@ import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequ
 import MarkdownEditor from './MarkdownEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
+import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface TaskDetailModalProps {
   taskId: string
@@ -232,6 +233,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     setHasChanges(changed)
   }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone])
 
+  // Hook for unsaved changes warning
+  const { confirmClose } = useUnsavedChanges(hasChanges)
+
   const handleSave = async () => {
     if (!task || !hasChanges) return
 
@@ -353,10 +357,13 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const statusConfig = task ? STATUS_CONFIG[task.status] || STATUS_CONFIG.queued : STATUS_CONFIG.queued
   const StatusIcon = statusConfig.icon
 
+  // Wrap onClose to check for unsaved changes
+  const handleClose = confirmClose(onClose)
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
       {/* Slide-over panel */}
       <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-theme-bg-surface shadow-xl flex flex-col">
@@ -372,7 +379,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
             <h2 className="text-base font-semibold text-theme-text-primary">Assignment Details</h2>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors"
           >
             <X className="w-5 h-5 text-theme-text-secondary" />
@@ -790,7 +797,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
           </button>
           <div className="flex items-center gap-2">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-surface rounded-lg transition-colors text-xs"
             >
               Cancel
