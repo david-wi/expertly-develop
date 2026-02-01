@@ -7,6 +7,8 @@ interface MarkdownEditorProps {
   placeholder?: string
   rows?: number
   className?: string
+  previewMode?: boolean
+  disabled?: boolean
 }
 
 export default function MarkdownEditor({
@@ -15,8 +17,14 @@ export default function MarkdownEditor({
   placeholder = 'Write your content here... (Markdown supported)',
   rows = 4,
   className = '',
+  previewMode,
+  disabled = false,
 }: MarkdownEditorProps) {
   const [showPreview, setShowPreview] = useState(false)
+
+  // If previewMode is provided externally, use it
+  const isPreview = previewMode !== undefined ? previewMode : showPreview
+  const togglePreview = previewMode !== undefined ? undefined : () => setShowPreview(!showPreview)
 
   // Simple markdown to HTML conversion for preview
   const renderMarkdown = (text: string) => {
@@ -50,27 +58,29 @@ export default function MarkdownEditor({
       {/* Toolbar */}
       <div className="flex items-center justify-between px-3 py-2 border-b border-theme-border bg-theme-bg-elevated">
         <span className="text-xs text-theme-text-secondary">Markdown supported</span>
-        <button
-          type="button"
-          onClick={() => setShowPreview(!showPreview)}
-          className="flex items-center gap-1 text-xs text-theme-text-secondary hover:text-theme-text-primary transition-colors"
-        >
-          {showPreview ? (
-            <>
-              <Edit2 className="w-3.5 h-3.5" />
-              Edit
-            </>
-          ) : (
-            <>
-              <Eye className="w-3.5 h-3.5" />
-              Preview
-            </>
-          )}
-        </button>
+        {togglePreview && (
+          <button
+            type="button"
+            onClick={togglePreview}
+            className="flex items-center gap-1 text-xs text-theme-text-secondary hover:text-theme-text-primary transition-colors"
+          >
+            {isPreview ? (
+              <>
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5" />
+                Preview
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Content */}
-      {showPreview ? (
+      {isPreview ? (
         <div
           className="p-3 min-h-[100px] prose prose-sm max-w-none text-theme-text-primary"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(value) || '<span class="text-theme-text-secondary">Nothing to preview</span>' }}
@@ -81,7 +91,8 @@ export default function MarkdownEditor({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full p-3 bg-transparent text-theme-text-primary placeholder-theme-text-secondary resize-none focus:outline-none"
+          disabled={disabled}
+          className={`w-full p-3 bg-transparent text-theme-text-primary placeholder-theme-text-secondary resize-none focus:outline-none ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
         />
       )}
     </div>

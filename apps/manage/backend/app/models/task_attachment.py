@@ -18,6 +18,9 @@ class TaskAttachment(MongoModel):
     organization_id: PyObjectId
     attachment_type: AttachmentType
 
+    # Optional step association for playbook step-level attachments
+    step_id: Optional[str] = None  # UUID from PlaybookStep
+
     # File-specific fields
     filename: Optional[str] = None  # Stored filename (UUID-based)
     original_filename: Optional[str] = None  # Original uploaded filename
@@ -42,6 +45,7 @@ class TaskAttachmentCreate(BaseModel):
     url: str
     link_title: Optional[str] = None
     note: Optional[str] = None
+    step_id: Optional[str] = None  # For step-level attachments
 
 
 class TaskAttachmentResponse(BaseModel):
@@ -50,6 +54,9 @@ class TaskAttachmentResponse(BaseModel):
     task_id: str
     organization_id: str
     attachment_type: AttachmentType
+
+    # Step association (optional)
+    step_id: Optional[str] = None
 
     # File fields
     filename: Optional[str] = None
