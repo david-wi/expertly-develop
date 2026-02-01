@@ -929,6 +929,11 @@ export interface Playbook {
   item_type: PlaybookItemType
   parent_id?: string | null
   order_index: number
+  // Assignment defaults
+  default_queue_id?: string
+  default_approver_type?: 'user' | 'team' | 'anyone'
+  default_approver_id?: string
+  default_approver_queue_id?: string
 }
 
 export interface CreatePlaybookRequest {
@@ -940,6 +945,11 @@ export interface CreatePlaybookRequest {
   scope_id?: string
   item_type?: PlaybookItemType
   parent_id?: string | null
+  // Assignment defaults
+  default_queue_id?: string
+  default_approver_type?: 'user' | 'team' | 'anyone'
+  default_approver_id?: string
+  default_approver_queue_id?: string
 }
 
 export interface UpdatePlaybookRequest {
@@ -951,6 +961,11 @@ export interface UpdatePlaybookRequest {
   scope_id?: string
   is_active?: boolean
   parent_id?: string | null
+  // Assignment defaults
+  default_queue_id?: string
+  default_approver_type?: 'user' | 'team' | 'anyone'
+  default_approver_id?: string
+  default_approver_queue_id?: string
 }
 
 export interface PlaybookReorderItem {

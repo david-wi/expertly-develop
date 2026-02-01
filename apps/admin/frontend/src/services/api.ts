@@ -31,6 +31,17 @@ import type {
   AIUseCaseConfigCreate,
   AIUseCaseConfigUpdate,
 } from '@/types/ai_config'
+import type {
+  TestScenario,
+  TestScenarioListResponse,
+  TestScenarioCreate,
+  TestScenarioUpdate,
+  TestScenarioStats,
+  TestScenarioFilters,
+  TestRun,
+  TestRunListResponse,
+  TestRunCreate,
+} from '@/types/test_scenarios'
 
 const API_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -256,6 +267,68 @@ export const aiConfigApi = {
 
   deleteUseCase: async (id: string): Promise<void> => {
     await api.delete(`/ai-config/use-cases/${id}`)
+  },
+}
+
+// Test Scenarios API
+export const testScenariosApi = {
+  list: async (filters: TestScenarioFilters = {}): Promise<TestScenarioListResponse> => {
+    const response = await api.get<TestScenarioListResponse>('/test-scenarios', {
+      params: filters,
+    })
+    return response.data
+  },
+
+  get: async (id: string): Promise<TestScenario> => {
+    const response = await api.get<TestScenario>(`/test-scenarios/${id}`)
+    return response.data
+  },
+
+  create: async (data: TestScenarioCreate): Promise<TestScenario> => {
+    const response = await api.post<TestScenario>('/test-scenarios', data)
+    return response.data
+  },
+
+  update: async (id: string, data: TestScenarioUpdate): Promise<TestScenario> => {
+    const response = await api.put<TestScenario>(`/test-scenarios/${id}`, data)
+    return response.data
+  },
+
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/test-scenarios/${id}`)
+  },
+
+  getStats: async (): Promise<TestScenarioStats> => {
+    const response = await api.get<TestScenarioStats>('/test-scenarios/stats')
+    return response.data
+  },
+
+  getApps: async (): Promise<string[]> => {
+    const response = await api.get<string[]>('/test-scenarios/apps')
+    return response.data
+  },
+
+  getCategories: async (): Promise<string[]> => {
+    const response = await api.get<string[]>('/test-scenarios/categories')
+    return response.data
+  },
+
+  // Test Runs
+  listRuns: async (scenarioId: string, filters: { status?: string; environment?: string; skip?: number; limit?: number } = {}): Promise<TestRunListResponse> => {
+    const response = await api.get<TestRunListResponse>(`/test-scenarios/${scenarioId}/runs`, {
+      params: filters,
+    })
+    return response.data
+  },
+
+  getRun: async (runId: string): Promise<TestRun> => {
+    const response = await api.get<TestRun>(`/test-scenarios/runs/${runId}`)
+    return response.data
+  },
+
+  reportRun: async (data: TestRunCreate): Promise<TestRun> => {
+    const response = await api.post<TestRun>('/test-scenarios/runs', data)
+    return response.data
   },
 }
 

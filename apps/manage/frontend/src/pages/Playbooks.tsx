@@ -5,6 +5,7 @@ import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, Pla
 import { useAppStore } from '../stores/appStore'
 import { createErrorLogger } from '../utils/errorLogger'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import ApproverSelector, { ApproverType } from '../components/ApproverSelector'
 
 const logger = createErrorLogger('Playbooks')
 
@@ -964,6 +965,11 @@ export default function Playbooks() {
     scope_type: ScopeType
     scope_id: string
     parent_id: string
+    // Assignment defaults
+    default_queue_id: string
+    default_approver_type: 'user' | 'team' | 'anyone' | ''
+    default_approver_id: string
+    default_approver_queue_id: string
   }>({
     name: '',
     description: '',
@@ -971,6 +977,10 @@ export default function Playbooks() {
     scope_type: 'user',
     scope_id: '',
     parent_id: '',
+    default_queue_id: '',
+    default_approver_type: '',
+    default_approver_id: '',
+    default_approver_queue_id: '',
   })
   const [steps, setSteps] = useState<StepFormData[]>([])
   const [focusedStepId, setFocusedStepId] = useState<string | null>(null)
@@ -1009,6 +1019,11 @@ export default function Playbooks() {
     if (formData.inputs_template !== (editingPlaybook.inputs_template || '')) return true
     if (formData.scope_type !== editingPlaybook.scope_type) return true
     if (formData.scope_id !== (editingPlaybook.scope_id || '')) return true
+    // Check assignment defaults
+    if (formData.default_queue_id !== (editingPlaybook.default_queue_id || '')) return true
+    if (formData.default_approver_type !== (editingPlaybook.default_approver_type || '')) return true
+    if (formData.default_approver_id !== (editingPlaybook.default_approver_id || '')) return true
+    if (formData.default_approver_queue_id !== (editingPlaybook.default_approver_queue_id || '')) return true
     // Check steps changes
     const originalSteps = editingPlaybook.steps.map(playbookStepToForm)
     if (steps.length !== originalSteps.length) return true
@@ -1081,6 +1096,11 @@ export default function Playbooks() {
           steps: steps.map((s, idx) => stepFormToCreate(s, idx + 1)),
           scope_type: formData.scope_type,
           scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
+          // Assignment defaults
+          default_queue_id: formData.default_queue_id || undefined,
+          default_approver_type: formData.default_approver_type || undefined,
+          default_approver_id: formData.default_approver_id || undefined,
+          default_approver_queue_id: formData.default_approver_queue_id || undefined,
         })
         // Refresh the editing playbook to sync with saved state
         const updated = await api.getPlaybooks()
@@ -1337,6 +1357,11 @@ export default function Playbooks() {
         scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
         item_type: 'playbook',
         parent_id: parentId,
+        // Assignment defaults
+        default_queue_id: formData.default_queue_id || undefined,
+        default_approver_type: formData.default_approver_type || undefined,
+        default_approver_id: formData.default_approver_id || undefined,
+        default_approver_queue_id: formData.default_approver_queue_id || undefined,
       }
       await api.createPlaybook(newPlaybook)
       recordParentUsage(parentId)
@@ -1398,6 +1423,11 @@ export default function Playbooks() {
         steps: steps.map((s, idx) => stepFormToCreate(s, idx + 1)),
         scope_type: formData.scope_type,
         scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
+        // Assignment defaults
+        default_queue_id: formData.default_queue_id || undefined,
+        default_approver_type: formData.default_approver_type || undefined,
+        default_approver_id: formData.default_approver_id || undefined,
+        default_approver_queue_id: formData.default_approver_queue_id || undefined,
       })
       // Refresh the editing playbook to sync with saved state (stay in edit mode)
       const updated = await api.getPlaybooks()
@@ -1484,6 +1514,10 @@ export default function Playbooks() {
       scope_type: playbook.scope_type,
       scope_id: playbook.scope_id || '',
       parent_id: playbook.parent_id || '',
+      default_queue_id: playbook.default_queue_id || '',
+      default_approver_type: playbook.default_approver_type || '',
+      default_approver_id: playbook.default_approver_id || '',
+      default_approver_queue_id: playbook.default_approver_queue_id || '',
     })
     setSteps(playbook.steps.map(playbookStepToForm))
     setFocusedStepId(null)
@@ -1508,6 +1542,10 @@ export default function Playbooks() {
       scope_type: 'user',
       scope_id: '',
       parent_id: '',
+      default_queue_id: '',
+      default_approver_type: '',
+      default_approver_id: '',
+      default_approver_queue_id: '',
     })
     setSteps([])
     setFocusedStepId(null)
@@ -1857,6 +1895,54 @@ export default function Playbooks() {
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   rows={2}
                   placeholder="What information should be provided when starting this playbook? (e.g., Customer name, Order ID, Issue description)"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Assignment Defaults */}
+          <div className="bg-white shadow rounded-lg p-6">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Assignment Defaults</h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Configure default settings for assignments using this playbook. These can be overridden when creating individual assignments.
+            </p>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Default Queue
+                </label>
+                <select
+                  value={formData.default_queue_id}
+                  onChange={(e) => setFormData({ ...formData, default_queue_id: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2"
+                >
+                  <option value="">No default queue</option>
+                  {queues.map((queue) => (
+                    <option key={queue.id || queue._id} value={queue.id || queue._id}>
+                      {queue.purpose}
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-xs text-gray-500">
+                  Where assignments using this playbook will be placed by default
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Default Approver
+                </label>
+                <ApproverSelector
+                  approverType={formData.default_approver_type as ApproverType || null}
+                  approverId={formData.default_approver_id || null}
+                  approverQueueId={formData.default_approver_queue_id || null}
+                  onChange={(type, id, queueId) => {
+                    setFormData({
+                      ...formData,
+                      default_approver_type: type || '',
+                      default_approver_id: id || '',
+                      default_approver_queue_id: queueId || '',
+                    })
+                  }}
                 />
               </div>
             </div>

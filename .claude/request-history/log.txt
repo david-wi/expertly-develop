@@ -52,3 +52,6 @@ Warns users before losing changes on modal close or page refresh.
 20260131 - Manage Edit Playbook: Change step header background from gray-50 to primary-50 (theme-aware color) for visual variety and skimmability
 20260131 Implement task phase system (workflow phases like Dynamics CRM - planning, ready, in_progress, pending_review, in_review, changes_requested, approved, waiting_on_subplaybook)
 20260131 - Improve playbook step editing UX: auto-expand on focus, auto-collapse when moving to next step
+20260201 - Set up Violet and Ocean themes in admin panel at https://admin.ai.devintensive.com/themes for cross-project use
+20260201 - Implement test scenarios enhancement: database-driven scenario definitions with plain-English step-by-step descriptions and real test result tracking. Created models, schemas, services, API endpoints, migration, seed data, frontend types, API client, and updated TestScenarios.tsx.
+20260201 - Added playbook assignment defaults (default_queue_id, default_approver_type, default_approver_id, default_approver_queue_id) to Playbook model and UI, and updated CreateAssignmentModal to use these defaults when selecting a playbook
