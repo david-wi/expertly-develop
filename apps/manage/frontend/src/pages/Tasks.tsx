@@ -12,10 +12,22 @@ const STATUS_COLORS: Record<string, string> = {
   failed: 'bg-red-100 text-red-800',
 }
 
+const PHASE_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
+  planning: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Planning' },
+  ready: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Ready' },
+  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'In Progress' },
+  pending_review: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Pending Review' },
+  in_review: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'In Review' },
+  changes_requested: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Changes Requested' },
+  approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
+  waiting_on_subplaybook: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Waiting' },
+}
+
 export default function Tasks() {
   const { tasks, queues, loading, fetchTasks, fetchQueues, createTask } = useAppStore()
   const [filterQueue, setFilterQueue] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('')
+  const [filterPhase, setFilterPhase] = useState<string>('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', description: '', queue_id: '' })
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
@@ -28,6 +40,7 @@ export default function Tasks() {
   const filteredTasks = tasks.filter((task) => {
     if (filterQueue && task.queue_id !== filterQueue) return false
     if (filterStatus && task.status !== filterStatus) return false
+    if (filterPhase && task.phase !== filterPhase) return false
     return true
   })
 
@@ -94,6 +107,24 @@ export default function Tasks() {
               <option value="failed">Failed</option>
             </select>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phase</label>
+            <select
+              value={filterPhase}
+              onChange={(e) => setFilterPhase(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+            >
+              <option value="">All Phases</option>
+              <option value="planning">Planning</option>
+              <option value="ready">Ready</option>
+              <option value="in_progress">In Progress</option>
+              <option value="pending_review">Pending Review</option>
+              <option value="in_review">In Review</option>
+              <option value="changes_requested">Changes Requested</option>
+              <option value="approved">Approved</option>
+              <option value="waiting_on_subplaybook">Waiting on Subplaybook</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -123,13 +154,22 @@ export default function Tasks() {
                       <span>Created: {new Date(task.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
-                    }`}
-                  >
-                    {task.status.replace('_', ' ')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {task.phase && PHASE_CONFIG[task.phase] && (
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${PHASE_CONFIG[task.phase].bg} ${PHASE_CONFIG[task.phase].text}`}
+                      >
+                        {PHASE_CONFIG[task.phase].label}
+                      </span>
+                    )}
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {task.status.replace('_', ' ')}
+                    </span>
+                  </div>
                 </div>
               </li>
             ))}

@@ -4,7 +4,8 @@ from app.models.user import User, UserCreate, UserUpdate, UserType, UserRole
 from app.models.team import Team, TeamCreate, TeamUpdate
 from app.models.queue import Queue, QueueCreate, QueueUpdate, QueueType, ScopeType
 from app.models.task import (
-    Task, TaskCreate, TaskUpdate, TaskStatus, TaskCheckout, TaskStart, TaskComplete, TaskFail,
+    Task, TaskCreate, TaskUpdate, TaskStatus, TaskPhase, VALID_PHASE_TRANSITIONS,
+    TaskCheckout, TaskStart, TaskComplete, TaskFail,
     RecurringTask, RecurringTaskCreate, RecurringTaskUpdate, RecurrenceType
 )
 from app.models.task_update import TaskProgressUpdate, TaskProgressUpdateCreate
@@ -68,6 +69,8 @@ __all__ = [
     "TaskCreate",
     "TaskUpdate",
     "TaskStatus",
+    "TaskPhase",
+    "VALID_PHASE_TRANSITIONS",
     "TaskCheckout",
     "TaskStart",
     "TaskComplete",

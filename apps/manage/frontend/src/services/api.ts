@@ -164,10 +164,11 @@ export const api = {
     }),
 
   // Tasks
-  getTasks: (params?: { queue_id?: string; status?: string }) => {
+  getTasks: (params?: { queue_id?: string; status?: string; phase?: string }) => {
     const searchParams = new URLSearchParams()
     if (params?.queue_id) searchParams.set('queue_id', params.queue_id)
     if (params?.status) searchParams.set('status', params.status)
+    if (params?.phase) searchParams.set('phase', params.phase)
     const query = searchParams.toString()
     return request<Task[]>(`/api/v1/tasks${query ? `?${query}` : ''}`)
   },
@@ -185,6 +186,32 @@ export const api = {
   deleteTask: (id: string) =>
     request<void>(`/api/v1/tasks/${id}`, {
       method: 'DELETE',
+    }),
+
+  // Task Phase Transitions
+  markTaskReady: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/mark-ready`, {
+      method: 'POST',
+    }),
+  submitForReview: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/submit-for-review`, {
+      method: 'POST',
+    }),
+  startReview: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/start-review`, {
+      method: 'POST',
+    }),
+  requestChanges: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/request-changes`, {
+      method: 'POST',
+    }),
+  approveTask: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/approve`, {
+      method: 'POST',
+    }),
+  resumeWork: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/resume-work`, {
+      method: 'POST',
     }),
 
   // Task Attachments
@@ -568,6 +595,16 @@ export interface Queue {
   created_at: string
 }
 
+export type TaskPhase =
+  | 'planning'
+  | 'ready'
+  | 'in_progress'
+  | 'pending_review'
+  | 'in_review'
+  | 'changes_requested'
+  | 'approved'
+  | 'waiting_on_subplaybook'
+
 export interface Task {
   _id?: string
   id: string
@@ -575,10 +612,14 @@ export interface Task {
   title: string
   description?: string
   status: 'queued' | 'blocked' | 'checked_out' | 'in_progress' | 'completed' | 'failed'
+  phase: TaskPhase
   priority: number
   assigned_to_id?: string
   project_id?: string
   sop_id?: string
+  // Review fields
+  reviewer_id?: string
+  review_requested_at?: string
   // Approval fields
   approver_type?: 'user' | 'team' | 'anyone'
   approver_id?: string
