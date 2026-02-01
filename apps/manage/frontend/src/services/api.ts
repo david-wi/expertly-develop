@@ -705,6 +705,10 @@ export interface CreateTaskRequest {
   depends_on?: string[]
   // Playbook tracking
   playbook_id?: string
+  // Scheduling fields
+  scheduled_start?: string
+  scheduled_end?: string
+  schedule_timezone?: string
 }
 
 export interface UpdateTaskRequest {

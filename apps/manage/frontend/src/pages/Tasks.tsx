@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Modal, ModalFooter } from '@expertly/ui'
 import { useAppStore } from '../stores/appStore'
 import TaskDetailModal from '../components/TaskDetailModal'
+import CreateAssignmentModal from '../components/CreateAssignmentModal'
 
 const STATUS_COLORS: Record<string, string> = {
   queued: 'bg-blue-100 text-blue-800',
@@ -24,12 +24,11 @@ const PHASE_CONFIG: Record<string, { bg: string; text: string; label: string }> 
 }
 
 export default function Tasks() {
-  const { tasks, queues, loading, fetchTasks, fetchQueues, createTask } = useAppStore()
+  const { tasks, queues, loading, fetchTasks, fetchQueues } = useAppStore()
   const [filterQueue, setFilterQueue] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [filterPhase, setFilterPhase] = useState<string>('')
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', description: '', queue_id: '' })
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -43,19 +42,6 @@ export default function Tasks() {
     if (filterPhase && task.phase !== filterPhase) return false
     return true
   })
-
-  const handleCreateTask = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newTask.title || !newTask.queue_id) return
-
-    try {
-      await createTask(newTask)
-      setNewTask({ title: '', description: '', queue_id: '' })
-      setShowCreateModal(false)
-    } catch (error) {
-      console.error('Failed to create task:', error)
-    }
-  }
 
   const getQueuePurpose = (queueId: string) => {
     const queue = queues.find((q) => (q._id || q.id) === queueId)
@@ -191,69 +177,11 @@ export default function Tasks() {
       )}
 
       {/* Create Assignment Modal */}
-      <Modal
+      <CreateAssignmentModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
-        title="Create New Assignment"
-      >
-        <form onSubmit={handleCreateTask} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
-            <select
-              value={newTask.queue_id}
-              onChange={(e) => setNewTask({ ...newTask, queue_id: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              required
-              autoFocus
-            >
-              <option value="">Select a queue</option>
-              {queues.map((queue) => (
-                <option key={queue._id || queue.id} value={queue._id || queue.id}>
-                  {queue.purpose}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input
-              type="text"
-              value={newTask.title}
-              onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="Assignment title"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description (optional)
-            </label>
-            <textarea
-              value={newTask.description}
-              onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              rows={3}
-              placeholder="Assignment description"
-            />
-          </div>
-          <ModalFooter>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(false)}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-            >
-              Create Assignment
-            </button>
-          </ModalFooter>
-        </form>
-      </Modal>
+        onCreated={() => fetchTasks()}
+      />
     </div>
   )
 }

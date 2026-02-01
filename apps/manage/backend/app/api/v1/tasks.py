@@ -124,6 +124,9 @@ async def create_task(
         approver_id=ObjectId(data.approver_id) if data.approver_id else None,
         approver_queue_id=ObjectId(data.approver_queue_id) if data.approver_queue_id else None,
         approval_required=data.approval_required,
+        scheduled_start=data.scheduled_start,
+        scheduled_end=data.scheduled_end,
+        schedule_timezone=data.schedule_timezone,
     )
 
     await db.tasks.insert_one(task.model_dump_mongo())
