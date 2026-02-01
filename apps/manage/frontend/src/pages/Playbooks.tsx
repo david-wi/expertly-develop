@@ -1293,11 +1293,25 @@ export default function Playbooks() {
     })
   }
 
-  const addStep = () => {
+  const addStep = useCallback(() => {
     const newStep = createEmptyStep()
-    setSteps([...steps, newStep])
-    setExpandedSteps(new Set([...expandedSteps, newStep.id]))
-  }
+    setSteps(prev => [...prev, newStep])
+    setExpandedSteps(prev => new Set([...prev, newStep.id]))
+  }, [])
+
+  // Keyboard shortcut for add step (Cmd/Ctrl+Shift+S) - only when editing
+  useEffect(() => {
+    if (!isEditing) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        addStep()
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isEditing, addStep])
 
   const updateStep = (index: number, updatedStep: StepFormData) => {
     const newSteps = [...steps]
@@ -1645,6 +1659,7 @@ export default function Playbooks() {
                   type="button"
                   onClick={addStep}
                   className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                  title={`Add Step (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+S)`}
                 >
                   + Add Step
                 </button>
@@ -1658,9 +1673,13 @@ export default function Playbooks() {
                   type="button"
                   onClick={addStep}
                   className="text-blue-600 hover:text-blue-800 font-medium"
+                  title={`Add your first step (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+S)`}
                 >
                   Add your first step
                 </button>
+                <p className="text-xs text-gray-400 mt-2">
+                  or press {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+S
+                </p>
               </div>
             ) : (
               <div className="space-y-2">
@@ -1691,9 +1710,13 @@ export default function Playbooks() {
                 <button
                   type="button"
                   onClick={addStep}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors group"
+                  title={`Add Another Step (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+S)`}
                 >
                   + Add Another Step
+                  <span className="ml-2 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+Shift+S
+                  </span>
                 </button>
               </div>
             )}
