@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,6 +16,9 @@ import {
 import { Plus, FolderTree, Loader2 } from 'lucide-react'
 import { productsApi, Product } from '@/api/client'
 import { ProductAvatar } from '@/components/products/ProductAvatar'
+import { ErrorState, createErrorLogger } from '@expertly/ui'
+
+const logger = createErrorLogger('define')
 
 function suggestPrefix(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)
@@ -29,24 +32,29 @@ function suggestPrefix(name: string): string {
 export default function Products() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [newProduct, setNewProduct] = useState({ name: '', prefix: '', description: '' })
 
-  useEffect(() => {
-    fetchProducts()
-  }, [])
-
-  async function fetchProducts() {
+  const fetchProducts = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
       const data = await productsApi.list()
       setProducts(data)
-    } catch (error) {
-      console.error('Error fetching products:', error)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load products'
+      setError(message)
+      logger.error(err, { component: 'Products', action: 'fetchProducts' })
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchProducts()
+  }, [fetchProducts])
 
   async function createProduct(e: React.FormEvent) {
     e.preventDefault()
@@ -153,6 +161,12 @@ export default function Products() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
         </div>
+      ) : error ? (
+        <ErrorState
+          title="Unable to load products"
+          message={error}
+          onRetry={fetchProducts}
+        />
       ) : products.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
