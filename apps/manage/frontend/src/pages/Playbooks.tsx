@@ -1367,10 +1367,15 @@ export default function Playbooks() {
         scope_type: formData.scope_type,
         scope_id: formData.scope_type === 'organization' ? undefined : formData.scope_id || undefined,
       })
-      await loadData()
-      setIsEditing(false)
-      setEditingPlaybook(null)
-      resetForm()
+      // Refresh the editing playbook to sync with saved state (stay in edit mode)
+      const updated = await api.getPlaybooks()
+      const refreshed = updated.find(p => p.id === editingPlaybook.id)
+      if (refreshed) {
+        setEditingPlaybook(refreshed)
+      }
+      setPlaybooks(updated)
+      setAutoSaveStatus('saved')
+      setTimeout(() => setAutoSaveStatus('idle'), 2000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to save playbook'
       setError(message)
