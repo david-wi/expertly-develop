@@ -396,15 +396,31 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
             <div className="p-4 text-red-600">{error}</div>
           ) : task ? (
             <div className="p-4 space-y-4">
-              {/* Title */}
-              <div>
-                <label className="block text-xs font-medium text-theme-text-secondary mb-1">Title</label>
-                <input
-                  type="text"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                />
+              {/* Title and Priority */}
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Title</label>
+                  <input
+                    type="text"
+                    value={editedTitle}
+                    onChange={(e) => setEditedTitle(e.target.value)}
+                    className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  />
+                </div>
+                <div className="w-20">
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Priority</label>
+                  <select
+                    value={editedPriority}
+                    onChange={(e) => setEditedPriority(Number(e.target.value))}
+                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
+                      <option key={p} value={p}>
+                        {p} {p === 1 ? '(High)' : p === 10 ? '(Low)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Description */}
@@ -419,8 +435,8 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 />
               </div>
 
-              {/* Playbook, Queue, Priority - 3 column */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Playbook and Queue - 2 column */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Playbook</label>
                   <select
@@ -450,36 +466,55 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Priority</label>
-                  <select
-                    value={editedPriority}
-                    onChange={(e) => setEditedPriority(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
-                      <option key={p} value={p}>
-                        {p} {p === 1 ? '(High)' : p === 10 ? '(Low)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
               </div>
 
-              {/* Approval Section */}
-              <div className="bg-theme-bg-elevated rounded-lg p-3 border border-theme-border">
-                <label className="block text-xs font-medium text-theme-text-secondary mb-2">Approval</label>
-                <ApproverSelector
-                  approverType={editedApproverType}
-                  approverId={editedApproverId}
-                  approverQueueId={editedApproverQueueId}
-                  onChange={(type, id, queueId) => {
-                    setEditedApproverType(type)
-                    setEditedApproverId(id)
-                    setEditedApproverQueueId(queueId)
-                  }}
-                />
-              </div>
+              {/* Approval Section - hidden if playbook defines approval */}
+              {(() => {
+                const selectedPlaybook = editedPlaybookId
+                  ? playbooks.find(p => p.id === editedPlaybookId)
+                  : null
+                const playbookHasApproval = selectedPlaybook?.steps?.some(s => s.approval_required)
+
+                if (playbookHasApproval) {
+                  return null // Approval managed by playbook
+                }
+
+                return (
+                  <div className="flex items-start gap-3">
+                    <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap pt-0.5">
+                      <input
+                        type="checkbox"
+                        checked={editedApproverType !== null}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setEditedApproverType('anyone')
+                          } else {
+                            setEditedApproverType(null)
+                            setEditedApproverId(null)
+                            setEditedApproverQueueId(null)
+                          }
+                        }}
+                        className="rounded border-theme-border text-primary-600"
+                      />
+                      <span className="text-xs font-medium text-theme-text-secondary">Requires approval</span>
+                    </label>
+                    {editedApproverType !== null && (
+                      <div className="flex-1">
+                        <ApproverSelector
+                          approverType={editedApproverType}
+                          approverId={editedApproverId}
+                          approverQueueId={editedApproverQueueId}
+                          onChange={(type, id, queueId) => {
+                            setEditedApproverType(type)
+                            setEditedApproverId(id)
+                            setEditedApproverQueueId(queueId)
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Advanced Settings - Collapsible */}
               <div className="border border-theme-border rounded-lg overflow-hidden">
