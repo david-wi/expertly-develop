@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { FolderPlus } from 'lucide-react'
 import { Modal, ModalFooter } from '@expertly/ui'
 import { api, Playbook, CreatePlaybookRequest, ScopeType, User, Team, Queue, PlaybookStep, PlaybookStepCreate, AssigneeType, PlaybookReorderItem, GeneratedStep } from '../services/api'
@@ -214,10 +214,199 @@ interface StepEditorProps {
   isDragging: boolean
   isDragOver: boolean
   users: User[]
+  bots: User[]
   teams: Team[]
   queues: Queue[]
   playbooks: Playbook[]
   currentPlaybookId?: string
+}
+
+// Unified assignee/approver selector component
+function AssigneeSelector({
+  value,
+  onChange,
+  users,
+  bots,
+  teams,
+  placeholder = 'Anyone',
+  label,
+  inline = false,
+}: {
+  value: { type: AssigneeType; id: string }
+  onChange: (type: AssigneeType, id: string) => void
+  users: User[]
+  bots: User[]
+  teams: Team[]
+  placeholder?: string
+  label?: string
+  inline?: boolean
+}) {
+  const [search, setSearch] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Get display value
+  const getDisplayValue = () => {
+    if (value.type === 'anyone') return placeholder
+    if (value.type === 'user' && value.id) {
+      const user = [...users, ...bots].find(u => u.id === value.id)
+      if (user) {
+        const isBot = bots.some(b => b.id === user.id)
+        return `${isBot ? '🤖 ' : ''}${user.name}`
+      }
+    }
+    if (value.type === 'team' && value.id) {
+      const team = teams.find(t => t.id === value.id)
+      return team ? `Team: ${team.name}` : placeholder
+    }
+    return placeholder
+  }
+
+  // Filter items by search
+  const filteredUsers = users.filter(u =>
+    u.name.toLowerCase().includes(search.toLowerCase())
+  )
+  const filteredBots = bots.filter(b =>
+    b.name.toLowerCase().includes(search.toLowerCase())
+  )
+  const filteredTeams = teams.filter(t =>
+    t.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const hasResults = filteredUsers.length > 0 || filteredBots.length > 0 || filteredTeams.length > 0
+
+  return (
+    <div className={`relative ${inline ? 'inline-block' : ''}`} ref={dropdownRef}>
+      {label && <label className="block text-xs font-medium text-gray-500 mb-1">{label}</label>}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`${inline ? 'px-2 py-1' : 'w-full px-2 py-1.5'} border border-gray-300 rounded text-sm text-left bg-white hover:bg-gray-50 flex items-center justify-between gap-2`}
+      >
+        <span className={value.type === 'anyone' ? 'text-gray-500' : 'text-gray-900'}>
+          {getDisplayValue()}
+        </span>
+        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-20 mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
+          <div className="p-2 border-b">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {/* Anyone option */}
+            <button
+              type="button"
+              onClick={() => {
+                onChange('anyone', '')
+                setIsOpen(false)
+                setSearch('')
+              }}
+              className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
+                value.type === 'anyone' ? 'bg-blue-50 text-blue-700' : ''
+              }`}
+            >
+              {placeholder}
+            </button>
+
+            {/* People section */}
+            {filteredUsers.length > 0 && (
+              <>
+                <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50">People</div>
+                {filteredUsers.map(user => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => {
+                      onChange('user', user.id)
+                      setIsOpen(false)
+                      setSearch('')
+                    }}
+                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
+                      value.type === 'user' && value.id === user.id ? 'bg-blue-50 text-blue-700' : ''
+                    }`}
+                  >
+                    {user.name}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* Bots section */}
+            {filteredBots.length > 0 && (
+              <>
+                <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50">Bots</div>
+                {filteredBots.map(bot => (
+                  <button
+                    key={bot.id}
+                    type="button"
+                    onClick={() => {
+                      onChange('user', bot.id)
+                      setIsOpen(false)
+                      setSearch('')
+                    }}
+                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
+                      value.type === 'user' && value.id === bot.id ? 'bg-blue-50 text-blue-700' : ''
+                    }`}
+                  >
+                    🤖 {bot.name}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {/* Teams section */}
+            {filteredTeams.length > 0 && (
+              <>
+                <div className="px-3 py-1 text-xs font-medium text-gray-500 bg-gray-50">Teams</div>
+                {filteredTeams.map(team => (
+                  <button
+                    key={team.id}
+                    type="button"
+                    onClick={() => {
+                      onChange('team', team.id)
+                      setIsOpen(false)
+                      setSearch('')
+                    }}
+                    className={`w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
+                      value.type === 'team' && value.id === team.id ? 'bg-blue-50 text-blue-700' : ''
+                    }`}
+                  >
+                    {team.name}
+                  </button>
+                ))}
+              </>
+            )}
+
+            {!hasResults && search && (
+              <div className="px-3 py-2 text-sm text-gray-500">No results found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function StepEditor({
@@ -236,22 +425,32 @@ function StepEditor({
   isDragging,
   isDragOver,
   users,
+  bots,
   teams,
   queues,
   playbooks,
   currentPlaybookId,
 }: StepEditorProps) {
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
   const updateField = <K extends keyof StepFormData>(field: K, value: StepFormData[K]) => {
     onChange({ ...step, [field]: value })
   }
 
-  // Filter out current playbook from nested options
-  const availablePlaybooks = playbooks.filter(p => p.id !== currentPlaybookId)
+  // Filter out current playbook and groups from nested options
+  const availablePlaybooks = playbooks.filter(p => p.id !== currentPlaybookId && p.item_type === 'playbook')
+
+  // Show assignment section when instructions have content OR a playbook is selected
+  const showAssignment = step.description.trim().length > 0 || !!step.nested_playbook_id
 
   // Get assignee label for collapsed view
   const getAssigneeLabel = () => {
+    if (step.nested_playbook_id) {
+      const pb = playbooks.find(p => p.id === step.nested_playbook_id)
+      return pb ? `→ ${pb.name}` : 'Playbook'
+    }
     if (step.assignee_type === 'user' && step.assignee_id) {
-      const user = users.find(u => u.id === step.assignee_id)
+      const user = [...users, ...bots].find(u => u.id === step.assignee_id)
       return user?.name || 'User'
     }
     if (step.assignee_type === 'team' && step.assignee_id) {
@@ -358,8 +557,26 @@ function StepEditor({
       {/* Expanded content - compact layout */}
       {expanded && (
         <div className="p-3 space-y-3 text-sm">
-          {/* Description and When to Perform - side by side on larger screens */}
+          {/* Row 1: Playbook to Use (left) and Instructions (right) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                Playbook to Use <span className="font-normal text-gray-400">(Optional)</span>
+              </label>
+              <select
+                value={step.nested_playbook_id}
+                onChange={(e) => updateField('nested_playbook_id', e.target.value)}
+                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+              >
+                <option value="">— Manual step —</option>
+                {availablePlaybooks.map((pb) => (
+                  <option key={pb.id} value={pb.id}>{pb.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                Run another playbook as this step
+              </p>
+            </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 mb-1">Instructions</label>
               <textarea
@@ -370,150 +587,125 @@ function StepEditor({
                 placeholder="What needs to be done?"
               />
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">When to Perform</label>
-              <textarea
-                value={step.when_to_perform}
-                onChange={(e) => updateField('when_to_perform', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                rows={2}
-                placeholder="Conditions or timing (optional)"
-              />
-            </div>
           </div>
 
-          {/* Two-column layout for assignment and options */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Assignment */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-gray-500">Assign to</label>
-              <select
-                value={step.assignee_type}
-                onChange={(e) => {
-                  updateField('assignee_type', e.target.value as AssigneeType)
-                  updateField('assignee_id', '')
-                }}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-              >
-                <option value="anyone">Anyone</option>
-                <option value="user">Specific person</option>
-                <option value="team">Team</option>
-              </select>
-              {step.assignee_type === 'user' && (
-                <select
-                  value={step.assignee_id}
-                  onChange={(e) => updateField('assignee_id', e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                >
-                  <option value="">Select person...</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
-              )}
-              {step.assignee_type === 'team' && (
-                <select
-                  value={step.assignee_id}
-                  onChange={(e) => updateField('assignee_id', e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                >
-                  <option value="">Select team...</option>
-                  {teams.map((t) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-              )}
-            </div>
-
-            {/* Queue, parallel group, and nested playbook */}
-            <div className="space-y-2">
-              <label className="block text-xs font-medium text-gray-500">Queue</label>
-              <select
-                value={step.queue_id}
-                onChange={(e) => updateField('queue_id', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-              >
-                <option value="">Default queue</option>
-                {queues.map((q) => (
-                  <option key={q.id} value={q.id}>{q.purpose}</option>
-                ))}
-              </select>
-              <label className="block text-xs font-medium text-gray-500">Parallel Group</label>
-              <input
-                type="text"
-                value={step.parallel_group}
-                onChange={(e) => updateField('parallel_group', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                placeholder="Steps with same group run in parallel"
-              />
-              {availablePlaybooks.length > 0 && (
-                <>
-                  <label className="block text-xs font-medium text-gray-500">Nested Playbook</label>
-                  <select
-                    value={step.nested_playbook_id}
-                    onChange={(e) => updateField('nested_playbook_id', e.target.value)}
-                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  >
-                    <option value="">None</option>
-                    {availablePlaybooks.map((pb) => (
-                      <option key={pb.id} value={pb.id}>{pb.name}</option>
-                    ))}
-                  </select>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Approval - compact toggle */}
-          <div className="border-t pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={step.approval_required}
-                onChange={(e) => updateField('approval_required', e.target.checked)}
-                className="rounded border-gray-300 text-blue-600"
-              />
-              <span className="text-xs font-medium text-gray-700">Requires approval</span>
-            </label>
-
-            {step.approval_required && (
-              <div className="mt-2 pl-5 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <select
-                  value={step.approver_type}
-                  onChange={(e) => {
-                    updateField('approver_type', e.target.value as AssigneeType)
-                    updateField('approver_id', '')
+          {/* Row 2: Assignment (only shown when instructions have content or playbook selected) */}
+          {showAssignment && (
+            <div className="flex flex-wrap items-center gap-3 pl-4 border-l-2 border-gray-100">
+              {/* Assign to - show "Playbook's default" when using a playbook */}
+              {step.nested_playbook_id ? (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Assign to</label>
+                  <div className="px-2 py-1.5 text-sm text-gray-500 bg-gray-50 rounded border border-gray-200">
+                    Uses playbook's settings
+                  </div>
+                </div>
+              ) : (
+                <AssigneeSelector
+                  value={{ type: step.assignee_type, id: step.assignee_id }}
+                  onChange={(type, id) => {
+                    updateField('assignee_type', type)
+                    updateField('assignee_id', id)
                   }}
-                  className="border border-gray-300 rounded px-2 py-1.5 text-sm"
-                >
-                  <option value="anyone">Anyone can approve</option>
-                  <option value="user">Specific approver</option>
-                  <option value="team">Team approves</option>
-                </select>
-                {step.approver_type === 'user' && (
+                  users={users}
+                  bots={bots}
+                  teams={teams}
+                  placeholder="Anyone"
+                  label="Assign to"
+                />
+              )}
+
+              {/* Queue - only show when NOT using a playbook */}
+              {!step.nested_playbook_id && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Queue</label>
                   <select
-                    value={step.approver_id}
-                    onChange={(e) => updateField('approver_id', e.target.value)}
+                    value={step.queue_id}
+                    onChange={(e) => updateField('queue_id', e.target.value)}
                     className="border border-gray-300 rounded px-2 py-1.5 text-sm"
                   >
-                    <option value="">Select approver...</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
+                    <option value="">Default</option>
+                    {queues.map((q) => (
+                      <option key={q.id} value={q.id}>{q.purpose}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* Requires approval - inline */}
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={step.approval_required}
+                    onChange={(e) => updateField('approval_required', e.target.checked)}
+                    className="rounded border-gray-300 text-blue-600"
+                  />
+                  <span className="text-xs font-medium text-gray-700">Requires approval</span>
+                </label>
+                {step.approval_required && (
+                  <AssigneeSelector
+                    value={{ type: step.approver_type, id: step.approver_id }}
+                    onChange={(type, id) => {
+                      updateField('approver_type', type)
+                      updateField('approver_id', id)
+                    }}
+                    users={users}
+                    bots={bots}
+                    teams={teams}
+                    placeholder="Anyone can approve"
+                    inline
+                  />
                 )}
-                {step.approver_type === 'team' && (
-                  <select
-                    value={step.approver_id}
-                    onChange={(e) => updateField('approver_id', e.target.value)}
-                    className="border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  >
-                    <option value="">Select team...</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </select>
-                )}
+              </div>
+            </div>
+          )}
+
+          {/* Advanced section - collapsible */}
+          <div className="border-t pt-2 pl-4 border-l-2 border-gray-100 ml-0">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-700"
+            >
+              <svg
+                className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Advanced options
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">When to Perform</label>
+                  <textarea
+                    value={step.when_to_perform}
+                    onChange={(e) => updateField('when_to_perform', e.target.value)}
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    rows={2}
+                    placeholder="Conditions or timing (e.g., 'Only if customer is enterprise tier')"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Parallel Group
+                  </label>
+                  <input
+                    type="text"
+                    value={step.parallel_group}
+                    onChange={(e) => updateField('parallel_group', e.target.value)}
+                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    placeholder="e.g., 'onboarding-prep'"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Steps with the same group name run simultaneously instead of sequentially
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -718,6 +910,7 @@ export default function Playbooks() {
   const { user } = useAppStore()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [users, setUsers] = useState<User[]>([])
+  const [bots, setBots] = useState<User[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [queues, setQueues] = useState<Queue[]>([])
   const [loading, setLoading] = useState(true)
@@ -1047,14 +1240,16 @@ export default function Playbooks() {
     setLoading(true)
     setError(null)
     try {
-      const [playbooksData, usersData, teamsData, queuesData] = await Promise.all([
+      const [playbooksData, usersData, botsData, teamsData, queuesData] = await Promise.all([
         api.getPlaybooks(),
         api.getUsers('human'),
+        api.getUsers('virtual'),
         api.getTeams(),
         api.getQueues(),
       ])
       setPlaybooks(playbooksData)
       setUsers(usersData)
+      setBots(botsData)
       setTeams(teamsData)
       setQueues(queuesData)
     } catch (err) {
@@ -1701,6 +1896,7 @@ export default function Playbooks() {
                     isDragging={dragIndex === index}
                     isDragOver={dragOverIndex === index}
                     users={users}
+                    bots={bots}
                     teams={teams}
                     queues={queues}
                     playbooks={playbooks}
