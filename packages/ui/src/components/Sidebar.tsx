@@ -256,7 +256,7 @@ export function Sidebar({
               onClick={() => setShowProductSwitcher(false)}
             />
             <div className={`fixed left-0 top-14 w-72 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
-              <div className="p-2">
+              <div className="group/dropdown p-2">
                 <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
                 {EXPERTLY_PRODUCTS.map((product) => (
                   <div key={product.code}>
@@ -265,22 +265,22 @@ export function Sidebar({
                     )}
                     <a
                       href={product.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                         product.code === productCode
-                          ? `${activeBg} ${activeText}`
-                          : `${textSecondary} ${hoverBg} hover:${textPrimary}`
+                          ? `${activeBg} ${activeText} group-has-[a:hover]/dropdown:[&:not(:hover)]:bg-transparent group-has-[a:hover]/dropdown:[&:not(:hover)]:text-inherit`
+                          : `${textSecondary} hover:${activeBg} hover:${activeText}`
                       }`}
                       onClick={() => setShowProductSwitcher(false)}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
                         product.separatorBefore
-                          ? 'bg-gray-100 dark:bg-gray-800'
-                          : 'bg-violet-100 dark:bg-violet-900/50'
+                          ? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700'
+                          : 'bg-violet-100 dark:bg-violet-900/50 group-hover:bg-gradient-to-br group-hover:from-violet-500 group-hover:to-purple-600'
                       }`}>
-                        <product.icon className={`w-4 h-4 ${
+                        <product.icon className={`w-4 h-4 transition-colors ${
                           product.separatorBefore
-                            ? 'text-gray-600 dark:text-gray-400'
-                            : 'text-violet-600 dark:text-violet-400'
+                            ? 'text-gray-600 dark:text-gray-400 group-hover:text-white'
+                            : 'text-violet-600 dark:text-violet-400 group-hover:text-white'
                         }`} />
                       </div>
                       <div>
