@@ -1,7 +1,11 @@
 import axios from 'axios'
+import { createErrorLogger } from '@expertly/ui'
 
 // Identity service URL for authentication
 const IDENTITY_URL = import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com'
+
+// Error logger for API errors
+const logger = createErrorLogger('define')
 
 // Storage key for tenant ID override
 export const TENANT_STORAGE_KEY = 'expertly-tenant-id'
@@ -23,7 +27,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Redirect to Identity login on 401 errors
+// Redirect to Identity login on 401 errors, log other errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -35,6 +39,18 @@ api.interceptors.response.use(
       window.location.href = loginUrl.toString()
       return new Promise(() => {}) // Never resolve - we're redirecting
     }
+
+    // Log non-401 errors to centralized error tracking
+    logger.error(error, {
+      action: 'apiRequest',
+      additionalContext: {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+      },
+    })
+
     return Promise.reject(error)
   }
 )

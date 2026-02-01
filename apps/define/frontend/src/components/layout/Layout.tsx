@@ -1,12 +1,14 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   FolderTree,
   Package,
 } from 'lucide-react'
-import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
+import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, createErrorLogger } from '@expertly/ui'
 import { usersApi } from '../../api/client'
+
+const logger = createErrorLogger('define')
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -20,7 +22,14 @@ export default function Layout() {
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => usersApi.me(), [])
-  const { sidebarUser } = useCurrentUser(fetchCurrentUser)
+  const { sidebarUser, error: userError } = useCurrentUser(fetchCurrentUser)
+
+  // Log user fetch errors to centralized error logging
+  useEffect(() => {
+    if (userError) {
+      logger.error(userError, { component: 'Layout', action: 'fetchCurrentUser' })
+    }
+  }, [userError])
 
   // Use shared organizations hook
   const { organizationsConfig, currentOrg } = useOrganizations({

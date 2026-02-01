@@ -96,3 +96,17 @@ export { useActiveElement } from './hooks/useActiveElement'
 export { useAudioRecorder } from './hooks/useAudioRecorder'
 export { useDeepgramWebSocket } from './hooks/useDeepgramWebSocket'
 export type { UseActiveElementReturn, UseAudioRecorderReturn, UseAudioRecorderOptions, UseDeepgramWebSocketReturn, UseDeepgramWebSocketOptions } from './components/VoiceTranscription'
+
+// Error handling
+export {
+  ErrorState,
+  type ErrorStateProps,
+} from './components/ErrorState'
+
+export {
+  logError,
+  createErrorLogger,
+  type ErrorSeverity,
+  type ErrorLogContext,
+  type ErrorLogPayload,
+} from './utils/errorLogger'
