@@ -9,171 +9,10 @@ import {
   ChevronUp,
   ExternalLink,
   AlertTriangle,
+  ListOrdered,
 } from 'lucide-react'
-
-interface TestScenario {
-  id: string
-  name: string
-  description: string
-  app: string
-  category: 'smoke' | 'integration' | 'e2e' | 'regression'
-  lastRun?: {
-    status: 'passed' | 'failed' | 'skipped' | 'running'
-    timestamp: string
-    duration?: number
-    error?: string
-  }
-  testFile?: string
-}
-
-// Static test scenarios data - in the future this could come from an API
-const TEST_SCENARIOS: TestScenario[] = [
-  // Define App
-  {
-    id: 'define-login',
-    name: 'User Login Flow',
-    description: 'Verify user can log in via Identity service and access Define dashboard',
-    app: 'Define',
-    category: 'smoke',
-    testFile: 'apps/define/frontend/e2e/login.spec.ts',
-  },
-  {
-    id: 'define-product-crud',
-    name: 'Product CRUD Operations',
-    description: 'Create, read, update, and delete products with requirements',
-    app: 'Define',
-    category: 'integration',
-    testFile: 'apps/define/backend/tests/test_products.py',
-  },
-  {
-    id: 'define-ai-import',
-    name: 'AI Requirements Import',
-    description: 'Import requirements from text, PDF, or images using AI',
-    app: 'Define',
-    category: 'e2e',
-  },
-  // Develop App
-  {
-    id: 'develop-walkthrough',
-    name: 'Create Visual Walkthrough',
-    description: 'Create a new walkthrough project with screenshots and annotations',
-    app: 'Develop',
-    category: 'e2e',
-    testFile: 'apps/develop/frontend/e2e/product-dropdown.spec.ts',
-  },
-  {
-    id: 'develop-job-queue',
-    name: 'Job Queue Processing',
-    description: 'Verify background jobs are queued and processed correctly',
-    app: 'Develop',
-    category: 'integration',
-    testFile: 'apps/develop/backend/tests/test_api.py',
-  },
-  // Manage App
-  {
-    id: 'manage-playbooks',
-    name: 'Playbook Execution',
-    description: 'Create and execute playbooks with task assignments',
-    app: 'Manage',
-    category: 'e2e',
-    testFile: 'apps/manage/frontend/e2e/playbooks.spec.ts',
-  },
-  {
-    id: 'manage-bot-workflow',
-    name: 'Bot Task Workflow',
-    description: 'Verify bots can process and complete assigned tasks',
-    app: 'Manage',
-    category: 'integration',
-    testFile: 'apps/manage/backend/tests/test_scenario_bot_workflow.py',
-  },
-  {
-    id: 'manage-queue-priority',
-    name: 'Queue Priority Ordering',
-    description: 'Tasks are processed in correct priority order',
-    app: 'Manage',
-    category: 'integration',
-  },
-  // Today App
-  {
-    id: 'today-dashboard',
-    name: 'Dashboard Load',
-    description: 'Dashboard displays tasks, stats, and recent activity',
-    app: 'Today',
-    category: 'smoke',
-    testFile: 'apps/today/frontend/e2e/dashboard.spec.ts',
-  },
-  {
-    id: 'today-task-crud',
-    name: 'Task CRUD Operations',
-    description: 'Create, complete, and manage daily tasks',
-    app: 'Today',
-    category: 'e2e',
-    testFile: 'apps/today/frontend/e2e/tasks.spec.ts',
-  },
-  {
-    id: 'today-production',
-    name: 'Production E2E Tests',
-    description: 'End-to-end tests against production environment',
-    app: 'Today',
-    category: 'e2e',
-    testFile: 'apps/today/frontend/e2e/production-e2e.spec.ts',
-  },
-  // Identity App
-  {
-    id: 'identity-auth',
-    name: 'Authentication Flow',
-    description: 'User registration, login, and session management',
-    app: 'Identity',
-    category: 'smoke',
-  },
-  {
-    id: 'identity-org-switch',
-    name: 'Organization Switching',
-    description: 'Users can switch between organizations they belong to',
-    app: 'Identity',
-    category: 'integration',
-  },
-  // Salon App
-  {
-    id: 'salon-comprehensive',
-    name: 'Comprehensive Salon Tests',
-    description: 'Full suite of salon management operations',
-    app: 'Salon',
-    category: 'e2e',
-    testFile: 'apps/salon/frontend/e2e/comprehensive.spec.ts',
-  },
-  {
-    id: 'salon-booking',
-    name: 'Appointment Booking',
-    description: 'Book, modify, and cancel salon appointments',
-    app: 'Salon',
-    category: 'integration',
-  },
-  // VibeTest App
-  {
-    id: 'vibetest-smoke',
-    name: 'VibeTest Smoke Tests',
-    description: 'Basic smoke tests for the testing platform',
-    app: 'VibeTest',
-    category: 'smoke',
-    testFile: 'apps/vibetest/e2e/tests/test_smoke.py',
-  },
-  // Cross-App
-  {
-    id: 'cross-app-theme',
-    name: 'Theme Synchronization',
-    description: 'Themes update correctly across all applications',
-    app: 'All Apps',
-    category: 'integration',
-  },
-  {
-    id: 'cross-app-auth',
-    name: 'Cross-App Authentication',
-    description: 'Single sign-on works across all Expertly applications',
-    app: 'All Apps',
-    category: 'e2e',
-  },
-]
+import { testScenariosApi } from '@/services/api'
+import type { TestScenario, TestScenarioStats, TestRunStatus, TestStepDefinition, TestStepResult } from '@/types/test_scenarios'
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
@@ -188,7 +27,7 @@ function formatDate(dateString: string): string {
   }) + ' EST'
 }
 
-function StatusBadge({ status }: { status: 'passed' | 'failed' | 'skipped' | 'running' | undefined }) {
+function StatusBadge({ status }: { status: TestRunStatus | undefined }) {
   if (!status) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
@@ -213,12 +52,28 @@ function StatusBadge({ status }: { status: 'passed' | 'failed' | 'skipped' | 'ru
   )
 }
 
+function StepStatusIcon({ status, isFailed }: { status?: TestRunStatus; isFailed?: boolean }) {
+  if (isFailed) {
+    return <XCircle className="w-4 h-4 text-red-500" />
+  }
+  if (status === 'passed') {
+    return <CheckCircle className="w-4 h-4 text-green-500" />
+  }
+  if (status === 'failed') {
+    return <XCircle className="w-4 h-4 text-red-500" />
+  }
+  if (status === 'running') {
+    return <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+  }
+  return <div className="w-4 h-4 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+}
+
 function CategoryBadge({ category }: { category: string }) {
   const colors: Record<string, string> = {
     smoke: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
     integration: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
     e2e: 'bg-primary-100 text-primary-800 dark:bg-primary-900/50 dark:text-primary-300',
-    regression: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300',
+    unit: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300',
   }
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${colors[category] || 'bg-gray-100 text-gray-800'}`}>
@@ -253,54 +108,148 @@ function StatCard({
   )
 }
 
+function StepsList({
+  steps,
+  stepResults,
+  failedStep
+}: {
+  steps: TestStepDefinition[] | null
+  stepResults: TestStepResult[] | null
+  failedStep: number | null
+}) {
+  if (!steps || steps.length === 0) {
+    return (
+      <p className="text-sm text-theme-text-muted italic">No step definitions available</p>
+    )
+  }
+
+  // Create a map of step results for quick lookup
+  const resultsMap = new Map<number, TestStepResult>()
+  if (stepResults) {
+    stepResults.forEach(sr => resultsMap.set(sr.step_number, sr))
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 text-sm font-medium text-theme-text-primary mb-3">
+        <ListOrdered className="w-4 h-4" />
+        Test Steps
+      </div>
+      <ol className="space-y-2">
+        {steps.map((step) => {
+          const result = resultsMap.get(step.step_number)
+          const isFailed = failedStep === step.step_number
+
+          return (
+            <li
+              key={step.step_number}
+              className={`flex items-start gap-3 p-2 rounded-lg ${
+                isFailed
+                  ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                  : 'bg-theme-bg-surface'
+              }`}
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                <StepStatusIcon status={result?.status} isFailed={isFailed} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-theme-text-muted">
+                    Step {step.step_number}
+                  </span>
+                  {result?.duration_ms && (
+                    <span className="text-xs text-theme-text-muted">
+                      ({(result.duration_ms / 1000).toFixed(2)}s)
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-theme-text-primary">
+                  {step.description}
+                </p>
+                {step.expected_outcome && (
+                  <p className="text-xs text-theme-text-secondary mt-0.5">
+                    Expected: {step.expected_outcome}
+                  </p>
+                )}
+                {result?.error && (
+                  <pre className="mt-1 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 p-2 rounded overflow-x-auto">
+                    {result.error}
+                  </pre>
+                )}
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
+  )
+}
+
 export function TestScenarios() {
-  const [scenarios, setScenarios] = useState<TestScenario[]>(TEST_SCENARIOS)
+  const [scenarios, setScenarios] = useState<TestScenario[]>([])
+  const [stats, setStats] = useState<TestScenarioStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [filterApp, setFilterApp] = useState<string>('')
   const [filterCategory, setFilterCategory] = useState<string>('')
   const [filterStatus, setFilterStatus] = useState<string>('')
+  const [apps, setApps] = useState<string[]>([])
+  const [categories, setCategories] = useState<string[]>([])
 
-  // Simulate fetching latest results (in future this could be from an API)
+  const fetchData = async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const [scenariosRes, statsRes, appsRes, categoriesRes] = await Promise.all([
+        testScenariosApi.list({
+          app_name: filterApp || undefined,
+          category: filterCategory as 'smoke' | 'integration' | 'e2e' | 'unit' | undefined,
+        }),
+        testScenariosApi.getStats(),
+        testScenariosApi.getApps(),
+        testScenariosApi.getCategories(),
+      ])
+      setScenarios(scenariosRes.scenarios)
+      setStats(statsRes)
+      setApps(appsRes)
+      setCategories(categoriesRes)
+    } catch (err) {
+      console.error('Failed to fetch test scenarios:', err)
+      setError('Failed to load test scenarios. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    // Add some mock last run data for demonstration
-    const scenariosWithResults = TEST_SCENARIOS.map(s => {
-      // Randomly assign some results for demo purposes
-      if (Math.random() > 0.3) {
-        const statuses: ('passed' | 'failed' | 'skipped')[] = ['passed', 'passed', 'passed', 'failed', 'skipped']
-        const status = statuses[Math.floor(Math.random() * statuses.length)]
-        return {
-          ...s,
-          lastRun: {
-            status,
-            timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            duration: Math.floor(Math.random() * 30000) + 1000,
-            error: status === 'failed' ? 'AssertionError: Expected element to be visible' : undefined,
-          },
-        }
-      }
-      return s
-    })
-    setScenarios(scenariosWithResults)
-  }, [])
+    fetchData()
+  }, [filterApp, filterCategory])
 
-  const apps = [...new Set(scenarios.map(s => s.app))]
-  const categories = [...new Set(scenarios.map(s => s.category))]
-
+  // Filter by status (client-side since it depends on latest_run)
   const filteredScenarios = scenarios.filter(s => {
-    if (filterApp && s.app !== filterApp) return false
-    if (filterCategory && s.category !== filterCategory) return false
     if (filterStatus) {
-      if (filterStatus === 'not-run' && s.lastRun) return false
-      if (filterStatus !== 'not-run' && s.lastRun?.status !== filterStatus) return false
+      const runStatus = s.latest_run?.status
+      if (filterStatus === 'not-run' && runStatus) return false
+      if (filterStatus !== 'not-run' && runStatus !== filterStatus) return false
     }
     return true
   })
 
-  const stats = {
-    total: scenarios.length,
-    passed: scenarios.filter(s => s.lastRun?.status === 'passed').length,
-    failed: scenarios.filter(s => s.lastRun?.status === 'failed').length,
-    notRun: scenarios.filter(s => !s.lastRun).length,
+  // Calculate stats from current scenarios
+  const displayStats = {
+    total: stats?.total_scenarios || 0,
+    passed: stats?.run_stats?.passed || 0,
+    failed: stats?.run_stats?.failed || 0,
+    notRun: (stats?.total_scenarios || 0) - Object.values(stats?.run_stats || {}).reduce((a, b) => a + b, 0),
+  }
+
+  if (loading && scenarios.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <RefreshCw className="w-8 h-8 animate-spin text-theme-text-muted" />
+      </div>
+    )
   }
 
   return (
@@ -314,37 +263,44 @@ export function TestScenarios() {
           </p>
         </div>
         <button
-          onClick={() => window.location.reload()}
-          className="flex items-center gap-2 px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg text-sm transition-colors"
+          onClick={fetchData}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg text-sm transition-colors disabled:opacity-50"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           Refresh
         </button>
       </div>
+
+      {error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-red-800 dark:text-red-200">
+          {error}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Total Scenarios"
-          value={stats.total}
+          value={displayStats.total}
           icon={FlaskConical}
           color="bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
         />
         <StatCard
           title="Passed"
-          value={stats.passed}
+          value={displayStats.passed}
           icon={CheckCircle}
           color="bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400"
         />
         <StatCard
           title="Failed"
-          value={stats.failed}
+          value={displayStats.failed}
           icon={XCircle}
           color="bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400"
         />
         <StatCard
           title="Not Run"
-          value={stats.notRun}
+          value={displayStats.notRun}
           icon={Clock}
           color="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
         />
@@ -414,7 +370,9 @@ export function TestScenarios() {
         {filteredScenarios.length === 0 ? (
           <div className="p-8 text-center text-theme-text-muted">
             <FlaskConical className="w-8 h-8 mx-auto mb-2" />
-            No scenarios found matching filters
+            {scenarios.length === 0
+              ? 'No test scenarios defined yet. Run the seed script to populate initial data.'
+              : 'No scenarios found matching filters'}
           </div>
         ) : (
           <div className="divide-y divide-theme-border">
@@ -425,21 +383,26 @@ export function TestScenarios() {
                   className="w-full px-4 py-3 flex items-center justify-between text-left"
                 >
                   <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <StatusBadge status={scenario.lastRun?.status} />
+                    <StatusBadge status={scenario.latest_run?.status} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-theme-text-primary truncate">
                         {scenario.name}
                       </p>
                       <p className="text-xs text-theme-text-muted truncate">
-                        {scenario.app} • {scenario.description}
+                        {scenario.app_name} {scenario.description && `• ${scenario.description}`}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <CategoryBadge category={scenario.category} />
-                    {scenario.lastRun && (
+                    {scenario.steps && (
                       <span className="text-xs text-theme-text-muted hidden sm:inline">
-                        {formatDate(scenario.lastRun.timestamp)}
+                        {scenario.steps.length} steps
+                      </span>
+                    )}
+                    {scenario.latest_run && (
+                      <span className="text-xs text-theme-text-muted hidden sm:inline">
+                        {formatDate(scenario.latest_run.created_at)}
                       </span>
                     )}
                     {expandedId === scenario.id ? (
@@ -451,20 +414,30 @@ export function TestScenarios() {
                 </button>
 
                 {expandedId === scenario.id && (
-                  <div className="px-4 pb-4 pt-0 space-y-3">
-                    <div className="bg-theme-bg-elevated rounded-lg p-3 ml-8">
-                      <p className="text-sm text-theme-text-secondary mb-2">
-                        {scenario.description}
-                      </p>
+                  <div className="px-4 pb-4 pt-0 space-y-4">
+                    <div className="bg-theme-bg-elevated rounded-lg p-4 ml-8">
+                      {scenario.description && (
+                        <p className="text-sm text-theme-text-secondary mb-4">
+                          {scenario.description}
+                        </p>
+                      )}
 
-                      {scenario.testFile && (
-                        <div className="flex items-center gap-2 text-xs text-theme-text-muted">
+                      {/* Steps List */}
+                      <StepsList
+                        steps={scenario.steps}
+                        stepResults={scenario.latest_run?.step_results || null}
+                        failedStep={scenario.latest_run?.failed_step || null}
+                      />
+
+                      {/* Test File Link */}
+                      {scenario.test_file && (
+                        <div className="flex items-center gap-2 text-xs text-theme-text-muted mt-4 pt-4 border-t border-theme-border">
                           <span>Test file:</span>
                           <code className="bg-theme-bg-surface px-1.5 py-0.5 rounded">
-                            {scenario.testFile}
+                            {scenario.test_file}
                           </code>
                           <a
-                            href={`https://github.com/david-wi/expertly-develop/blob/main/${scenario.testFile}`}
+                            href={`https://github.com/david-wi/expertly-develop/blob/main/${scenario.test_file}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-primary-600 hover:text-primary-700 inline-flex items-center gap-1"
@@ -474,22 +447,43 @@ export function TestScenarios() {
                         </div>
                       )}
 
-                      {scenario.lastRun && (
-                        <div className="mt-3 pt-3 border-t border-theme-border">
+                      {/* Last Run Info */}
+                      {scenario.latest_run && (
+                        <div className="mt-4 pt-4 border-t border-theme-border">
                           <div className="flex items-center gap-4 text-xs">
                             <span className="text-theme-text-muted">
-                              Last run: {formatDate(scenario.lastRun.timestamp)}
+                              Last run: {formatDate(scenario.latest_run.created_at)}
                             </span>
-                            {scenario.lastRun.duration && (
+                            {scenario.latest_run.duration_ms && (
                               <span className="text-theme-text-muted">
-                                Duration: {(scenario.lastRun.duration / 1000).toFixed(1)}s
+                                Duration: {(scenario.latest_run.duration_ms / 1000).toFixed(1)}s
+                              </span>
+                            )}
+                            {scenario.latest_run.environment && (
+                              <span className="text-theme-text-muted">
+                                Env: {scenario.latest_run.environment}
                               </span>
                             )}
                           </div>
-                          {scenario.lastRun.error && (
-                            <pre className="mt-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded overflow-x-auto">
-                              {scenario.lastRun.error}
-                            </pre>
+                          {scenario.latest_run.error_message && (
+                            <div className="mt-3">
+                              <p className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">
+                                Error at Step {scenario.latest_run.failed_step}:
+                              </p>
+                              <pre className="text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded overflow-x-auto">
+                                {scenario.latest_run.error_message}
+                              </pre>
+                            </div>
+                          )}
+                          {scenario.latest_run.error_stack && (
+                            <details className="mt-2">
+                              <summary className="text-xs text-theme-text-muted cursor-pointer hover:text-theme-text-secondary">
+                                Show stack trace
+                              </summary>
+                              <pre className="mt-1 text-xs text-theme-text-muted bg-theme-bg-surface p-2 rounded overflow-x-auto max-h-48">
+                                {scenario.latest_run.error_stack}
+                              </pre>
+                            </details>
                           )}
                         </div>
                       )}
@@ -504,7 +498,7 @@ export function TestScenarios() {
 
       {/* Footer note */}
       <p className="text-xs text-theme-text-muted text-center">
-        Test results are cached and may not reflect the latest run. Click Refresh to update.
+        Test results are updated when CI/CD reports runs via the API. Click Refresh to reload.
       </p>
     </div>
   )

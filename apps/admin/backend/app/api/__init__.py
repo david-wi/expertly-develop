@@ -11,6 +11,7 @@ from app.api.error_logs import router as error_logs_router
 from app.api.ai_config import router as ai_config_router
 from app.api.known_issues import router as known_issues_router
 from app.api.ideas import router as ideas_router
+from app.api.test_scenarios import router as test_scenarios_router
 
 api_router = APIRouter()
 api_router.include_router(themes_router, prefix="/themes", tags=["themes"])
@@ -22,3 +23,4 @@ api_router.include_router(error_logs_router, prefix="/error-logs", tags=["error-
 api_router.include_router(ai_config_router, prefix="/ai-config", tags=["ai-config"])
 api_router.include_router(known_issues_router, prefix="/known-issues", tags=["known-issues"])
 api_router.include_router(ideas_router, prefix="/ideas", tags=["ideas"])
+api_router.include_router(test_scenarios_router, prefix="/test-scenarios", tags=["test-scenarios"])

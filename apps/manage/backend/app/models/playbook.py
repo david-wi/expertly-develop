@@ -125,6 +125,12 @@ class Playbook(BaseModel):
     parent_id: Optional[str] = None  # ID of parent playbook/group
     order_index: int = 0  # Position among siblings
 
+    # Assignment defaults (for tasks using this playbook)
+    default_queue_id: Optional[str] = None  # Where assignments go by default
+    default_approver_type: Optional[str] = None  # "user", "team", "anyone"
+    default_approver_id: Optional[str] = None  # User or Team ID
+    default_approver_queue_id: Optional[str] = None  # Queue for approval tasks
+
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -146,6 +152,11 @@ class PlaybookCreate(BaseModel):
     scope_id: Optional[str] = None  # User or Team ID
     item_type: PlaybookItemType = PlaybookItemType.PLAYBOOK
     parent_id: Optional[str] = None
+    # Assignment defaults
+    default_queue_id: Optional[str] = None
+    default_approver_type: Optional[str] = None
+    default_approver_id: Optional[str] = None
+    default_approver_queue_id: Optional[str] = None
 
 
 class PlaybookUpdate(BaseModel):
@@ -158,6 +169,11 @@ class PlaybookUpdate(BaseModel):
     scope_id: Optional[str] = None
     is_active: Optional[bool] = None
     parent_id: Optional[str] = None
+    # Assignment defaults
+    default_queue_id: Optional[str] = None
+    default_approver_type: Optional[str] = None
+    default_approver_id: Optional[str] = None
+    default_approver_queue_id: Optional[str] = None
 
 
 class PlaybookReorderItem(BaseModel):

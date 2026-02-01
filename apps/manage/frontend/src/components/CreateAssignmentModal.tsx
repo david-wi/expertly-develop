@@ -10,6 +10,7 @@ import {
   CreateRecurringTaskRequest,
   RecurrenceType,
 } from '../services/api'
+import ApproverSelector, { ApproverType } from './ApproverSelector'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -56,6 +57,10 @@ interface FormState {
   scheduled_end_date: string
   scheduled_end_time: string
   schedule_timezone: string
+  // Approver fields
+  approver_type: 'user' | 'team' | 'anyone' | ''
+  approver_id: string
+  approver_queue_id: string
 }
 
 const initialFormState: FormState = {
@@ -77,6 +82,9 @@ const initialFormState: FormState = {
   scheduled_end_date: '',
   scheduled_end_time: '',
   schedule_timezone: '',
+  approver_type: '',
+  approver_id: '',
+  approver_queue_id: '',
 }
 
 export default function CreateAssignmentModal({
@@ -161,23 +169,25 @@ export default function CreateAssignmentModal({
     return playbooks.find((p) => (p.id || (p as { _id?: string })._id) === form.playbook_id)
   }, [playbooks, form.playbook_id])
 
-  // When playbook is selected, set default queue from first step if available
+  // When playbook is selected, set defaults from playbook's default fields
   const handlePlaybookSelect = (playbook: Playbook) => {
     const playbookId = playbook.id || (playbook as { _id?: string })._id || ''
-    let queueId = form.queue_id
 
-    // If playbook has steps with a queue_id, use the first one as default
-    if (playbook.steps && playbook.steps.length > 0) {
-      const firstStepWithQueue = playbook.steps.find((step) => step.queue_id)
-      if (firstStepWithQueue?.queue_id) {
-        queueId = firstStepWithQueue.queue_id
-      }
-    }
+    // Use playbook's default_queue_id if available, otherwise keep current
+    const queueId = playbook.default_queue_id || form.queue_id
+
+    // Use playbook's default approver settings if available
+    const approverType = playbook.default_approver_type || ''
+    const approverId = playbook.default_approver_id || ''
+    const approverQueueId = playbook.default_approver_queue_id || ''
 
     setForm((prev) => ({
       ...prev,
       playbook_id: playbookId,
       queue_id: queueId,
+      approver_type: approverType,
+      approver_id: approverId,
+      approver_queue_id: approverQueueId,
     }))
     setPlaybookSearch('')
     setShowPlaybookDropdown(false)
@@ -243,10 +253,16 @@ export default function CreateAssignmentModal({
           description: form.description.trim() || undefined,
           project_id: projectId,
           sop_id: form.playbook_id || undefined,
+          playbook_id: form.playbook_id || undefined,
           priority: form.priority,
           scheduled_start: buildScheduledStart(),
           scheduled_end: buildScheduledEnd(),
           schedule_timezone: form.schedule_timezone || undefined,
+          // Approver fields
+          approver_type: form.approver_type || undefined,
+          approver_id: form.approver_id || undefined,
+          approver_queue_id: form.approver_queue_id || undefined,
+          approval_required: !!form.approver_type,
         }
         await api.createTask(taskData)
       }
@@ -466,6 +482,33 @@ export default function CreateAssignmentModal({
               )}
             </div>
           </div>
+
+          {/* Approval Section */}
+          {!form.is_recurring && (
+            <div className="border-t pt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Approval Required
+                {selectedPlaybook?.default_approver_type && (
+                  <span className="ml-2 text-xs text-gray-500 font-normal">
+                    (from playbook defaults)
+                  </span>
+                )}
+              </label>
+              <ApproverSelector
+                approverType={(form.approver_type as ApproverType) || null}
+                approverId={form.approver_id || null}
+                approverQueueId={form.approver_queue_id || null}
+                onChange={(type, id, queueId) => {
+                  setForm({
+                    ...form,
+                    approver_type: type || '',
+                    approver_id: id || '',
+                    approver_queue_id: queueId || '',
+                  })
+                }}
+              />
+            </div>
+          )}
 
           {/* Scheduling Section */}
           <div className="border-t pt-4">
