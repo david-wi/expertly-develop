@@ -265,19 +265,23 @@ export function Sidebar({
                     )}
                     <a
                       href={product.href}
-                      className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                         product.code === productCode
                           ? `${activeBg} ${activeText}`
                           : `${textSecondary} ${hoverBg} hover:${textPrimary}`
                       }`}
                       onClick={() => setShowProductSwitcher(false)}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 border-2 transition-colors ${
                         product.separatorBefore
-                          ? 'bg-gradient-to-br from-gray-500 to-gray-700'
-                          : 'bg-gradient-to-br from-violet-500 to-purple-600'
+                          ? 'border-gray-300 bg-gray-50 group-hover:border-gray-400 group-hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:group-hover:border-gray-500 dark:group-hover:bg-gray-700'
+                          : 'border-gray-300 bg-gray-50 group-hover:border-violet-500 group-hover:bg-violet-100 dark:border-gray-600 dark:bg-gray-800 dark:group-hover:border-violet-400 dark:group-hover:bg-violet-900/50'
                       }`}>
-                        <product.icon className="w-4 h-4 text-white" />
+                        <product.icon className={`w-4 h-4 transition-colors ${
+                          product.separatorBefore
+                            ? 'text-gray-600 dark:text-gray-400'
+                            : 'text-gray-600 group-hover:text-violet-600 dark:text-gray-400 dark:group-hover:text-violet-400'
+                        }`} />
                       </div>
                       <div>
                         <p className="font-medium">{product.name}</p>
