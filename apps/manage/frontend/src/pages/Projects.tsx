@@ -725,7 +725,7 @@ export default function Projects() {
                   return (
                     <tr
                       key={projectId}
-                      className={`hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                      className={`group hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
                       onDragOver={(e) => handleDragOver(e, projectId)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
@@ -797,11 +797,44 @@ export default function Projects() {
                                 {getDescendantCount(node)} sub
                               </span>
                             )}
+                            {/* Hover action icons - appear inline with project name */}
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openCreateWithParent(project); }}
+                                className="text-green-600 hover:text-green-800 hover:bg-green-50 p-0.5 rounded transition-colors"
+                                title="Add Subproject"
+                                draggable={false}
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openEditModal(project); }}
+                                className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-0.5 rounded transition-colors"
+                                title="Edit"
+                                draggable={false}
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openDeleteConfirm(project); }}
+                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-0.5 rounded transition-colors"
+                                title="Delete"
+                                draggable={false}
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openCreateWithParent(project)}
                             className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
@@ -877,7 +910,7 @@ export default function Projects() {
                   return (
                     <tr
                       key={projectId}
-                      className={`hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                      className={`group hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
                       onDragOver={(e) => handleDragOver(e, projectId)}
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, projectId)}
@@ -924,6 +957,39 @@ export default function Projects() {
                                   {node.taskCount}
                                 </Link>
                               )}
+                              {/* Hover action icons - appear inline with project name */}
+                              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openCreateWithParent(project); }}
+                                  className="text-green-600 hover:text-green-800 hover:bg-green-50 p-0.5 rounded transition-colors"
+                                  title="Add Subproject"
+                                  draggable={false}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openEditModal(project); }}
+                                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50 p-0.5 rounded transition-colors"
+                                  title="Edit"
+                                  draggable={false}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                  </svg>
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); openDeleteConfirm(project); }}
+                                  className="text-red-600 hover:text-red-800 hover:bg-red-50 p-0.5 rounded transition-colors"
+                                  title="Delete"
+                                  draggable={false}
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
                             {/* Inline leaf subprojects as tags */}
                             {leafChildren.length > 0 && (
@@ -931,20 +997,39 @@ export default function Projects() {
                                 {leafChildren.map((leaf) => {
                                   const leafId = leaf.project._id || leaf.project.id
                                   return (
-                                    <Link
+                                    <span
                                       key={leafId}
-                                      to={`/projects/${leafId}`}
-                                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-                                      title={leaf.project.description || undefined}
-                                      draggable={false}
+                                      className="group/tag inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
                                     >
-                                      {leaf.project.name}
+                                      <Link
+                                        to={`/projects/${leafId}`}
+                                        title={leaf.project.description || undefined}
+                                        draggable={false}
+                                        className="hover:text-gray-900"
+                                      >
+                                        {leaf.project.name}
+                                      </Link>
                                       {leaf.taskCount > 0 && (
-                                        <span className="px-1 py-px text-[10px] bg-indigo-200 text-indigo-700 rounded">
+                                        <Link
+                                          to={`/tasks?project_id=${leafId}`}
+                                          className="px-1 py-px text-[10px] bg-indigo-200 text-indigo-700 rounded hover:bg-indigo-300"
+                                          title={`${leaf.taskCount} task${leaf.taskCount !== 1 ? 's' : ''}`}
+                                          draggable={false}
+                                        >
                                           {leaf.taskCount}
-                                        </span>
+                                        </Link>
                                       )}
-                                    </Link>
+                                      <button
+                                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); openCreateWithParent(leaf.project); }}
+                                        className="opacity-0 group-hover/tag:opacity-100 text-green-600 hover:text-green-800 transition-opacity"
+                                        title="Add Subproject"
+                                        draggable={false}
+                                      >
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                      </button>
+                                    </span>
                                   )
                                 })}
                               </div>
@@ -953,7 +1038,7 @@ export default function Projects() {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right align-top">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openCreateWithParent(project)}
                             className="text-green-600 hover:text-green-800 p-1 rounded hover:bg-green-50 transition-colors"
