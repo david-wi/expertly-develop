@@ -135,4 +135,57 @@ describe('nginx configuration', () => {
       expect(hasGzip).toBe(true)
     })
   })
+
+  describe('API proxy configuration', () => {
+    /**
+     * CRITICAL: When using variables in proxy_pass, nginx does NOT perform
+     * URI replacement like it does with static values.
+     *
+     * Example of BROKEN config (path gets truncated):
+     *   set $backend_host define-backend;
+     *   proxy_pass http://$backend_host:8000/api/;  # BAD: /api/v1/products -> /api/
+     *
+     * Example of CORRECT config (full path preserved):
+     *   set $backend_host define-backend;
+     *   proxy_pass http://$backend_host:8000;  # GOOD: /api/v1/products -> /api/v1/products
+     *
+     * When nginx sees a URI in proxy_pass (the /api/ part), it normally replaces
+     * the matched location with that URI. But with variables, this replacement
+     * doesn't happen, causing unexpected path truncation.
+     *
+     * See: PR #251 for the fix that resolved this issue in Expertly Define.
+     */
+    it.each(nginxConfigs)('%s should not use URI path with variable in proxy_pass (causes path truncation)', (configPath) => {
+      const fullPath = join(MONOREPO_ROOT, configPath)
+
+      if (!existsSync(fullPath)) {
+        throw new Error(`nginx.conf not found: ${fullPath}`)
+      }
+
+      const content = readFileSync(fullPath, 'utf-8')
+
+      // Find all proxy_pass directives that use variables
+      // This regex matches: proxy_pass http://$variable:port/path;
+      // where /path is any URI path (starts with /)
+      const variableProxyPassWithUri = /proxy_pass\s+https?:\/\/\$[^;]+:\d+\/[^;]+;/g
+      const matches = content.match(variableProxyPassWithUri)
+
+      // If there are matches, they're problematic
+      if (matches) {
+        // Filter out matches that are just trailing slashes with no real path
+        // e.g., http://$host:8000; is fine (no URI)
+        // e.g., http://$host:8000/api/; is problematic (has URI path)
+        const problematicMatches = matches.filter(m => {
+          // Extract the path part after port
+          const pathMatch = m.match(/:\d+(\/[^;]+)/)
+          if (!pathMatch) return false
+          const path = pathMatch[1]
+          // A single trailing slash is borderline, but any path like /api/ is bad
+          return path.length > 1
+        })
+
+        expect(problematicMatches).toEqual([])
+      }
+    })
+  })
 })
