@@ -167,6 +167,7 @@ function ServiceFormModal({
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
           placeholder="e.g., Haircut, Color, etc."
+          autoFocus
         />
         <Input
           label="Description"

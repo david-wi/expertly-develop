@@ -112,6 +112,7 @@ export function StaffDetailModal({ staff, isOpen, onClose, mode }: Props) {
                     value={formData.first_name}
                     onChange={(e) => handleInputChange('first_name', e.target.value)}
                     required
+                    autoFocus
                   />
                   <Input
                     label="Last Name"

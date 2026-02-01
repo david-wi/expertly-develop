@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { X } from 'lucide-react'
 import { widgetList } from './widgets/registry'
 import { useDashboardStore } from '../../stores/dashboardStore'
@@ -9,6 +10,18 @@ interface AddWidgetModalProps {
 
 export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
   const { widgets, addWidget } = useDashboardStore()
+
+  // Handle escape key
+  useEffect(() => {
+    if (!isOpen) return
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose()
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, onClose])
 
   if (!isOpen) return null
 
