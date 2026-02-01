@@ -274,14 +274,10 @@ export function Sidebar({
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         product.separatorBefore
-                          ? 'bg-gray-100 dark:bg-gray-800'
-                          : isDark ? 'bg-primary-900/50' : 'bg-primary-100'
+                          ? 'bg-gradient-to-br from-gray-500 to-gray-700'
+                          : 'bg-gradient-to-br from-violet-500 to-purple-600'
                       }`}>
-                        <product.icon className={`w-4 h-4 ${
-                          product.separatorBefore
-                            ? 'text-gray-600 dark:text-gray-400'
-                            : isDark ? 'text-primary-400' : 'text-primary-600'
-                        }`} />
+                        <product.icon className="w-4 h-4 text-white" />
                       </div>
                       <div>
                         <p className="font-medium">{product.name}</p>
