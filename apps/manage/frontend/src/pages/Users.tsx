@@ -441,6 +441,7 @@ export default function Users() {
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                   placeholder={formData.user_type === 'virtual' ? 'e.g., Research Bot' : 'e.g., John Smith'}
                   required
+                  autoFocus
                 />
               </div>
               <div>

@@ -419,6 +419,7 @@ export default function Backlog() {
               className="w-full border border-gray-300 rounded-md px-3 py-2"
               placeholder="e.g., Implement user authentication"
               required
+              autoFocus
             />
           </div>
           <div>

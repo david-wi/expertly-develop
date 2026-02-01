@@ -1046,6 +1046,7 @@ export default function Projects() {
               className="w-full border border-gray-300 rounded-md px-3 py-2"
               placeholder="e.g., Website Redesign"
               required
+              autoFocus
             />
           </div>
           <div>

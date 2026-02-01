@@ -331,6 +331,7 @@ function CreateIssueModal({
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               required
+              autoFocus
               className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="Brief description of the issue"
             />

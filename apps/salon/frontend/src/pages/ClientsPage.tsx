@@ -163,6 +163,7 @@ function CreateClientModal({
               setFormData({ ...formData, first_name: e.target.value })
             }
             required
+            autoFocus
           />
           <Input
             label="Last Name"
