@@ -51,3 +51,12 @@ body {
   background-color: var(--theme-bg-default);
   color: var(--theme-text-primary);
 }
+
+/* Product dropdown hover behavior:
+ * When any item in the dropdown is hovered, remove the active highlight
+ * from the current product (unless it's the one being hovered)
+ */
+.product-dropdown:has(a:hover) .product-item-active:not(:hover) {
+  background-color: transparent !important;
+  color: inherit !important;
+}

@@ -256,7 +256,7 @@ export function Sidebar({
               onClick={() => setShowProductSwitcher(false)}
             />
             <div className={`fixed left-0 top-14 w-72 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
-              <div className="group/dropdown p-2">
+              <div className="product-dropdown p-2">
                 <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
                 {EXPERTLY_PRODUCTS.map((product) => (
                   <div key={product.code}>
@@ -267,7 +267,7 @@ export function Sidebar({
                       href={product.href}
                       className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
                         product.code === productCode
-                          ? `${activeBg} ${activeText} group-has-[a:hover]/dropdown:[&:not(:hover)]:bg-transparent group-has-[a:hover]/dropdown:[&:not(:hover)]:text-inherit`
+                          ? `product-item-active ${activeBg} ${activeText}`
                           : `${textSecondary} hover:${activeBg} hover:${activeText}`
                       }`}
                       onClick={() => setShowProductSwitcher(false)}
