@@ -1,4 +1,16 @@
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronUp,
+  ClipboardList,
+  MousePointerClick,
+  Lock,
+  CheckSquare,
+  Scissors,
+  Calendar,
+  Code,
+  FlaskConical,
+  Settings,
+} from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
@@ -19,22 +31,22 @@ export interface ExpertlyProduct {
   name: string
   code: string
   href: string
-  icon: string
+  icon: ComponentType<{ className?: string }>
   description: string
   /** If true, renders a horizontal rule before this item */
   separatorBefore?: boolean
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
-  { name: 'Expertly Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: '📋', description: 'Requirements management' },
-  { name: 'Expertly Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: '🛠️', description: 'Visual walkthroughs' },
-  { name: 'Expertly Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: '🔐', description: 'Users & authentication' },
-  { name: 'Expertly Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: '📊', description: 'Task management' },
-  { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: '💇', description: 'Salon management' },
-  { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: '📅', description: 'Daily workflow' },
-  { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: '💻', description: 'AI coding assistant' },
-  { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: '🧪', description: 'AI testing platform' },
-  { name: 'Expertly Admin', code: 'admin', href: 'https://admin.ai.devintensive.com', icon: '⚙️', description: 'Platform administration', separatorBefore: true },
+  { name: 'Expertly Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: ClipboardList, description: 'Requirements management' },
+  { name: 'Expertly Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: MousePointerClick, description: 'Visual walkthroughs' },
+  { name: 'Expertly Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: Lock, description: 'Users & authentication' },
+  { name: 'Expertly Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
+  { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: Scissors, description: 'Salon management' },
+  { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: Calendar, description: 'Daily workflow' },
+  { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },
+  { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: FlaskConical, description: 'AI testing platform' },
+  { name: 'Expertly Admin', code: 'admin', href: 'https://admin.ai.devintensive.com', icon: Settings, description: 'Platform administration', separatorBefore: true },
 ]
 
 export type SupportedLanguage = 'en' | 'es'
@@ -260,8 +272,16 @@ export function Sidebar({
                       }`}
                       onClick={() => setShowProductSwitcher(false)}
                     >
-                      <div className="w-8 h-8 border-2 border-primary-500 rounded-lg flex items-center justify-center">
-                        <span>{product.icon}</span>
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        product.separatorBefore
+                          ? 'bg-gray-100 dark:bg-gray-800'
+                          : isDark ? 'bg-primary-900/50' : 'bg-primary-100'
+                      }`}>
+                        <product.icon className={`w-4 h-4 ${
+                          product.separatorBefore
+                            ? 'text-gray-600 dark:text-gray-400'
+                            : isDark ? 'text-primary-400' : 'text-primary-600'
+                        }`} />
                       </div>
                       <div>
                         <p className="font-medium">{product.name}</p>

@@ -49,11 +49,11 @@ describe('EXPERTLY_PRODUCTS', () => {
     })
   })
 
-  it('should have emoji icons', () => {
+  it('should have icon components', () => {
     EXPERTLY_PRODUCTS.forEach(product => {
       expect(product.icon).toBeTruthy()
-      // Basic check that it's a single emoji (may include variation selectors)
-      expect(product.icon.length).toBeLessThanOrEqual(4)
+      // Icons are Lucide React components (can be function or object with render method)
+      expect(['function', 'object'].includes(typeof product.icon)).toBe(true)
     })
   })
 
