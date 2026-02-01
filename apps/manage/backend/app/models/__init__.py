@@ -44,6 +44,10 @@ from app.models.bot_activity import (
 from app.models.document import (
     Document, DocumentCreate, DocumentUpdate, DocumentResponse, DocumentHistoryEntry
 )
+from app.models.step_response import (
+    TaskStepResponse, TaskStepResponseCreate, TaskStepResponseUpdate,
+    TaskStepResponseComplete, TaskStepResponseResponse, StepStatus
+)
 
 __all__ = [
     "PyObjectId",
@@ -147,4 +151,10 @@ __all__ = [
     "DocumentUpdate",
     "DocumentResponse",
     "DocumentHistoryEntry",
+    "TaskStepResponse",
+    "TaskStepResponseCreate",
+    "TaskStepResponseUpdate",
+    "TaskStepResponseComplete",
+    "TaskStepResponseResponse",
+    "StepStatus",
 ]

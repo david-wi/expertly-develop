@@ -34,6 +34,7 @@ def serialize_attachment(attachment: dict) -> dict:
         "task_id": str(attachment["task_id"]),
         "organization_id": str(attachment["organization_id"]),
         "attachment_type": attachment["attachment_type"],
+        "step_id": attachment.get("step_id"),
         "filename": attachment.get("filename"),
         "original_filename": attachment.get("original_filename"),
         "mime_type": attachment.get("mime_type"),
@@ -50,9 +51,17 @@ def serialize_attachment(attachment: dict) -> dict:
 @router.get("/tasks/{task_id}/attachments")
 async def list_task_attachments(
     task_id: str,
+    step_id: Optional[str] = None,
+    task_level_only: bool = False,
     current_user: User = Depends(get_current_user)
 ) -> list[dict]:
-    """List all attachments for a task."""
+    """List attachments for a task.
+
+    Args:
+        task_id: The task ID
+        step_id: If provided, only return attachments for this step
+        task_level_only: If true, only return task-level attachments (no step_id)
+    """
     db = get_database()
 
     if not ObjectId.is_valid(task_id):
@@ -66,10 +75,17 @@ async def list_task_attachments(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    cursor = db.task_attachments.find({
+    query = {
         "task_id": ObjectId(task_id),
         "deleted_at": None
-    }).sort("created_at", -1)
+    }
+
+    if step_id:
+        query["step_id"] = step_id
+    elif task_level_only:
+        query["step_id"] = None
+
+    cursor = db.task_attachments.find(query).sort("created_at", -1)
 
     attachments = await cursor.to_list(100)
     return [serialize_attachment(a) for a in attachments]
@@ -80,9 +96,10 @@ async def upload_task_attachment(
     task_id: str,
     file: UploadFile = File(...),
     note: Optional[str] = Form(None),
+    step_id: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Upload a file attachment to a task."""
+    """Upload a file attachment to a task (optionally to a specific step)."""
     db = get_database()
 
     if not ObjectId.is_valid(task_id):
@@ -115,6 +132,7 @@ async def upload_task_attachment(
         task_id=ObjectId(task_id),
         organization_id=current_user.organization_id,
         attachment_type=AttachmentType.FILE,
+        step_id=step_id,
         filename=unique_filename,
         original_filename=file.filename,
         mime_type=file.content_type,
@@ -135,7 +153,7 @@ async def add_task_link(
     data: TaskAttachmentCreate,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Add a link attachment to a task."""
+    """Add a link attachment to a task (optionally to a specific step)."""
     db = get_database()
 
     if not ObjectId.is_valid(task_id):
@@ -154,6 +172,7 @@ async def add_task_link(
         task_id=ObjectId(task_id),
         organization_id=current_user.organization_id,
         attachment_type=AttachmentType.LINK,
+        step_id=data.step_id,
         url=data.url,
         link_title=data.link_title,
         note=data.note,

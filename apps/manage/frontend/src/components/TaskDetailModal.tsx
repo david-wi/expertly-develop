@@ -28,6 +28,7 @@ import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequ
 import MarkdownEditor from './MarkdownEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
+import PlaybookStepExecutor from './PlaybookStepExecutor'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface TaskDetailModalProps {
@@ -442,6 +443,35 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
             <div className="p-4 text-red-600">{error}</div>
           ) : task ? (
             <div className="p-4 space-y-4">
+              {/* Playbook Step Executor - shown when task has playbook and is being worked on */}
+              {(() => {
+                const activePlaybook = task.sop_id ? playbooks.find(p => p.id === task.sop_id) : null
+                const isWorkingOnTask = task.status === 'checked_out' || task.status === 'in_progress'
+
+                if (activePlaybook && isWorkingOnTask && activePlaybook.steps?.length > 0) {
+                  return (
+                    <div className="mb-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-xs font-medium text-theme-text-secondary">Playbook:</span>
+                        <span className="text-sm font-medium text-theme-text-primary">{activePlaybook.name}</span>
+                      </div>
+                      <PlaybookStepExecutor
+                        taskId={taskId}
+                        playbook={activePlaybook}
+                        onStepComplete={() => {
+                          // Could show a notification or update UI
+                        }}
+                        onAllStepsComplete={() => {
+                          // Refresh task data when all steps complete
+                          fetchData()
+                        }}
+                      />
+                    </div>
+                  )
+                }
+                return null
+              })()}
+
               {/* Title and Priority */}
               <div className="flex gap-3">
                 <div className="flex-1">

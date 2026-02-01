@@ -7,6 +7,7 @@ from app.models import (
     Task, TaskCreate, TaskUpdate, TaskStatus, TaskPhase, VALID_PHASE_TRANSITIONS,
     TaskComplete, TaskFail,
     TaskProgressUpdate, TaskProgressUpdateCreate,
+    TaskStepResponse, StepStatus,
     User
 )
 from app.api.deps import get_current_user
@@ -192,7 +193,8 @@ async def checkout_task(
     task_id: str,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Check out a task for processing. Transitions: queued -> checked_out, phase: ready -> in_progress"""
+    """Check out a task for processing. Transitions: queued -> checked_out, phase: ready -> in_progress.
+    If task has a playbook (sop_id), initializes step responses for all steps."""
     db = get_database()
 
     if not ObjectId.is_valid(task_id):
@@ -229,6 +231,32 @@ async def checkout_task(
             raise HTTPException(status_code=404, detail="Task not found")
         if task["status"] != TaskStatus.QUEUED.value:
             raise HTTPException(status_code=400, detail=f"Task is {task['status']}, not queued")
+
+    # If task has a playbook (sop_id), initialize step responses
+    sop_id = result.get("sop_id")
+    if sop_id:
+        # Check if step responses already exist
+        existing_steps = await db.task_step_responses.count_documents({
+            "task_id": ObjectId(task_id)
+        })
+
+        if existing_steps == 0:
+            # Fetch the playbook to get steps
+            playbook = await db.playbooks.find_one({"_id": str(sop_id)})
+            if playbook and playbook.get("steps"):
+                step_responses = []
+                for step in playbook["steps"]:
+                    step_response = TaskStepResponse(
+                        task_id=ObjectId(task_id),
+                        organization_id=current_user.organization_id,
+                        step_id=step["id"],
+                        step_order=step["order"],
+                        status=StepStatus.PENDING,
+                    )
+                    step_responses.append(step_response.model_dump_mongo())
+
+                if step_responses:
+                    await db.task_step_responses.insert_many(step_responses)
 
     return serialize_task(result)
 

@@ -215,12 +215,18 @@ export const api = {
     }),
 
   // Task Attachments
-  getTaskAttachments: (taskId: string) =>
-    request<TaskAttachment[]>(`/api/v1/tasks/${taskId}/attachments`),
-  uploadTaskAttachment: async (taskId: string, file: File, note?: string) => {
+  getTaskAttachments: (taskId: string, params?: { step_id?: string; task_level_only?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.step_id) searchParams.set('step_id', params.step_id)
+    if (params?.task_level_only) searchParams.set('task_level_only', 'true')
+    const query = searchParams.toString()
+    return request<TaskAttachment[]>(`/api/v1/tasks/${taskId}/attachments${query ? `?${query}` : ''}`)
+  },
+  uploadTaskAttachment: async (taskId: string, file: File, note?: string, stepId?: string) => {
     const formData = new FormData()
     formData.append('file', file)
     if (note) formData.append('note', note)
+    if (stepId) formData.append('step_id', stepId)
 
     const response = await fetch(`${API_BASE}/api/v1/tasks/${taskId}/attachments/upload`, {
       method: 'POST',
@@ -253,6 +259,51 @@ export const api = {
     }),
   getAttachmentDownloadUrl: (attachmentId: string) =>
     `${API_BASE}/api/v1/attachments/${attachmentId}/download`,
+
+  // Step Responses
+  getStepResponses: (taskId: string) =>
+    request<StepResponse[]>(`/api/v1/tasks/${taskId}/steps`),
+  getStepResponse: (taskId: string, stepId: string) =>
+    request<StepResponse>(`/api/v1/tasks/${taskId}/steps/${stepId}`),
+  updateStepResponse: (taskId: string, stepId: string, data: UpdateStepResponseRequest) =>
+    request<StepResponse>(`/api/v1/tasks/${taskId}/steps/${stepId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  completeStep: (taskId: string, stepId: string, data?: CompleteStepRequest) =>
+    request<StepResponse>(`/api/v1/tasks/${taskId}/steps/${stepId}/complete`, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+    }),
+  skipStep: (taskId: string, stepId: string) =>
+    request<StepResponse>(`/api/v1/tasks/${taskId}/steps/${stepId}/skip`, {
+      method: 'POST',
+    }),
+  getStepAttachments: (taskId: string, stepId: string) =>
+    request<TaskAttachment[]>(`/api/v1/tasks/${taskId}/steps/${stepId}/attachments`),
+  uploadStepAttachment: async (taskId: string, stepId: string, file: File, note?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    if (note) formData.append('note', note)
+
+    const response = await fetch(`${API_BASE}/api/v1/tasks/${taskId}/steps/${stepId}/attachments/upload`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const returnUrl = encodeURIComponent(window.location.href)
+        window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`
+        throw new Error('Redirecting to login...')
+      }
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return response.json() as Promise<TaskAttachment>
+  },
 
   // Task Comments
   getTaskComments: (taskId: string) =>
@@ -1042,6 +1093,8 @@ export interface TaskAttachment {
   task_id: string
   organization_id: string
   attachment_type: AttachmentType
+  // Step association (optional)
+  step_id?: string
   // File fields
   filename?: string
   original_filename?: string
@@ -1060,6 +1113,35 @@ export interface CreateTaskLinkRequest {
   url: string
   link_title?: string
   note?: string
+  step_id?: string
+}
+
+// Step Response types
+export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'skipped'
+
+export interface StepResponse {
+  id: string
+  task_id: string
+  organization_id: string
+  step_id: string
+  step_order: number
+  status: StepStatus
+  notes?: string
+  output_data?: Record<string, unknown>
+  completed_by_id?: string
+  completed_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface UpdateStepResponseRequest {
+  notes?: string
+  output_data?: Record<string, unknown>
+}
+
+export interface CompleteStepRequest {
+  notes?: string
+  output_data?: Record<string, unknown>
 }
 
 // Task Comment types
