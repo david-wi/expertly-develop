@@ -1,14 +1,14 @@
 """Security utilities using Identity service for authentication."""
 
-from typing import Optional, Any
+from typing import Optional
 from fastapi import Depends, HTTPException, status, Request
-from bson import ObjectId
 
 from ..config import settings
 from .database import get_collection
 
 # Import from shared identity-client package
-from identity_client import IdentityClient, IdentityAuth, User as IdentityUser
+from identity_client import IdentityClient, IdentityAuth
+from identity_client.models import User as IdentityUser
 from identity_client.auth import get_session_token, SESSION_COOKIE_NAME, SESSION_HEADER_NAME
 
 
@@ -36,38 +36,55 @@ def get_identity_auth() -> IdentityAuth:
     return _identity_auth
 
 
-async def get_current_user(request: Request) -> dict:
+async def get_current_user(request: Request) -> IdentityUser:
     """
     Get current authenticated user from Identity session.
 
-    The user is returned as a dict with MongoDB-compatible fields for backward compatibility.
+    Returns IdentityUser directly from Identity service.
+    For salon-specific data (salon_id, staff_id), use get_salon_membership().
     """
     auth = get_identity_auth()
     identity_user = await auth.get_current_user(request)
 
-    # Map Identity user to local user representation
-    # Look up the user in our local users collection by email
-    users_collection = get_collection("users")
-    local_user = await users_collection.find_one({"email": identity_user.email.lower()})
+    if not identity_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
+        )
 
-    if local_user:
-        # Return local user data (includes salon_id, staff_id, etc.)
-        return local_user
+    return identity_user
 
-    # If no local user found, create a minimal representation
-    # This allows Identity-only users to access the system
-    return {
-        "_id": ObjectId(),  # Temporary ID
-        "email": identity_user.email,
-        "first_name": identity_user.name.split()[0] if identity_user.name else "",
-        "last_name": " ".join(identity_user.name.split()[1:]) if identity_user.name and len(identity_user.name.split()) > 1 else "",
-        "role": _map_identity_role(identity_user.role),
-        "salon_id": None,  # No salon association
-        "staff_id": None,
-        "is_active": identity_user.is_active,
-        "identity_user_id": identity_user.id,
-        "organization_id": identity_user.organization_id,
-    }
+
+async def get_current_user_optional(request: Request) -> Optional[IdentityUser]:
+    """Get current user if authenticated, None otherwise."""
+    auth = get_identity_auth()
+    identity_user = await auth.get_current_user_optional(request)
+
+    if identity_user and not identity_user.is_active:
+        return None
+
+    return identity_user
+
+
+async def get_salon_membership(identity_user: IdentityUser) -> Optional[dict]:
+    """
+    Get salon membership data for an Identity user.
+
+    Returns the salon-specific membership record (salon_id, staff_id, role)
+    or None if the user has no salon membership.
+    """
+    memberships = get_collection("salon_memberships")
+    membership = await memberships.find_one({
+        "identity_user_id": identity_user.id
+    })
+    return membership
+
+
+async def get_current_active_user(
+    current_user: IdentityUser = Depends(get_current_user)
+) -> IdentityUser:
+    """Alias for get_current_user that ensures user is active."""
+    return current_user
 
 
 def _map_identity_role(identity_role: str) -> str:
@@ -75,54 +92,24 @@ def _map_identity_role(identity_role: str) -> str:
     role_mapping = {
         "owner": "owner",
         "admin": "admin",
-        "member": "manager",  # Default members to manager
+        "member": "manager",
         "viewer": "staff",
     }
     return role_mapping.get(identity_role, "staff")
 
 
-async def get_current_user_optional(request: Request) -> Optional[dict]:
-    """Get current user if authenticated, None otherwise."""
-    auth = get_identity_auth()
-    identity_user = await auth.get_current_user_optional(request)
-
-    if not identity_user:
-        return None
-
-    # Same logic as get_current_user
-    users_collection = get_collection("users")
-    local_user = await users_collection.find_one({"email": identity_user.email.lower()})
-
-    if local_user:
-        return local_user
-
-    return {
-        "_id": ObjectId(),
-        "email": identity_user.email,
-        "first_name": identity_user.name.split()[0] if identity_user.name else "",
-        "last_name": " ".join(identity_user.name.split()[1:]) if identity_user.name and len(identity_user.name.split()) > 1 else "",
-        "role": _map_identity_role(identity_user.role),
-        "salon_id": None,
-        "staff_id": None,
-        "is_active": identity_user.is_active,
-        "identity_user_id": identity_user.id,
-        "organization_id": identity_user.organization_id,
-    }
-
-
-async def get_current_active_user(
-    current_user: dict = Depends(get_current_user)
-) -> dict:
-    """Alias for get_current_user that ensures user is active."""
-    return current_user
-
-
 def require_role(*roles: str):
-    """Dependency factory that requires specific roles."""
-    async def role_checker(request: Request) -> dict:
+    """
+    Dependency factory that requires specific Identity roles.
+
+    Note: This checks Identity service roles, not salon membership roles.
+    For salon-specific role checks, use require_salon_role().
+    """
+    async def role_checker(request: Request) -> IdentityUser:
         current_user = await get_current_user(request)
-        user_role = current_user.get("role", "staff")
-        if user_role not in roles:
+        user_role = current_user.role
+        mapped_role = _map_identity_role(user_role)
+        if mapped_role not in roles and user_role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Required role: {', '.join(roles)}",
@@ -131,8 +118,38 @@ def require_role(*roles: str):
     return role_checker
 
 
-# Keep password utilities for local user management (staff accounts)
-# These are used when creating salon-specific user accounts
+def require_salon_role(*roles: str):
+    """
+    Dependency factory that requires specific salon membership roles.
+
+    Checks the user's role in their salon membership record.
+    """
+    async def role_checker(request: Request) -> dict:
+        current_user = await get_current_user(request)
+        membership = await get_salon_membership(current_user)
+
+        if not membership:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No salon membership found",
+            )
+
+        user_role = membership.get("role", "staff")
+        if user_role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Required role: {', '.join(roles)}",
+            )
+
+        # Return membership data with identity user info
+        return {
+            **membership,
+            "identity_user": current_user,
+        }
+    return role_checker
+
+
+# Password utilities for legacy support
 from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
