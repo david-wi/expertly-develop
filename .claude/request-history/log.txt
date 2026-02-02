@@ -56,3 +56,5 @@ Warns users before losing changes on modal close or page refresh.
 20260201 - Implement test scenarios enhancement: database-driven scenario definitions with plain-English step-by-step descriptions and real test result tracking. Created models, schemas, services, API endpoints, migration, seed data, frontend types, API client, and updated TestScenarios.tsx.
 20260201 - Added playbook assignment defaults (default_queue_id, default_approver_type, default_approver_id, default_approver_queue_id) to Playbook model and UI, and updated CreateAssignmentModal to use these defaults when selecting a playbook
 20260202 - Voice transcription not working in Manage - Fix encoding mismatch between frontend (WebM/Opus) and backend Deepgram config (linear16)
+20260202 - Migrated Today, Vibetest, Salon, Develop apps to use Identity service for all user management. Created PR #263.
+20260202 - Upgrade Deepgram model from nova-2 to nova-3 for better transcription accuracy (54% lower WER)
