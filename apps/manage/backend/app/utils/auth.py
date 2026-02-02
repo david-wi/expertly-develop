@@ -174,3 +174,46 @@ def require_role(*roles: str):
             )
         return user
     return role_checker
+
+
+async def get_user_by_api_key(api_key: str) -> Optional[IdentityUser]:
+    """
+    Get user by API key (for WebSocket authentication).
+
+    This is a wrapper around validate_api_key_with_identity for backwards compatibility.
+    """
+    settings = get_settings()
+    if not api_key.startswith(settings.api_key_prefix):
+        return None
+    return await validate_api_key_with_identity(api_key)
+
+
+async def get_default_user() -> Optional[IdentityUser]:
+    """
+    Get the default dev user from Identity service (for skip_auth mode).
+
+    Used by WebSocket authentication when SKIP_AUTH is enabled.
+    """
+    client = get_identity_client()
+    try:
+        import httpx
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.get(
+                f"{client.base_url}/api/v1/auth/dev-user",
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return IdentityUser(
+                    id=data["id"],
+                    organization_id=data["organization_id"],
+                    name=data["name"],
+                    email=data.get("email"),
+                    user_type=data.get("user_type", "human"),
+                    role=data.get("role", "member"),
+                    is_active=True,
+                    avatar_url=data.get("avatar_url"),
+                    organization_name=data.get("organization_name"),
+                )
+    except Exception:
+        pass
+    return None
