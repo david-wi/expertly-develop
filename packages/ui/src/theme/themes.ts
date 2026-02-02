@@ -186,7 +186,7 @@ export const themes: Record<ThemeId, Theme> = {
           textMuted: '#9ca3af',
           border: '#e5e7eb',
           textStrong: '#111827', // gray-900 - for product name
-          activeText: '#0d9488', // teal-600 - visible on white
+          activeText: '#0f766e', // teal-700 - better contrast on white (4.87:1)
           textHover: '#111827', // gray-900 - dark text on light hover bg
         },
       },
