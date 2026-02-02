@@ -40,8 +40,11 @@ function ThemeCard({ theme }: { theme: Theme }) {
       <div className="p-4">
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-semibold text-theme-text-primary group-hover:text-primary-600 transition-colors">
-              {theme.name}
+            <h3
+              className="font-semibold text-theme-text-primary transition-colors"
+              style={{ '--hover-color': primaryColors?.['600'] || '#7c3aed' } as React.CSSProperties}
+            >
+              <span className="group-hover:[color:var(--hover-color)]">{theme.name}</span>
             </h3>
             <p className="text-sm text-theme-text-muted">{theme.slug}</p>
           </div>

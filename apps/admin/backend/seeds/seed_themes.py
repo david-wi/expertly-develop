@@ -143,6 +143,72 @@ THEMES_DATA = [
             },
         },
     },
+    {
+        "name": "Emerald",
+        "slug": "emerald",
+        "description": "Fresh green theme - professional and vibrant",
+        "is_default": False,
+        "colors": {
+            "light": {
+                "primary": {
+                    "50": "#f0fdf4",
+                    "100": "#dcfce7",
+                    "200": "#bbf7d0",
+                    "300": "#86efac",
+                    "400": "#4ade80",
+                    "500": "#22c55e",
+                    "600": "#16a34a",
+                    "700": "#15803d",
+                    "800": "#166534",
+                    "900": "#14532d",
+                    "950": "#052e16",
+                },
+                "background": {
+                    "default": "#f9fafb",
+                    "surface": "#ffffff",
+                    "elevated": "#ffffff",
+                },
+                "text": {
+                    "primary": "#111827",
+                    "secondary": "#4b5563",
+                    "muted": "#6b7280",
+                },
+                "border": {
+                    "default": "#e5e7eb",
+                    "subtle": "#f3f4f6",
+                },
+            },
+            "dark": {
+                "primary": {
+                    "50": "#f0fdf4",
+                    "100": "#dcfce7",
+                    "200": "#bbf7d0",
+                    "300": "#86efac",
+                    "400": "#4ade80",
+                    "500": "#22c55e",
+                    "600": "#16a34a",
+                    "700": "#15803d",
+                    "800": "#166534",
+                    "900": "#14532d",
+                    "950": "#052e16",
+                },
+                "background": {
+                    "default": "#111827",
+                    "surface": "#1f2937",
+                    "elevated": "#374151",
+                },
+                "text": {
+                    "primary": "#f9fafb",
+                    "secondary": "#9ca3af",
+                    "muted": "#6b7280",
+                },
+                "border": {
+                    "default": "#374151",
+                    "subtle": "#1f2937",
+                },
+            },
+        },
+    },
 ]
 
 

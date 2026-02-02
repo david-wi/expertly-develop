@@ -1,6 +1,6 @@
 // Theme definitions for Expertly apps
 
-export type ThemeId = 'violet' | 'ocean'
+export type ThemeId = 'violet' | 'ocean' | 'emerald'
 export type ThemeMode = 'light' | 'dark'
 
 export interface ThemeColors {
@@ -171,6 +171,70 @@ export const themes: Record<ThemeId, Theme> = {
         border: {
           default: '#334155', // slate-700
           subtle: '#1e293b', // slate-800
+        },
+      },
+    },
+  },
+  emerald: {
+    id: 'emerald',
+    name: 'Emerald',
+    colors: {
+      light: {
+        primary: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+          950: '#052e16',
+        },
+        background: {
+          default: '#f9fafb', // gray-50
+          surface: '#ffffff',
+          elevated: '#ffffff',
+        },
+        text: {
+          primary: '#111827', // gray-900
+          secondary: '#4b5563', // gray-600
+          muted: '#6b7280', // gray-500
+        },
+        border: {
+          default: '#e5e7eb', // gray-200
+          subtle: '#f3f4f6', // gray-100
+        },
+      },
+      dark: {
+        primary: {
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+          950: '#052e16',
+        },
+        background: {
+          default: '#111827', // gray-900
+          surface: '#1f2937', // gray-800
+          elevated: '#374151', // gray-700
+        },
+        text: {
+          primary: '#f9fafb', // gray-50
+          secondary: '#9ca3af', // gray-400
+          muted: '#6b7280', // gray-500
+        },
+        border: {
+          default: '#374151', // gray-700
+          subtle: '#1f2937', // gray-800
         },
       },
     },
