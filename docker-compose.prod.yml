@@ -511,3 +511,5 @@ volumes:
     external: true
     name: shared_define_uploads
   identity_uploads:
+    external: true
+    name: shared_identity_uploads
