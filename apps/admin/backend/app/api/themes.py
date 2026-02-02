@@ -33,14 +33,30 @@ async def list_themes(
     limit: int = Query(100, ge=1, le=100),
     service: ThemeService = Depends(get_theme_service),
 ):
-    """List all themes."""
+    """List all themes with their colors."""
     themes, total = await service.list_themes(
         include_inactive=include_inactive,
         skip=skip,
         limit=limit,
     )
+    # Build response with colors for each theme
+    theme_responses = []
+    for t in themes:
+        colors = t.get_current_snapshot()
+        theme_responses.append(ThemeResponse(
+            id=t.id,
+            name=t.name,
+            slug=t.slug,
+            description=t.description,
+            is_default=t.is_default,
+            is_active=t.is_active,
+            current_version=t.current_version,
+            colors=colors,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        ))
     return ThemeListResponse(
-        themes=[ThemeResponse.model_validate(t) for t in themes],
+        themes=theme_responses,
         total=total,
     )
 

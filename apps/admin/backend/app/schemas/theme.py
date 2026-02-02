@@ -101,6 +101,7 @@ class ThemeResponse(BaseModel):
     is_default: bool
     is_active: bool
     current_version: int
+    colors: Optional[dict] = None  # Include colors for display
     created_at: datetime
     updated_at: datetime
 
