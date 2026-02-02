@@ -25,11 +25,11 @@ class BotActivity(MongoModel):
 
     Used to monitor bot health, calculate statistics, and debug issues.
     """
-    organization_id: PyObjectId
-    bot_id: PyObjectId  # User ID of the bot
+    organization_id: str  # UUID from Identity service
+    bot_id: str  # User UUID from Identity service
 
     activity_type: BotActivityType
-    task_id: Optional[PyObjectId] = None  # Related task if applicable
+    task_id: Optional[PyObjectId] = None  # Related task - local MongoDB ObjectId
 
     # Performance metrics
     duration_seconds: Optional[int] = None  # Time taken for task completion

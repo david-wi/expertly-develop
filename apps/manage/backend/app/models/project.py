@@ -14,17 +14,17 @@ class ProjectStatus(str, Enum):
 
 class Project(MongoModel):
     """Project model - hierarchical containers for tasks."""
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     name: str
     description: Optional[str] = None
     status: ProjectStatus = ProjectStatus.ACTIVE
 
-    # Hierarchy
+    # Hierarchy - local MongoDB ObjectId
     parent_project_id: Optional[PyObjectId] = None
 
-    # Ownership
-    owner_user_id: Optional[PyObjectId] = None
-    team_id: Optional[PyObjectId] = None
+    # Ownership - UUIDs from Identity service
+    owner_user_id: Optional[str] = None
+    team_id: Optional[str] = None
 
 
 class ProjectCreate(BaseModel):

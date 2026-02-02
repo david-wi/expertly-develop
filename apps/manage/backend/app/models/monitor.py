@@ -88,13 +88,13 @@ class Monitor(MongoModel):
 
     Monitors can be user-scoped, team-scoped, or organization-wide (like playbooks).
     """
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     name: str
     description: Optional[str] = None
 
     # Scope (like playbooks and queues)
     scope_type: ScopeType = ScopeType.ORGANIZATION
-    scope_id: Optional[PyObjectId] = None  # User or Team ID (null = organization-wide)
+    scope_id: Optional[str] = None  # User or Team UUID from Identity (null = organization-wide)
 
     # Provider configuration
     provider: MonitorProvider
@@ -135,7 +135,7 @@ class MonitorEvent(MongoModel):
     """
     Tracks events detected by monitors for deduplication and audit trail.
     """
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     monitor_id: PyObjectId
 
     # Event identification

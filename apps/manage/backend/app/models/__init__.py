@@ -1,7 +1,20 @@
 from app.models.base import PyObjectId, MongoModel
-from app.models.organization import Organization, OrganizationCreate, OrganizationUpdate, OrganizationSettings
-from app.models.user import User, UserCreate, UserUpdate, UserType, UserRole
-from app.models.team import Team, TeamCreate, TeamUpdate
+
+# User, Organization, Team are now fetched from Identity service
+# Re-export from identity_client for backward compatibility
+from identity_client.models import User as IdentityUser
+from identity_client.models import Organization as IdentityOrganization
+from identity_client.models import Team as IdentityTeam
+
+# Alias for backward compatibility with existing imports
+User = IdentityUser
+Organization = IdentityOrganization
+Team = IdentityTeam
+
+# Keep local schemas for request/response formatting
+from app.models.user import UserCreate, UserUpdate, UserType, UserRole
+from app.models.organization import OrganizationCreate, OrganizationUpdate, OrganizationSettings
+from app.models.team import TeamCreate, TeamUpdate
 from app.models.queue import Queue, QueueCreate, QueueUpdate, QueueType, ScopeType
 from app.models.task import (
     Task, TaskCreate, TaskUpdate, TaskStatus, TaskPhase, VALID_PHASE_TRANSITIONS,

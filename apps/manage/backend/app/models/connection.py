@@ -26,8 +26,8 @@ class Connection(MongoModel):
     User's OAuth connection to an external service.
     Stores encrypted tokens for accessing external APIs.
     """
-    user_id: PyObjectId
-    organization_id: PyObjectId
+    user_id: str  # UUID from Identity service
+    organization_id: str  # UUID from Identity service
     provider: ConnectionProvider
     provider_user_id: Optional[str] = None
     provider_email: Optional[str] = None

@@ -46,7 +46,7 @@ VALID_PHASE_TRANSITIONS: dict[TaskPhase, list[TaskPhase]] = {
 
 class Task(MongoModel):
     """Task model - work items in queues."""
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     queue_id: PyObjectId
     title: str
     description: Optional[str] = None
@@ -54,20 +54,20 @@ class Task(MongoModel):
     phase: TaskPhase = TaskPhase.PLANNING
     priority: int = 5  # 1-10, lower is higher priority
 
-    # Assignment
-    assigned_to_id: Optional[PyObjectId] = None
+    # Assignment - user IDs are UUIDs from Identity
+    assigned_to_id: Optional[str] = None
     checked_out_at: Optional[datetime] = None
-    checked_out_by_id: Optional[PyObjectId] = None
+    checked_out_by_id: Optional[str] = None
 
-    # Review assignment
-    reviewer_id: Optional[PyObjectId] = None
+    # Review assignment - user IDs are UUIDs from Identity
+    reviewer_id: Optional[str] = None
     review_requested_at: Optional[datetime] = None
 
-    # Hierarchy
+    # Hierarchy - local MongoDB ObjectIds
     parent_task_id: Optional[PyObjectId] = None
     project_id: Optional[PyObjectId] = None
 
-    # SOP reference
+    # SOP reference - local MongoDB ObjectId
     sop_id: Optional[PyObjectId] = None
     current_step: Optional[int] = None
 
@@ -87,7 +87,7 @@ class Task(MongoModel):
 
     # Approval assignment
     approver_type: Optional[str] = None  # "user", "team", "anyone"
-    approver_id: Optional[PyObjectId] = None  # User or Team ID
+    approver_id: Optional[str] = None  # User or Team UUID from Identity
     approver_queue_id: Optional[PyObjectId] = None  # Queue where approval task goes
     approval_required: bool = False
 
@@ -171,7 +171,7 @@ class RecurrenceType(str, Enum):
 
 class RecurringTask(MongoModel):
     """Recurring task template - creates tasks on a schedule."""
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     queue_id: PyObjectId
     title: str
     description: Optional[str] = None

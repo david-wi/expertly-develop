@@ -17,7 +17,7 @@ class StepStatus(str, Enum):
 class TaskStepResponse(MongoModel):
     """Per-step response for playbook execution on a task."""
     task_id: PyObjectId
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     step_id: str  # UUID from PlaybookStep
     step_order: int  # For ordering display
     status: StepStatus = StepStatus.PENDING
@@ -27,7 +27,7 @@ class TaskStepResponse(MongoModel):
     output_data: Optional[dict[str, Any]] = None  # Structured output data
 
     # Completion tracking
-    completed_by_id: Optional[PyObjectId] = None
+    completed_by_id: Optional[str] = None  # UUID from Identity service
     completed_at: Optional[datetime] = None
 
 

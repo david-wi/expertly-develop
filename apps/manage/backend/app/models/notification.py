@@ -25,8 +25,8 @@ class Notification(MongoModel):
     Notifications are created when events occur that users should be alerted about,
     such as task assignments, completions, or approval requests.
     """
-    organization_id: PyObjectId
-    user_id: PyObjectId  # Recipient of the notification
+    organization_id: str  # UUID from Identity service
+    user_id: str  # UUID from Identity service - Recipient of the notification
 
     # Notification content
     notification_type: NotificationType
@@ -35,7 +35,7 @@ class Notification(MongoModel):
 
     # Related entities
     task_id: Optional[PyObjectId] = None
-    actor_id: Optional[PyObjectId] = None  # User who triggered the notification
+    actor_id: Optional[str] = None  # User UUID who triggered the notification
 
     # State
     read: bool = False

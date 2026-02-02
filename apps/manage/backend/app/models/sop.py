@@ -21,7 +21,7 @@ class SOPStep(BaseModel):
 
 class SOP(MongoModel):
     """Standard Operating Procedure - instructions for tasks."""
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     name: str
     description: Optional[str] = None
     sop_type: SOPType = SOPType.GENERAL

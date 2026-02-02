@@ -25,14 +25,14 @@ class BacklogCategory(str, Enum):
 
 class BacklogItem(MongoModel):
     """Backlog item model for tracking work items and ideas."""
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     title: str
     description: Optional[str] = None
     status: BacklogStatus = BacklogStatus.NEW
     priority: BacklogPriority = BacklogPriority.MEDIUM
     category: BacklogCategory = BacklogCategory.BACKLOG
     tags: List[str] = []
-    created_by: Optional[PyObjectId] = None
+    created_by: Optional[str] = None  # UUID from Identity service
 
 
 class BacklogItemCreate(BaseModel):
