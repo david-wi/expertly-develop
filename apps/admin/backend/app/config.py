@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
 
+    # CORS
+    cors_origins: str = "https://admin.ai.devintensive.com,http://localhost:5173,http://localhost:3000"
+
     # Identity service
     identity_api_url: str = "https://identity-api.ai.devintensive.com"
     skip_auth: bool = False
