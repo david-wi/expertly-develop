@@ -32,6 +32,8 @@ module.exports = {
         'theme-sidebar-text': 'var(--theme-sidebar-text)',
         'theme-sidebar-text-muted': 'var(--theme-sidebar-text-muted)',
         'theme-sidebar-border': 'var(--theme-sidebar-border)',
+        'theme-sidebar-text-strong': 'var(--theme-sidebar-text-strong)',
+        'theme-sidebar-active-text': 'var(--theme-sidebar-active-text)',
       },
       backgroundColor: {
         'theme-bg': 'var(--theme-bg-default)',
@@ -46,6 +48,8 @@ module.exports = {
         'theme-text-muted': 'var(--theme-text-muted)',
         'theme-sidebar-text': 'var(--theme-sidebar-text)',
         'theme-sidebar-text-muted': 'var(--theme-sidebar-text-muted)',
+        'theme-sidebar-text-strong': 'var(--theme-sidebar-text-strong)',
+        'theme-sidebar-active-text': 'var(--theme-sidebar-active-text)',
       },
       borderColor: {
         'theme-border': 'var(--theme-border-default)',
