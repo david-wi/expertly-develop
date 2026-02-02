@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import TestSuite, Project, User
+from app.models import TestSuite, Project
+from identity_client.models import User as IdentityUser
 from app.schemas import TestSuiteCreate, TestSuiteUpdate, TestSuiteResponse
 from app.api.deps import get_current_user
 
@@ -19,7 +20,7 @@ router = APIRouter()
 async def list_suites(
     project_id: str,
     type: Optional[str] = Query(None, pattern="^(smoke|regression|critical|custom)$"),
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List test suites for a project."""
@@ -49,7 +50,7 @@ async def list_suites(
 async def create_suite(
     project_id: str,
     suite_in: TestSuiteCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new test suite."""
@@ -88,7 +89,7 @@ async def create_suite(
 async def get_suite(
     project_id: str,
     suite_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a test suite by ID."""
@@ -121,7 +122,7 @@ async def update_suite(
     project_id: str,
     suite_id: str,
     suite_in: TestSuiteUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Update a test suite."""
@@ -163,7 +164,7 @@ async def update_suite(
 async def delete_suite(
     project_id: str,
     suite_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete a test suite."""

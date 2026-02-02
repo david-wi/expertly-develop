@@ -9,7 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import QuickStartSession, Project, Environment, TestCase, User
+from app.models import QuickStartSession, Project, Environment, TestCase
+from identity_client.models import User as IdentityUser
 from app.schemas import (
     QuickStartCreate,
     QuickStartResponse,
@@ -138,7 +139,7 @@ async def get_quick_start_status(
 async def save_as_project(
     session_id: str,
     name: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Save quick start results as a new project."""

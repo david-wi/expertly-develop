@@ -9,14 +9,11 @@ Identity service at https://identity.ai.devintensive.com. This module provides:
 Note: Login/logout/register are now handled by the Identity frontend.
 """
 
-from fastapi import APIRouter, Depends, Request
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Request
 
-from app.database import get_db
-from app.models import User
-from app.schemas.auth import UserResponse, OrganizationResponse
 from app.api.deps import get_current_user
 from app.config import get_settings
+from identity_client.models import User as IdentityUser
 
 router = APIRouter()
 settings = get_settings()
@@ -39,27 +36,20 @@ async def get_identity_urls():
     }
 
 
-@router.get("/me", response_model=UserResponse)
-async def get_current_user_info(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
+@router.get("/me")
+async def get_current_user_info(request: Request):
     """Get current user information from Identity session."""
-    current_user = await get_current_user(request, db)
+    current_user: IdentityUser = await get_current_user(request)
 
-    return UserResponse(
-        id=current_user.id,
-        email=current_user.email,
-        full_name=current_user.full_name,
-        role=current_user.role,
-        is_active=current_user.is_active,
-        is_verified=current_user.is_verified,
-        created_at=current_user.created_at,
-        organization=OrganizationResponse(
-            id=current_user.organization.id,
-            name=current_user.organization.name,
-            slug=current_user.organization.slug,
-            is_active=current_user.organization.is_active,
-            created_at=current_user.organization.created_at,
-        ),
-    )
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.name,
+        "role": current_user.role,
+        "is_active": current_user.is_active,
+        "is_verified": True,  # Identity users are always verified
+        "organization": {
+            "id": current_user.organization_id,
+            "name": current_user.organization_name or "Organization",
+        },
+    }

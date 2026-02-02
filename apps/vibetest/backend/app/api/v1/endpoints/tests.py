@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import TestCase, TestCaseHistory, Project, User
+from app.models import TestCase, TestCaseHistory, Project
+from identity_client.models import User as IdentityUser
 from app.schemas import TestCaseCreate, TestCaseUpdate, TestCaseResponse
 from app.api.deps import get_current_user, get_project_with_access
 
@@ -23,7 +24,7 @@ async def list_tests(
     execution_type: Optional[str] = Query(None, pattern="^(manual|browser|api|visual)$"),
     tag: Optional[str] = None,
     search: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List test cases for a project."""
@@ -77,7 +78,7 @@ async def list_tests(
 async def create_test(
     project_id: str,
     test_in: TestCaseCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new test case."""
@@ -124,7 +125,7 @@ async def create_test(
 async def get_test(
     project_id: str,
     test_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a test case by ID."""
@@ -160,7 +161,7 @@ async def update_test(
     project_id: str,
     test_id: str,
     test_in: TestCaseUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Update a test case."""
@@ -235,7 +236,7 @@ async def update_test(
 async def delete_test(
     project_id: str,
     test_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Soft-delete a test case."""
@@ -288,7 +289,7 @@ async def delete_test(
 async def approve_test(
     project_id: str,
     test_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Approve a test case."""

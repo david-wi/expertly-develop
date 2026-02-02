@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import User, Project, Organization
+from app.models import Project
 from app.config import get_settings
 
 # Import from shared identity-client package
@@ -40,70 +40,25 @@ def get_identity_auth() -> IdentityAuth:
     return _identity_auth
 
 
-async def get_current_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-) -> User:
+async def get_current_user(request: Request) -> IdentityUser:
     """Get the current authenticated user from Identity session.
 
+    Returns IdentityUser directly from Identity service.
     Raises HTTPException 401 if not authenticated.
     """
     auth = get_identity_auth()
     identity_user = await auth.get_current_user(request)
 
-    # Look up local user by email
-    stmt = select(User).where(
-        User.email == identity_user.email,
-        User.deleted_at.is_(None)
-    )
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-
-    if user:
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="User account is disabled",
-            )
-        return user
-
-    # If no local user exists, create one linked to this Identity user
-    # First, ensure the organization exists
-    org_stmt = select(Organization).where(Organization.id == identity_user.organization_id)
-    org_result = await db.execute(org_stmt)
-    org = org_result.scalar_one_or_none()
-
-    if not org:
-        # Create organization from Identity
-        org = Organization(
-            id=identity_user.organization_id,
-            name=identity_user.organization_name or "Default Organization",
-            slug=identity_user.organization_id[:8],  # Use first 8 chars of UUID as slug
-            is_active=True,
+    if not identity_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
         )
-        db.add(org)
 
-    # Create local shadow user linked to Identity
-    user = User(
-        id=identity_user.id,
-        organization_id=identity_user.organization_id,
-        email=identity_user.email,
-        full_name=identity_user.name,
-        role=identity_user.role,
-        is_active=identity_user.is_active,
-        is_verified=True,  # Identity users are already verified
-    )
-    db.add(user)
-    await db.flush()
-    await db.refresh(user)
-
-    return user
+    return identity_user
 
 
-async def get_optional_user(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-) -> Optional[User]:
+async def get_optional_user(request: Request) -> Optional[IdentityUser]:
     """Get the current user if authenticated, None otherwise.
 
     For endpoints that work with or without authentication.
@@ -111,19 +66,10 @@ async def get_optional_user(
     auth = get_identity_auth()
     identity_user = await auth.get_current_user_optional(request)
 
-    if not identity_user:
+    if identity_user and not identity_user.is_active:
         return None
 
-    # Look up local user by email
-    stmt = select(User).where(
-        User.email == identity_user.email,
-        User.deleted_at.is_(None),
-        User.is_active == True
-    )
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-
-    return user
+    return identity_user
 
 
 def require_role(*allowed_roles: str):
@@ -131,14 +77,11 @@ def require_role(*allowed_roles: str):
 
     Usage:
         @router.post("/admin-action")
-        async def admin_action(user: User = Depends(require_role("owner", "admin"))):
+        async def admin_action(user: IdentityUser = Depends(require_role("owner", "admin"))):
             ...
     """
-    async def role_checker(
-        request: Request,
-        db: AsyncSession = Depends(get_db),
-    ) -> User:
-        current_user = await get_current_user(request, db)
+    async def role_checker(request: Request) -> IdentityUser:
+        current_user = await get_current_user(request)
         if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -158,7 +101,7 @@ async def get_project_with_access(
 
     The project must belong to the user's organization.
     """
-    current_user = await get_current_user(request, db)
+    current_user = await get_current_user(request)
 
     stmt = select(Project).where(
         Project.id == project_id,
@@ -178,5 +121,5 @@ async def get_project_with_access(
 
 
 # Type aliases for cleaner dependency injection
-CurrentUser = Annotated[User, Depends(get_current_user)]
-OptionalUser = Annotated[Optional[User], Depends(get_optional_user)]
+CurrentUser = Annotated[IdentityUser, Depends(get_current_user)]
+OptionalUser = Annotated[Optional[IdentityUser], Depends(get_optional_user)]
