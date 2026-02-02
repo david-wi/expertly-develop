@@ -23,19 +23,15 @@ class Client(Base, TimestampMixin):
     __tablename__ = "clients"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     name = Column(String(255), nullable=False)
     status = Column(String(50), default=ClientStatus.ACTIVE, nullable=False)
     notes = Column(Text, nullable=True)
     metadata_ = Column("metadata", JSONB, default=dict, nullable=False)
 
-    # Relationships
-    tenant = relationship("Tenant")
+    # Relationships (Tenant now from Identity service)
     people = relationship("Person", back_populates="client")
     sales_opportunities = relationship("SalesOpportunity", back_populates="client")
 

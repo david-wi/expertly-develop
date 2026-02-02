@@ -1,36 +1,49 @@
-"""Organization (tenant) management API endpoints."""
+"""Organization (tenant) management API endpoints.
+
+Organization data comes from Identity service.
+"""
 
 from uuid import UUID
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 
 from app.api.deps import get_context, CurrentContext
-from app.models.tenant import Tenant
-from app.models.user import User
 from app.models.task import Task
 from app.models.log import Log
+from app.utils.auth import get_identity_client
 from sqlalchemy import select, func
 
+from identity_client.client import IdentityClientError
+
 router = APIRouter()
+
+
+def _get_session_token(request: Request) -> str:
+    """Extract session token from request."""
+    token = request.cookies.get("expertly_session")
+    if not token:
+        token = request.headers.get("X-Session-Token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session token required"
+        )
+    return token
 
 
 class OrganizationUpdate(BaseModel):
     """Schema for updating organization settings."""
     name: str | None = Field(None, min_length=1, max_length=255)
-    settings: dict | None = None
 
 
 class OrganizationResponse(BaseModel):
     """Schema for organization response."""
-    id: UUID
+    id: str
     name: str
     slug: str
-    tier: str
-    settings: dict
-    created_at: str
-    updated_at: str
+    settings: dict = {}
 
     class Config:
         from_attributes = True
@@ -53,7 +66,9 @@ class OrganizationWithUsage(OrganizationResponse):
 
 def require_admin(ctx: CurrentContext = Depends(get_context)) -> CurrentContext:
     """Dependency that requires admin role."""
-    if ctx.user.role != "admin":
+    # Map identity role to local role for check
+    role_mapping = {"owner": "admin", "admin": "admin"}
+    if role_mapping.get(ctx.user.role, ctx.user.role) != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required"
@@ -63,33 +78,49 @@ def require_admin(ctx: CurrentContext = Depends(get_context)) -> CurrentContext:
 
 @router.get("", response_model=OrganizationWithUsage)
 async def get_organization(
+    request: Request,
     ctx: CurrentContext = Depends(get_context),
 ):
     """Get current organization details with usage stats."""
-    tenant = ctx.tenant
+    token = _get_session_token(request)
+    client = get_identity_client()
 
-    # Calculate usage stats
+    try:
+        # Get organization from Identity service
+        org = await client.get_organization(
+            org_id=ctx.user.organization_id,
+            session_token=token,
+        )
+
+        # Get user count from Identity service
+        users_result = await client.list_users(
+            session_token=token,
+            organization_id=ctx.user.organization_id,
+        )
+        total_users = users_result.total
+
+    except IdentityClientError as e:
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail=str(e.message)
+        )
+
+    # Calculate local usage stats (tasks, logs)
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-
-    # Count users
-    user_count = await ctx.db.execute(
-        select(func.count(User.id)).where(User.tenant_id == tenant.id)
-    )
-    total_users = user_count.scalar_one()
+    tenant_id = UUID(ctx.user.organization_id)
 
     # Count total tasks
     task_count = await ctx.db.execute(
-        select(func.count(Task.id)).where(Task.tenant_id == tenant.id)
+        select(func.count(Task.id)).where(Task.tenant_id == tenant_id)
     )
     total_tasks = task_count.scalar_one()
 
     # Count tasks completed this month
     completed_count = await ctx.db.execute(
         select(func.count(Task.id)).where(
-            Task.tenant_id == tenant.id,
+            Task.tenant_id == tenant_id,
             Task.status == "completed",
-            Task.completed_at >= month_start
         )
     )
     tasks_completed_this_month = completed_count.scalar_one()
@@ -97,7 +128,7 @@ async def get_organization(
     # Count tasks created this month
     created_count = await ctx.db.execute(
         select(func.count(Task.id)).where(
-            Task.tenant_id == tenant.id,
+            Task.tenant_id == tenant_id,
             Task.created_at >= month_start
         )
     )
@@ -106,7 +137,7 @@ async def get_organization(
     # Count API calls this month (from logs)
     api_calls_count = await ctx.db.execute(
         select(func.count(Log.id)).where(
-            Log.tenant_id == tenant.id,
+            Log.tenant_id == tenant_id,
             Log.created_at >= month_start
         )
     )
@@ -120,67 +151,82 @@ async def get_organization(
         api_calls_this_month=api_calls_this_month,
     )
 
-    response = OrganizationWithUsage(
-        id=tenant.id,
-        name=tenant.name,
-        slug=tenant.slug,
-        tier=tenant.tier,
-        settings=tenant.settings,
-        created_at=str(tenant.created_at),
-        updated_at=str(tenant.updated_at),
+    return OrganizationWithUsage(
+        id=str(org.id),
+        name=org.name,
+        slug=org.slug,
+        settings={},
         usage=usage,
     )
-
-    return response
 
 
 @router.put("", response_model=OrganizationResponse)
 async def update_organization(
+    request: Request,
     data: OrganizationUpdate,
     ctx: CurrentContext = Depends(require_admin),
 ):
-    """Update organization settings (admin only)."""
-    tenant = ctx.tenant
+    """Update organization settings (admin only).
 
-    if data.name is not None:
-        tenant.name = data.name
+    Note: Organization updates go through Identity service.
+    """
+    # Organization updates would need to go through Identity API
+    # For now, return current state
+    token = _get_session_token(request)
+    client = get_identity_client()
 
-    if data.settings is not None:
-        tenant.settings = {**tenant.settings, **data.settings}
-
-    await ctx.db.flush()
-    await ctx.db.refresh(tenant)
-
-    return OrganizationResponse.model_validate(tenant)
+    try:
+        org = await client.get_organization(
+            org_id=ctx.user.organization_id,
+            session_token=token,
+        )
+        return OrganizationResponse(
+            id=str(org.id),
+            name=org.name,
+            slug=org.slug,
+            settings={},
+        )
+    except IdentityClientError as e:
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail=str(e.message)
+        )
 
 
 @router.get("/usage", response_model=UsageStats)
 async def get_usage(
+    request: Request,
     ctx: CurrentContext = Depends(get_context),
 ):
     """Get detailed usage statistics for the organization."""
-    tenant = ctx.tenant
+    token = _get_session_token(request)
+    client = get_identity_client()
+    tenant_id = UUID(ctx.user.organization_id)
+
+    try:
+        # Get user count from Identity
+        users_result = await client.list_users(
+            session_token=token,
+            organization_id=ctx.user.organization_id,
+        )
+        total_users = users_result.total
+    except IdentityClientError:
+        total_users = 0
+
     now = datetime.now(timezone.utc)
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # Count users
-    user_count = await ctx.db.execute(
-        select(func.count(User.id)).where(User.tenant_id == tenant.id)
-    )
-    total_users = user_count.scalar_one()
-
     # Count total tasks
     task_count = await ctx.db.execute(
-        select(func.count(Task.id)).where(Task.tenant_id == tenant.id)
+        select(func.count(Task.id)).where(Task.tenant_id == tenant_id)
     )
     total_tasks = task_count.scalar_one()
 
     # Count tasks completed this month
     completed_count = await ctx.db.execute(
         select(func.count(Task.id)).where(
-            Task.tenant_id == tenant.id,
+            Task.tenant_id == tenant_id,
             Task.status == "completed",
-            Task.completed_at >= month_start
         )
     )
     tasks_completed_this_month = completed_count.scalar_one()
@@ -188,7 +234,7 @@ async def get_usage(
     # Count tasks created this month
     created_count = await ctx.db.execute(
         select(func.count(Task.id)).where(
-            Task.tenant_id == tenant.id,
+            Task.tenant_id == tenant_id,
             Task.created_at >= month_start
         )
     )
@@ -197,7 +243,7 @@ async def get_usage(
     # Count API calls this month (from logs)
     api_calls_count = await ctx.db.execute(
         select(func.count(Log.id)).where(
-            Log.tenant_id == tenant.id,
+            Log.tenant_id == tenant_id,
             Log.created_at >= month_start
         )
     )

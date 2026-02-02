@@ -20,16 +20,10 @@ class Project(Base, TimestampMixin):
     __tablename__ = "projects"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
+    # Organization ID from Identity service (UUID string)
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # User ID from Identity service (UUID string)
+    user_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
@@ -54,8 +48,7 @@ class Project(Base, TimestampMixin):
 
     metadata_ = Column("metadata", JSONB, default=dict, nullable=False)
 
-    # Relationships
-    tenant = relationship("Tenant", back_populates="projects")
+    # Relationships (Tenant now comes from Identity service, not local table)
     tasks = relationship("Task", back_populates="project")
     parent = relationship("Project", remote_side=[id], backref="children")
 

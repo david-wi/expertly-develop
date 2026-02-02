@@ -265,6 +265,13 @@ USE_CASES_DATA = [
         "max_tokens": 4096,
         "temperature": 0.7,
     },
+    {
+        "use_case": "playbook_generation",
+        "description": "Generating playbook steps for Expertly Manage",
+        "model_id": "gpt-5.2-pro",  # Analytical - uses thinking
+        "max_tokens": 4096,
+        "temperature": 0.5,
+    },
 ]
 
 

@@ -23,11 +23,8 @@ class RecurringTask(Base, TimestampMixin):
     __tablename__ = "recurring_tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     # Template
     title = Column(String(500), nullable=False)
@@ -45,8 +42,7 @@ class RecurringTask(Base, TimestampMixin):
     # Control
     active = Column(Boolean, default=True, nullable=False)
 
-    # Relationships
-    tenant = relationship("Tenant")
+    # Tenant now comes from Identity service
 
     def __repr__(self) -> str:
         return f"<RecurringTask {self.title} ({self.frequency})>"
