@@ -4,10 +4,11 @@ Authentication endpoints using Identity service.
 Most authentication operations (login, logout, password reset) are handled by the
 Identity service at https://identity.ai.devintensive.com. This module provides:
 - Session validation endpoint (/auth/me)
-- User management endpoints for staff (list, create, update, delete)
+- User management endpoints for salon-specific user records
 - Identity redirect URLs
 
 Note: Login/logout are now handled by the Identity frontend.
+Authentication is via Identity service; this module manages salon-specific user data.
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, Request
@@ -15,7 +16,6 @@ from bson import ObjectId
 
 from ...core.database import get_collection
 from ...core.security import (
-    get_password_hash,
     get_current_user,
     require_role,
 )
@@ -131,16 +131,18 @@ async def create_user(
             detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}",
         )
 
-    # Create user (password is stored but not used for auth - Identity handles that)
+    # Create salon-specific user record (auth is via Identity service)
     user_data = {
         "email": data.email.lower(),
-        "password_hash": get_password_hash(data.password),  # Kept for legacy support
         "first_name": data.first_name,
         "last_name": data.last_name,
         "salon_id": current_user["salon_id"],
         "role": data.role,
         "staff_id": ObjectId(data.staff_id) if data.staff_id else None,
         "is_active": True,
+        # Identity fields will be set when user logs in via Identity
+        "identity_user_id": None,
+        "organization_id": current_user.get("organization_id"),
     }
 
     result = await users.insert_one(user_data)

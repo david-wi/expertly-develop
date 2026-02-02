@@ -266,14 +266,13 @@ class IdentityClient:
             UserListResponse with items and total count.
         """
         client = await self._get_client()
-        params = {}
+        headers = self._headers(session_token)
         if organization_id:
-            params["organization_id"] = organization_id
+            headers["X-Organization-Id"] = organization_id
 
         response = await client.get(
             "/api/v1/users",
-            headers=self._headers(session_token),
-            params=params,
+            headers=headers,
         )
         response.raise_for_status()
         data = response.json()
@@ -285,6 +284,180 @@ class IdentityClient:
             items=[User(**u) for u in data.get("items", [])],
             total=data.get("total", 0),
         )
+
+    async def create_user(
+        self,
+        session_token: str,
+        organization_id: str,
+        name: str,
+        email: Optional[str] = None,
+        role: str = "member",
+        user_type: str = "human",
+        avatar_url: Optional[str] = None,
+        title: Optional[str] = None,
+        responsibilities: Optional[str] = None,
+    ) -> User:
+        """
+        Create a new user in the organization.
+
+        Args:
+            session_token: Session token for authentication.
+            organization_id: Organization ID.
+            name: User's display name.
+            email: User's email (required for human users).
+            role: User role (owner, admin, member, viewer).
+            user_type: User type (human, bot).
+            avatar_url: Optional avatar URL.
+            title: Optional job title.
+            responsibilities: Optional responsibilities description.
+
+        Returns:
+            Created User object.
+        """
+        client = await self._get_client()
+        headers = self._headers(session_token)
+        headers["X-Organization-Id"] = organization_id
+
+        payload = {
+            "name": name,
+            "role": role,
+            "user_type": user_type,
+        }
+        if email:
+            payload["email"] = email
+        if avatar_url:
+            payload["avatar_url"] = avatar_url
+        if title:
+            payload["title"] = title
+        if responsibilities:
+            payload["responsibilities"] = responsibilities
+
+        response = await client.post(
+            "/api/v1/users",
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        data = response.json()
+        # Handle wrapped response
+        if "user" in data:
+            return User(**data["user"])
+        return User(**data)
+
+    async def update_user(
+        self,
+        user_id: str,
+        session_token: str,
+        organization_id: str,
+        name: Optional[str] = None,
+        email: Optional[str] = None,
+        role: Optional[str] = None,
+        is_active: Optional[bool] = None,
+        avatar_url: Optional[str] = None,
+        title: Optional[str] = None,
+        responsibilities: Optional[str] = None,
+    ) -> User:
+        """
+        Update a user.
+
+        Args:
+            user_id: The user ID to update.
+            session_token: Session token for authentication.
+            organization_id: Organization ID.
+            name: Optional new name.
+            email: Optional new email.
+            role: Optional new role.
+            is_active: Optional active status.
+            avatar_url: Optional avatar URL.
+            title: Optional job title.
+            responsibilities: Optional responsibilities.
+
+        Returns:
+            Updated User object.
+        """
+        client = await self._get_client()
+        headers = self._headers(session_token)
+        headers["X-Organization-Id"] = organization_id
+
+        payload = {}
+        if name is not None:
+            payload["name"] = name
+        if email is not None:
+            payload["email"] = email
+        if role is not None:
+            payload["role"] = role
+        if is_active is not None:
+            payload["is_active"] = is_active
+        if avatar_url is not None:
+            payload["avatar_url"] = avatar_url
+        if title is not None:
+            payload["title"] = title
+        if responsibilities is not None:
+            payload["responsibilities"] = responsibilities
+
+        response = await client.patch(
+            f"/api/v1/users/{user_id}",
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        return User(**response.json())
+
+    async def delete_user(
+        self,
+        user_id: str,
+        session_token: str,
+        organization_id: str,
+    ) -> bool:
+        """
+        Delete a user.
+
+        Args:
+            user_id: The user ID to delete.
+            session_token: Session token for authentication.
+            organization_id: Organization ID.
+
+        Returns:
+            True if successful.
+        """
+        client = await self._get_client()
+        headers = self._headers(session_token)
+        headers["X-Organization-Id"] = organization_id
+
+        response = await client.delete(
+            f"/api/v1/users/{user_id}",
+            headers=headers,
+        )
+        response.raise_for_status()
+        return True
+
+    async def regenerate_user_api_key(
+        self,
+        user_id: str,
+        session_token: str,
+        organization_id: str,
+    ) -> str:
+        """
+        Regenerate a user's API key.
+
+        Args:
+            user_id: The user ID.
+            session_token: Session token for authentication.
+            organization_id: Organization ID.
+
+        Returns:
+            The new API key.
+        """
+        client = await self._get_client()
+        headers = self._headers(session_token)
+        headers["X-Organization-Id"] = organization_id
+
+        response = await client.post(
+            f"/api/v1/users/{user_id}/regenerate-api-key",
+            headers=headers,
+        )
+        response.raise_for_status()
+        return response.json()["api_key"]
 
     # -------------------------------------------------------------------------
     # Organizations
