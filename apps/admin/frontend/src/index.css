@@ -33,6 +33,13 @@
   /* Border colors */
   --theme-border-default: #e5e7eb;
   --theme-border-subtle: #f3f4f6;
+
+  /* Sidebar colors - defaults match background (white sidebar) */
+  --theme-sidebar-bg: #ffffff;
+  --theme-sidebar-bg-hover: #f3f4f6;
+  --theme-sidebar-text: #4b5563;
+  --theme-sidebar-text-muted: #9ca3af;
+  --theme-sidebar-border: #e5e7eb;
 }
 
 /* Dark mode overrides */
@@ -47,6 +54,13 @@
 
   --theme-border-default: #374151;
   --theme-border-subtle: #1f2937;
+
+  /* Sidebar colors for dark mode */
+  --theme-sidebar-bg: #1f2937;
+  --theme-sidebar-bg-hover: #374151;
+  --theme-sidebar-text: #9ca3af;
+  --theme-sidebar-text-muted: #6b7280;
+  --theme-sidebar-border: #374151;
 }
 
 /* Utility classes for theme colors */
@@ -73,6 +87,13 @@
 
   --color-theme-border: var(--theme-border-default);
   --color-theme-border-subtle: var(--theme-border-subtle);
+
+  /* Sidebar colors */
+  --color-theme-sidebar-bg: var(--theme-sidebar-bg);
+  --color-theme-sidebar-bg-hover: var(--theme-sidebar-bg-hover);
+  --color-theme-sidebar-text: var(--theme-sidebar-text);
+  --color-theme-sidebar-text-muted: var(--theme-sidebar-text-muted);
+  --color-theme-sidebar-border: var(--theme-sidebar-border);
 }
 
 /* Base styles */
