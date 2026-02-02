@@ -1,11 +1,6 @@
 import logging
-from bson import ObjectId
 
-from app.config import get_settings
 from app.database import get_database
-from app.models import Organization, OrganizationSettings, User, UserType, UserRole, Queue
-from app.models.queue import ScopeType
-from app.utils.auth import hash_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -18,94 +13,24 @@ async def ensure_indexes() -> None:
 
 async def seed_database() -> None:
     """
-    Seed the database with default data for development.
+    Seed the database with indexes and required data.
 
-    Creates:
-    - Default organization (David)
-    - Default user (David, owner)
-    - System queues (Inbox, Urgent, Follow-up) - organization-wide
+    Note: Users and organizations are managed by the Identity service.
+    System queues (Inbox, Approvals) are created on-demand when users
+    access the app, via the queue service.
     """
-    settings = get_settings()
     db = get_database()
 
     # Always ensure indexes exist (idempotent)
     await create_indexes(db)
 
-    # Check if already seeded
-    existing_org = await db.organizations.find_one({"is_default": True})
-    if existing_org:
-        logger.info("Database already seeded, skipping")
-        return
-
-    logger.info("Seeding database with default data...")
-
-    # Create default organization
-    org_id = ObjectId()
-    org = Organization(
-        id=org_id,
-        name=settings.default_org_name,
-        slug=settings.default_org_slug,
-        settings=OrganizationSettings(),
-        is_default=True
-    )
-    await db.organizations.insert_one(org.model_dump_mongo())
-    logger.info(f"Created default organization: {org.name} ({org.id})")
-
-    # Create default user
-    user_id = ObjectId()
-    user = User(
-        id=user_id,
-        organization_id=org_id,
-        email=settings.default_user_email,
-        name=settings.default_user_name,
-        user_type=UserType.HUMAN,
-        role=UserRole.OWNER,
-        is_default=True,
-        api_key_hash=hash_api_key(settings.default_api_key)
-    )
-    await db.users.insert_one(user.model_dump_mongo())
-    logger.info(f"Created default user: {user.name} ({user.id})")
-
-    # Create Inbox queue for David (user-scoped)
-    inbox_queue = Queue(
-        organization_id=org_id,
-        purpose="Inbox",
-        description="Default queue for incoming tasks",
-        scope_type=ScopeType.USER,
-        scope_id=user_id,
-        is_system=True,
-        system_type="inbox"
-    )
-    await db.queues.insert_one(inbox_queue.model_dump_mongo())
-    logger.info(f"Created Inbox queue for {user.name}")
-
-    # Create Approvals queue for David (user-scoped)
-    approvals_queue = Queue(
-        organization_id=org_id,
-        purpose="Approvals",
-        description="Queue for tasks requiring approval",
-        scope_type=ScopeType.USER,
-        scope_id=user_id,
-        is_system=True,
-        system_type="approvals"
-    )
-    await db.queues.insert_one(approvals_queue.model_dump_mongo())
-    logger.info(f"Created Approvals queue for {user.name}")
-
-    logger.info("Database seeding complete!")
-    logger.info(f"Default API key: {settings.default_api_key}")
+    logger.info("Database indexes created/verified.")
 
 
 async def create_indexes(db) -> None:
     """Create MongoDB indexes for performance."""
-    # Organizations
-    await db.organizations.create_index("slug", unique=True)
-    await db.organizations.create_index("is_default")
-
-    # Users
-    await db.users.create_index([("organization_id", 1), ("email", 1)], unique=True)
-    await db.users.create_index("api_key_hash")
-    await db.users.create_index("is_default")
+    # Note: Users and organizations are managed by Identity service.
+    # No local user/organization indexes needed.
 
     # Teams
     await db.teams.create_index("organization_id")

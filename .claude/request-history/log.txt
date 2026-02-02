@@ -61,3 +61,5 @@ Warns users before losing changes on modal close or page refresh.
 20260202 - Add playbook_generation use case to AI config for Manage app's AI Assist feature
 20260202 - Add Groq support to Manage AI service for playbook generation
 20260202 08:12:16 - Eliminate local users/tenants collections from Develop app - changed tenant_id to organization_id, removed shadow user creation, updated all API endpoints and services to use Identity service directly
+20260202: Fixed identity avatar images lost during blue-green deployments. Made identity_uploads volume external and shared. Created shared_identity_uploads volume on server and migrated all avatars from blue/green volumes.
+20260202 Continue Manage app migration to eliminate local User collection - update notifications, task_comments, notification_service, and seed to use Identity service

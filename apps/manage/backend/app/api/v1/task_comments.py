@@ -3,26 +3,21 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 
 from app.database import get_database
-from app.models import (
-    TaskComment, TaskCommentCreate, TaskCommentUpdate,
-    User
-)
+from app.models import TaskComment, TaskCommentCreate, TaskCommentUpdate
 from app.api.deps import get_current_user
+from identity_client.models import User as IdentityUser
 
 router = APIRouter()
 
 
-async def serialize_comment(comment: dict, db) -> dict:
-    """Convert ObjectIds to strings and populate user name."""
-    user = await db.users.find_one({"_id": comment["user_id"]})
-    user_name = user.get("name") if user else None
-
+def serialize_comment(comment: dict) -> dict:
+    """Convert ObjectIds to strings for response."""
     return {
         "id": str(comment["_id"]),
         "task_id": str(comment["task_id"]),
         "organization_id": str(comment["organization_id"]),
         "user_id": str(comment["user_id"]),
-        "user_name": user_name,
+        "user_name": comment.get("user_name"),  # Stored at creation time
         "content": comment["content"],
         "attachment_ids": comment.get("attachment_ids", []),
         "created_at": comment["created_at"],
@@ -33,7 +28,7 @@ async def serialize_comment(comment: dict, db) -> dict:
 @router.get("/tasks/{task_id}/comments")
 async def list_task_comments(
     task_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> list[dict]:
     """List all comments for a task (regardless of task status)."""
     db = get_database()
@@ -55,14 +50,14 @@ async def list_task_comments(
     }).sort("created_at", 1)  # Chronological order
 
     comments = await cursor.to_list(200)
-    return [await serialize_comment(c, db) for c in comments]
+    return [serialize_comment(c) for c in comments]
 
 
 @router.post("/tasks/{task_id}/comments", status_code=status.HTTP_201_CREATED)
 async def create_task_comment(
     task_id: str,
     data: TaskCommentCreate,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
     """Create a comment on a task."""
     db = get_database()
@@ -78,24 +73,25 @@ async def create_task_comment(
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    # Create comment
+    # Create comment with user_name stored for display
     comment = TaskComment(
         task_id=ObjectId(task_id),
         organization_id=current_user.organization_id,
         user_id=current_user.id,
+        user_name=current_user.name,  # Store name at creation time
         content=data.content,
         attachment_ids=data.attachment_ids,
     )
 
     await db.task_comments.insert_one(comment.model_dump_mongo())
 
-    return await serialize_comment(comment.model_dump_mongo(), db)
+    return serialize_comment(comment.model_dump_mongo())
 
 
 @router.get("/comments/{comment_id}")
 async def get_comment(
     comment_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
     """Get a specific comment."""
     db = get_database()
@@ -112,14 +108,14 @@ async def get_comment(
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
 
-    return await serialize_comment(comment, db)
+    return serialize_comment(comment)
 
 
 @router.patch("/comments/{comment_id}")
 async def update_comment(
     comment_id: str,
     data: TaskCommentUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
     """Update a comment. Only the author can update their comment."""
     db = get_database()
@@ -156,13 +152,13 @@ async def update_comment(
             raise HTTPException(status_code=404, detail="Comment not found")
         raise HTTPException(status_code=403, detail="You can only edit your own comments")
 
-    return await serialize_comment(result, db)
+    return serialize_comment(result)
 
 
 @router.delete("/comments/{comment_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_comment(
     comment_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ):
     """Delete a comment (soft delete). Only the author can delete their comment."""
     db = get_database()

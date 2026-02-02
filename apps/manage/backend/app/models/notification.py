@@ -36,6 +36,7 @@ class Notification(MongoModel):
     # Related entities
     task_id: Optional[PyObjectId] = None
     actor_id: Optional[str] = None  # User UUID who triggered the notification
+    actor_name: Optional[str] = None  # Stored at creation time for display
 
     # State
     read: bool = False
@@ -55,6 +56,7 @@ class NotificationCreate(BaseModel):
     message: str
     task_id: Optional[str] = None
     actor_id: Optional[str] = None
+    actor_name: Optional[str] = None  # Pass actor's name for storage
     action_url: Optional[str] = None
 
 

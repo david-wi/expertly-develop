@@ -21,26 +21,28 @@ class NotificationService:
 
     async def create_notification(
         self,
-        organization_id: ObjectId,
-        user_id: ObjectId,
+        organization_id: str,
+        user_id: str,
         notification_type: NotificationType,
         title: str,
         message: str,
         task_id: Optional[ObjectId] = None,
-        actor_id: Optional[ObjectId] = None,
+        actor_id: Optional[str] = None,
+        actor_name: Optional[str] = None,
         action_url: Optional[str] = None
     ) -> Notification:
         """
         Create a new notification.
 
         Args:
-            organization_id: Organization the notification belongs to
-            user_id: User to notify (recipient)
+            organization_id: Organization UUID from Identity service
+            user_id: User UUID to notify (recipient)
             notification_type: Type of notification
             title: Short title for the notification
             message: Detailed message
             task_id: Related task if applicable
-            actor_id: User who triggered the notification
+            actor_id: User UUID who triggered the notification
+            actor_name: Name of the actor (stored for display)
             action_url: URL to navigate to when clicked
 
         Returns:
@@ -54,6 +56,7 @@ class NotificationService:
             message=message,
             task_id=task_id,
             actor_id=actor_id,
+            actor_name=actor_name,
             action_url=action_url
         )
 
@@ -70,14 +73,16 @@ class NotificationService:
     async def notify_task_assigned(
         self,
         task: dict,
-        assigned_by_id: Optional[ObjectId] = None
+        assigned_by_id: Optional[str] = None,
+        assigned_by_name: Optional[str] = None
     ) -> Optional[Notification]:
         """
         Create a notification when a task is assigned to a user.
 
         Args:
             task: The task document
-            assigned_by_id: User who made the assignment (actor)
+            assigned_by_id: User UUID who made the assignment (actor)
+            assigned_by_name: Name of user who made the assignment
 
         Returns:
             The created notification or None if no assignee
@@ -98,20 +103,23 @@ class NotificationService:
             message=f"You've been assigned: {task.get('title', 'Untitled task')}",
             task_id=task["_id"],
             actor_id=assigned_by_id,
+            actor_name=assigned_by_name,
             action_url=f"/tasks?taskId={task['_id']}"
         )
 
     async def notify_approval_needed(
         self,
         task: dict,
-        requester_id: ObjectId
+        requester_id: str,
+        requester_name: Optional[str] = None
     ) -> Optional[Notification]:
         """
         Create a notification when a task requires approval.
 
         Args:
             task: The task document requiring approval
-            requester_id: User who is requesting approval
+            requester_id: User UUID who is requesting approval
+            requester_name: Name of user requesting approval
 
         Returns:
             The created notification or None if no approver set
@@ -128,13 +136,15 @@ class NotificationService:
             message=f"Please review: {task.get('title', 'Untitled task')}",
             task_id=task["_id"],
             actor_id=requester_id,
+            actor_name=requester_name,
             action_url=f"/tasks?taskId={task['_id']}"
         )
 
     async def notify_task_completed(
         self,
         task: dict,
-        completed_by_id: ObjectId
+        completed_by_id: str,
+        completed_by_name: Optional[str] = None
     ) -> list[Notification]:
         """
         Notify relevant users when a task is completed.
@@ -143,7 +153,8 @@ class NotificationService:
 
         Args:
             task: The completed task document
-            completed_by_id: User who completed the task
+            completed_by_id: User UUID who completed the task
+            completed_by_name: Name of user who completed the task
 
         Returns:
             List of created notifications
@@ -161,6 +172,7 @@ class NotificationService:
                 message=f"Task completed: {task.get('title', 'Untitled task')}",
                 task_id=task["_id"],
                 actor_id=completed_by_id,
+                actor_name=completed_by_name,
                 action_url=f"/tasks?taskId={task['_id']}"
             )
             notifications.append(notif)
@@ -198,23 +210,23 @@ class NotificationService:
 
     async def notify_bot_failure(
         self,
-        organization_id: ObjectId,
-        bot_id: ObjectId,
+        organization_id: str,
+        bot_id: str,
         bot_name: str,
         task: dict,
         error_message: str,
-        admin_ids: list[ObjectId]
+        admin_ids: list[str]
     ) -> list[Notification]:
         """
         Notify admins when a bot fails a task.
 
         Args:
-            organization_id: Organization ID
-            bot_id: The bot that failed
+            organization_id: Organization UUID
+            bot_id: The bot UUID that failed
             bot_name: Name of the bot
             task: The failed task
             error_message: Error description
-            admin_ids: List of admin user IDs to notify
+            admin_ids: List of admin user UUIDs to notify
 
         Returns:
             List of created notifications
@@ -230,6 +242,7 @@ class NotificationService:
                 message=f"{bot_name} failed: {task.get('title', 'task')} - {error_message}",
                 task_id=task["_id"],
                 actor_id=bot_id,
+                actor_name=bot_name,
                 action_url=f"/bots/{bot_id}"
             )
             notifications.append(notif)
@@ -239,14 +252,14 @@ class NotificationService:
     async def mark_as_read(
         self,
         notification_id: ObjectId,
-        user_id: ObjectId
+        user_id: str
     ) -> bool:
         """
         Mark a notification as read.
 
         Args:
             notification_id: The notification to mark
-            user_id: The user marking it (for authorization)
+            user_id: The user UUID marking it (for authorization)
 
         Returns:
             True if updated, False otherwise
@@ -268,15 +281,15 @@ class NotificationService:
 
     async def mark_all_as_read(
         self,
-        user_id: ObjectId,
-        organization_id: ObjectId
+        user_id: str,
+        organization_id: str
     ) -> int:
         """
         Mark all notifications for a user as read.
 
         Args:
-            user_id: The user
-            organization_id: Organization for filtering
+            user_id: The user UUID
+            organization_id: Organization UUID for filtering
 
         Returns:
             Number of notifications marked as read
@@ -299,14 +312,14 @@ class NotificationService:
     async def dismiss_notification(
         self,
         notification_id: ObjectId,
-        user_id: ObjectId
+        user_id: str
     ) -> bool:
         """
         Dismiss a notification (hide it from the user).
 
         Args:
             notification_id: The notification to dismiss
-            user_id: The user dismissing it
+            user_id: The user UUID dismissing it
 
         Returns:
             True if updated, False otherwise
@@ -327,15 +340,15 @@ class NotificationService:
 
     async def get_unread_count(
         self,
-        user_id: ObjectId,
-        organization_id: ObjectId
+        user_id: str,
+        organization_id: str
     ) -> int:
         """
         Get count of unread notifications for a user.
 
         Args:
-            user_id: The user
-            organization_id: Organization for filtering
+            user_id: The user UUID
+            organization_id: Organization UUID for filtering
 
         Returns:
             Count of unread notifications
