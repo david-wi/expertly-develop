@@ -158,11 +158,16 @@ export default function CreateAssignmentModal({
     }
   }, [isOpen])
 
-  // Filtered playbooks for typeahead
+  // Filtered playbooks for typeahead (exclude groups, sort alphabetically)
   const filteredPlaybooks = useMemo(() => {
-    if (!playbookSearch.trim()) return playbooks.slice(0, 10)
+    // Only include actual playbooks (not groups)
+    const actualPlaybooks = playbooks
+      .filter((p) => p.item_type === 'playbook')
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    if (!playbookSearch.trim()) return actualPlaybooks.slice(0, 10)
     const search = playbookSearch.toLowerCase()
-    return playbooks.filter((p) => p.name.toLowerCase().includes(search)).slice(0, 10)
+    return actualPlaybooks.filter((p) => p.name.toLowerCase().includes(search)).slice(0, 10)
   }, [playbooks, playbookSearch])
 
   const selectedPlaybook = useMemo(() => {
