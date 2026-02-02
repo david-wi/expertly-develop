@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useWebSocket } from '../hooks/useWebSocket'
 import { DashboardGrid, AddWidgetModal } from '../components/dashboard'
+import { Tooltip } from '../components/ui/Tooltip'
 
 export default function Dashboard() {
   const { user, wsConnected, fetchUser, fetchQueues, fetchTasks } = useAppStore()
@@ -20,16 +21,24 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
         <div className="flex items-center space-x-2">
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              wsConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-            }`}
+          <Tooltip
+            content={wsConnected
+              ? 'Real-time updates active. Changes will appear instantly without refreshing.'
+              : 'Not connected to server. Updates require manual refresh. Reconnection will be attempted automatically.'
+            }
+            position="bottom"
           >
             <span
-              className={`w-2 h-2 mr-1.5 rounded-full ${wsConnected ? 'bg-green-400' : 'bg-gray-400'}`}
-            />
-            {wsConnected ? 'Live' : 'Offline'}
-          </span>
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-help ${
+                wsConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 mr-1.5 rounded-full ${wsConnected ? 'bg-green-400' : 'bg-gray-400'}`}
+              />
+              {wsConnected ? 'Live' : 'Offline'}
+            </span>
+          </Tooltip>
         </div>
       </div>
 
