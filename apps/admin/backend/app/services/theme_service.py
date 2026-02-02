@@ -25,8 +25,8 @@ class ThemeService:
         skip: int = 0,
         limit: int = 100,
     ) -> tuple[list[Theme], int]:
-        """List all themes with pagination."""
-        query = select(Theme)
+        """List all themes with pagination and their versions for colors."""
+        query = select(Theme).options(selectinload(Theme.versions))
         if not include_inactive:
             query = query.where(Theme.is_active == True)
 
@@ -37,7 +37,7 @@ class ThemeService:
         total_result = await self.db.execute(count_query)
         total = total_result.scalar()
 
-        # Get paginated results
+        # Get paginated results with versions eagerly loaded
         query = query.offset(skip).limit(limit).order_by(Theme.name)
         result = await self.db.execute(query)
         themes = result.scalars().all()
