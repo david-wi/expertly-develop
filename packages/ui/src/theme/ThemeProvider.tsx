@@ -90,6 +90,8 @@ function applyThemeToDOM(themeId: string, mode: ThemeMode, customThemes?: Map<st
   root.style.setProperty('--theme-sidebar-text', sidebar?.text ?? colors.text.secondary)
   root.style.setProperty('--theme-sidebar-text-muted', sidebar?.textMuted ?? colors.text.muted)
   root.style.setProperty('--theme-sidebar-border', sidebar?.border ?? colors.border.default)
+  root.style.setProperty('--theme-sidebar-text-strong', sidebar?.textStrong ?? colors.text.primary)
+  root.style.setProperty('--theme-sidebar-active-text', sidebar?.activeText ?? colors.primary['600'])
 
   // Set data attributes for CSS selectors
   root.setAttribute('data-theme', themeId)

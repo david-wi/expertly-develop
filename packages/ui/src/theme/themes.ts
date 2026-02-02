@@ -42,6 +42,10 @@ export interface ThemeColors {
     text: string
     textMuted: string
     border: string
+    /** Strong text color for headers/product name - high contrast */
+    textStrong?: string
+    /** Active item text color - visible on sidebar background */
+    activeText?: string
   }
 }
 
@@ -94,6 +98,8 @@ export const themes: Record<ThemeId, Theme> = {
           text: '#4b5563', // gray-600
           textMuted: '#9ca3af', // gray-400
           border: '#e5e7eb', // gray-200
+          textStrong: '#111827', // gray-900 - for product name, user name
+          activeText: '#7c3aed', // violet-600 - visible on white
         },
       },
       dark: {
@@ -130,6 +136,8 @@ export const themes: Record<ThemeId, Theme> = {
           text: '#9ca3af', // gray-400
           textMuted: '#6b7280', // gray-500
           border: '#374151', // gray-700
+          textStrong: '#f9fafb', // gray-50 - white for dark sidebar
+          activeText: '#c4b5fd', // violet-300 - visible on dark
         },
       },
     },
@@ -173,6 +181,8 @@ export const themes: Record<ThemeId, Theme> = {
           text: '#4b5563',
           textMuted: '#9ca3af',
           border: '#e5e7eb',
+          textStrong: '#111827', // gray-900 - for product name
+          activeText: '#0d9488', // teal-600 - visible on white
         },
       },
       dark: {
@@ -209,6 +219,8 @@ export const themes: Record<ThemeId, Theme> = {
           text: '#94a3b8', // slate-400
           textMuted: '#64748b', // slate-500
           border: '#334155', // slate-700
+          textStrong: '#f8fafc', // slate-50 - white for dark sidebar
+          activeText: '#5eead4', // teal-300 - visible on dark
         },
       },
     },
@@ -253,6 +265,8 @@ export const themes: Record<ThemeId, Theme> = {
           text: '#a8a29e', // stone-400
           textMuted: '#57534e', // stone-600
           border: '#292524', // stone-800
+          textStrong: '#fafaf9', // stone-50 - white for dark sidebar
+          activeText: '#5eead4', // teal-300 - visible on dark
         },
       },
       dark: {
@@ -290,6 +304,8 @@ export const themes: Record<ThemeId, Theme> = {
           text: '#a8a29e', // stone-400
           textMuted: '#57534e', // stone-600
           border: '#292524', // stone-800
+          textStrong: '#fafaf9', // stone-50 - white for dark sidebar
+          activeText: '#5eead4', // teal-300 - visible on dark
         },
       },
     },

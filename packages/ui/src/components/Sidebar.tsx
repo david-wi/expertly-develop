@@ -164,9 +164,9 @@ export function Sidebar({
   const sidebarTextMuted = 'text-theme-sidebar-text-muted'
   const sidebarHoverBg = 'hover:bg-theme-sidebar-bg-hover'
 
-  // Sidebar active states - using primary colors with light text for visibility
+  // Sidebar active states - using theme-aware colors for proper contrast
   const activeBg = 'bg-primary-500/15'
-  const activeText = 'text-primary-300'
+  const activeText = 'text-theme-sidebar-active-text'
 
   // Content area colors (for dropdowns that appear over content)
   const borderColor = 'border-theme-border'
@@ -199,7 +199,7 @@ export function Sidebar({
             className={`flex items-center gap-2 ${sidebarHoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
           >
             <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
-            <span className={`font-semibold text-white text-base whitespace-nowrap`}>Expertly {productName}</span>
+            <span className={`font-semibold text-theme-sidebar-text-strong text-base whitespace-nowrap`}>Expertly {productName}</span>
             <ChevronDown className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
 
@@ -272,12 +272,12 @@ export function Sidebar({
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
                         product.separatorBefore
                           ? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700'
-                          : 'bg-violet-100 dark:bg-violet-900/50 group-hover:bg-gradient-to-br group-hover:from-violet-500 group-hover:to-purple-600'
+                          : 'bg-primary-100 dark:bg-primary-900/50 group-hover:bg-gradient-to-br group-hover:from-primary-500 group-hover:to-primary-600'
                       }`}>
                         <product.icon className={`w-4 h-4 transition-colors ${
                           product.separatorBefore
                             ? 'text-gray-600 dark:text-gray-400 group-hover:text-white'
-                            : 'text-violet-600 dark:text-violet-400 group-hover:text-white'
+                            : 'text-primary-600 dark:text-primary-400 group-hover:text-white'
                         }`} />
                       </div>
                       <div>
@@ -379,7 +379,7 @@ export function Sidebar({
                   </span>
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className={`text-sm font-medium text-white truncate`}>{user.name || 'Loading...'}</p>
+                  <p className={`text-sm font-medium text-theme-sidebar-text-strong truncate`}>{user.name || 'Loading...'}</p>
                   {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
                   {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
                 </div>
@@ -400,7 +400,7 @@ export function Sidebar({
                 </span>
               </div>
               <div className="min-w-0">
-                <p className={`text-sm font-medium text-white truncate`}>{user.name || 'Loading...'}</p>
+                <p className={`text-sm font-medium text-theme-sidebar-text-strong truncate`}>{user.name || 'Loading...'}</p>
                 {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
                 {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
               </div>
