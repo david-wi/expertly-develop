@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Modal, ModalFooter } from '@expertly/ui'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import {
   api,
   Queue,
@@ -10,8 +11,6 @@ import {
   CreateRecurringTaskRequest,
   RecurrenceType,
 } from '../services/api'
-import ApproverSelector, { ApproverType } from './ApproverSelector'
-import PlaybookSelector from './PlaybookSelector'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -99,6 +98,7 @@ export default function CreateAssignmentModal({
   const [teams, setTeams] = useState<Team[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -108,23 +108,43 @@ export default function CreateAssignmentModal({
   // Scheduling toggle
   const [showScheduling, setShowScheduling] = useState(false)
 
+  // Advanced section toggle
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  // Playbook typeahead state
+  const [playbookSearch, setPlaybookSearch] = useState('')
+  const [showPlaybookDropdown, setShowPlaybookDropdown] = useState(false)
+
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [queuesData, teamsData, usersData, playbooksData] = await Promise.all([
+      const [queuesData, teamsData, usersData, playbooksData, userData] = await Promise.all([
         api.getQueues(),
         api.getTeams(),
         api.getUsers(),
         api.getPlaybooks({ active_only: true }),
+        api.getCurrentUser(),
       ])
 
       setQueues(queuesData)
       setTeams(teamsData)
       setUsers(usersData)
       setPlaybooks(playbooksData)
+      setCurrentUser(userData)
 
-      // Set default queue if available
-      if (queuesData.length > 0) {
+      // Set default queue to user's inbox if available
+      const userId = userData?.id || (userData as { _id?: string })?._id
+      const userInbox = queuesData.find(
+        (q) => q.scope_type === 'user' && q.scope_id === userId
+      )
+      if (userInbox) {
+        setForm((prev) => {
+          if (!prev.queue_id) {
+            return { ...prev, queue_id: userInbox._id || userInbox.id }
+          }
+          return prev
+        })
+      } else if (queuesData.length > 0) {
         setForm((prev) => {
           if (!prev.queue_id) {
             return { ...prev, queue_id: queuesData[0]._id || queuesData[0].id }
@@ -151,8 +171,37 @@ export default function CreateAssignmentModal({
     if (!isOpen) {
       setForm(initialFormState)
       setShowScheduling(false)
+      setShowAdvanced(false)
+      setPlaybookSearch('')
+      setShowPlaybookDropdown(false)
     }
   }, [isOpen])
+
+  // Filtered playbooks for typeahead (exclude groups, sort alphabetically)
+  const filteredPlaybooks = useMemo(() => {
+    // Exclude groups - include playbooks and any legacy items without item_type
+    const actualPlaybooks = playbooks
+      .filter((p) => p.item_type !== 'group')
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    if (!playbookSearch.trim()) return actualPlaybooks.slice(0, 10)
+    const search = playbookSearch.toLowerCase()
+    return actualPlaybooks.filter((p) => p.name.toLowerCase().includes(search)).slice(0, 10)
+  }, [playbooks, playbookSearch])
+
+  const selectedPlaybook = useMemo(() => {
+    return playbooks.find((p) => (p.id || (p as { _id?: string })._id) === form.playbook_id)
+  }, [playbooks, form.playbook_id])
+
+  // Check if playbook has a default queue (for "Not Applicable" display)
+  const playbookHasQueue = selectedPlaybook?.default_queue_id ? true : false
+
+  // Get user's inbox queue for display
+  const userInboxQueue = useMemo(() => {
+    if (!currentUser) return null
+    const userId = currentUser.id || (currentUser as { _id?: string })?._id
+    return queues.find((q) => q.scope_type === 'user' && q.scope_id === userId)
+  }, [currentUser, queues])
 
   // When playbook is selected, set defaults from playbook's default fields
   const handlePlaybookSelect = (playbook: Playbook | null) => {
@@ -181,11 +230,6 @@ export default function CreateAssignmentModal({
     }))
   }
 
-  // Get selected playbook for showing defaults info
-  const selectedPlaybook = playbooks.find(
-    (p) => (p.id || (p as { _id?: string })._id) === form.playbook_id
-  )
-
   const toggleDayOfWeek = (day: number) => {
     const days = form.days_of_week || []
     if (days.includes(day)) {
@@ -209,7 +253,21 @@ export default function CreateAssignmentModal({
     return undefined
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const resetFormForAnother = useCallback(() => {
+    // Reset to user's inbox queue
+    const userId = currentUser?.id || (currentUser as { _id?: string } | null)?._id
+    const userInbox = queues.find((q) => q.scope_type === 'user' && q.scope_id === userId)
+    const defaultQueueId = userInbox ? userInbox._id || userInbox.id : queues[0]?._id || queues[0]?.id || ''
+
+    setForm({
+      ...initialFormState,
+      queue_id: defaultQueueId,
+    })
+    setPlaybookSearch('')
+    setShowScheduling(false)
+  }, [currentUser, queues])
+
+  const handleSubmit = async (e: React.FormEvent, addAnother = false) => {
     e.preventDefault()
     if (!form.title.trim()) return
 
@@ -261,7 +319,11 @@ export default function CreateAssignmentModal({
       }
 
       onCreated()
-      onClose()
+      if (addAnother) {
+        resetFormForAnother()
+      } else {
+        onClose()
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to create assignment'
       alert(message)
@@ -277,52 +339,22 @@ export default function CreateAssignmentModal({
       {loading ? (
         <div className="py-8 text-center text-gray-500">Loading...</div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="Assignment title"
-              required
-              autoFocus
-            />
-          </div>
-
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description (optional)
-            </label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              rows={2}
-              placeholder="Assignment description"
-            />
-          </div>
-
-          {/* Playbook Selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Playbook (optional)
-            </label>
-            <PlaybookSelector
-              playbooks={playbooks}
-              selectedPlaybookId={form.playbook_id || null}
-              onSelect={handlePlaybookSelect}
-              placeholder="Select a playbook..."
-            />
-          </div>
-
-          {/* Priority and Assignment in same row */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Priority */}
-            <div>
+        <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
+          {/* Row 1: Title + Priority */}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2"
+                placeholder="Assignment title"
+                required
+                autoFocus
+              />
+            </div>
+            <div className="w-28">
               <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
               <select
                 value={form.priority}
@@ -331,340 +363,540 @@ export default function CreateAssignmentModal({
               >
                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
                   <option key={p} value={p}>
-                    {p} {p === 1 ? '(Highest)' : p === 10 ? '(Lowest)' : ''}
+                    {p} {p === 1 ? '(High)' : p === 10 ? '(Low)' : ''}
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Row 2: Playbook + Queue */}
+          <div className="flex gap-3">
+            {/* Playbook Typeahead */}
+            <div className="flex-1 relative">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Playbook (optional)
+              </label>
+              {selectedPlaybook ? (
+                <div className="flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
+                  <span className="text-gray-900 truncate">{selectedPlaybook.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // Reset queue to user's inbox when clearing playbook
+                      const newQueueId = userInboxQueue
+                        ? userInboxQueue._id || userInboxQueue.id
+                        : form.queue_id
+                      setForm({ ...form, playbook_id: '', queue_id: newQueueId })
+                      setPlaybookSearch('')
+                    }}
+                    className="text-gray-400 hover:text-gray-600 ml-2 flex-shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <input
+                    type="text"
+                    value={playbookSearch}
+                    onChange={(e) => {
+                      setPlaybookSearch(e.target.value)
+                      setShowPlaybookDropdown(true)
+                    }}
+                    onFocus={() => setShowPlaybookDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowPlaybookDropdown(false), 200)}
+                    className="w-full border border-gray-300 rounded-md px-3 py-2"
+                    placeholder="Search playbooks..."
+                  />
+                  {showPlaybookDropdown && filteredPlaybooks.length > 0 && (
+                    <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
+                      {filteredPlaybooks.map((playbook) => (
+                        <li
+                          key={playbook.id || (playbook as { _id?: string })._id}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                          onMouseDown={() => handlePlaybookSelect(playbook)}
+                        >
+                          <p className="font-medium text-gray-900">{playbook.name}</p>
+                          {playbook.description && (
+                            <p className="text-xs text-gray-500 truncate">{playbook.description}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              )}
             </div>
 
             {/* Queue */}
-            <div>
+            <div className="w-40">
               <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
-              <select
-                value={form.queue_id}
-                onChange={(e) => setForm({ ...form, queue_id: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              >
-                <option value="">Select a queue</option>
-                {queues.map((queue) => (
-                  <option key={queue._id || queue.id} value={queue._id || queue.id}>
-                    {queue.purpose}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Assignment Section */}
-          <div className="border-t pt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Assignment Type</label>
-            <div className="space-y-3">
-              {/* Assignment Type Radio */}
-              <div className="flex space-x-4">
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="assignment_type"
-                    value="queue"
-                    checked={form.assignment_type === 'queue'}
-                    onChange={() => setForm({ ...form, assignment_type: 'queue' })}
-                    className="mr-2"
-                  />
-                  Queue
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="assignment_type"
-                    value="team"
-                    checked={form.assignment_type === 'team'}
-                    onChange={() => setForm({ ...form, assignment_type: 'team' })}
-                    className="mr-2"
-                  />
-                  Team
-                </label>
-                <label className="flex items-center">
-                  <input
-                    type="radio"
-                    name="assignment_type"
-                    value="user"
-                    checked={form.assignment_type === 'user'}
-                    onChange={() => setForm({ ...form, assignment_type: 'user' })}
-                    className="mr-2"
-                  />
-                  User
-                </label>
-              </div>
-
-              {/* Assignment Dropdown based on type */}
-              {form.assignment_type === 'team' && (
+              {playbookHasQueue ? (
+                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-100 text-gray-500 text-sm">
+                  From Playbook
+                </div>
+              ) : (
                 <select
-                  value={form.team_id}
-                  onChange={(e) => setForm({ ...form, team_id: e.target.value })}
+                  value={form.queue_id}
+                  onChange={(e) => setForm({ ...form, queue_id: e.target.value })}
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
-                  <option value="">Select a team</option>
-                  {teams.map((team) => (
-                    <option key={team._id || team.id} value={team._id || team.id}>
-                      {team.name}
-                    </option>
-                  ))}
-                </select>
-              )}
-
-              {form.assignment_type === 'user' && (
-                <select
-                  value={form.user_id}
-                  onChange={(e) => setForm({ ...form, user_id: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  <option value="">Select a user</option>
-                  {users.map((user) => (
-                    <option key={user._id || user.id} value={user._id || user.id}>
-                      {user.name}
-                    </option>
-                  ))}
+                  {userInboxQueue && (
+                    <option value={userInboxQueue._id || userInboxQueue.id}>My Inbox</option>
+                  )}
+                  {queues
+                    .filter(
+                      (q) =>
+                        !userInboxQueue ||
+                        (q._id || q.id) !== (userInboxQueue._id || userInboxQueue.id)
+                    )
+                    .map((queue) => (
+                      <option key={queue._id || queue.id} value={queue._id || queue.id}>
+                        {queue.purpose}
+                      </option>
+                    ))}
                 </select>
               )}
             </div>
           </div>
 
-          {/* Approval Section */}
-          {!form.is_recurring && (
-            <div className="border-t pt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Approval Required
-                {selectedPlaybook?.default_approver_type && (
-                  <span className="ml-2 text-xs text-gray-500 font-normal">
-                    (from playbook defaults)
-                  </span>
-                )}
-              </label>
-              <ApproverSelector
-                approverType={(form.approver_type as ApproverType) || null}
-                approverId={form.approver_id || null}
-                approverQueueId={form.approver_queue_id || null}
-                onChange={(type, id, queueId) => {
-                  setForm({
-                    ...form,
-                    approver_type: type || '',
-                    approver_id: id || '',
-                    approver_queue_id: queueId || '',
-                  })
-                }}
-              />
-            </div>
-          )}
+          {/* Instructions (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Instructions (optional)
+            </label>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={4}
+              placeholder="Additional instructions for this assignment..."
+            />
+          </div>
 
-          {/* Scheduling Section */}
-          <div className="border-t pt-4">
+          {/* Advanced Section */}
+          <div className="border-t pt-3">
             <button
               type="button"
-              onClick={() => setShowScheduling(!showScheduling)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
             >
-              <svg
-                className={`w-4 h-4 transition-transform ${showScheduling ? 'rotate-90' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-              Schedule for Later
-              {(form.scheduled_start_date || form.scheduled_end_date) && (
-                <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                  Scheduled
+              {showAdvanced ? (
+                <ChevronDown className="w-4 h-4" />
+              ) : (
+                <ChevronRight className="w-4 h-4" />
+              )}
+              Advanced
+              {(form.approver_type ||
+                form.scheduled_start_date ||
+                form.is_recurring ||
+                form.assignment_type !== 'queue') && (
+                <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                  {
+                    [
+                      form.approver_type ? 'Approval' : '',
+                      form.scheduled_start_date ? 'Scheduled' : '',
+                      form.is_recurring ? 'Recurring' : '',
+                      form.assignment_type !== 'queue' ? 'Direct Assign' : '',
+                    ].filter(Boolean).length
+                  }{' '}
+                  set
                 </span>
               )}
             </button>
 
-            {showScheduling && (
-              <div className="mt-4 space-y-4 pl-6">
-                {/* Scheduled Start */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Don't start before
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={form.scheduled_start_date}
-                      onChange={(e) => setForm({ ...form, scheduled_start_date: e.target.value })}
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-                    />
-                    <input
-                      type="time"
-                      value={form.scheduled_start_time}
-                      onChange={(e) => setForm({ ...form, scheduled_start_time: e.target.value })}
-                      className="w-32 border border-gray-300 rounded-md px-3 py-2"
-                    />
-                  </div>
-                </div>
-
-                {/* Scheduled End */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Work window closes (optional)
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="date"
-                      value={form.scheduled_end_date}
-                      onChange={(e) => setForm({ ...form, scheduled_end_date: e.target.value })}
-                      className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-                    />
-                    <input
-                      type="time"
-                      value={form.scheduled_end_time}
-                      onChange={(e) => setForm({ ...form, scheduled_end_time: e.target.value })}
-                      className="w-32 border border-gray-300 rounded-md px-3 py-2"
-                    />
-                  </div>
-                </div>
-
-                {/* Timezone */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Timezone</label>
-                  <select
-                    value={form.schedule_timezone}
-                    onChange={(e) => setForm({ ...form, schedule_timezone: e.target.value })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="">Browser default</option>
-                    {TIMEZONES.map((tz) => (
-                      <option key={tz} value={tz}>
-                        {tz}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Clear scheduling button */}
-                {(form.scheduled_start_date || form.scheduled_end_date) && (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setForm({
-                        ...form,
-                        scheduled_start_date: '',
-                        scheduled_start_time: '',
-                        scheduled_end_date: '',
-                        scheduled_end_time: '',
-                        schedule_timezone: '',
-                      })
-                    }
-                    className="text-sm text-red-600 hover:text-red-700"
-                  >
-                    Clear scheduling
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Make Recurring Toggle */}
-          <div className="border-t pt-4">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={form.is_recurring}
-                onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })}
-                className="mr-2"
-              />
-              <span className="text-sm font-medium text-gray-700">
-                Make this a recurring assignment
-              </span>
-            </label>
-
-            {form.is_recurring && (
-              <div className="mt-4 space-y-3 pl-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Recurrence Type
-                  </label>
-                  <select
-                    value={form.recurrence_type}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        recurrence_type: e.target.value as RecurrenceType,
-                      })
-                    }
-                    className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  >
-                    <option value="daily">Daily</option>
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Every</label>
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="number"
-                      value={form.interval}
-                      onChange={(e) =>
-                        setForm({ ...form, interval: parseInt(e.target.value) || 1 })
-                      }
-                      className="w-20 border border-gray-300 rounded-md px-3 py-2"
-                      min={1}
-                    />
-                    <span className="text-gray-700">
-                      {form.recurrence_type === 'daily'
-                        ? 'day(s)'
-                        : form.recurrence_type === 'weekly'
-                          ? 'week(s)'
-                          : 'month(s)'}
-                    </span>
-                  </div>
-                </div>
-
-                {form.recurrence_type === 'weekly' && (
+            {showAdvanced && (
+              <div className="mt-4 space-y-4 pl-2">
+                {/* Approver Section */}
+                {!form.is_recurring && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">On days</label>
-                    <div className="flex flex-wrap gap-2">
-                      {DAYS_OF_WEEK.map((day, index) => (
+                    <div className="flex items-center gap-3 mb-2">
+                      <label className="text-sm font-medium text-gray-700">Approver</label>
+                      <div className="flex gap-1">
                         <button
-                          key={day}
                           type="button"
-                          onClick={() => toggleDayOfWeek(index)}
-                          className={`px-3 py-1 rounded-md text-sm ${
-                            form.days_of_week?.includes(index)
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              approver_type: '',
+                              approver_id: '',
+                              approver_queue_id: '',
+                            })
+                          }
+                          className={`px-2 py-1 text-xs rounded ${
+                            !form.approver_type
+                              ? 'bg-gray-200 text-gray-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                           }`}
                         >
-                          {day}
+                          No Approval
                         </button>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              approver_type: 'user',
+                              approver_id: '',
+                              approver_queue_id: '',
+                            })
+                          }
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.approver_type === 'user'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          User
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              approver_type: 'team',
+                              approver_id: '',
+                              approver_queue_id: '',
+                            })
+                          }
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.approver_type === 'team'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Team
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              approver_type: 'anyone',
+                              approver_id: '',
+                              approver_queue_id: '',
+                            })
+                          }
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.approver_type === 'anyone'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Anyone
+                        </button>
+                      </div>
                     </div>
+                    {form.approver_type === 'user' && (
+                      <select
+                        value={form.approver_id}
+                        onChange={(e) => setForm({ ...form, approver_id: e.target.value })}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      >
+                        <option value="">Select approver...</option>
+                        {users.map((user) => (
+                          <option key={user._id || user.id} value={user._id || user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {form.approver_type === 'team' && (
+                      <select
+                        value={form.approver_id}
+                        onChange={(e) => setForm({ ...form, approver_id: e.target.value })}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      >
+                        <option value="">Select approving team...</option>
+                        {teams.map((team) => (
+                          <option key={team._id || team.id} value={team._id || team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 )}
 
-                {form.recurrence_type === 'monthly' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      On day of month
-                    </label>
+                {/* Schedule for Later */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowScheduling(!showScheduling)}
+                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    {showScheduling ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                    Schedule for Later
+                    {(form.scheduled_start_date || form.scheduled_end_date) && (
+                      <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
+                        Set
+                      </span>
+                    )}
+                  </button>
+
+                  {showScheduling && (
+                    <div className="mt-3 space-y-3 pl-6">
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">
+                          Don't start before
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            value={form.scheduled_start_date}
+                            onChange={(e) =>
+                              setForm({ ...form, scheduled_start_date: e.target.value })
+                            }
+                            className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                          />
+                          <input
+                            type="time"
+                            value={form.scheduled_start_time}
+                            onChange={(e) =>
+                              setForm({ ...form, scheduled_start_time: e.target.value })
+                            }
+                            className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">
+                          Work window closes (optional)
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="date"
+                            value={form.scheduled_end_date}
+                            onChange={(e) =>
+                              setForm({ ...form, scheduled_end_date: e.target.value })
+                            }
+                            className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                          />
+                          <input
+                            type="time"
+                            value={form.scheduled_end_time}
+                            onChange={(e) =>
+                              setForm({ ...form, scheduled_end_time: e.target.value })
+                            }
+                            className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm text-gray-600 mb-1">Timezone</label>
+                        <select
+                          value={form.schedule_timezone}
+                          onChange={(e) => setForm({ ...form, schedule_timezone: e.target.value })}
+                          className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        >
+                          <option value="">Browser default</option>
+                          {TIMEZONES.map((tz) => (
+                            <option key={tz} value={tz}>
+                              {tz}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {(form.scheduled_start_date || form.scheduled_end_date) && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setForm({
+                              ...form,
+                              scheduled_start_date: '',
+                              scheduled_start_time: '',
+                              scheduled_end_date: '',
+                              scheduled_end_time: '',
+                              schedule_timezone: '',
+                            })
+                          }
+                          className="text-xs text-red-600 hover:text-red-700"
+                        >
+                          Clear scheduling
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Make Recurring */}
+                <div>
+                  <label className="flex items-center">
                     <input
-                      type="number"
-                      value={form.day_of_month}
-                      onChange={(e) =>
-                        setForm({ ...form, day_of_month: parseInt(e.target.value) || 1 })
-                      }
-                      className="w-20 border border-gray-300 rounded-md px-3 py-2"
-                      min={1}
-                      max={31}
+                      type="checkbox"
+                      checked={form.is_recurring}
+                      onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })}
+                      className="mr-2"
                     />
+                    <span className="text-sm font-medium text-gray-700">
+                      Make this a recurring assignment
+                    </span>
+                  </label>
+
+                  {form.is_recurring && (
+                    <div className="mt-3 space-y-3 pl-6">
+                      <div className="flex items-center gap-3">
+                        <select
+                          value={form.recurrence_type}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              recurrence_type: e.target.value as RecurrenceType,
+                            })
+                          }
+                          className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        >
+                          <option value="daily">Daily</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="monthly">Monthly</option>
+                        </select>
+                        <span className="text-sm text-gray-600">every</span>
+                        <input
+                          type="number"
+                          value={form.interval}
+                          onChange={(e) =>
+                            setForm({ ...form, interval: parseInt(e.target.value) || 1 })
+                          }
+                          className="w-16 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                          min={1}
+                        />
+                        <span className="text-sm text-gray-600">
+                          {form.recurrence_type === 'daily'
+                            ? 'day(s)'
+                            : form.recurrence_type === 'weekly'
+                              ? 'week(s)'
+                              : 'month(s)'}
+                        </span>
+                      </div>
+
+                      {form.recurrence_type === 'weekly' && (
+                        <div className="flex flex-wrap gap-1">
+                          {DAYS_OF_WEEK.map((day, index) => (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => toggleDayOfWeek(index)}
+                              className={`px-2 py-1 rounded text-xs ${
+                                form.days_of_week?.includes(index)
+                                  ? 'bg-blue-600 text-white'
+                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                              }`}
+                            >
+                              {day}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {form.recurrence_type === 'monthly' && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">On day</span>
+                          <input
+                            type="number"
+                            value={form.day_of_month}
+                            onChange={(e) =>
+                              setForm({ ...form, day_of_month: parseInt(e.target.value) || 1 })
+                            }
+                            className="w-16 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                            min={1}
+                            max={31}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Direct Assignment (Team/User) */}
+                <div>
+                  <div className="flex items-center gap-3 mb-2">
+                    <label className="text-sm font-medium text-gray-700">Assign To</label>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({ ...form, assignment_type: 'queue', team_id: '', user_id: '' })
+                        }
+                        className={`px-2 py-1 text-xs rounded ${
+                          form.assignment_type === 'queue'
+                            ? 'bg-gray-200 text-gray-800'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Queue
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({ ...form, assignment_type: 'team', team_id: '', user_id: '' })
+                        }
+                        className={`px-2 py-1 text-xs rounded ${
+                          form.assignment_type === 'team'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        Team
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({ ...form, assignment_type: 'user', team_id: '', user_id: '' })
+                        }
+                        className={`px-2 py-1 text-xs rounded ${
+                          form.assignment_type === 'user'
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                        }`}
+                      >
+                        User
+                      </button>
+                    </div>
                   </div>
-                )}
+                  {form.assignment_type === 'team' && (
+                    <select
+                      value={form.team_id}
+                      onChange={(e) => setForm({ ...form, team_id: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="">Select a team...</option>
+                      {teams.map((team) => (
+                        <option key={team._id || team.id} value={team._id || team.id}>
+                          {team.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {form.assignment_type === 'user' && (
+                    <select
+                      value={form.user_id}
+                      onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                    >
+                      <option value="">Select a user...</option>
+                      {users.map((user) => (
+                        <option key={user._id || user.id} value={user._id || user.id}>
+                          {user.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -678,6 +910,14 @@ export default function CreateAssignmentModal({
               Cancel
             </button>
             <button
+              type="button"
+              onClick={(e) => handleSubmit(e, true)}
+              disabled={saving || !form.title.trim()}
+              className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition-colors disabled:opacity-50"
+            >
+              Create & Add Another
+            </button>
+            <button
               type="submit"
               disabled={saving || !form.title.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -685,8 +925,8 @@ export default function CreateAssignmentModal({
               {saving
                 ? 'Creating...'
                 : form.is_recurring
-                  ? 'Create Recurring Assignment'
-                  : 'Create Assignment'}
+                  ? 'Create Recurring'
+                  : 'Create'}
             </button>
           </ModalFooter>
         </form>
