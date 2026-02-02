@@ -30,6 +30,7 @@ import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
 import PlaybookStepExecutor from './PlaybookStepExecutor'
+import PlaybookSelector from './PlaybookSelector'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface TaskDetailModalProps {
@@ -531,18 +532,12 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Playbook</label>
-                  <select
-                    value={editedPlaybookId || ''}
-                    onChange={(e) => setEditedPlaybookId(e.target.value || null)}
-                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  >
-                    <option value="">None</option>
-                    {playbooks.map((playbook) => (
-                      <option key={playbook.id} value={playbook.id}>
-                        {playbook.name}
-                      </option>
-                    ))}
-                  </select>
+                  <PlaybookSelector
+                    playbooks={playbooks}
+                    selectedPlaybookId={editedPlaybookId}
+                    onSelect={(playbook) => setEditedPlaybookId(playbook?.id || null)}
+                    placeholder="None"
+                  />
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Queue</label>

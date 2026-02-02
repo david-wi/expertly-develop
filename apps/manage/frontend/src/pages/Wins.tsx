@@ -74,9 +74,18 @@ export default function Wins() {
       }
     })
 
-    // Sort by order_index
+    // Sort alphabetically within each level (groups first, then playbooks, both alphabetically)
     const sortNodes = (nodes: PlaybookNode[]) => {
-      nodes.sort((a, b) => a.playbook.order_index - b.playbook.order_index)
+      nodes.sort((a, b) => {
+        // Groups come before playbooks
+        const aIsGroup = a.playbook.item_type === 'group'
+        const bIsGroup = b.playbook.item_type === 'group'
+        if (aIsGroup !== bIsGroup) {
+          return aIsGroup ? -1 : 1
+        }
+        // Within same type, sort alphabetically
+        return a.playbook.name.localeCompare(b.playbook.name)
+      })
       nodes.forEach(n => sortNodes(n.children))
     }
     sortNodes(rootNodes)

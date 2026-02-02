@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Modal, ModalFooter, InlineVoiceTranscription } from '@expertly/ui'
+import { useState, useEffect, useCallback } from 'react'
+import { Modal, ModalFooter } from '@expertly/ui'
 import {
   api,
   Queue,
@@ -11,6 +11,7 @@ import {
   RecurrenceType,
 } from '../services/api'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
+import PlaybookSelector from './PlaybookSelector'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -104,10 +105,6 @@ export default function CreateAssignmentModal({
   // Form state
   const [form, setForm] = useState<FormState>(initialFormState)
 
-  // Playbook typeahead state
-  const [playbookSearch, setPlaybookSearch] = useState('')
-  const [showPlaybookDropdown, setShowPlaybookDropdown] = useState(false)
-
   // Scheduling toggle
   const [showScheduling, setShowScheduling] = useState(false)
 
@@ -153,29 +150,17 @@ export default function CreateAssignmentModal({
   useEffect(() => {
     if (!isOpen) {
       setForm(initialFormState)
-      setPlaybookSearch('')
       setShowScheduling(false)
     }
   }, [isOpen])
 
-  // Filtered playbooks for typeahead (exclude groups, sort alphabetically)
-  const filteredPlaybooks = useMemo(() => {
-    // Exclude groups - include playbooks and any legacy items without item_type
-    const actualPlaybooks = playbooks
-      .filter((p) => p.item_type !== 'group')
-      .sort((a, b) => a.name.localeCompare(b.name))
-
-    if (!playbookSearch.trim()) return actualPlaybooks.slice(0, 10)
-    const search = playbookSearch.toLowerCase()
-    return actualPlaybooks.filter((p) => p.name.toLowerCase().includes(search)).slice(0, 10)
-  }, [playbooks, playbookSearch])
-
-  const selectedPlaybook = useMemo(() => {
-    return playbooks.find((p) => (p.id || (p as { _id?: string })._id) === form.playbook_id)
-  }, [playbooks, form.playbook_id])
-
   // When playbook is selected, set defaults from playbook's default fields
-  const handlePlaybookSelect = (playbook: Playbook) => {
+  const handlePlaybookSelect = (playbook: Playbook | null) => {
+    if (!playbook) {
+      setForm((prev) => ({ ...prev, playbook_id: '' }))
+      return
+    }
+
     const playbookId = playbook.id || (playbook as { _id?: string })._id || ''
 
     // Use playbook's default_queue_id if available, otherwise keep current
@@ -194,9 +179,12 @@ export default function CreateAssignmentModal({
       approver_id: approverId,
       approver_queue_id: approverQueueId,
     }))
-    setPlaybookSearch('')
-    setShowPlaybookDropdown(false)
   }
+
+  // Get selected playbook for showing defaults info
+  const selectedPlaybook = playbooks.find(
+    (p) => (p.id || (p as { _id?: string })._id) === form.playbook_id
+  )
 
   const toggleDayOfWeek = (day: number) => {
     const days = form.days_of_week || []
@@ -293,22 +281,15 @@ export default function CreateAssignmentModal({
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-                placeholder="Assignment title"
-                required
-                autoFocus
-              />
-              <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
-                onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
-                size="md"
-              />
-            </div>
+            <input
+              type="text"
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              placeholder="Assignment title"
+              required
+              autoFocus
+            />
           </div>
 
           {/* Description */}
@@ -316,81 +297,26 @@ export default function CreateAssignmentModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description (optional)
             </label>
-            <div className="flex gap-2">
-              <textarea
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="flex-1 border border-gray-300 rounded-md px-3 py-2"
-                rows={2}
-                placeholder="Assignment description"
-              />
-              <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
-                onTranscribe={(text) => setForm({ ...form, description: form.description ? form.description + ' ' + text : text })}
-                size="md"
-                className="self-start mt-1"
-              />
-            </div>
+            <textarea
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2"
+              rows={2}
+              placeholder="Assignment description"
+            />
           </div>
 
-          {/* Playbook Typeahead */}
-          <div className="relative">
+          {/* Playbook Selector */}
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Playbook (optional)
             </label>
-            {selectedPlaybook ? (
-              <div className="flex items-center justify-between border border-gray-300 rounded-md px-3 py-2 bg-gray-50">
-                <span className="text-gray-900">{selectedPlaybook.name}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForm({ ...form, playbook_id: '' })
-                    setPlaybookSearch('')
-                  }}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <>
-                <input
-                  type="text"
-                  value={playbookSearch}
-                  onChange={(e) => {
-                    setPlaybookSearch(e.target.value)
-                    setShowPlaybookDropdown(true)
-                  }}
-                  onFocus={() => setShowPlaybookDropdown(true)}
-                  onBlur={() => setTimeout(() => setShowPlaybookDropdown(false), 200)}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                  placeholder="Search playbooks..."
-                />
-                {showPlaybookDropdown && filteredPlaybooks.length > 0 && (
-                  <ul className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
-                    {filteredPlaybooks.map((playbook) => (
-                      <li
-                        key={playbook.id || (playbook as { _id?: string })._id}
-                        className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                        onMouseDown={() => handlePlaybookSelect(playbook)}
-                      >
-                        <p className="font-medium text-gray-900">{playbook.name}</p>
-                        {playbook.description && (
-                          <p className="text-xs text-gray-500 truncate">{playbook.description}</p>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </>
-            )}
+            <PlaybookSelector
+              playbooks={playbooks}
+              selectedPlaybookId={form.playbook_id || null}
+              onSelect={handlePlaybookSelect}
+              placeholder="Select a playbook..."
+            />
           </div>
 
           {/* Priority and Assignment in same row */}
