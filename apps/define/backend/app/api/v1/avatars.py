@@ -23,6 +23,7 @@ class GenerateAvatarRequest(BaseModel):
     product_id: str
     product_name: str
     product_description: Optional[str] = None
+    image_description: Optional[str] = None  # User's custom description for the image
 
 
 class AvatarResponse(BaseModel):
@@ -57,13 +58,23 @@ async def generate_avatar(
         )
 
     # Build prompt for DALL-E
-    description_part = f" {data.product_description}." if data.product_description else ""
-    prompt = (
-        f"A modern, minimal app icon for '{data.product_name}'.{description_part} "
-        "Clean, professional design suitable for a software product logo. "
-        "Simple geometric shapes, vibrant colors on a clean background. "
-        "No text or letters. Icon style, not a photograph."
-    )
+    if data.image_description:
+        # User provided a custom description - use it as the main prompt
+        prompt = (
+            f"{data.image_description}. "
+            "Modern, minimal icon style. Clean, professional design. "
+            "Simple geometric shapes, vibrant colors on a clean background. "
+            "No text or letters. Icon style, not a photograph."
+        )
+    else:
+        # Fall back to auto-generated prompt from product name/description
+        description_part = f" {data.product_description}." if data.product_description else ""
+        prompt = (
+            f"A modern, minimal app icon for '{data.product_name}'.{description_part} "
+            "Clean, professional design suitable for a software product logo. "
+            "Simple geometric shapes, vibrant colors on a clean background. "
+            "No text or letters. Icon style, not a photograph."
+        )
 
     try:
         async with httpx.AsyncClient() as client:

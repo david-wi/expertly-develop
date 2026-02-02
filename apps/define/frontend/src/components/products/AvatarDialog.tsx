@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { ProductAvatar } from './ProductAvatar'
 import { avatarsApi, Product } from '@/api/client'
 import { Sparkles, Upload, Trash2, Loader2 } from 'lucide-react'
@@ -28,7 +29,19 @@ export function AvatarDialog({
   const [isUploading, setIsUploading] = useState(false)
   const [isRemoving, setIsRemoving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [imageDescription, setImageDescription] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Prepopulate image description when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Generate a suggested description from product name and description
+      const suggestion = product.description
+        ? `An icon representing ${product.name}: ${product.description}`
+        : `An icon representing ${product.name}`
+      setImageDescription(suggestion)
+    }
+  }, [open, product.name, product.description])
 
   const handleGenerate = async () => {
     setIsGenerating(true)
@@ -37,7 +50,8 @@ export function AvatarDialog({
       const result = await avatarsApi.generate(
         product.id,
         product.name,
-        product.description
+        product.description,
+        imageDescription.trim() || null
       )
       onAvatarChange(result.avatar_url)
     } catch (err: unknown) {
@@ -112,10 +126,28 @@ export function AvatarDialog({
             </div>
           )}
 
+          {/* Image description input for AI generation */}
+          <div className="w-full space-y-2">
+            <label htmlFor="image-description" className="text-sm font-medium">
+              Describe the image you want
+            </label>
+            <Textarea
+              id="image-description"
+              value={imageDescription}
+              onChange={(e) => setImageDescription(e.target.value)}
+              placeholder="e.g., A rocket ship launching into space with stars"
+              className="min-h-[80px] resize-none"
+              disabled={isLoading}
+            />
+            <p className="text-xs text-muted-foreground">
+              Edit the description above to customize what DALL-E generates
+            </p>
+          </div>
+
           <div className="flex flex-col gap-3 w-full">
             <Button
               onClick={handleGenerate}
-              disabled={isLoading}
+              disabled={isLoading || !imageDescription.trim()}
               className="w-full"
             >
               {isGenerating ? (
