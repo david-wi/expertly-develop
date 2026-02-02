@@ -13,6 +13,7 @@ import {
 import { Upload, Loader2, File, X, CheckCircle, AlertCircle } from 'lucide-react'
 import { artifactsApi } from '@/api/client'
 import { cn } from '@/lib/utils'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface ArtifactUploadDialogProps {
   productId: string
@@ -367,19 +368,33 @@ export function ArtifactUploadDialog({
 
                     {fileItem.status === 'pending' && (
                       <>
-                        <Input
-                          placeholder="Name (optional, defaults to filename)"
-                          value={fileItem.name}
-                          onChange={(e) => updateFile(index, { name: e.target.value })}
-                          className="text-sm"
-                        />
-                        <Textarea
-                          placeholder="Description (optional)"
-                          value={fileItem.description}
-                          onChange={(e) => updateFile(index, { description: e.target.value })}
-                          rows={1}
-                          className="text-sm"
-                        />
+                        <div className="flex gap-2">
+                          <Input
+                            placeholder="Name (optional, defaults to filename)"
+                            value={fileItem.name}
+                            onChange={(e) => updateFile(index, { name: e.target.value })}
+                            className="text-sm flex-1"
+                          />
+                          <InlineVoiceTranscription
+                            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                            onTranscribe={(text) => updateFile(index, { name: fileItem.name ? fileItem.name + ' ' + text : text })}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Textarea
+                            placeholder="Description (optional)"
+                            value={fileItem.description}
+                            onChange={(e) => updateFile(index, { description: e.target.value })}
+                            rows={1}
+                            className="text-sm flex-1"
+                          />
+                          <InlineVoiceTranscription
+                            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                            onTranscribe={(text) => updateFile(index, { description: fileItem.description ? fileItem.description + ' ' + text : text })}
+                            size="sm"
+                          />
+                        </div>
                       </>
                     )}
 

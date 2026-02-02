@@ -7,6 +7,7 @@ import { ColorPaletteEditor } from '@/components/themes/ColorPaletteEditor'
 import { ThemePreview } from '@/components/themes/ThemePreview'
 import { VersionHistory } from '@/components/themes/VersionHistory'
 import type { ThemeColors, ThemeUpdateInput } from '@/types/theme'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 export function ThemeDetail() {
   const { id } = useParams<{ id: string }>()
@@ -159,41 +160,71 @@ export function ThemeDetail() {
                 <label className="block text-sm font-medium text-theme-text-secondary mb-1">
                   Name
                 </label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                    setHasChanges(true)
-                  }}
-                  className="w-full px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value)
+                      setHasChanges(true)
+                    }}
+                    className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <InlineVoiceTranscription
+                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    onTranscribe={(text) => {
+                      setName(name ? name + ' ' + text : text)
+                      setHasChanges(true)
+                    }}
+                    size="md"
+                    className="self-center"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-theme-text-secondary mb-1">
                   Description
                 </label>
-                <textarea
-                  value={description}
-                  onChange={(e) => {
-                    setDescription(e.target.value)
-                    setHasChanges(true)
-                  }}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
+                <div className="flex gap-2">
+                  <textarea
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value)
+                      setHasChanges(true)
+                    }}
+                    rows={2}
+                    className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <InlineVoiceTranscription
+                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    onTranscribe={(text) => {
+                      setDescription(description ? description + ' ' + text : text)
+                      setHasChanges(true)
+                    }}
+                    size="md"
+                    className="self-start mt-1"
+                  />
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-theme-text-secondary mb-1">
                   Change Summary
                 </label>
-                <input
-                  type="text"
-                  value={changeSummary}
-                  onChange={(e) => setChangeSummary(e.target.value)}
-                  placeholder="Describe your changes..."
-                  className="w-full px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={changeSummary}
+                    onChange={(e) => setChangeSummary(e.target.value)}
+                    placeholder="Describe your changes..."
+                    className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <InlineVoiceTranscription
+                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    onTranscribe={(text) => setChangeSummary(changeSummary ? changeSummary + ' ' + text : text)}
+                    size="md"
+                    className="self-center"
+                  />
+                </div>
               </div>
             </div>
           </div>

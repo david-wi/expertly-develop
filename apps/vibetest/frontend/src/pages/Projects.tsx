@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
+import { InlineVoiceTranscription } from '@expertly/ui'
 import { projectsApi } from '../api/client'
 import { Project } from '../types'
 import {
@@ -155,26 +156,42 @@ export default function Projects() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t('common.name')}
                     </label>
-                    <input
-                      type="text"
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="My Project"
-                      required
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newProjectName}
+                        onChange={(e) => setNewProjectName(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        placeholder="My Project"
+                        required
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setNewProjectName(newProjectName ? newProjectName + ' ' + text : text)}
+                        size="md"
+                        className="self-center"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       {t('common.description')}
                     </label>
-                    <textarea
-                      value={newProjectDescription}
-                      onChange={(e) => setNewProjectDescription(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      rows={3}
-                      placeholder="Optional description..."
-                    />
+                    <div className="flex gap-2">
+                      <textarea
+                        value={newProjectDescription}
+                        onChange={(e) => setNewProjectDescription(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        rows={3}
+                        placeholder="Optional description..."
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setNewProjectDescription(newProjectDescription ? newProjectDescription + ' ' + text : text)}
+                        size="md"
+                        className="self-start mt-1"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

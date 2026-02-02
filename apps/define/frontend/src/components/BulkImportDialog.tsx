@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { aiApi, requirementsApi, ParsedRequirement } from '@/api/client'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface ExistingRequirement {
   id: string
@@ -560,13 +561,21 @@ export function BulkImportDialog({
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
                   Describe your requirements
                 </label>
-                <Textarea
-                  placeholder="Example: We need user authentication with login, registration, password reset, and email verification. There should also be role-based access control with admin and regular user roles."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={6}
-                  className="resize-none"
-                />
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Example: We need user authentication with login, registration, password reset, and email verification. There should also be role-based access control with admin and regular user roles."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={6}
+                    className="resize-none flex-1"
+                  />
+                  <InlineVoiceTranscription
+                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    onTranscribe={(text) => setDescription(description ? description + ' ' + text : text)}
+                    size="md"
+                    className="self-start mt-1"
+                  />
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Be as detailed as you want. AI will parse this into structured requirements.
                 </p>

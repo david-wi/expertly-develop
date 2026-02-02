@@ -4,6 +4,7 @@ import { Plus, Edit2, Trash2, Clock, DollarSign } from 'lucide-react';
 import { Button, Input, Card, Modal, ModalFooter } from '../components/ui';
 import { services as servicesApi } from '../services/api';
 import type { Service, ServiceCreate } from '../types';
+import { InlineVoiceTranscription } from '@expertly/ui';
 
 export function ServicesPage() {
   const queryClient = useQueryClient();
@@ -161,22 +162,42 @@ function ServiceFormModal({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="Service Name"
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          required
-          placeholder="e.g., Haircut, Color, etc."
-          autoFocus
-        />
-        <Input
-          label="Description"
-          value={formData.description || ''}
-          onChange={(e) =>
-            setFormData({ ...formData, description: e.target.value })
-          }
-          placeholder="Optional description"
-        />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              label="Service Name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
+              placeholder="e.g., Haircut, Color, etc."
+              autoFocus
+            />
+          </div>
+          <InlineVoiceTranscription
+            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
+            size="md"
+            className="self-end mb-[2px]"
+          />
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              label="Description"
+              value={formData.description || ''}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="Optional description"
+            />
+          </div>
+          <InlineVoiceTranscription
+            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
+            size="md"
+            className="self-end mb-[2px]"
+          />
+        </div>
         <div className="grid grid-cols-2 gap-4">
           <Input
             label="Duration (minutes)"

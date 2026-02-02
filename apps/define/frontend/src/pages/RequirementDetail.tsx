@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select'
 import { ArrowLeft, Loader2, Save, Trash2 } from 'lucide-react'
 import { requirementsApi, Requirement } from '@/api/client'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 const statusOptions = [
   { value: 'draft', label: 'Draft' },
@@ -158,11 +159,18 @@ export default function RequirementDetail() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Title
               </label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="text-lg font-semibold"
-              />
+              <div className="flex gap-2">
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  className="text-lg font-semibold flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
+                  size="md"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -212,12 +220,21 @@ export default function RequirementDetail() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 What this does
               </label>
-              <Textarea
-                placeholder="Users can..."
-                value={form.what_this_does}
-                onChange={(e) => setForm({ ...form, what_this_does: e.target.value })}
-                rows={3}
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Users can..."
+                  value={form.what_this_does}
+                  onChange={(e) => setForm({ ...form, what_this_does: e.target.value })}
+                  rows={3}
+                  className="flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setForm({ ...form, what_this_does: form.what_this_does ? form.what_this_does + ' ' + text : text })}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
               <p className="text-xs text-gray-500 mt-1">One clear sentence starting with "Users can..."</p>
             </div>
 
@@ -225,12 +242,21 @@ export default function RequirementDetail() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Why this exists
               </label>
-              <Textarea
-                placeholder="This helps people..."
-                value={form.why_this_exists}
-                onChange={(e) => setForm({ ...form, why_this_exists: e.target.value })}
-                rows={3}
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="This helps people..."
+                  value={form.why_this_exists}
+                  onChange={(e) => setForm({ ...form, why_this_exists: e.target.value })}
+                  rows={3}
+                  className="flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setForm({ ...form, why_this_exists: form.why_this_exists ? form.why_this_exists + ' ' + text : text })}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
               <p className="text-xs text-gray-500 mt-1">One or two sentences in plain English</p>
             </div>
 
@@ -238,12 +264,21 @@ export default function RequirementDetail() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Not included
               </label>
-              <Textarea
-                placeholder="• Branching or merging versions..."
-                value={form.not_included}
-                onChange={(e) => setForm({ ...form, not_included: e.target.value })}
-                rows={4}
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="• Branching or merging versions..."
+                  value={form.not_included}
+                  onChange={(e) => setForm({ ...form, not_included: e.target.value })}
+                  rows={4}
+                  className="flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setForm({ ...form, not_included: form.not_included ? form.not_included + ' ' + text : text })}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
               <p className="text-xs text-gray-500 mt-1">Bullets that avoid confusion and scope creep</p>
             </div>
 
@@ -251,12 +286,21 @@ export default function RequirementDetail() {
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Acceptance criteria
               </label>
-              <Textarea
-                placeholder="• Users can see a list of versions..."
-                value={form.acceptance_criteria}
-                onChange={(e) => setForm({ ...form, acceptance_criteria: e.target.value })}
-                rows={4}
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="• Users can see a list of versions..."
+                  value={form.acceptance_criteria}
+                  onChange={(e) => setForm({ ...form, acceptance_criteria: e.target.value })}
+                  rows={4}
+                  className="flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setForm({ ...form, acceptance_criteria: form.acceptance_criteria ? form.acceptance_criteria + ' ' + text : text })}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
               <p className="text-xs text-gray-500 mt-1">Testable criteria that map to tests</p>
             </div>
           </div>

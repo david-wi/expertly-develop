@@ -10,6 +10,7 @@ import {
   MessageCircle,
   Image as ImageIcon,
 } from 'lucide-react';
+import { InlineVoiceTranscription } from '@expertly/ui';
 import { useDashboardStore, type Widget as WidgetType, type ChatConversation, type ImageAttachment } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
 import MessageList from './MessageList';
@@ -298,6 +299,12 @@ export default function ChatWidget({ widget, conversation, ws }: ChatWidgetProps
             placeholder={conversation?.state === 'busy' ? 'Waiting for response...' : pendingImages.length > 0 ? 'Add a message or press Enter...' : 'Paste images or type a message...'}
             disabled={!conversation || conversation.state === 'busy'}
             className="flex-1 px-3 py-2 rounded-lg bg-white border border-violet-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-violet-400 disabled:opacity-50"
+          />
+          <InlineVoiceTranscription
+            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            onTranscribe={(text) => setInput(input ? input + ' ' + text : text)}
+            size="md"
+            className="self-center"
           />
           <button
             onClick={handleSend}

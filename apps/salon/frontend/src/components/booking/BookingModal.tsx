@@ -9,6 +9,7 @@ import { services as servicesApi, staff as staffApi, clients as clientsApi } fro
 import { Button, Input } from '../ui';
 import type { Service, Staff, Client, AvailableSlot } from '../../types';
 import { useState } from 'react';
+import { InlineVoiceTranscription } from '@expertly/ui';
 
 export function BookingModal() {
   const {
@@ -373,12 +374,21 @@ function ClientStep({ selected, onSelect }: ClientStepProps) {
 
   return (
     <div className="space-y-4">
-      <Input
-        placeholder="Search clients by name or phone..."
-        value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
-        autoFocus
-      />
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <Input
+            placeholder="Search clients by name or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            autoFocus
+          />
+        </div>
+        <InlineVoiceTranscription
+          wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+          onTranscribe={(text) => setSearchQuery(searchQuery ? searchQuery + ' ' + text : text)}
+          size="md"
+        />
+      </div>
 
       <div className="space-y-2 max-h-64 overflow-y-auto">
         {isLoading ? (
@@ -444,18 +454,38 @@ function CreateClientInline({ onCreated, onCancel }: CreateClientInlineProps) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        <Input
-          label="First Name"
-          value={firstName}
-          onChange={(e) => setFirstName(e.target.value)}
-          required
-        />
-        <Input
-          label="Last Name"
-          value={lastName}
-          onChange={(e) => setLastName(e.target.value)}
-          required
-        />
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              label="First Name"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              required
+            />
+          </div>
+          <InlineVoiceTranscription
+            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            onTranscribe={(text) => setFirstName(firstName ? firstName + ' ' + text : text)}
+            size="md"
+            className="self-end mb-[2px]"
+          />
+        </div>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Input
+              label="Last Name"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              required
+            />
+          </div>
+          <InlineVoiceTranscription
+            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            onTranscribe={(text) => setLastName(lastName ? lastName + ' ' + text : text)}
+            size="md"
+            className="self-end mb-[2px]"
+          />
+        </div>
       </div>
       <Input
         label="Phone"
@@ -525,13 +555,21 @@ function ConfirmStep({ service, slot, client, notes, onNotesChange }: ConfirmSte
 
       <div>
         <label className="block text-sm font-medium text-warm-700 mb-1">Notes (optional)</label>
-        <textarea
-          value={notes}
-          onChange={(e) => onNotesChange(e.target.value)}
-          rows={3}
-          className="w-full px-3 py-2 rounded-lg border border-warm-300 focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
-          placeholder="Any special requests or notes..."
-        />
+        <div className="flex gap-2">
+          <textarea
+            value={notes}
+            onChange={(e) => onNotesChange(e.target.value)}
+            rows={3}
+            className="flex-1 px-3 py-2 rounded-lg border border-warm-300 focus:ring-2 focus:ring-primary-300 focus:border-primary-400"
+            placeholder="Any special requests or notes..."
+          />
+          <InlineVoiceTranscription
+            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            onTranscribe={(text) => onNotesChange(notes ? notes + ' ' + text : text)}
+            size="md"
+            className="self-start mt-1"
+          />
+        </div>
       </div>
     </div>
   );

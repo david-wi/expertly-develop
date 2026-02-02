@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 // Types
 interface Idea {
@@ -348,28 +349,44 @@ function CreateIdeaModal({
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
               What's the idea? *
             </label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-              autoFocus
-              className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="e.g., AI-powered task suggestions"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+                autoFocus
+                className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="e.g., AI-powered task suggestions"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
+                size="md"
+                className="self-center"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
               Tell me more (optional)
             </label>
-            <textarea
-              value={form.description || ''}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              rows={4}
-              className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Why is this idea valuable? What problem does it solve?"
-            />
+            <div className="flex gap-2">
+              <textarea
+                value={form.description || ''}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={4}
+                className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Why is this idea valuable? What problem does it solve?"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, description: form.description ? form.description + ' ' + text : text })}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

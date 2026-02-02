@@ -13,6 +13,7 @@ import {
   ChevronUp,
   Bug,
 } from 'lucide-react'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 // Types
 interface KnownIssue {
@@ -326,29 +327,45 @@ function CreateIssueModal({
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
               Title *
             </label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              required
-              autoFocus
-              className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Brief description of the issue"
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                required
+                autoFocus
+                className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Brief description of the issue"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
+                size="md"
+                className="self-center"
+              />
+            </div>
           </div>
 
           <div>
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
               Description *
             </label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              required
-              rows={4}
-              className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Detailed description of the issue and how it manifests"
-            />
+            <div className="flex gap-2">
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                required
+                rows={4}
+                className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Detailed description of the issue and how it manifests"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, description: form.description ? form.description + ' ' + text : text })}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -420,13 +437,21 @@ function CreateIssueModal({
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
               Workaround
             </label>
-            <textarea
-              value={form.workaround}
-              onChange={(e) => setForm({ ...form, workaround: e.target.value })}
-              rows={3}
-              className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Steps users can take to work around this issue"
-            />
+            <div className="flex gap-2">
+              <textarea
+                value={form.workaround}
+                onChange={(e) => setForm({ ...form, workaround: e.target.value })}
+                rows={3}
+                className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                placeholder="Steps users can take to work around this issue"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, workaround: form.workaround ? form.workaround + ' ' + text : text })}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
         </form>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { Modal, ModalFooter } from '@expertly/ui'
+import { Modal, ModalFooter, InlineVoiceTranscription } from '@expertly/ui'
 import {
   usersApi,
   imagesApi,
@@ -474,13 +474,21 @@ export default function UserProfilePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={formData.name || ''}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                        required
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={formData.name || ''}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                          required
+                        />
+                        <InlineVoiceTranscription
+                          wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                          onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
+                          size="md"
+                          className="self-center"
+                        />
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -498,13 +506,21 @@ export default function UserProfilePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                      <input
-                        type="text"
-                        value={formData.title || ''}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                        placeholder="e.g., Senior Developer"
-                      />
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={formData.title || ''}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                          placeholder="e.g., Senior Developer"
+                        />
+                        <InlineVoiceTranscription
+                          wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                          onTranscribe={(text) => setFormData({ ...formData, title: formData.title ? formData.title + ' ' + text : text })}
+                          size="md"
+                          className="self-center"
+                        />
+                      </div>
                     </div>
                     {user.user_type === 'human' && (
                       <div>
@@ -525,13 +541,21 @@ export default function UserProfilePage() {
                   {/* Responsibilities */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Responsibilities</label>
-                    <textarea
-                      value={formData.responsibilities || ''}
-                      onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
-                      rows={2}
-                      placeholder={user.user_type === 'bot' ? 'Describe what this bot does...' : 'Describe responsibilities...'}
-                    />
+                    <div className="flex gap-2">
+                      <textarea
+                        value={formData.responsibilities || ''}
+                        onChange={(e) => setFormData({ ...formData, responsibilities: e.target.value })}
+                        className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                        rows={2}
+                        placeholder={user.user_type === 'bot' ? 'Describe what this bot does...' : 'Describe responsibilities...'}
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setFormData({ ...formData, responsibilities: formData.responsibilities ? formData.responsibilities + ' ' + text : text })}
+                        size="md"
+                        className="self-start mt-1"
+                      />
+                    </div>
                   </div>
 
                   {/* Avatar URL */}
@@ -550,21 +574,37 @@ export default function UserProfilePage() {
                   {user.user_type === 'bot' && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">What I can help with</label>
-                      <textarea
-                        value={formData.bot_config?.what_i_can_help_with || ''}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            bot_config: {
-                              ...formData.bot_config,
-                              what_i_can_help_with: e.target.value,
-                            },
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded-md px-3 py-2"
-                        rows={2}
-                        placeholder="e.g., LinkedIn posting, research, content writing..."
-                      />
+                      <div className="flex gap-2">
+                        <textarea
+                          value={formData.bot_config?.what_i_can_help_with || ''}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              bot_config: {
+                                ...formData.bot_config,
+                                what_i_can_help_with: e.target.value,
+                              },
+                            })
+                          }
+                          className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                          rows={2}
+                          placeholder="e.g., LinkedIn posting, research, content writing..."
+                        />
+                        <InlineVoiceTranscription
+                          wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                          onTranscribe={(text) =>
+                            setFormData({
+                              ...formData,
+                              bot_config: {
+                                ...formData.bot_config,
+                                what_i_can_help_with: formData.bot_config?.what_i_can_help_with ? formData.bot_config.what_i_can_help_with + ' ' + text : text,
+                              },
+                            })
+                          }
+                          size="md"
+                          className="self-start mt-1"
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -934,13 +974,21 @@ export default function UserProfilePage() {
             <p className="text-gray-500 mb-3 text-sm">
               Describe the appearance and we'll generate a stylized avatar illustration.
             </p>
-            <textarea
-              value={appearanceDescription}
-              onChange={(e) => setAppearanceDescription(e.target.value)}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
-              rows={3}
-              placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
-            />
+            <div className="flex gap-2 mb-4">
+              <textarea
+                value={appearanceDescription}
+                onChange={(e) => setAppearanceDescription(e.target.value)}
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                rows={3}
+                placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setAppearanceDescription(appearanceDescription ? appearanceDescription + ' ' + text : text)}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
 
           <ModalFooter>
