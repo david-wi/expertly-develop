@@ -46,6 +46,8 @@ export interface ThemeColors {
     textStrong?: string
     /** Active item text color - visible on sidebar background */
     activeText?: string
+    /** Hover text color for nav items - visible on hover background */
+    textHover?: string
   }
 }
 
@@ -100,6 +102,7 @@ export const themes: Record<ThemeId, Theme> = {
           border: '#e5e7eb', // gray-200
           textStrong: '#111827', // gray-900 - for product name, user name
           activeText: '#7c3aed', // violet-600 - visible on white
+          textHover: '#111827', // gray-900 - dark text on light hover bg
         },
       },
       dark: {
@@ -138,6 +141,7 @@ export const themes: Record<ThemeId, Theme> = {
           border: '#374151', // gray-700
           textStrong: '#f9fafb', // gray-50 - white for dark sidebar
           activeText: '#c4b5fd', // violet-300 - visible on dark
+          textHover: '#f9fafb', // gray-50 - white text on dark hover bg
         },
       },
     },
@@ -183,6 +187,7 @@ export const themes: Record<ThemeId, Theme> = {
           border: '#e5e7eb',
           textStrong: '#111827', // gray-900 - for product name
           activeText: '#0d9488', // teal-600 - visible on white
+          textHover: '#111827', // gray-900 - dark text on light hover bg
         },
       },
       dark: {
@@ -221,6 +226,7 @@ export const themes: Record<ThemeId, Theme> = {
           border: '#334155', // slate-700
           textStrong: '#f8fafc', // slate-50 - white for dark sidebar
           activeText: '#5eead4', // teal-300 - visible on dark
+          textHover: '#f8fafc', // slate-50 - white text on dark hover bg
         },
       },
     },
@@ -267,6 +273,7 @@ export const themes: Record<ThemeId, Theme> = {
           border: '#292524', // stone-800
           textStrong: '#fafaf9', // stone-50 - white for dark sidebar
           activeText: '#5eead4', // teal-300 - visible on dark
+          textHover: '#fafaf9', // stone-50 - white text on dark hover bg
         },
       },
       dark: {
@@ -306,6 +313,7 @@ export const themes: Record<ThemeId, Theme> = {
           border: '#292524', // stone-800
           textStrong: '#fafaf9', // stone-50 - white for dark sidebar
           activeText: '#5eead4', // teal-300 - visible on dark
+          textHover: '#fafaf9', // stone-50 - white text on dark hover bg
         },
       },
     },

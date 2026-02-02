@@ -322,7 +322,7 @@ export function Sidebar({
                         transition-colors duration-150
                         ${isActive
                           ? `${activeBg} ${activeText}`
-                          : `${sidebarText} ${navHoverBg} hover:text-white`
+                          : `${sidebarText} ${navHoverBg} hover:text-theme-sidebar-text-hover`
                         }
                       `,
                       children: (

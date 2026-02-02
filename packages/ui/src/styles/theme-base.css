@@ -39,6 +39,7 @@
   --theme-sidebar-border: #e5e7eb;
   --theme-sidebar-text-strong: #111827;
   --theme-sidebar-active-text: #7c3aed;
+  --theme-sidebar-text-hover: #111827;
 }
 
 /* Dark mode fallback (if class-based dark mode is used without ThemeProvider) */
@@ -62,6 +63,7 @@
   --theme-sidebar-border: #374151;
   --theme-sidebar-text-strong: #f9fafb;
   --theme-sidebar-active-text: #c4b5fd;
+  --theme-sidebar-text-hover: #f9fafb;
 }
 
 /* Body defaults using theme variables */
