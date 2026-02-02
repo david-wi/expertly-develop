@@ -16,9 +16,10 @@ router = APIRouter()
 
 # Deepgram WebSocket URL with recommended settings
 # Note: Do NOT specify encoding/sample_rate - let Deepgram auto-detect from container format (WebM/Opus)
+# Nova-3 (Feb 2025) offers 54% lower WER vs Nova-2, with real-time multilingual support
 DEEPGRAM_WS_URL = (
     "wss://api.deepgram.com/v1/listen?"
-    "model=nova-2&"
+    "model=nova-3&"
     "language=en-US&"
     "punctuate=true&"
     "interim_results=true&"
