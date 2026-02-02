@@ -4,15 +4,13 @@ import hashlib
 import secrets
 from typing import Optional
 from fastapi import Header, HTTPException, status, Depends, Request
-from bson import ObjectId
 
 from app.config import get_settings
-from app.database import get_database
-from app.models import User
 
 # Import from shared identity-client package
 from identity_client import IdentityClient, IdentityAuth
 from identity_client.models import User as IdentityUser
+from identity_client.auth import get_session_token
 
 # Identity service client (singleton)
 _identity_client: Optional[IdentityClient] = None
@@ -52,101 +50,66 @@ def generate_api_key() -> str:
     return f"{settings.api_key_prefix}{random_part}"
 
 
-async def get_user_by_api_key(api_key: str) -> Optional[User]:
-    """Look up a user by their API key."""
-    db = get_database()
-    key_hash = hash_api_key(api_key)
-
-    user_doc = await db.users.find_one({"api_key_hash": key_hash, "is_active": True})
-    if user_doc:
-        return User(**user_doc)
+async def validate_api_key_with_identity(api_key: str) -> Optional[IdentityUser]:
+    """Validate an API key against Identity service."""
+    client = get_identity_client()
+    try:
+        import httpx
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.get(
+                f"{client.base_url}/api/v1/auth/validate-api-key",
+                headers={"X-API-Key": api_key},
+            )
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("valid") and data.get("user"):
+                    user_data = data["user"]
+                    return IdentityUser(
+                        id=user_data["id"],
+                        organization_id=user_data["organization_id"],
+                        name=user_data["name"],
+                        email=user_data.get("email"),
+                        user_type=user_data.get("user_type", "bot"),
+                        role=user_data.get("role", "member"),
+                        is_active=user_data.get("is_active", True),
+                        avatar_url=user_data.get("avatar_url"),
+                        title=user_data.get("title"),
+                        responsibilities=user_data.get("responsibilities"),
+                        organization_name=user_data.get("organization_name"),
+                    )
+    except Exception:
+        pass
     return None
-
-
-async def get_default_user() -> Optional[User]:
-    """Get the default user (for dev mode)."""
-    db = get_database()
-    user_doc = await db.users.find_one({"is_default": True})
-    if user_doc:
-        return User(**user_doc)
-    return None
-
-
-def _map_identity_role(identity_role: str) -> str:
-    """Map Identity service role to manage role."""
-    role_mapping = {
-        "owner": "owner",
-        "admin": "admin",
-        "member": "member",
-        "viewer": "member",
-    }
-    return role_mapping.get(identity_role, "member")
 
 
 async def get_current_user(
     request: Request,
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-) -> User:
+) -> IdentityUser:
     """
-    Get the current authenticated user.
+    Get the current authenticated user from Identity service.
 
     Authentication priority:
     1. Identity session cookie (X-Session-Token header or expertly_session cookie)
-    2. API key (X-API-Key header) - for bots and service-to-service calls
-    3. Dev mode default user (SKIP_AUTH=true)
+    2. API key (X-API-Key header) - validated against Identity
+    3. Dev mode - use session token from environment or skip
+
+    Returns:
+        IdentityUser from the Identity service.
     """
     settings = get_settings()
-    db = get_database()
 
     # Try Identity session first
     auth = get_identity_auth()
     identity_user = await auth.get_current_user_optional(request)
 
     if identity_user:
-        # Look up local user by email
-        user_doc = await db.users.find_one({
-            "email": identity_user.email,
-            "is_active": True,
-        })
-
-        if user_doc:
-            return User(**user_doc)
-
-        # If no local user found, create one based on Identity user
-        # First, ensure the organization exists (look up by identity_id)
-        org_doc = await db.organizations.find_one({"identity_id": identity_user.organization_id})
-        if not org_doc:
-            # Create organization with new ObjectId
-            org_data = {
-                "_id": ObjectId(),
-                "identity_id": identity_user.organization_id,
-                "name": identity_user.organization_name or "Default Organization",
-                "slug": identity_user.organization_id[:8],
-                "is_default": False,
-            }
-            await db.organizations.insert_one(org_data)
-            org_doc = org_data
-
-        # Create local user linked to Identity (with new ObjectId)
-        user_data = {
-            "_id": ObjectId(),
-            "identity_id": identity_user.id,
-            "organization_id": org_doc["_id"],
-            "email": identity_user.email,
-            "name": identity_user.name,
-            "user_type": "human",
-            "role": _map_identity_role(identity_user.role),
-            "is_active": True,
-            "is_default": False,
-            "avatar_url": identity_user.avatar_url,
-        }
-        await db.users.insert_one(user_data)
-        return User(**user_data)
+        return identity_user
 
     # Fall back to API key authentication (for bots)
     if x_api_key:
         if x_api_key.startswith(settings.api_key_prefix):
-            user = await get_user_by_api_key(x_api_key)
+            user = await validate_api_key_with_identity(x_api_key)
             if user:
                 return user
             raise HTTPException(
@@ -158,14 +121,33 @@ async def get_current_user(
             detail="Invalid API key format."
         )
 
-    # Dev mode fallback
+    # Dev mode fallback - get default user from Identity
     if settings.skip_auth:
-        user = await get_default_user()
-        if user:
-            return user
+        client = get_identity_client()
+        try:
+            import httpx
+            async with httpx.AsyncClient() as http_client:
+                response = await http_client.get(
+                    f"{client.base_url}/api/v1/auth/dev-user",
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    return IdentityUser(
+                        id=data["id"],
+                        organization_id=data["organization_id"],
+                        name=data["name"],
+                        email=data.get("email"),
+                        user_type=data.get("user_type", "human"),
+                        role=data.get("role", "member"),
+                        is_active=True,
+                        avatar_url=data.get("avatar_url"),
+                        organization_name=data.get("organization_name"),
+                    )
+        except Exception:
+            pass
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Default user not found. Run seed script first."
+            detail="Could not get dev user from Identity. Ensure Identity is running."
         )
 
     raise HTTPException(
@@ -175,15 +157,15 @@ async def get_current_user(
 
 
 async def get_current_user_org_id(
-    current_user: User = Depends(get_current_user)
-) -> ObjectId:
+    current_user: IdentityUser = Depends(get_current_user)
+) -> str:
     """Get the organization ID of the current user."""
     return current_user.organization_id
 
 
 def require_role(*roles: str):
     """Dependency factory that requires specific roles."""
-    async def role_checker(request: Request) -> User:
+    async def role_checker(request: Request) -> IdentityUser:
         user = await get_current_user(request)
         if user.role not in roles:
             raise HTTPException(

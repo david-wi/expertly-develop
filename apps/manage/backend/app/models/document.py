@@ -27,7 +27,7 @@ class Document(MongoModel):
     Documents can store markdown content with full version history, and/or
     link to external files (e.g., Google Docs).
     """
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
 
     # Core fields
     title: str

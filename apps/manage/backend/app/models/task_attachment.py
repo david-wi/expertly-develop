@@ -15,7 +15,7 @@ class AttachmentType(str, Enum):
 class TaskAttachment(MongoModel):
     """Task attachment model - files or links attached to tasks."""
     task_id: PyObjectId
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
     attachment_type: AttachmentType
 
     # Optional step association for playbook step-level attachments
@@ -34,7 +34,7 @@ class TaskAttachment(MongoModel):
 
     # Common fields
     note: Optional[str] = None  # Optional description/note about the attachment
-    uploaded_by_id: PyObjectId
+    uploaded_by_id: str  # UUID from Identity service
 
     # Soft delete
     deleted_at: Optional[datetime] = None

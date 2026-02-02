@@ -8,8 +8,8 @@ from app.models.base import MongoModel, PyObjectId
 class TaskComment(MongoModel):
     """Task comment model - comments/discussion on tasks."""
     task_id: PyObjectId
-    organization_id: PyObjectId
-    user_id: PyObjectId
+    organization_id: str  # UUID from Identity service
+    user_id: str  # UUID from Identity service
 
     # Content
     content: str  # Markdown text

@@ -1,111 +1,125 @@
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, status
-from bson import ObjectId
+"""Organization API endpoints - proxies to Identity service."""
 
-from app.database import get_database
-from app.models import Organization, OrganizationCreate, OrganizationUpdate, User
-from app.api.deps import get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
+from typing import Optional
+
+from identity_client.auth import get_session_token
+from identity_client.models import User as IdentityUser
+
+from app.utils.auth import get_identity_client, get_current_user
 
 router = APIRouter()
 
 
+class OrganizationUpdate(BaseModel):
+    """Schema for updating an organization."""
+    name: Optional[str] = None
+    slug: Optional[str] = None
+
+
+def _org_to_dict(org_data: dict) -> dict:
+    """Convert Identity organization to API response format."""
+    return {
+        "id": org_data.get("id"),
+        "_id": org_data.get("id"),  # For backward compatibility
+        "name": org_data.get("name"),
+        "slug": org_data.get("slug"),
+        "settings": org_data.get("settings", {}),
+        "is_default": org_data.get("is_default", False),
+        "created_at": org_data.get("created_at"),
+        "updated_at": org_data.get("updated_at"),
+    }
+
+
 @router.get("")
 async def list_organizations(
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> list[dict]:
-    """List organizations the user has access to."""
-    db = get_database()
+    """List organizations the user has access to from Identity."""
+    session_token = get_session_token(request)
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Session required")
 
-    # Users can only see their own organization
-    cursor = db.organizations.find({"_id": current_user.organization_id})
-    orgs = await cursor.to_list(100)
-
-    return [{**org, "_id": str(org["_id"])} for org in orgs]
+    client = get_identity_client()
+    try:
+        # Users typically only have access to their own organization
+        org = await client.get_organization(current_user.organization_id, session_token)
+        return [_org_to_dict(org.model_dump())]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch organizations: {str(e)}")
 
 
 @router.get("/{org_id}")
 async def get_organization(
     org_id: str,
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
-    """Get a specific organization."""
-    db = get_database()
+    """Get a specific organization from Identity."""
+    session_token = get_session_token(request)
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Session required")
 
-    if not ObjectId.is_valid(org_id):
-        raise HTTPException(status_code=400, detail="Invalid organization ID")
-
-    # Verify access
-    if str(current_user.organization_id) != org_id:
+    # Verify access - users can only see their own organization
+    if current_user.organization_id != org_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    org = await db.organizations.find_one({"_id": ObjectId(org_id)})
-    if not org:
-        raise HTTPException(status_code=404, detail="Organization not found")
-
-    return {**org, "_id": str(org["_id"])}
-
-
-@router.post("", status_code=status.HTTP_201_CREATED)
-async def create_organization(
-    data: OrganizationCreate,
-    current_user: User = Depends(get_current_user)
-) -> dict:
-    """Create a new organization."""
-    db = get_database()
-
-    # Check for duplicate slug
-    existing = await db.organizations.find_one({"slug": data.slug})
-    if existing:
-        raise HTTPException(status_code=400, detail="Organization slug already exists")
-
-    org = Organization(
-        name=data.name,
-        slug=data.slug,
-        settings=data.settings or Organization.model_fields["settings"].default_factory(),
-        is_default=data.is_default
-    )
-
-    await db.organizations.insert_one(org.model_dump_mongo())
-
-    return {**org.model_dump_mongo(), "_id": str(org.id)}
+    client = get_identity_client()
+    try:
+        org = await client.get_organization(org_id, session_token)
+        return _org_to_dict(org.model_dump())
+    except Exception as e:
+        if "404" in str(e) or "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail="Organization not found")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch organization: {str(e)}")
 
 
 @router.patch("/{org_id}")
 async def update_organization(
     org_id: str,
     data: OrganizationUpdate,
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
-    """Update an organization."""
-    db = get_database()
+    """Update an organization in Identity."""
+    session_token = get_session_token(request)
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Session required")
 
-    if not ObjectId.is_valid(org_id):
-        raise HTTPException(status_code=400, detail="Invalid organization ID")
-
-    # Verify access (must be owner)
-    if str(current_user.organization_id) != org_id or current_user.role != "owner":
+    # Verify access (must be owner of the organization)
+    if current_user.organization_id != org_id or current_user.role != "owner":
         raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = data.model_dump(exclude_unset=True)
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    # Check for duplicate slug
-    if "slug" in update_data:
-        existing = await db.organizations.find_one({
-            "slug": update_data["slug"],
-            "_id": {"$ne": ObjectId(org_id)}
-        })
-        if existing:
-            raise HTTPException(status_code=400, detail="Organization slug already exists")
+    client = get_identity_client()
 
-    result = await db.organizations.find_one_and_update(
-        {"_id": ObjectId(org_id)},
-        {"$set": update_data},
-        return_document=True
-    )
+    try:
+        import httpx
+        async with httpx.AsyncClient() as http_client:
+            response = await http_client.patch(
+                f"{client.base_url}/api/v1/organizations/{org_id}",
+                json=update_data,
+                headers={
+                    "X-Session-Token": session_token,
+                    "Content-Type": "application/json",
+                },
+            )
+            if response.status_code == 404:
+                raise HTTPException(status_code=404, detail="Organization not found")
+            if response.status_code == 400:
+                detail = response.json().get("detail", "Bad request")
+                raise HTTPException(status_code=400, detail=detail)
+            response.raise_for_status()
+            result = response.json()
 
-    if not result:
-        raise HTTPException(status_code=404, detail="Organization not found")
+        return _org_to_dict(result)
 
-    return {**result, "_id": str(result["_id"])}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update organization: {str(e)}")

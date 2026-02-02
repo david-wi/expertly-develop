@@ -95,7 +95,7 @@ class Playbook(BaseModel):
     )
 
     id: str = Field(default_factory=lambda: str(uuid4()), alias="_id")
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
 
     # Core fields
     name: str
@@ -107,7 +107,7 @@ class Playbook(BaseModel):
 
     # Scope - who can access this playbook
     scope_type: ScopeType = ScopeType.ORGANIZATION
-    scope_id: Optional[PyObjectId] = None  # User or Team ID (null = organization-wide)
+    scope_id: Optional[str] = None  # User or Team UUID from Identity (null = organization-wide)
 
     # Versioning and history
     version: int = 1

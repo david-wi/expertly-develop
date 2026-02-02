@@ -22,7 +22,7 @@ class Queue(MongoModel):
     - ("My Tasks", user:david-uuid)
     - ("Support Tickets", organization)
     """
-    organization_id: PyObjectId
+    organization_id: str  # UUID from Identity service
 
     # The PURPOSE - what this queue is for
     purpose: str  # e.g., "Marketing Collateral Approval", "Bug Triage", "My Inbox"
@@ -30,7 +30,7 @@ class Queue(MongoModel):
 
     # The SCOPE - who this queue belongs to
     scope_type: ScopeType = ScopeType.ORGANIZATION
-    scope_id: Optional[PyObjectId] = None  # User or Team UUID (null = organization-wide)
+    scope_id: Optional[str] = None  # User or Team UUID from Identity (null = organization-wide)
 
     # System queues (Inbox, Urgent, Follow-up) - created automatically per user
     is_system: bool = False

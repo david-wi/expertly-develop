@@ -252,9 +252,10 @@ async def oauth_callback(
         db = get_database()
 
         # Check if connection already exists for this provider + provider_user_id
+        # user_id and organization_id are now string UUIDs from Identity
         existing = await db.connections.find_one({
-            "user_id": ObjectId(state_data["user_id"]),
-            "organization_id": ObjectId(state_data["organization_id"]),
+            "user_id": state_data["user_id"],
+            "organization_id": state_data["organization_id"],
             "provider": provider,
             "provider_user_id": user_info.id,
         })
@@ -278,8 +279,8 @@ async def oauth_callback(
         else:
             # Create new connection
             connection = Connection(
-                user_id=ObjectId(state_data["user_id"]),
-                organization_id=ObjectId(state_data["organization_id"]),
+                user_id=state_data["user_id"],
+                organization_id=state_data["organization_id"],
                 provider=ConnectionProvider(provider),
                 provider_user_id=user_info.id,
                 provider_email=user_info.email,

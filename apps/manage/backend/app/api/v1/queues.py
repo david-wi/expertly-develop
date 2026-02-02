@@ -3,9 +3,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 
 from app.database import get_database
-from app.models import Queue, QueueCreate, QueueUpdate, User
+from app.models import Queue, QueueCreate, QueueUpdate
 from app.models.queue import ScopeType
 from app.api.deps import get_current_user
+from identity_client.models import User as IdentityUser
 
 router = APIRouter()
 
@@ -15,8 +16,8 @@ def serialize_queue(queue: dict) -> dict:
     return {
         **queue,
         "_id": str(queue["_id"]),
-        "organization_id": str(queue["organization_id"]),
-        "scope_id": str(queue["scope_id"]) if queue.get("scope_id") else None
+        "organization_id": queue["organization_id"],  # Already a string UUID
+        "scope_id": queue["scope_id"] if queue.get("scope_id") else None  # Already a string UUID
     }
 
 
@@ -25,7 +26,7 @@ async def list_queues(
     scope_type: str | None = None,
     scope_id: str | None = None,
     include_system: bool = True,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> list[dict]:
     """
     List queues accessible to the current user.
@@ -43,9 +44,7 @@ async def list_queues(
         query["scope_type"] = scope_type
 
     if scope_id:
-        if not ObjectId.is_valid(scope_id):
-            raise HTTPException(status_code=400, detail="Invalid scope_id")
-        query["scope_id"] = ObjectId(scope_id)
+        query["scope_id"] = scope_id  # String UUID from Identity
 
     if not include_system:
         query["is_system"] = False
@@ -58,7 +57,7 @@ async def list_queues(
 
 @router.get("/stats")
 async def get_queue_stats(
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> list[dict]:
     """Get task statistics for all queues."""
     db = get_database()
@@ -127,7 +126,7 @@ async def get_queue_stats(
 @router.get("/{queue_id}")
 async def get_queue(
     queue_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
     """Get a specific queue."""
     db = get_database()
@@ -150,7 +149,7 @@ async def get_queue(
 @router.post("", status_code=status.HTTP_201_CREATED)
 async def create_queue(
     data: QueueCreate,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
     """
     Create a new queue.
@@ -162,36 +161,20 @@ async def create_queue(
     """
     db = get_database()
 
-    # Validate scope_id based on scope_type
-    scope_id = None
-    if data.scope_id:
-        if not ObjectId.is_valid(data.scope_id):
-            raise HTTPException(status_code=400, detail="Invalid scope_id")
-        scope_id = ObjectId(data.scope_id)
+    # scope_id is now a string UUID from Identity
+    scope_id = data.scope_id
 
     # User scopes must have a user UUID
     if data.scope_type == ScopeType.USER:
         if not scope_id:
-            scope_id = current_user.id  # Default to current user
-        # Verify user exists in org
-        user = await db.users.find_one({
-            "_id": scope_id,
-            "organization_id": current_user.organization_id
-        })
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            scope_id = current_user.id  # Default to current user (string UUID)
+        # User validation is handled by Identity service
 
     # Team scopes must have a team UUID
     if data.scope_type == ScopeType.TEAM:
         if not scope_id:
             raise HTTPException(status_code=400, detail="Team queues require scope_id (team UUID)")
-        # Verify team exists in org
-        team = await db.teams.find_one({
-            "_id": scope_id,
-            "organization_id": current_user.organization_id
-        })
-        if not team:
-            raise HTTPException(status_code=404, detail="Team not found")
+        # Team validation is handled by Identity service
 
     # Organization scopes should not have scope_id
     if data.scope_type == ScopeType.ORGANIZATION:
@@ -216,7 +199,7 @@ async def create_queue(
 async def update_queue(
     queue_id: str,
     data: QueueUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
     """Update a queue."""
     db = get_database()
@@ -237,9 +220,7 @@ async def update_queue(
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    # Convert scope_id to ObjectId
-    if "scope_id" in update_data and update_data["scope_id"]:
-        update_data["scope_id"] = ObjectId(update_data["scope_id"])
+    # scope_id is now a string UUID - no conversion needed
 
     result = await db.queues.find_one_and_update(
         {"_id": ObjectId(queue_id), "organization_id": current_user.organization_id},
@@ -253,7 +234,7 @@ async def update_queue(
 @router.delete("/{queue_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_queue(
     queue_id: str,
-    current_user: User = Depends(get_current_user)
+    current_user: IdentityUser = Depends(get_current_user)
 ):
     """Soft-delete a queue."""
     db = get_database()
