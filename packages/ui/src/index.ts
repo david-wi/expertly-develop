@@ -91,7 +91,7 @@ export {
 } from './components/ChangelogPage'
 
 // Voice Transcription
-export { VoiceTranscription, VoiceTranscriptionButton, type VoiceTranscriptionProps, type VoiceTranscriptionButtonProps, type VoiceTranscriptionStatus, type VoiceTranscriptionPosition, type VoiceTranscriptionError, type PositionOffset, type TranscriptMessage } from './components/VoiceTranscription'
+export { VoiceTranscription, VoiceTranscriptionButton, InlineVoiceTranscription, type VoiceTranscriptionProps, type InlineVoiceTranscriptionProps, type VoiceTranscriptionButtonProps, type VoiceTranscriptionStatus, type VoiceTranscriptionPosition, type VoiceTranscriptionError, type PositionOffset, type TranscriptMessage } from './components/VoiceTranscription'
 export { useActiveElement } from './hooks/useActiveElement'
 export { useAudioRecorder } from './hooks/useAudioRecorder'
 export { useDeepgramWebSocket } from './hooks/useDeepgramWebSocket'

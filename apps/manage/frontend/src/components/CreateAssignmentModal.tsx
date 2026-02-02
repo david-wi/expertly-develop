@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Modal, ModalFooter } from '@expertly/ui'
+import { Modal, ModalFooter, InlineVoiceTranscription } from '@expertly/ui'
 import {
   api,
   Queue,
@@ -293,15 +293,22 @@ export default function CreateAssignmentModal({
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              placeholder="Assignment title"
-              required
-              autoFocus
-            />
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                placeholder="Assignment title"
+                required
+                autoFocus
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
+                size="md"
+              />
+            </div>
           </div>
 
           {/* Description */}
@@ -309,13 +316,21 @@ export default function CreateAssignmentModal({
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description (optional)
             </label>
-            <textarea
-              value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-              rows={2}
-              placeholder="Assignment description"
-            />
+            <div className="flex gap-2">
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                rows={2}
+                placeholder="Assignment description"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setForm({ ...form, description: form.description ? form.description + ' ' + text : text })}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
 
           {/* Playbook Typeahead */}
