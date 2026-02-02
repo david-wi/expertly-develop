@@ -194,18 +194,18 @@ export const themes: Record<ThemeId, Theme> = {
           950: '#052e16',
         },
         background: {
-          default: '#f9fafb', // gray-50
+          default: '#fafaf9', // stone-50
           surface: '#ffffff',
           elevated: '#ffffff',
         },
         text: {
-          primary: '#111827', // gray-900
-          secondary: '#4b5563', // gray-600
-          muted: '#6b7280', // gray-500
+          primary: '#1c1917', // stone-900
+          secondary: '#57534e', // stone-600
+          muted: '#78716c', // stone-500
         },
         border: {
-          default: '#e5e7eb', // gray-200
-          subtle: '#f3f4f6', // gray-100
+          default: '#e7e5e4', // stone-200
+          subtle: '#f5f5f4', // stone-100
         },
       },
       dark: {
@@ -223,18 +223,18 @@ export const themes: Record<ThemeId, Theme> = {
           950: '#052e16',
         },
         background: {
-          default: '#111827', // gray-900
-          surface: '#1f2937', // gray-800
-          elevated: '#374151', // gray-700
+          default: '#1c1917', // stone-900
+          surface: '#292524', // stone-800
+          elevated: '#44403c', // stone-700
         },
         text: {
-          primary: '#f9fafb', // gray-50
-          secondary: '#9ca3af', // gray-400
-          muted: '#6b7280', // gray-500
+          primary: '#fafaf9', // stone-50
+          secondary: '#a8a29e', // stone-400
+          muted: '#78716c', // stone-500
         },
         border: {
-          default: '#374151', // gray-700
-          subtle: '#1f2937', // gray-800
+          default: '#44403c', // stone-700
+          subtle: '#292524', // stone-800
         },
       },
     },
