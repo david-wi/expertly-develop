@@ -355,11 +355,12 @@ export const artifactsApi = {
 
 // Avatars API
 export const avatarsApi = {
-  generate: (productId: string, productName: string, productDescription?: string | null) =>
+  generate: (productId: string, productName: string, productDescription?: string | null, imageDescription?: string | null) =>
     api.post<{ avatar_url: string }>('/avatars/generate', {
       product_id: productId,
       product_name: productName,
       product_description: productDescription,
+      image_description: imageDescription,
     }).then((r) => r.data),
 
   upload: (productId: string, file: File) => {
