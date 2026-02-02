@@ -83,12 +83,11 @@ async def get_current_user(
         )
         db.add(org)
 
-    # Create local user
+    # Create local shadow user linked to Identity
     user = User(
         id=identity_user.id,
         organization_id=identity_user.organization_id,
         email=identity_user.email,
-        password_hash="",  # No local password - auth is via Identity
         full_name=identity_user.name,
         role=identity_user.role,
         is_active=identity_user.is_active,

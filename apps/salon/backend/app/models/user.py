@@ -15,14 +15,22 @@ class UserRole(str, Enum):
 
 
 class User(MongoModel, TimestampMixin):
-    """User account for admin system access."""
+    """
+    User account for salon admin system access.
+
+    Authentication is handled by Identity service. This collection stores
+    salon-specific user data like salon_id and staff linkage.
+    """
 
     salon_id: PyObjectId
     email: EmailStr
-    password_hash: str
     first_name: str
     last_name: str
     role: UserRole = UserRole.STAFF
+
+    # Link to Identity service user
+    identity_user_id: Optional[str] = None  # UUID from Identity service
+    organization_id: Optional[str] = None  # Organization UUID from Identity
 
     # Optional link to staff profile
     staff_id: Optional[PyObjectId] = None

@@ -1,4 +1,4 @@
-"""User model."""
+"""User model - shadow records for Identity users."""
 from sqlalchemy import Column, String, Boolean, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
@@ -8,10 +8,16 @@ from app.models.base import TimestampMixin, SoftDeleteMixin, generate_uuid
 
 
 class User(Base, TimestampMixin, SoftDeleteMixin):
-    """User represents an authenticated user within an organization."""
+    """
+    User represents a shadow record for Identity service users.
+
+    Authentication is handled by Identity service. This table stores
+    local references for relationships and caches user data.
+    """
 
     __tablename__ = "users"
 
+    # ID matches the Identity service user ID (UUID string)
     id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
     organization_id = Column(
         UUID(as_uuid=False),
@@ -19,11 +25,10 @@ class User(Base, TimestampMixin, SoftDeleteMixin):
         nullable=False
     )
     email = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     role = Column(String(50), default="member", nullable=False)  # owner, admin, member, viewer
     is_active = Column(Boolean, default=True, nullable=False)
-    is_verified = Column(Boolean, default=False, nullable=False)
+    is_verified = Column(Boolean, default=True, nullable=False)  # Identity users are verified
 
     # Relationships
     organization = relationship("Organization", back_populates="users")

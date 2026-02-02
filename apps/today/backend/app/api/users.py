@@ -1,16 +1,17 @@
-"""User management API endpoints."""
+"""User management API endpoints - proxies to Identity service."""
 
 from uuid import UUID
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, EmailStr, Field
 
 from app.api.deps import get_context, CurrentContext
-from app.models.user import User
-from app.models.base import generate_api_key
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.utils.auth import get_identity_client
+
+# Import identity client
+from identity_client import IdentityClient
+from identity_client.client import IdentityClientError
 
 router = APIRouter()
 
@@ -20,36 +21,60 @@ class UserCreate(BaseModel):
     email: EmailStr
     name: str = Field(..., min_length=1, max_length=255)
     role: str = Field(default="member", pattern="^(admin|member|viewer)$")
-    timezone: str = Field(default="UTC", max_length=50)
 
 
 class UserUpdate(BaseModel):
     """Schema for updating a user."""
     name: str | None = Field(None, min_length=1, max_length=255)
     role: str | None = Field(None, pattern="^(admin|member|viewer)$")
-    timezone: str | None = Field(None, max_length=50)
-    settings: dict | None = None
 
 
 class UserResponse(BaseModel):
     """Schema for user response."""
-    id: UUID
-    tenant_id: UUID
-    email: str
-    name: str | None
+    id: str
+    organization_id: str
+    email: str | None
+    name: str
     role: str
-    timezone: str
-    settings: dict
-    created_at: str
-    updated_at: str
+    is_active: bool = True
+    created_at: str | None = None
 
     class Config:
         from_attributes = True
 
 
-class UserWithApiKey(UserResponse):
-    """User response including API key (only returned on creation)."""
-    api_key: str
+def _get_session_token(request: Request) -> str:
+    """Extract session token from request."""
+    token = request.cookies.get("expertly_session")
+    if not token:
+        token = request.headers.get("X-Session-Token")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session token required"
+        )
+    return token
+
+
+def _map_role_to_identity(role: str) -> str:
+    """Map Today role to Identity role."""
+    mapping = {
+        "admin": "admin",
+        "member": "member",
+        "viewer": "viewer",
+    }
+    return mapping.get(role, "member")
+
+
+def _map_role_from_identity(role: str) -> str:
+    """Map Identity role to Today role."""
+    mapping = {
+        "owner": "admin",
+        "admin": "admin",
+        "member": "member",
+        "viewer": "viewer",
+    }
+    return mapping.get(role, "member")
 
 
 def require_admin(ctx: CurrentContext = Depends(get_context)) -> CurrentContext:
@@ -64,49 +89,73 @@ def require_admin(ctx: CurrentContext = Depends(get_context)) -> CurrentContext:
 
 @router.get("", response_model=List[UserResponse])
 async def list_users(
+    request: Request,
     ctx: CurrentContext = Depends(get_context),
 ):
-    """List all users in the organization."""
-    result = await ctx.db.execute(
-        select(User).where(User.tenant_id == ctx.tenant.id).order_by(User.created_at)
-    )
-    users = result.scalars().all()
-    return [UserResponse.model_validate(u) for u in users]
+    """List all users in the organization (fetched from Identity service)."""
+    token = _get_session_token(request)
+    client = get_identity_client()
+
+    try:
+        result = await client.list_users(
+            session_token=token,
+            organization_id=str(ctx.tenant.id),
+        )
+        return [
+            UserResponse(
+                id=str(u.id),
+                organization_id=str(u.organization_id),
+                email=u.email,
+                name=u.name,
+                role=_map_role_from_identity(u.role),
+                is_active=u.is_active,
+            )
+            for u in result.items
+        ]
+    except IdentityClientError as e:
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail=str(e.message)
+        )
 
 
-@router.post("", response_model=UserWithApiKey, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(
+    request: Request,
     data: UserCreate,
     ctx: CurrentContext = Depends(require_admin),
 ):
-    """Create a new user (admin only)."""
-    # Check if email already exists in tenant
-    result = await ctx.db.execute(
-        select(User).where(
-            User.tenant_id == ctx.tenant.id,
-            User.email == data.email
+    """Create a new user (admin only) - creates in Identity service."""
+    token = _get_session_token(request)
+    client = get_identity_client()
+
+    try:
+        user = await client.create_user(
+            session_token=token,
+            organization_id=str(ctx.tenant.id),
+            name=data.name,
+            email=data.email,
+            role=_map_role_to_identity(data.role),
+            user_type="human",
         )
-    )
-    if result.scalar_one_or_none():
+        return UserResponse(
+            id=str(user.id),
+            organization_id=str(user.organization_id),
+            email=user.email,
+            name=user.name,
+            role=_map_role_from_identity(user.role),
+            is_active=user.is_active,
+        )
+    except IdentityClientError as e:
+        if e.status_code == 400:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(e.message)
+            )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists in the organization"
+            status_code=e.status_code or 500,
+            detail=str(e.message)
         )
-
-    # Create user with new API key
-    user = User(
-        tenant_id=ctx.tenant.id,
-        email=data.email,
-        name=data.name,
-        role=data.role,
-        timezone=data.timezone,
-        api_key=generate_api_key(),
-    )
-    ctx.db.add(user)
-    await ctx.db.flush()
-    await ctx.db.refresh(user)
-
-    return UserWithApiKey.model_validate(user)
 
 
 @router.get("/me", response_model=UserResponse)
@@ -114,44 +163,60 @@ async def get_current_user(
     ctx: CurrentContext = Depends(get_context),
 ):
     """Get the current authenticated user."""
-    return UserResponse.model_validate(ctx.user)
+    return UserResponse(
+        id=str(ctx.user.id),
+        organization_id=str(ctx.tenant.id),
+        email=ctx.user.email,
+        name=ctx.user.name or "",
+        role=ctx.user.role,
+        is_active=True,
+    )
 
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user(
     user_id: UUID,
+    request: Request,
     ctx: CurrentContext = Depends(get_context),
 ):
-    """Get a user by ID."""
-    result = await ctx.db.execute(
-        select(User).where(
-            User.id == user_id,
-            User.tenant_id == ctx.tenant.id
+    """Get a user by ID from Identity service."""
+    token = _get_session_token(request)
+    client = get_identity_client()
+
+    try:
+        user = await client.get_user(
+            user_id=str(user_id),
+            session_token=token,
         )
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return UserResponse.model_validate(user)
+        # Verify user belongs to same organization
+        if str(user.organization_id) != str(ctx.tenant.id):
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return UserResponse(
+            id=str(user.id),
+            organization_id=str(user.organization_id),
+            email=user.email,
+            name=user.name,
+            role=_map_role_from_identity(user.role),
+            is_active=user.is_active,
+        )
+    except IdentityClientError as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail=str(e.message)
+        )
 
 
 @router.put("/{user_id}", response_model=UserResponse)
 async def update_user(
     user_id: UUID,
+    request: Request,
     data: UserUpdate,
     ctx: CurrentContext = Depends(get_context),
 ):
-    """Update a user. Users can update themselves, admins can update anyone."""
-    result = await ctx.db.execute(
-        select(User).where(
-            User.id == user_id,
-            User.tenant_id == ctx.tenant.id
-        )
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
+    """Update a user in Identity service. Users can update themselves, admins can update anyone."""
     # Only admins can update other users or change roles
     if ctx.user.id != user_id:
         if ctx.user.role != "admin":
@@ -166,73 +231,60 @@ async def update_user(
             detail="Only admins can change user roles"
         )
 
-    # Update fields
-    if data.name is not None:
-        user.name = data.name
-    if data.role is not None:
-        user.role = data.role
-    if data.timezone is not None:
-        user.timezone = data.timezone
-    if data.settings is not None:
-        user.settings = {**user.settings, **data.settings}
+    token = _get_session_token(request)
+    client = get_identity_client()
 
-    await ctx.db.flush()
-    await ctx.db.refresh(user)
-
-    return UserResponse.model_validate(user)
+    try:
+        user = await client.update_user(
+            user_id=str(user_id),
+            session_token=token,
+            organization_id=str(ctx.tenant.id),
+            name=data.name,
+            role=_map_role_to_identity(data.role) if data.role else None,
+        )
+        return UserResponse(
+            id=str(user.id),
+            organization_id=str(user.organization_id),
+            email=user.email,
+            name=user.name,
+            role=_map_role_from_identity(user.role),
+            is_active=user.is_active,
+        )
+    except IdentityClientError as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=e.status_code or 500,
+            detail=str(e.message)
+        )
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_user(
     user_id: UUID,
+    request: Request,
     ctx: CurrentContext = Depends(require_admin),
 ):
-    """Delete a user (admin only). Cannot delete yourself."""
+    """Delete a user from Identity service (admin only). Cannot delete yourself."""
     if ctx.user.id == user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot delete yourself"
         )
 
-    result = await ctx.db.execute(
-        select(User).where(
-            User.id == user_id,
-            User.tenant_id == ctx.tenant.id
+    token = _get_session_token(request)
+    client = get_identity_client()
+
+    try:
+        await client.delete_user(
+            user_id=str(user_id),
+            session_token=token,
+            organization_id=str(ctx.tenant.id),
         )
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    await ctx.db.delete(user)
-    await ctx.db.flush()
-
-
-@router.post("/{user_id}/regenerate-api-key", response_model=UserWithApiKey)
-async def regenerate_api_key(
-    user_id: UUID,
-    ctx: CurrentContext = Depends(get_context),
-):
-    """Regenerate API key for a user. Users can regenerate their own, admins can regenerate any."""
-    result = await ctx.db.execute(
-        select(User).where(
-            User.id == user_id,
-            User.tenant_id == ctx.tenant.id
-        )
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Only admins can regenerate other users' keys
-    if ctx.user.id != user_id and ctx.user.role != "admin":
+    except IdentityClientError as e:
+        if e.status_code == 404:
+            raise HTTPException(status_code=404, detail="User not found")
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot regenerate API key for other users"
+            status_code=e.status_code or 500,
+            detail=str(e.message)
         )
-
-    user.api_key = generate_api_key()
-    await ctx.db.flush()
-    await ctx.db.refresh(user)
-
-    return UserWithApiKey.model_validate(user)

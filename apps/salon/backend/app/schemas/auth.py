@@ -1,41 +1,16 @@
+"""
+Authentication schemas for Salon app.
+
+Note: Authentication is handled by Identity service at identity.ai.devintensive.com.
+These schemas are for salon-specific user management (not auth itself).
+"""
+
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
-class LoginRequest(BaseModel):
-    """Login credentials."""
-
-    email: EmailStr
-    password: str = Field(min_length=8)
-
-
-class LoginResponse(BaseModel):
-    """Login response with tokens."""
-
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-    user: "UserResponse"
-
-
-class TokenRefreshRequest(BaseModel):
-    """Token refresh request."""
-
-    refresh_token: str
-
-
-class RegisterRequest(BaseModel):
-    """User registration request."""
-
-    email: EmailStr
-    password: str = Field(min_length=8)
-    first_name: str = Field(min_length=1)
-    last_name: str = Field(min_length=1)
-    salon_id: str  # Must be invited to a salon
-
-
 class InviteStaffRequest(BaseModel):
-    """Invite a staff member to create a login."""
+    """Invite a staff member to create a login via Identity service."""
 
     staff_id: str
     email: EmailStr
@@ -43,10 +18,14 @@ class InviteStaffRequest(BaseModel):
 
 
 class CreateUserRequest(BaseModel):
-    """Create a new user account (admin only)."""
+    """Create a new salon user record (admin only).
+
+    Note: Authentication is handled by Identity service.
+    This creates a salon-specific user record that will be linked
+    to an Identity user when they log in.
+    """
 
     email: EmailStr
-    password: str = Field(min_length=8)
     first_name: str = Field(min_length=1)
     last_name: str = Field(min_length=1)
     role: str = "staff"
@@ -87,7 +66,3 @@ class UserResponse(BaseModel):
             staff_id=str(user["staff_id"]) if user.get("staff_id") else None,
             is_active=user.get("is_active", True),
         )
-
-
-# Update forward reference
-LoginResponse.model_rebuild()
