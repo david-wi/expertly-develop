@@ -4,6 +4,7 @@ import secrets
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
+from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete as sql_delete
@@ -326,6 +327,10 @@ async def get_accessible_organizations(
         raise HTTPException(status_code=401, detail="Session invalid or expired")
 
     user_id = validation.user.id
+    # Ensure user_id is a proper UUID for the query
+    if isinstance(user_id, str):
+        user_id = UUID(user_id)
+    logger.info(f"Org lookup for user_id={user_id}, type={type(user_id)}")
 
     # Get the full user record to check is_expertly_admin
     user_query = select(User).where(User.id == user_id)
@@ -333,6 +338,7 @@ async def get_accessible_organizations(
     user = user_result.scalar_one_or_none()
 
     if not user:
+        logger.error(f"User not found for id={user_id}")
         raise HTTPException(status_code=401, detail="User not found")
 
     accessible_orgs = []
