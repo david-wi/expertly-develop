@@ -22,11 +22,8 @@ class WaitingItem(Base, TimestampMixin):
     __tablename__ = "waiting_items"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     task_id = Column(
         UUID(as_uuid=True),
         ForeignKey("tasks.id", ondelete="SET NULL"),
@@ -54,8 +51,7 @@ class WaitingItem(Base, TimestampMixin):
     resolved_at = Column(String(50), nullable=True)
     resolution_notes = Column(Text, nullable=True)
 
-    # Relationships
-    tenant = relationship("Tenant")
+    # Relationships (Tenant now from Identity service)
     task = relationship("Task")
     person = relationship("Person")
 

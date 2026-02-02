@@ -26,11 +26,8 @@ class SalesOpportunity(Base, TimestampMixin):
     __tablename__ = "sales_opportunities"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     client_id = Column(
         UUID(as_uuid=True),
         ForeignKey("clients.id", ondelete="SET NULL"),
@@ -58,8 +55,7 @@ class SalesOpportunity(Base, TimestampMixin):
     # Closed timestamp
     closed_at = Column(String(50), nullable=True)
 
-    # Relationships
-    tenant = relationship("Tenant")
+    # Relationships (Tenant now from Identity service)
     client = relationship("Client", back_populates="sales_opportunities")
 
     __table_args__ = (

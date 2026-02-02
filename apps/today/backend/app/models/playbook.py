@@ -26,11 +26,8 @@ class Playbook(Base, TimestampMixin):
     __tablename__ = "playbooks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
 
     # Identity
     name = Column(String(255), nullable=False)
@@ -64,8 +61,7 @@ class Playbook(Base, TimestampMixin):
     # Status
     status = Column(String(50), default=PlaybookStatus.ACTIVE, nullable=False)
 
-    # Relationships
-    tenant = relationship("Tenant")
+    # Tenant now comes from Identity service
 
     def __repr__(self) -> str:
         return f"<Playbook {self.name}>"

@@ -40,16 +40,10 @@ class Task(Base, TimestampMixin):
     __tablename__ = "tasks"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
+    # Organization ID from Identity service (UUID string)
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # User ID from Identity service (UUID string)
+    user_id = Column(UUID(as_uuid=True), nullable=True, index=True)
     project_id = Column(
         UUID(as_uuid=True),
         ForeignKey("projects.id", ondelete="SET NULL"),
@@ -86,9 +80,7 @@ class Task(Base, TimestampMixin):
     # Worker tracking (for multi-agent support)
     worker_id = Column(String(100), nullable=True)  # ID of bot/agent working on this
 
-    # Relationships
-    tenant = relationship("Tenant")
-    creator = relationship("User", back_populates="tasks", foreign_keys=[user_id])
+    # Relationships (User/Tenant now come from Identity service, not local tables)
     project = relationship("Project", back_populates="tasks")
     blocking_question = relationship("Question", foreign_keys=[blocking_question_id])
     drafts = relationship("Draft", back_populates="task")

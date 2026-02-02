@@ -52,16 +52,10 @@ class Question(Base, TimestampMixin):
     __tablename__ = "questions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # User ID from Identity service
+    user_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     # The question itself
     text = Column(Text, nullable=False)
@@ -81,9 +75,7 @@ class Question(Base, TimestampMixin):
     answered_at = Column(String(50), nullable=True)
     answered_by = Column(String(50), nullable=True)  # 'user' or 'claude'
 
-    # Relationships
-    tenant = relationship("Tenant")
-    user = relationship("User", back_populates="questions")
+    # Relationships (User/Tenant now from Identity service)
     unblocks_tasks = relationship(
         "Task",
         secondary="question_unblocks",

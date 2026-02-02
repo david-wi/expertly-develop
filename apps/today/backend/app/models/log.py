@@ -23,16 +23,10 @@ class Log(Base, TimestampMixin):
     __tablename__ = "logs"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-    user_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("users.id", ondelete="SET NULL"),
-        nullable=True,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
+    # User ID from Identity service
+    user_id = Column(UUID(as_uuid=True), nullable=True, index=True)
 
     # When & Who
     timestamp = Column(String(50), nullable=False)
@@ -49,9 +43,7 @@ class Log(Base, TimestampMixin):
     # Context
     session_id = Column(String(100), nullable=True)
 
-    # Relationships
-    tenant = relationship("Tenant")
-    user = relationship("User", back_populates="logs")
+    # User/Tenant now come from Identity service, not local tables
 
     def __repr__(self) -> str:
         return f"<Log {self.action} on {self.entity_type}>"

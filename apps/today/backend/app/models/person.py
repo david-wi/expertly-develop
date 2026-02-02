@@ -39,11 +39,8 @@ class Person(Base, TimestampMixin):
     __tablename__ = "people"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    tenant_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("tenants.id", ondelete="CASCADE"),
-        nullable=False,
-    )
+    # Organization ID from Identity service
+    tenant_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     client_id = Column(
         UUID(as_uuid=True),
         ForeignKey("clients.id", ondelete="SET NULL"),
@@ -71,8 +68,7 @@ class Person(Base, TimestampMixin):
     context_notes = Column(Text, nullable=True)
     metadata_ = Column("metadata", JSONB, default=dict, nullable=False)
 
-    # Relationships
-    tenant = orm_relationship("Tenant")
+    # Relationships (Tenant now from Identity service)
     client = orm_relationship("Client", back_populates="people")
     tasks = orm_relationship("TaskPerson", back_populates="person", cascade="all, delete-orphan")
 

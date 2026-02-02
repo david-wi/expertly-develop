@@ -1,8 +1,10 @@
-"""SQLAlchemy models for Expertly Today."""
+"""SQLAlchemy models for Expertly Today.
+
+Note: User and Tenant data now comes from Identity service.
+tenant_id and user_id columns store Identity UUIDs directly.
+"""
 
 from app.models.base import Base, TimestampMixin
-from app.models.tenant import Tenant
-from app.models.user import User
 from app.models.project import Project
 from app.models.task import Task
 from app.models.question import Question, QuestionUnblock
@@ -19,8 +21,6 @@ from app.models.log import Log
 __all__ = [
     "Base",
     "TimestampMixin",
-    "Tenant",
-    "User",
     "Project",
     "Task",
     "Question",
