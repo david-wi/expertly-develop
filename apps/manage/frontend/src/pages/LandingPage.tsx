@@ -24,8 +24,8 @@ const capabilities = [
     icon: Workflow,
   },
   {
-    name: 'Build Your Bot Army',
-    description: 'Gradually delegate steps to specialized bots. SalesBot, MarketingBot, SupportBot — each follows your playbooks and seeks approval when you want.',
+    name: 'Deploy AI Specialists',
+    description: 'Gradually delegate steps to specialized AI. Sales, Marketing, Support — each follows your playbooks and seeks approval when needed.',
     icon: Bot,
   },
   {
@@ -40,7 +40,7 @@ const capabilities = [
   },
   {
     name: 'Multiply Leadership',
-    description: 'Bots seek approval from your leads when needed. Extend their span of control exponentially while maintaining oversight.',
+    description: 'AI specialists seek approval from your leads when needed. Extend their span of control exponentially while maintaining oversight.',
     icon: TrendingUp,
   },
   {
@@ -58,9 +58,9 @@ const integrations = [
 ]
 
 const benefits = [
-  'Your AI Chief of Staff',
+  'Mission Control + Digital Workforce',
   'Processes on autopilot',
-  'Bots that multiply you',
+  'AI specialists multiply your team',
   'Full context everywhere',
   'Nothing falls through',
   'Scale without chaos',
@@ -103,16 +103,16 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
-              Your AI-Powered{' '}
-              <span className="text-primary-600">Chief of Staff</span>
+              Mission Control for{' '}
+              <span className="text-primary-600">the Amplified Team</span>
             </h1>
             <p className="mt-3 text-lg font-medium text-primary-600 italic">
-              Map your processes. Build your bot army. Let AI push everything forward.
+              You. Your inner circle. AI specialists multiplying each one.
             </p>
             <p className="mt-6 text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-              Define how your organization works — who does what, when, with what approvals.
-              Then watch as bots take over more and more steps, your leaders multiply their reach,
-              and every one of your initiatives gets proactively pushed forward.
+              Build a leaner, better organization. Work with the talented people you love working with —
+              each one amplified by AI specialists who handle the rote work, gather context,
+              and push every initiative forward while your team focuses on what actually matters.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -164,16 +164,16 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Imagine this...
+              The future isn't a bigger org. It's a better one.
             </h2>
             <p className="mt-6 text-xl text-gray-600 leading-relaxed">
-              You have <span className="font-semibold text-gray-900">dozens of initiatives</span> to push forward.
-              Emails to follow up on. Approvals waiting. Tasks scattered across tools.
+              Imagine working only with the people you love working with — your <span className="font-semibold text-gray-900">inner circle</span> of
+              talented, driven people. Each one focused on the challenging, creative, rewarding parts of their job.
             </p>
             <p className="mt-4 text-xl text-gray-600 leading-relaxed">
-              Now imagine a <span className="font-semibold text-primary-600">Chief of Staff</span> who knows every project,
-              proactively gathers what you need, drafts responses, reminds you to nudge people,
-              and keeps everything moving — <span className="italic">even while you sleep</span>.
+              The rote work? <span className="font-semibold text-primary-600">Handled by AI specialists</span>.
+              Follow-ups? Automatic. Context-gathering? Done before they start.
+              Your superstars stay superstars — <span className="italic">and accomplish more than teams twice their size</span>.
             </p>
           </div>
 
@@ -193,10 +193,10 @@ export default function LandingPage() {
               <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
                 <Bot className="w-7 h-7 text-purple-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-3">For Your Bots</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">For Your AI Specialists</h3>
               <p className="text-gray-600">
-                SalesBot handles outreach. MarketingBot manages campaigns. SupportBot triages tickets.
-                Each follows your playbooks precisely and escalates when you want.
+                Sales AI handles outreach. Marketing AI manages campaigns. Support AI triages tickets.
+                Each follows your playbooks precisely and escalates when needed.
               </p>
             </div>
 
@@ -299,10 +299,10 @@ export default function LandingPage() {
                 2
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Build Your Bots
+                Deploy AI Specialists
               </h3>
               <p className="mt-3 text-gray-600">
-                Gradually delegate steps to specialized bots that follow your playbooks.
+                Gradually delegate steps to specialized AI that follows your playbooks.
               </p>
             </div>
             <div className="text-center">
@@ -310,7 +310,7 @@ export default function LandingPage() {
                 3
               </div>
               <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Centralize Everything
+                Unify in Mission Control
               </h3>
               <p className="mt-3 text-gray-600">
                 Pull todos from everywhere into one hub, mapped to projects for full context.
@@ -324,7 +324,7 @@ export default function LandingPage() {
                 Let AI Push Forward
               </h3>
               <p className="mt-3 text-gray-600">
-                Watch as your AI Chief of Staff proactively advances every initiative.
+                Watch as your AI specialists proactively advance every initiative.
               </p>
             </div>
           </div>
@@ -336,11 +336,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Brain className="w-16 h-16 text-white/80 mx-auto mb-6" />
           <h2 className="text-3xl sm:text-4xl font-bold text-white">
-            Ready for your AI Chief of Staff?
+            Ready to build your Amplified Team?
           </h2>
           <p className="mt-4 text-xl text-primary-100 max-w-2xl mx-auto">
-            Stop chasing tasks. Start building an organization that runs itself —
-            with you and your leaders in control.
+            Work with the people you love. Let AI specialists handle the rest.
+            Your inner circle, multiplied.
           </p>
           <Link
             to="/"
