@@ -312,6 +312,10 @@ async def get_accessible_organizations(
     2. Organization memberships
     3. All organizations if user is an Expertly Admin
     """
+    # Debug: log cookie and header info
+    cookie_token = request.cookies.get("expertly_session")
+    logger.info(f"Org request - Header token: {bool(session_token_header)}, Cookie token: {bool(cookie_token)}, All cookies: {list(request.cookies.keys())}")
+
     session_token = _get_session_token(request, session_token_header)
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
