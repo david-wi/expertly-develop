@@ -50,21 +50,21 @@ function StatCard({ label, value, icon, color, tooltip, trend }: StatCardProps) 
   return (
     <Tooltip content={tooltip} position="top">
       <div className={`${styles.bg} rounded-xl p-4 transition-all hover:shadow-md cursor-default`}>
-        <div className="flex items-start justify-between">
+        <div className="flex items-center justify-between">
           <div className={`${styles.iconBg} ${styles.iconColor} p-2 rounded-lg`}>
             {icon}
           </div>
-          {trend && (
-            <div className={`flex items-center gap-1 text-xs font-medium ${styles.trendColor}`}>
-              <TrendingUp className="w-3 h-3" />
-              <span>{trend.value}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {trend && (
+              <div className={`flex items-center gap-1 text-xs font-medium ${styles.trendColor}`}>
+                <TrendingUp className="w-3 h-3" />
+                <span>{trend.value}</span>
+              </div>
+            )}
+            <p className={`text-3xl font-bold ${styles.valueColor}`}>{value}</p>
+          </div>
         </div>
-        <div className="mt-3">
-          <p className={`text-3xl font-bold ${styles.valueColor}`}>{value}</p>
-          <p className="text-sm text-gray-600 mt-1">{label}</p>
-        </div>
+        <p className="text-sm text-gray-600 mt-2">{label}</p>
       </div>
     </Tooltip>
   )
