@@ -146,7 +146,7 @@ THEMES_DATA = [
     {
         "name": "Emerald",
         "slug": "emerald",
-        "description": "Fresh green theme - professional and vibrant",
+        "description": "Fresh green theme with warm stone neutrals - professional and vibrant",
         "is_default": False,
         "colors": {
             "light": {
@@ -164,18 +164,18 @@ THEMES_DATA = [
                     "950": "#052e16",
                 },
                 "background": {
-                    "default": "#f9fafb",
+                    "default": "#fafaf9",
                     "surface": "#ffffff",
                     "elevated": "#ffffff",
                 },
                 "text": {
-                    "primary": "#111827",
-                    "secondary": "#4b5563",
-                    "muted": "#6b7280",
+                    "primary": "#1c1917",
+                    "secondary": "#57534e",
+                    "muted": "#78716c",
                 },
                 "border": {
-                    "default": "#e5e7eb",
-                    "subtle": "#f3f4f6",
+                    "default": "#e7e5e4",
+                    "subtle": "#f5f5f4",
                 },
             },
             "dark": {
@@ -193,18 +193,18 @@ THEMES_DATA = [
                     "950": "#052e16",
                 },
                 "background": {
-                    "default": "#111827",
-                    "surface": "#1f2937",
-                    "elevated": "#374151",
+                    "default": "#1c1917",
+                    "surface": "#292524",
+                    "elevated": "#44403c",
                 },
                 "text": {
-                    "primary": "#f9fafb",
-                    "secondary": "#9ca3af",
-                    "muted": "#6b7280",
+                    "primary": "#fafaf9",
+                    "secondary": "#a8a29e",
+                    "muted": "#78716c",
                 },
                 "border": {
-                    "default": "#374151",
-                    "subtle": "#1f2937",
+                    "default": "#44403c",
+                    "subtle": "#292524",
                 },
             },
         },
