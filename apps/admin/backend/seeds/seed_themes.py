@@ -45,6 +45,13 @@ THEMES_DATA = [
                     "default": "#e5e7eb",
                     "subtle": "#f3f4f6",
                 },
+                "sidebar": {
+                    "background": "#ffffff",
+                    "backgroundHover": "#f3f4f6",
+                    "text": "#4b5563",
+                    "textMuted": "#9ca3af",
+                    "border": "#e5e7eb",
+                },
             },
             "dark": {
                 "primary": {
@@ -73,6 +80,13 @@ THEMES_DATA = [
                 "border": {
                     "default": "#374151",
                     "subtle": "#1f2937",
+                },
+                "sidebar": {
+                    "background": "#1f2937",
+                    "backgroundHover": "#374151",
+                    "text": "#9ca3af",
+                    "textMuted": "#6b7280",
+                    "border": "#374151",
                 },
             },
         },
@@ -111,6 +125,13 @@ THEMES_DATA = [
                     "default": "#e5e7eb",
                     "subtle": "#f3f4f6",
                 },
+                "sidebar": {
+                    "background": "#ffffff",
+                    "backgroundHover": "#f3f4f6",
+                    "text": "#4b5563",
+                    "textMuted": "#9ca3af",
+                    "border": "#e5e7eb",
+                },
             },
             "dark": {
                 "primary": {
@@ -139,6 +160,13 @@ THEMES_DATA = [
                 "border": {
                     "default": "#334155",
                     "subtle": "#1e293b",
+                },
+                "sidebar": {
+                    "background": "#1e293b",
+                    "backgroundHover": "#334155",
+                    "text": "#94a3b8",
+                    "textMuted": "#64748b",
+                    "border": "#334155",
                 },
             },
         },
@@ -177,6 +205,13 @@ THEMES_DATA = [
                     "default": "#e7e5e4",
                     "subtle": "#f5f5f4",
                 },
+                "sidebar": {
+                    "background": "#1c1917",
+                    "backgroundHover": "#292524",
+                    "text": "#a8a29e",
+                    "textMuted": "#57534e",
+                    "border": "#292524",
+                },
             },
             "dark": {
                 "primary": {
@@ -205,6 +240,13 @@ THEMES_DATA = [
                 "border": {
                     "default": "#44403c",
                     "subtle": "#292524",
+                },
+                "sidebar": {
+                    "background": "#1c1917",
+                    "backgroundHover": "#292524",
+                    "text": "#a8a29e",
+                    "textMuted": "#57534e",
+                    "border": "#292524",
                 },
             },
         },

@@ -83,6 +83,14 @@ function applyThemeToDOM(themeId: string, mode: ThemeMode, customThemes?: Map<st
   root.style.setProperty('--theme-border-default', colors.border.default)
   root.style.setProperty('--theme-border-subtle', colors.border.subtle)
 
+  // Apply sidebar colors (with fallbacks to background/text colors)
+  const sidebar = colors.sidebar
+  root.style.setProperty('--theme-sidebar-bg', sidebar?.background ?? colors.background.surface)
+  root.style.setProperty('--theme-sidebar-bg-hover', sidebar?.backgroundHover ?? colors.background.elevated)
+  root.style.setProperty('--theme-sidebar-text', sidebar?.text ?? colors.text.secondary)
+  root.style.setProperty('--theme-sidebar-text-muted', sidebar?.textMuted ?? colors.text.muted)
+  root.style.setProperty('--theme-sidebar-border', sidebar?.border ?? colors.border.default)
+
   // Set data attributes for CSS selectors
   root.setAttribute('data-theme', themeId)
   root.setAttribute('data-mode', mode)
