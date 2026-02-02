@@ -258,8 +258,7 @@ services:
       - SLACK_CLIENT_ID=${SLACK_CLIENT_ID:-}
       - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET:-}
       - CONNECTION_ENCRYPTION_KEY=${CONNECTION_ENCRYPTION_KEY:-}
-      # AI features
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # AI features (uses Groq via Admin AI Config)
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
