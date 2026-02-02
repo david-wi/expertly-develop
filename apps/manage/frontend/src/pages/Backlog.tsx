@@ -263,7 +263,7 @@ export default function Backlog() {
         <div className="flex items-center space-x-3">
           <ClipboardList className="h-8 w-8 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Backlog</h2>
+            <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Backlog</h2>
             <p className="text-sm text-gray-500">Track work items and tasks</p>
           </div>
         </div>

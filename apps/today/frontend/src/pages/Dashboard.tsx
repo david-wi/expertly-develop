@@ -37,7 +37,7 @@ export function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">Dashboard</h1>
           <p className="text-sm text-gray-500">Welcome back. Here's what's happening today.</p>
         </div>
         <Link to="/tasks/new">

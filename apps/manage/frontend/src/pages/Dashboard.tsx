@@ -19,7 +19,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Dashboard</h2>
         <div className="flex items-center space-x-2">
           <Tooltip
             content={wsConnected

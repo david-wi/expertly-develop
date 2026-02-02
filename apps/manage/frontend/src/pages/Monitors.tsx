@@ -404,7 +404,7 @@ export default function Monitors() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Monitors</h2>
+          <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Monitors</h2>
           <p className="text-sm text-gray-500 mt-1">
             Watch external services and trigger playbooks when events are detected
           </p>

@@ -286,7 +286,7 @@ export default function Wins() {
         <div className="flex items-center space-x-3">
           <Trophy className="h-8 w-8 text-yellow-500" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Wins</h2>
+            <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Wins</h2>
             <p className="text-sm text-gray-500">Celebrate what you've accomplished</p>
           </div>
         </div>
