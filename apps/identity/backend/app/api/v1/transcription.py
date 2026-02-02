@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Deepgram WebSocket URL with recommended settings
+# Note: Do NOT specify encoding/sample_rate - let Deepgram auto-detect from container format (WebM/Opus)
 DEEPGRAM_WS_URL = (
     "wss://api.deepgram.com/v1/listen?"
     "model=nova-2&"
@@ -22,9 +23,7 @@ DEEPGRAM_WS_URL = (
     "punctuate=true&"
     "interim_results=true&"
     "endpointing=300&"
-    "vad_events=true&"
-    "encoding=linear16&"
-    "sample_rate=16000"
+    "vad_events=true"
 )
 
 
