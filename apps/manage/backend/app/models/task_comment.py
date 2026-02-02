@@ -10,6 +10,7 @@ class TaskComment(MongoModel):
     task_id: PyObjectId
     organization_id: str  # UUID from Identity service
     user_id: str  # UUID from Identity service
+    user_name: Optional[str] = None  # Stored at creation time for display
 
     # Content
     content: str  # Markdown text
