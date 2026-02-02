@@ -29,6 +29,7 @@ export interface ThemeColors {
     primary: string
     secondary: string
     muted: string
+    heading: string  // Themed heading color (uses primary palette)
   }
   // Border colors
   border: {
@@ -88,6 +89,7 @@ export const themes: Record<ThemeId, Theme> = {
           primary: '#111827', // gray-900
           secondary: '#4b5563', // gray-600
           muted: '#6b7280', // gray-500
+          heading: '#6d28d9', // violet-700 - themed heading color
         },
         border: {
           default: '#e5e7eb', // gray-200
@@ -128,6 +130,7 @@ export const themes: Record<ThemeId, Theme> = {
           primary: '#f9fafb', // gray-50
           secondary: '#9ca3af', // gray-400
           muted: '#6b7280', // gray-500
+          heading: '#c4b5fd', // violet-300 - themed heading for dark mode
         },
         border: {
           default: '#374151', // gray-700
@@ -173,6 +176,7 @@ export const themes: Record<ThemeId, Theme> = {
           primary: '#111827', // gray-900
           secondary: '#4b5563', // gray-600
           muted: '#6b7280', // gray-500
+          heading: '#0f766e', // teal-700 - themed heading color
         },
         border: {
           default: '#e5e7eb', // gray-200
@@ -213,6 +217,7 @@ export const themes: Record<ThemeId, Theme> = {
           primary: '#f8fafc', // slate-50
           secondary: '#94a3b8', // slate-400
           muted: '#64748b', // slate-500
+          heading: '#5eead4', // teal-300 - themed heading for dark mode
         },
         border: {
           default: '#334155', // slate-700
@@ -259,6 +264,7 @@ export const themes: Record<ThemeId, Theme> = {
           primary: '#1c1917', // stone-900
           secondary: '#57534e', // stone-600
           muted: '#78716c', // stone-500
+          heading: '#0f766e', // teal-700 - themed heading color
         },
         border: {
           default: '#e7e5e4', // stone-200
@@ -300,6 +306,7 @@ export const themes: Record<ThemeId, Theme> = {
           primary: '#fafaf9', // stone-50
           secondary: '#a8a29e', // stone-400
           muted: '#78716c', // stone-500
+          heading: '#5eead4', // teal-300 - themed heading for dark mode
         },
         border: {
           default: '#44403c', // stone-700
