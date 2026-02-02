@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   FlaskConical,
   CheckCircle,
@@ -87,14 +87,22 @@ function StatCard({
   value,
   icon: Icon,
   color,
+  onClick,
 }: {
   title: string
   value: number
   icon: React.ElementType
   color: string
+  onClick?: () => void
 }) {
+  const Component = onClick ? 'button' : 'div'
   return (
-    <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-4">
+    <Component
+      onClick={onClick}
+      className={`bg-theme-bg-surface rounded-xl border border-theme-border p-4 text-left w-full ${
+        onClick ? 'cursor-pointer hover:bg-theme-bg-elevated transition-colors' : ''
+      }`}
+    >
       <div className="flex items-center gap-3">
         <div className={`p-2 rounded-lg ${color}`}>
           <Icon className="w-5 h-5" />
@@ -104,7 +112,7 @@ function StatCard({
           <p className="text-sm text-theme-text-secondary">{title}</p>
         </div>
       </div>
-    </div>
+    </Component>
   )
 }
 
@@ -196,6 +204,11 @@ export function TestScenarios() {
   const [filterStatus, setFilterStatus] = useState<string>('')
   const [apps, setApps] = useState<string[]>([])
   const [categories, setCategories] = useState<string[]>([])
+  const scenariosListRef = useRef<HTMLDivElement>(null)
+
+  const scrollToScenarios = () => {
+    scenariosListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   const fetchData = async () => {
     setLoading(true)
@@ -285,24 +298,40 @@ export function TestScenarios() {
           value={displayStats.total}
           icon={FlaskConical}
           color="bg-primary-100 text-primary-600 dark:bg-primary-900/50 dark:text-primary-400"
+          onClick={() => {
+            setFilterStatus('')
+            scrollToScenarios()
+          }}
         />
         <StatCard
           title="Passed"
           value={displayStats.passed}
           icon={CheckCircle}
           color="bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-400"
+          onClick={() => {
+            setFilterStatus('passed')
+            scrollToScenarios()
+          }}
         />
         <StatCard
           title="Failed"
           value={displayStats.failed}
           icon={XCircle}
           color="bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400"
+          onClick={() => {
+            setFilterStatus('failed')
+            scrollToScenarios()
+          }}
         />
         <StatCard
           title="Not Run"
           value={displayStats.notRun}
           icon={Clock}
           color="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+          onClick={() => {
+            setFilterStatus('not-run')
+            scrollToScenarios()
+          }}
         />
       </div>
 
@@ -366,7 +395,20 @@ export function TestScenarios() {
       </div>
 
       {/* Scenarios List */}
-      <div className="bg-theme-bg-surface rounded-xl border border-theme-border overflow-hidden">
+      <div ref={scenariosListRef} className="space-y-2">
+        {/* List Title */}
+        <h2 className="text-lg font-semibold text-theme-text-primary">
+          {filterStatus === 'passed' && 'Passed Scenarios'}
+          {filterStatus === 'failed' && 'Failed Scenarios'}
+          {filterStatus === 'not-run' && 'Scenarios Not Run'}
+          {filterStatus === 'skipped' && 'Skipped Scenarios'}
+          {!filterStatus && 'All Scenarios'}
+          <span className="text-sm font-normal text-theme-text-muted ml-2">
+            ({filteredScenarios.length})
+          </span>
+        </h2>
+
+        <div className="bg-theme-bg-surface rounded-xl border border-theme-border overflow-hidden">
         {filteredScenarios.length === 0 ? (
           <div className="p-8 text-center text-theme-text-muted">
             <FlaskConical className="w-8 h-8 mx-auto mb-2" />
@@ -375,41 +417,80 @@ export function TestScenarios() {
               : 'No scenarios found matching filters'}
           </div>
         ) : (
-          <div className="divide-y divide-theme-border">
+          <>
+            {/* Table Header */}
+            <div className="hidden md:grid grid-cols-[100px_1fr_120px_80px_80px_140px_32px] gap-2 px-4 py-2 bg-theme-bg-elevated border-b border-theme-border text-xs font-medium text-theme-text-muted uppercase tracking-wide">
+              <div>Status</div>
+              <div>Scenario</div>
+              <div>App</div>
+              <div>Category</div>
+              <div>Steps</div>
+              <div>Last Run</div>
+              <div></div>
+            </div>
+            <div className="divide-y divide-theme-border">
             {filteredScenarios.map((scenario) => (
               <div key={scenario.id} className="hover:bg-theme-bg-elevated transition-colors">
                 <button
                   onClick={() => setExpandedId(expandedId === scenario.id ? null : scenario.id)}
-                  className="w-full px-4 py-3 flex items-center justify-between text-left"
+                  className="w-full px-4 py-3 text-left"
                 >
-                  <div className="flex items-center gap-4 min-w-0 flex-1">
-                    <StatusBadge status={scenario.latest_run?.status} />
-                    <div className="min-w-0 flex-1">
+                  {/* Desktop: Table row layout */}
+                  <div className="hidden md:grid grid-cols-[100px_1fr_120px_80px_80px_140px_32px] gap-2 items-center">
+                    <div>
+                      <StatusBadge status={scenario.latest_run?.status} />
+                    </div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-theme-text-primary truncate">
                         {scenario.name}
                       </p>
-                      <p className="text-xs text-theme-text-muted truncate">
-                        {scenario.app_name} {scenario.description && `• ${scenario.description}`}
-                      </p>
+                      {scenario.description && (
+                        <p className="text-xs text-theme-text-muted truncate">
+                          {scenario.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="text-sm text-theme-text-secondary truncate">
+                      {scenario.app_name}
+                    </div>
+                    <div>
+                      <CategoryBadge category={scenario.category} />
+                    </div>
+                    <div className="text-xs text-theme-text-muted">
+                      {scenario.steps?.length || 0} steps
+                    </div>
+                    <div className="text-xs text-theme-text-muted truncate">
+                      {scenario.latest_run ? formatDate(scenario.latest_run.created_at) : '—'}
+                    </div>
+                    <div>
+                      {expandedId === scenario.id ? (
+                        <ChevronUp className="w-4 h-4 text-theme-text-muted" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-theme-text-muted" />
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <CategoryBadge category={scenario.category} />
-                    {scenario.steps && (
-                      <span className="text-xs text-theme-text-muted hidden sm:inline">
-                        {scenario.steps.length} steps
-                      </span>
-                    )}
-                    {scenario.latest_run && (
-                      <span className="text-xs text-theme-text-muted hidden sm:inline">
-                        {formatDate(scenario.latest_run.created_at)}
-                      </span>
-                    )}
-                    {expandedId === scenario.id ? (
-                      <ChevronUp className="w-4 h-4 text-theme-text-muted" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-theme-text-muted" />
-                    )}
+                  {/* Mobile: Stacked layout */}
+                  <div className="md:hidden flex items-center justify-between">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <StatusBadge status={scenario.latest_run?.status} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-theme-text-primary truncate">
+                          {scenario.name}
+                        </p>
+                        <p className="text-xs text-theme-text-muted">
+                          {scenario.app_name}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CategoryBadge category={scenario.category} />
+                      {expandedId === scenario.id ? (
+                        <ChevronUp className="w-4 h-4 text-theme-text-muted" />
+                      ) : (
+                        <ChevronDown className="w-4 h-4 text-theme-text-muted" />
+                      )}
+                    </div>
                   </div>
                 </button>
 
@@ -492,8 +573,10 @@ export function TestScenarios() {
                 )}
               </div>
             ))}
-          </div>
+            </div>
+          </>
         )}
+        </div>
       </div>
 
       {/* Footer note */}
