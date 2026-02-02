@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
 import {
@@ -11,6 +11,32 @@ import {
   getOrganizationId,
 } from '../services/api'
 
+// Common feminine first names for gender detection
+const FEMININE_NAMES = new Set([
+  'mary', 'patricia', 'jennifer', 'linda', 'elizabeth', 'barbara', 'susan', 'jessica',
+  'sarah', 'karen', 'nancy', 'lisa', 'betty', 'margaret', 'sandra', 'ashley', 'kimberly',
+  'emily', 'donna', 'michelle', 'dorothy', 'carol', 'amanda', 'melissa', 'deborah',
+  'stephanie', 'rebecca', 'sharon', 'laura', 'cynthia', 'kathleen', 'amy', 'angela',
+  'shirley', 'anna', 'brenda', 'pamela', 'emma', 'nicole', 'helen', 'samantha',
+  'katherine', 'christine', 'debra', 'rachel', 'carolyn', 'janet', 'catherine',
+  'maria', 'heather', 'diane', 'ruth', 'julie', 'olivia', 'joyce', 'virginia',
+  'victoria', 'kelly', 'lauren', 'christina', 'joan', 'evelyn', 'judith', 'megan',
+  'andrea', 'cheryl', 'hannah', 'jacqueline', 'martha', 'gloria', 'teresa', 'ann',
+  'sara', 'madison', 'frances', 'kathryn', 'janice', 'jean', 'abigail', 'alice',
+  'judy', 'sophia', 'grace', 'denise', 'amber', 'doris', 'marilyn', 'danielle',
+  'beverly', 'isabella', 'theresa', 'diana', 'natalie', 'brittany', 'charlotte',
+  'marie', 'kayla', 'alexis', 'lori', 'jane', 'claire', 'julia', 'elena', 'eva',
+])
+
+function getDefaultAppearanceDescription(name: string | undefined): string {
+  if (!name) return 'Person with brown short hair'
+  const firstName = name.split(' ')[0].toLowerCase()
+  const isFeminine = FEMININE_NAMES.has(firstName)
+  return isFeminine
+    ? 'Woman with brown short hair'
+    : 'Man with brown short hair'
+}
+
 export default function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>()
   const navigate = useNavigate()
@@ -22,10 +48,12 @@ export default function UserProfilePage() {
   // Form state
   const [formData, setFormData] = useState<UpdateUserRequest>({})
 
-  // Avatar generation
+  // Avatar generation and upload
   const [generatingAvatar, setGeneratingAvatar] = useState(false)
   const [showAppearanceModal, setShowAppearanceModal] = useState(false)
   const [appearanceDescription, setAppearanceDescription] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploadingAvatar, setUploadingAvatar] = useState(false)
 
   // Password change
   const [showPasswordModal, setShowPasswordModal] = useState(false)
@@ -235,6 +263,54 @@ export default function UserProfilePage() {
     }
   }
 
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be less than 5MB')
+      return
+    }
+
+    setUploadingAvatar(true)
+    try {
+      // Convert to base64 data URL for preview and storage
+      const reader = new FileReader()
+      reader.onload = async (e) => {
+        const dataUrl = e.target?.result as string
+        // For now, use data URL directly - backend can be updated later to handle file uploads
+        setFormData({ ...formData, avatar_url: dataUrl })
+        setShowAppearanceModal(false)
+        setUploadingAvatar(false)
+      }
+      reader.onerror = () => {
+        alert('Failed to read image file')
+        setUploadingAvatar(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+      alert('Failed to upload image')
+      setUploadingAvatar(false)
+    }
+
+    // Reset the input so the same file can be selected again
+    event.target.value = ''
+  }
+
+  const openAppearanceModal = () => {
+    // Set default appearance description based on name
+    setAppearanceDescription(getDefaultAppearanceDescription(formData.name))
+    setShowAppearanceModal(true)
+  }
+
   const getUserAvatar = (size: 'sm' | 'lg' = 'lg') => {
     const sizeClasses = size === 'lg' ? 'w-24 h-24 text-2xl' : 'w-10 h-10 text-sm'
     const avatarUrl = isEditing ? formData.avatar_url : user?.avatar_url
@@ -379,11 +455,11 @@ export default function UserProfilePage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => setShowAppearanceModal(true)}
-                      disabled={generatingAvatar}
+                      onClick={openAppearanceModal}
+                      disabled={generatingAvatar || uploadingAvatar}
                       className="w-full px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200 transition-colors disabled:opacity-50"
                     >
-                      {generatingAvatar ? 'Generating...' : 'Generate'}
+                      {generatingAvatar || uploadingAvatar ? 'Processing...' : 'Change'}
                     </button>
                   )}
                 </div>
@@ -819,18 +895,54 @@ export default function UserProfilePage() {
             setShowAppearanceModal(false)
             setAppearanceDescription('')
           }}
-          title="Describe Appearance"
+          title="Customize Avatar"
         >
-          <p className="text-gray-500 mb-4 text-sm">
-            Describe the appearance and we'll generate a stylized avatar illustration.
-          </p>
-          <textarea
-            value={appearanceDescription}
-            onChange={(e) => setAppearanceDescription(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
-            rows={4}
-            placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
+          {/* Hidden file input for uploads */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageUpload}
+            accept="image/*"
+            className="hidden"
           />
+
+          {/* Upload option */}
+          <div className="mb-6">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Upload an image</h4>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingAvatar || generatingAvatar}
+              className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+            >
+              {uploadingAvatar ? 'Uploading...' : 'Click to upload image'}
+            </button>
+            <p className="text-xs text-gray-400 mt-1">Max 5MB, JPG/PNG/GIF</p>
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="px-2 bg-white text-sm text-gray-400">or generate one</span>
+            </div>
+          </div>
+
+          {/* Generation option */}
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 mb-2">Generate from description</h4>
+            <p className="text-gray-500 mb-3 text-sm">
+              Describe the appearance and we'll generate a stylized avatar illustration.
+            </p>
+            <textarea
+              value={appearanceDescription}
+              onChange={(e) => setAppearanceDescription(e.target.value)}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 mb-4"
+              rows={3}
+              placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
+            />
+          </div>
+
           <ModalFooter>
             <button
               onClick={() => {
@@ -843,7 +955,7 @@ export default function UserProfilePage() {
             </button>
             <button
               onClick={generateHumanAvatar}
-              disabled={generatingAvatar || !appearanceDescription.trim()}
+              disabled={generatingAvatar || uploadingAvatar || !appearanceDescription.trim()}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
               {generatingAvatar ? 'Generating...' : 'Generate Avatar'}

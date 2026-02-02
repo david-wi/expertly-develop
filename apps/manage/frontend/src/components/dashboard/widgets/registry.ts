@@ -9,7 +9,7 @@ import { TeamMembersWidget } from './TeamMembersWidget'
 export const widgetRegistry: Record<string, WidgetDefinition> = {
   'team-members': {
     id: 'team-members',
-    name: 'Team Members',
+    name: 'My Team',
     description: 'View your team members with avatars',
     icon: Users,
     defaultSize: { w: 12, h: 2 },

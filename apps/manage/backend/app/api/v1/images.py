@@ -55,12 +55,13 @@ Style: Clean lines, vibrant colors, minimal shading, professional but approachab
 The character should visually represent their role/function in a creative way.
 Square format, simple background, suitable as a profile avatar."""
     else:
-        # Human avatar - stylized portrait
+        # Human avatar - stylized portrait with clear facial features
         prompt = f"""Modern flat vector illustration portrait of a person, explainer-style.
 Appearance: {request.description}
+The person must have clearly visible facial features: eyes, nose, and mouth.
 Style: Clean lines, vibrant colors, minimal shading, professional but friendly.
 Head and shoulders view, simple colored background, suitable as a profile avatar.
-NOT a photograph - stylized vector art illustration."""
+NOT a photograph - stylized vector art illustration with a recognizable face."""
 
     try:
         # Get model config for image generation
@@ -70,7 +71,7 @@ NOT a photograph - stylized vector art illustration."""
         response = client.images.generate(
             model=use_case_config.model_id,
             prompt=prompt,
-            size="1024x1024",
+            size="512x512",
             quality="standard",
             n=1,
         )

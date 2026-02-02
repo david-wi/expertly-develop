@@ -24,7 +24,7 @@ export function TeamMembersWidget({ widgetId }: WidgetProps) {
 
   if (loading) {
     return (
-      <WidgetWrapper widgetId={widgetId} title="Team">
+      <WidgetWrapper widgetId={widgetId} title="My Team">
         <div className="p-4 flex items-center justify-center">
           <span className="text-gray-500">Loading...</span>
         </div>
@@ -33,7 +33,7 @@ export function TeamMembersWidget({ widgetId }: WidgetProps) {
   }
 
   return (
-    <WidgetWrapper widgetId={widgetId} title="Team">
+    <WidgetWrapper widgetId={widgetId} title="My Team">
       <div className="p-4">
         <div className="flex flex-wrap gap-6 justify-center">
           {users.map((user) => (
