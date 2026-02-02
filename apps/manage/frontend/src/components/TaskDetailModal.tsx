@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Check,
 } from 'lucide-react'
+import { InlineVoiceTranscription } from '@expertly/ui'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase } from '../services/api'
 import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
 import FileUploadZone from './FileUploadZone'
@@ -476,12 +477,19 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               <div className="flex gap-3">
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={editedTitle}
-                    onChange={(e) => setEditedTitle(e.target.value)}
-                    className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editedTitle}
+                      onChange={(e) => setEditedTitle(e.target.value)}
+                      className="flex-1 px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => setEditedTitle(editedTitle ? editedTitle + ' ' + text : text)}
+                      size="sm"
+                    />
+                  </div>
                 </div>
                 <div className="w-20">
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Priority</label>
@@ -502,13 +510,21 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               {/* Description */}
               <div>
                 <label className="block text-xs font-medium text-theme-text-secondary mb-1">Description</label>
-                <textarea
-                  value={editedDescription}
-                  onChange={(e) => setEditedDescription(e.target.value)}
-                  rows={2}
-                  className="w-full px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-sm"
-                  placeholder="Add a description..."
-                />
+                <div className="flex gap-2">
+                  <textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    rows={2}
+                    className="flex-1 px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-sm"
+                    placeholder="Add a description..."
+                  />
+                  <InlineVoiceTranscription
+                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    onTranscribe={(text) => setEditedDescription(editedDescription ? editedDescription + ' ' + text : text)}
+                    size="sm"
+                    className="self-start mt-1"
+                  />
+                </div>
               </div>
 
               {/* Playbook and Queue - 2 column */}
