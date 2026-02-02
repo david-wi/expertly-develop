@@ -1,19 +1,22 @@
-"""Users API endpoints."""
+"""Users API endpoints.
+
+Returns user information from Identity service.
+"""
 
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, Request
 
-from app.database import get_database
-from app.api.deps import get_current_user, UserContext
+from app.api.deps import get_current_user, get_user_context, UserContext
+from identity_client.models import User as IdentityUser
 
 router = APIRouter()
 
 
-class TenantInfo(BaseModel):
-    """Tenant info for user context."""
+class OrganizationInfo(BaseModel):
+    """Organization info for user context."""
     id: str
-    name: str
-    slug: str
+    name: Optional[str] = None
 
 
 class CurrentUserResponse(BaseModel):
@@ -22,29 +25,29 @@ class CurrentUserResponse(BaseModel):
     name: str
     email: str
     role: str
-    tenant: TenantInfo
+    organization: OrganizationInfo
 
 
 @router.get("/me", response_model=CurrentUserResponse)
 async def get_current_user_info(
-    user: UserContext = Depends(get_current_user),
+    request: Request,
+    context: UserContext = Depends(get_user_context),
 ):
     """
-    Get current user context including tenant information.
-    """
-    db = get_database()
+    Get current user context including organization information.
 
-    # Get tenant info
-    tenant = await db.tenants.find_one({"_id": user.tenant_id})
+    User data comes from Identity service.
+    """
+    # Get full Identity user for organization name
+    identity_user = await get_current_user(request)
 
     return CurrentUserResponse(
-        id=str(user.user_id),
-        name=user.name,
-        email=user.email,
-        role=user.role,
-        tenant=TenantInfo(
-            id=str(tenant["_id"]),
-            name=tenant["name"],
-            slug=tenant["slug"],
+        id=context.user_id,
+        name=context.name,
+        email=context.email,
+        role=context.role,
+        organization=OrganizationInfo(
+            id=context.organization_id,
+            name=identity_user.organization_name,
         ),
     )

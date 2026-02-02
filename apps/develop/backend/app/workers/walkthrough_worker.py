@@ -135,7 +135,7 @@ class WalkthroughWorker(BaseWorker):
         await self.update_progress(job, 90, "Saving artifact...")
 
         doc = await document_service.create_document(
-            tenant_id=job.tenant_id,
+            organization_id=job.organization_id,
             name=f"{params.get('label', 'walkthrough')}.pdf",
             content=pdf_bytes,
             content_type="application/pdf",
@@ -149,7 +149,7 @@ class WalkthroughWorker(BaseWorker):
 
         # Create artifact record
         artifact = Artifact(
-            tenant_id=job.tenant_id,
+            organization_id=job.organization_id,
             project_id=project.id,
             created_by=job.requested_by,
             job_id=job.id,

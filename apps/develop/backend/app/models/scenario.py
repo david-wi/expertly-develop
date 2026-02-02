@@ -10,7 +10,7 @@ from app.models.base import MongoModel, TimestampMixin, PyObjectId
 class PreconfiguredScenario(MongoModel, TimestampMixin):
     """Preconfigured scenario template."""
 
-    tenant_id: Optional[PyObjectId] = None  # null = system-wide
+    organization_id: Optional[str] = None  # null = system-wide, otherwise Identity org UUID
 
     code: str  # unique identifier
     name: str

@@ -1,11 +1,14 @@
-"""Organizations API endpoints."""
+"""Organizations API endpoints.
 
-from typing import List
+Returns organization information from Identity service.
+"""
+
+from typing import List, Optional
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request, HTTPException, status
 
-from app.database import get_database
-from app.api.deps import get_current_user, UserContext
+from app.api.deps import get_current_user, get_user_context, get_identity_client, UserContext
+from identity_client.models import User as IdentityUser
 
 router = APIRouter()
 
@@ -14,7 +17,7 @@ class OrganizationResponse(BaseModel):
     """Organization response schema."""
     id: str
     name: str
-    slug: str
+    slug: Optional[str] = None
 
 
 class OrganizationsListResponse(BaseModel):
@@ -25,24 +28,41 @@ class OrganizationsListResponse(BaseModel):
 
 @router.get("", response_model=OrganizationsListResponse)
 async def list_organizations(
-    user: UserContext = Depends(get_current_user),
+    request: Request,
+    context: UserContext = Depends(get_user_context),
 ):
     """
-    List all available organizations.
+    List organizations available to the current user.
 
-    Available to all authenticated users.
+    Returns the user's organization from Identity service.
     """
-    db = get_database()
+    # Get full Identity user for organization details
+    identity_user = await get_current_user(request)
 
-    tenants = await db.tenants.find({}).to_list(length=100)
-
+    # Return the user's organization
     items = [
         OrganizationResponse(
-            id=str(tenant["_id"]),
-            name=tenant["name"],
-            slug=tenant["slug"],
+            id=identity_user.organization_id,
+            name=identity_user.organization_name or "Default Organization",
+            slug=identity_user.organization_id[:8] if identity_user.organization_id else None,
         )
-        for tenant in tenants
     ]
 
     return OrganizationsListResponse(items=items, total=len(items))
+
+
+@router.get("/current", response_model=OrganizationResponse)
+async def get_current_organization(
+    request: Request,
+    context: UserContext = Depends(get_user_context),
+):
+    """
+    Get the current organization context.
+    """
+    identity_user = await get_current_user(request)
+
+    return OrganizationResponse(
+        id=context.organization_id,
+        name=identity_user.organization_name or "Default Organization",
+        slug=context.organization_id[:8] if context.organization_id else None,
+    )

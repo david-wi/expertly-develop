@@ -20,15 +20,15 @@ class JobService:
 
     async def create_job(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         job_type: JobType,
         params: Dict[str, Any],
-        requested_by: Optional[ObjectId] = None,
+        requested_by: Optional[str] = None,
         project_id: Optional[ObjectId] = None,
     ) -> Job:
         """Create a new job and return it with its ID."""
         job = Job(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             job_type=job_type,
             params=params,
             requested_by=requested_by,
@@ -52,7 +52,7 @@ class JobService:
 
     async def list_jobs(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         status: Optional[JobStatus] = None,
         job_type: Optional[JobType] = None,
         project_id: Optional[ObjectId] = None,
@@ -60,7 +60,7 @@ class JobService:
         offset: int = 0,
     ) -> List[Job]:
         """List jobs with optional filters."""
-        query = {"tenant_id": tenant_id}
+        query = {"organization_id": organization_id}
 
         if status:
             query["status"] = status.value
@@ -191,19 +191,19 @@ class JobService:
 
     async def count_jobs(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         status: Optional[JobStatus] = None,
     ) -> int:
         """Count jobs with optional status filter."""
-        query = {"tenant_id": tenant_id}
+        query = {"organization_id": organization_id}
         if status:
             query["status"] = status.value
         return await self.collection.count_documents(query)
 
-    async def get_queue_stats(self, tenant_id: ObjectId) -> Dict[str, int]:
+    async def get_queue_stats(self, organization_id: str) -> Dict[str, int]:
         """Get job queue statistics."""
         pipeline = [
-            {"$match": {"tenant_id": tenant_id}},
+            {"$match": {"organization_id": organization_id}},
             {"$group": {"_id": "$status", "count": {"$sum": 1}}},
         ]
 

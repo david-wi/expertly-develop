@@ -5,7 +5,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.database import get_database
 from app.models.scenario import PreconfiguredScenario
 
@@ -46,16 +46,16 @@ def scenario_to_response(scenario: PreconfiguredScenario) -> ScenarioResponse:
 
 @router.get("", response_model=ScenarioListResponse)
 async def list_scenarios(
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """List available preconfigured scenarios."""
     db = get_database()
 
-    # Get both system-wide and tenant-specific scenarios
+    # Get both system-wide and organization-specific scenarios
     query = {
         "$or": [
-            {"tenant_id": None},
-            {"tenant_id": user.tenant_id},
+            {"organization_id": None},
+            {"organization_id": user.organization_id},
         ]
     }
 
@@ -71,17 +71,17 @@ async def list_scenarios(
 @router.get("/{code}", response_model=ScenarioResponse)
 async def get_scenario(
     code: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get a scenario by code."""
     db = get_database()
 
-    # Look for tenant-specific first, then system-wide
+    # Look for organization-specific first, then system-wide
     doc = await db.preconfigured_scenarios.find_one({
         "code": code,
         "$or": [
-            {"tenant_id": user.tenant_id},
-            {"tenant_id": None},
+            {"organization_id": user.organization_id},
+            {"organization_id": None},
         ]
     })
 

@@ -21,35 +21,20 @@ async def lifespan(app: FastAPI):
 
 
 async def seed_initial_data():
-    """Seed initial data if not exists."""
-    import uuid
+    """Seed initial data if not exists.
+
+    Note: User/organization data comes from Identity service.
+    This only seeds app-specific data like preconfigured scenarios.
+    """
     db = get_database()
 
-    # Check if default tenant exists
-    tenant = await db.tenants.find_one({"slug": "default"})
-    if not tenant:
-        # Create default tenant
-        result = await db.tenants.insert_one({
-            "name": "Default Organization",
-            "slug": "default",
-            "settings": {"default_visibility": "team"},
-        })
-        tenant_id = result.inserted_id
-
-        # Create default user (David)
-        await db.users.insert_one({
-            "tenant_id": tenant_id,
-            "email": "david@example.com",
-            "name": "David",
-            "role": "admin",
-            "is_default": True,
-            "api_key": str(uuid.uuid4()),
-        })
-
-        # Create preconfigured scenarios
+    # Check if preconfigured scenarios exist
+    existing_scenario = await db.preconfigured_scenarios.find_one({"code": "basic_visual_walkthrough"})
+    if not existing_scenario:
+        # Create preconfigured scenarios (system-level, not tenant-specific)
         await db.preconfigured_scenarios.insert_many([
             {
-                "tenant_id": None,
+                "organization_id": None,  # System-level scenario
                 "code": "basic_visual_walkthrough",
                 "name": "Basic Visual Walkthrough",
                 "description": "Navigates through main pages and captures screenshots",
@@ -69,7 +54,7 @@ Capture "Contact Page"
                 "is_system": True,
             },
             {
-                "tenant_id": None,
+                "organization_id": None,  # System-level scenario
                 "code": "e2e_testing",
                 "name": "End-to-End Testing",
                 "description": "Comprehensive testing of main user flows",
@@ -94,30 +79,7 @@ Capture "Profile Page"
             },
         ])
 
-        print("Initial data seeded successfully")
-
-    # Check if test tenant exists
-    test_tenant = await db.tenants.find_one({"slug": "test"})
-    if not test_tenant:
-        # Create test tenant
-        result = await db.tenants.insert_one({
-            "name": "Test Organization",
-            "slug": "test",
-            "settings": {"default_visibility": "team"},
-        })
-        test_tenant_id = result.inserted_id
-
-        # Create test user
-        await db.users.insert_one({
-            "tenant_id": test_tenant_id,
-            "email": "test@example.com",
-            "name": "Test User",
-            "role": "admin",
-            "is_default": False,
-            "api_key": str(uuid.uuid4()),
-        })
-
-        print("Test organization seeded successfully")
+        print("Preconfigured scenarios seeded successfully")
 
 
 settings = get_settings()

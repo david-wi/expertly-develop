@@ -24,8 +24,8 @@ class ProjectService:
 
     async def create_project(
         self,
-        tenant_id: ObjectId,
-        owner_id: ObjectId,
+        organization_id: str,
+        owner_id: str,
         name: str,
         description: Optional[str] = None,
         visibility: Visibility = Visibility.PRIVATE,
@@ -33,7 +33,7 @@ class ProjectService:
     ) -> Project:
         """Create a new project."""
         project = Project(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             owner_id=owner_id,
             name=name,
             description=description,
@@ -60,15 +60,15 @@ class ProjectService:
 
     async def list_projects(
         self,
-        tenant_id: ObjectId,
-        user_id: Optional[ObjectId] = None,
+        organization_id: str,
+        user_id: Optional[str] = None,
         visibility: Optional[Visibility] = None,
         include_deleted: bool = False,
         limit: int = 50,
         offset: int = 0,
     ) -> List[Project]:
         """List projects with access control."""
-        query = {"tenant_id": tenant_id}
+        query = {"organization_id": organization_id}
 
         if not include_deleted:
             query["deleted_at"] = None
@@ -165,11 +165,11 @@ class ProjectService:
 
     async def count_projects(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         include_deleted: bool = False,
     ) -> int:
         """Count projects for a tenant."""
-        query = {"tenant_id": tenant_id}
+        query = {"organization_id": organization_id}
         if not include_deleted:
             query["deleted_at"] = None
         return await self.collection.count_documents(query)

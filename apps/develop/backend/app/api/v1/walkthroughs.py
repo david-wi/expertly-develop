@@ -3,7 +3,7 @@
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.database import get_database
 from app.models.job import JobType
 from app.schemas.walkthrough import WalkthroughCreate, WalkthroughResponse
@@ -15,7 +15,7 @@ router = APIRouter()
 @router.post("", response_model=WalkthroughResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_walkthrough(
     data: WalkthroughCreate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """
     Create a new walkthrough job.
@@ -27,7 +27,7 @@ async def create_walkthrough(
     # Verify project exists
     project = await db.projects.find_one({
         "_id": ObjectId(data.project_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
         "deleted_at": None,
     })
 
@@ -57,8 +57,8 @@ async def create_walkthrough(
         scenario = await db.preconfigured_scenarios.find_one({
             "code": data.preconfigured_scenario,
             "$or": [
-                {"tenant_id": user.tenant_id},
-                {"tenant_id": None},
+                {"organization_id": user.organization_id},
+                {"organization_id": None},
             ]
         })
         if scenario:
@@ -78,7 +78,7 @@ async def create_walkthrough(
 
     # Create the job
     job = await job_service.create_job(
-        tenant_id=user.tenant_id,
+        organization_id=user.organization_id,
         job_type=JobType.WALKTHROUGH,
         params=params,
         requested_by=user.user_id,

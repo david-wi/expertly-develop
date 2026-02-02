@@ -1,37 +1,12 @@
-"""Tenant model for multitenancy - shadow records for Identity organizations."""
+"""
+DEPRECATED: Tenant model - no longer used.
 
-from typing import Optional
-from pydantic import Field
+Organization data comes from Identity service.
+This file is kept for reference only.
 
-from app.models.base import MongoModel, TimestampMixin, PyObjectId
+Organization data should come from:
+- identity_client.models.User.organization_id
+- identity_client.models.User.organization_name
+"""
 
-
-class TenantSettings(MongoModel):
-    """Tenant-level settings."""
-
-    default_visibility: str = "team"
-
-
-class Tenant(MongoModel, TimestampMixin):
-    """
-    Tenant (company) model - shadow record for Identity organizations.
-
-    Links to Identity service organization via identity_id field.
-    """
-
-    name: str
-    slug: str
-    settings: TenantSettings = Field(default_factory=TenantSettings)
-
-    # Link to Identity service organization
-    identity_id: Optional[str] = None  # Organization UUID from Identity service
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "name": "Acme Corp",
-                "slug": "acme-corp",
-                "settings": {"default_visibility": "team"},
-                "identity_id": "550e8400-e29b-41d4-a716-446655440000",
-            }
-        }
+# This model is no longer used - Identity service handles organization data

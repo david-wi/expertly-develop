@@ -6,7 +6,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.database import get_database
 from app.models.requirement import Requirement, RequirementStatus, DocumentType
 
@@ -71,12 +71,12 @@ async def list_requirements(
     status: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """List requirements with optional filters."""
     db = get_database()
 
-    query = {"tenant_id": user.tenant_id}
+    query = {"organization_id": user.organization_id}
 
     if meta_only:
         query["project_id"] = None
@@ -105,7 +105,7 @@ async def list_requirements(
 @router.post("", response_model=RequirementResponse, status_code=status.HTTP_201_CREATED)
 async def create_requirement(
     data: RequirementCreate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Create a new requirement."""
     db = get_database()
@@ -114,7 +114,7 @@ async def create_requirement(
     if data.project_id:
         project = await db.projects.find_one({
             "_id": ObjectId(data.project_id),
-            "tenant_id": user.tenant_id,
+            "organization_id": user.organization_id,
             "deleted_at": None,
         })
         if not project:
@@ -124,7 +124,7 @@ async def create_requirement(
             )
 
     req = Requirement(
-        tenant_id=user.tenant_id,
+        organization_id=user.organization_id,
         project_id=ObjectId(data.project_id) if data.project_id else None,
         title=data.title,
         document_type=data.document_type,
@@ -141,14 +141,14 @@ async def create_requirement(
 @router.get("/{requirement_id}", response_model=RequirementResponse)
 async def get_requirement(
     requirement_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get a requirement by ID."""
     db = get_database()
 
     doc = await db.requirements.find_one({
         "_id": ObjectId(requirement_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not doc:
@@ -164,14 +164,14 @@ async def get_requirement(
 async def update_requirement(
     requirement_id: str,
     data: RequirementUpdate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Update a requirement."""
     db = get_database()
 
     existing = await db.requirements.find_one({
         "_id": ObjectId(requirement_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not existing:
@@ -195,14 +195,14 @@ async def update_requirement(
 @router.delete("/{requirement_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_requirement(
     requirement_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Delete a requirement."""
     db = get_database()
 
     result = await db.requirements.delete_one({
         "_id": ObjectId(requirement_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if result.deleted_count == 0:

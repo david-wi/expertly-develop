@@ -1,7 +1,12 @@
-"""API dependencies for authentication and context."""
+"""API dependencies for authentication and context.
+
+Authentication is handled by Identity service. This module provides:
+- Identity session validation
+- API key fallback for programmatic access
+- User context for request handling
+"""
 
 from typing import Optional
-from bson import ObjectId
 from fastapi import Depends, HTTPException, Header, Request, status
 from pydantic import BaseModel
 
@@ -50,155 +55,121 @@ def _map_identity_role(identity_role: str) -> str:
 
 
 class UserContext(BaseModel):
-    """Current user context."""
+    """Current user context with Identity-based IDs."""
 
-    user_id: ObjectId
-    tenant_id: ObjectId
+    user_id: str  # Identity user UUID
+    organization_id: str  # Identity organization UUID
     email: str
     name: str
     role: str
 
-    class Config:
-        arbitrary_types_allowed = True
+
+async def get_current_user(request: Request) -> IdentityUser:
+    """
+    Get the current authenticated user from Identity service.
+
+    Returns the IdentityUser directly for full access to Identity data.
+    """
+    auth = get_identity_auth()
+    identity_user = await auth.get_current_user(request)
+
+    if not identity_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
+        )
+
+    return identity_user
 
 
-async def get_default_user() -> Optional[dict]:
-    """Get the default user from the database."""
-    db = get_database()
-    user = await db.users.find_one({"is_default": True})
-    return user
+async def get_current_user_optional(request: Request) -> Optional[IdentityUser]:
+    """Get current user if authenticated, None otherwise."""
+    auth = get_identity_auth()
+    return await auth.get_current_user_optional(request)
 
 
-async def _ensure_local_user(identity_user: IdentityUser, db) -> dict:
-    """Ensure local user and tenant exist for Identity user, create if needed."""
-    # Look up local user by email
-    user = await db.users.find_one({"email": identity_user.email, "deleted_at": None})
-
-    if user:
-        return user
-
-    # Create tenant if needed (look up by identity_id)
-    tenant = await db.tenants.find_one({"identity_id": identity_user.organization_id})
-
-    if not tenant:
-        # Try to find by slug match
-        tenant = await db.tenants.find_one({"slug": identity_user.organization_id[:8]})
-
-        if not tenant:
-            # Create tenant from Identity org (with new ObjectId)
-            tenant_doc = {
-                "_id": ObjectId(),
-                "identity_id": identity_user.organization_id,
-                "name": identity_user.organization_name or "Default Tenant",
-                "slug": identity_user.organization_id[:8],
-            }
-            await db.tenants.insert_one(tenant_doc)
-            tenant = tenant_doc
-
-    # Create local user linked to Identity (with new ObjectId)
-    user_doc = {
-        "_id": ObjectId(),
-        "identity_id": identity_user.id,
-        "tenant_id": tenant["_id"],
-        "email": identity_user.email,
-        "name": identity_user.name,
-        "role": _map_identity_role(identity_user.role),
-        "is_default": False,
-    }
-    await db.users.insert_one(user_doc)
-
-    return user_doc
-
-
-async def get_current_user(
+async def get_user_context(
     request: Request,
     x_api_key: Optional[str] = Header(None, alias="X-API-Key"),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-Id"),
+    x_organization_id: Optional[str] = Header(None, alias="X-Organization-Id"),
 ) -> UserContext:
     """
-    Get the current user context.
+    Get the current user context for request handling.
 
     Authentication priority:
     1. Identity session cookie (X-Session-Token header or expertly_session cookie)
     2. API key (X-API-Key header)
-    3. Default user (for backward compatibility)
 
-    Supports tenant switching via X-Tenant-Id header for admin users.
+    Supports organization switching via X-Organization-Id header for admin users.
     """
     db = get_database()
-    user = None
 
     # Try Identity session first
     auth = get_identity_auth()
     identity_user = await auth.get_current_user_optional(request)
 
     if identity_user:
-        # Ensure local user exists
-        user = await _ensure_local_user(identity_user, db)
-    elif x_api_key:
-        # Fall back to API key authentication
-        user = await db.users.find_one({"api_key": x_api_key, "deleted_at": None})
-        if not user:
+        if not identity_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is disabled",
+            )
+
+        organization_id = identity_user.organization_id
+
+        # Allow admin users to switch organizations via X-Organization-Id header
+        if x_organization_id and identity_user.role in ("owner", "admin"):
+            organization_id = x_organization_id
+
+        return UserContext(
+            user_id=identity_user.id,
+            organization_id=organization_id,
+            email=identity_user.email,
+            name=identity_user.name or identity_user.email,
+            role=_map_identity_role(identity_user.role),
+        )
+
+    # Fall back to API key authentication
+    if x_api_key:
+        api_key_doc = await db.api_keys.find_one({"key": x_api_key, "is_active": True})
+        if not api_key_doc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid API key",
             )
-    else:
-        # Fall back to default user for backward compatibility
-        user = await get_default_user()
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required. Provide session cookie or X-API-Key header.",
-            )
 
-    # Determine tenant_id (possibly overridden)
-    tenant_id = user["tenant_id"]
+        return UserContext(
+            user_id=api_key_doc.get("user_id", "api-key-user"),
+            organization_id=api_key_doc["organization_id"],
+            email=api_key_doc.get("email", "api@develop.local"),
+            name=api_key_doc.get("name", "API Key User"),
+            role=api_key_doc.get("role", "user"),
+        )
 
-    # Allow admin users to switch tenants via X-Tenant-Id header
-    if x_tenant_id and user["role"] == "admin":
-        try:
-            override_tenant_id = ObjectId(x_tenant_id)
-            # Validate tenant exists
-            tenant = await db.tenants.find_one({"_id": override_tenant_id})
-            if tenant:
-                tenant_id = override_tenant_id
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid tenant ID",
-                )
-        except Exception as e:
-            if isinstance(e, HTTPException):
-                raise
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid tenant ID format",
-            )
-
-    return UserContext(
-        user_id=user["_id"],
-        tenant_id=tenant_id,
-        email=user["email"],
-        name=user["name"],
-        role=user["role"],
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication required. Provide session cookie or X-API-Key header.",
     )
 
 
-async def get_current_tenant_id(
-    user: UserContext = Depends(get_current_user),
-) -> ObjectId:
-    """Get the current tenant ID from the user context."""
-    return user.tenant_id
+async def get_current_organization_id(
+    context: UserContext = Depends(get_user_context),
+) -> str:
+    """Get the current organization ID from the user context."""
+    return context.organization_id
+
+
+# Alias for backward compatibility
+get_current_tenant_id = get_current_organization_id
 
 
 async def require_admin(
-    user: UserContext = Depends(get_current_user),
+    context: UserContext = Depends(get_user_context),
 ) -> UserContext:
     """Require admin role."""
-    if user.role != "admin":
+    if context.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
-    return user
+    return context

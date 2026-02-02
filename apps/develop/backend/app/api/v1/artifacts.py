@@ -5,7 +5,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import Response
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.database import get_database
 from app.models.artifact import Artifact
 from app.schemas.artifact import ArtifactResponse, ArtifactListResponse
@@ -16,13 +16,14 @@ router = APIRouter()
 
 def artifact_to_response(
     artifact: Artifact,
-    user_names: Dict[str, str] = None,
     project_names: Dict[str, str] = None,
+    current_user: UserContext = None,
 ) -> ArtifactResponse:
     """Convert artifact model to response schema."""
+    # Use current user's name if they're the creator
     created_by_name = None
-    if user_names and artifact.created_by:
-        created_by_name = user_names.get(str(artifact.created_by))
+    if current_user and artifact.created_by == current_user.user_id:
+        created_by_name = current_user.name
     project_name = None
     if project_names and artifact.project_id:
         project_name = project_names.get(str(artifact.project_id))
@@ -48,12 +49,12 @@ async def list_artifacts(
     job_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """List artifacts with optional filters."""
     db = get_database()
 
-    query = {"tenant_id": user.tenant_id}
+    query = {"organization_id": user.organization_id}
     if project_id:
         query["project_id"] = ObjectId(project_id)
     if artifact_type:
@@ -70,14 +71,6 @@ async def list_artifacts(
 
     artifacts = [Artifact.from_mongo(doc) async for doc in cursor]
 
-    # Lookup user names for artifacts with created_by
-    user_ids = [a.created_by for a in artifacts if a.created_by]
-    user_names = {}
-    if user_ids:
-        user_cursor = db.users.find({"_id": {"$in": user_ids}}, {"_id": 1, "name": 1})
-        async for u in user_cursor:
-            user_names[str(u["_id"])] = u["name"]
-
     # Lookup project names for artifacts with project_id
     project_ids = [a.project_id for a in artifacts if a.project_id]
     project_names = {}
@@ -89,7 +82,7 @@ async def list_artifacts(
     total = await db.artifacts.count_documents(query)
 
     return ArtifactListResponse(
-        items=[artifact_to_response(a, user_names, project_names) for a in artifacts],
+        items=[artifact_to_response(a, project_names, user) for a in artifacts],
         total=total,
     )
 
@@ -97,14 +90,14 @@ async def list_artifacts(
 @router.get("/{artifact_id}", response_model=ArtifactResponse)
 async def get_artifact(
     artifact_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get an artifact by ID."""
     db = get_database()
 
     doc = await db.artifacts.find_one({
         "_id": ObjectId(artifact_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not doc:
@@ -115,13 +108,6 @@ async def get_artifact(
 
     artifact = Artifact.from_mongo(doc)
 
-    # Lookup user name if created_by is set
-    user_names = {}
-    if artifact.created_by:
-        u = await db.users.find_one({"_id": artifact.created_by}, {"_id": 1, "name": 1})
-        if u:
-            user_names[str(u["_id"])] = u["name"]
-
     # Lookup project name if project_id is set
     project_names = {}
     if artifact.project_id:
@@ -129,20 +115,20 @@ async def get_artifact(
         if p:
             project_names[str(p["_id"])] = p["name"]
 
-    return artifact_to_response(artifact, user_names, project_names)
+    return artifact_to_response(artifact, project_names, user)
 
 
 @router.get("/{artifact_id}/download")
 async def download_artifact(
     artifact_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Download an artifact's file."""
     db = get_database()
 
     doc = await db.artifacts.find_one({
         "_id": ObjectId(artifact_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not doc:
@@ -184,14 +170,14 @@ async def download_artifact(
 @router.delete("/{artifact_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_artifact(
     artifact_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Delete an artifact."""
     db = get_database()
 
     doc = await db.artifacts.find_one({
         "_id": ObjectId(artifact_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not doc:

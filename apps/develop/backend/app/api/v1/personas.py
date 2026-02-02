@@ -5,7 +5,7 @@ from typing import Optional
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.database import get_database
 from app.models.persona import Persona, PersonaCredentials
 from app.schemas.persona import (
@@ -39,12 +39,12 @@ async def list_personas(
     project_id: Optional[str] = None,
     limit: int = 50,
     offset: int = 0,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """List personas, optionally filtered by project."""
     db = get_database()
 
-    query = {"tenant_id": user.tenant_id}
+    query = {"organization_id": user.organization_id}
     if project_id:
         query["project_id"] = ObjectId(project_id)
 
@@ -62,7 +62,7 @@ async def list_personas(
 @router.post("", response_model=PersonaResponse, status_code=status.HTTP_201_CREATED)
 async def create_persona(
     data: PersonaCreate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Create a new persona."""
     db = get_database()
@@ -70,7 +70,7 @@ async def create_persona(
     # Verify project exists and belongs to tenant
     project = await db.projects.find_one({
         "_id": ObjectId(data.project_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
         "deleted_at": None,
     })
     if not project:
@@ -90,7 +90,7 @@ async def create_persona(
         credentials = PersonaCredentials(**creds_dict)
 
     persona = Persona(
-        tenant_id=user.tenant_id,
+        organization_id=user.organization_id,
         project_id=ObjectId(data.project_id),
         name=data.name,
         role_description=data.role_description,
@@ -108,14 +108,14 @@ async def create_persona(
 @router.get("/{persona_id}", response_model=PersonaResponse)
 async def get_persona(
     persona_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get a persona by ID."""
     db = get_database()
 
     doc = await db.personas.find_one({
         "_id": ObjectId(persona_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not doc:
@@ -131,14 +131,14 @@ async def get_persona(
 async def update_persona(
     persona_id: str,
     data: PersonaUpdate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Update a persona."""
     db = get_database()
 
     existing = await db.personas.find_one({
         "_id": ObjectId(persona_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if not existing:
@@ -171,14 +171,14 @@ async def update_persona(
 @router.delete("/{persona_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_persona(
     persona_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Delete a persona."""
     db = get_database()
 
     result = await db.personas.delete_one({
         "_id": ObjectId(persona_id),
-        "tenant_id": user.tenant_id,
+        "organization_id": user.organization_id,
     })
 
     if result.deleted_count == 0:
