@@ -78,6 +78,7 @@ function applyThemeToDOM(themeId: string, mode: ThemeMode, customThemes?: Map<st
   root.style.setProperty('--theme-text-primary', colors.text.primary)
   root.style.setProperty('--theme-text-secondary', colors.text.secondary)
   root.style.setProperty('--theme-text-muted', colors.text.muted)
+  root.style.setProperty('--theme-text-heading', colors.text.heading)
 
   // Apply border colors
   root.style.setProperty('--theme-border-default', colors.border.default)
