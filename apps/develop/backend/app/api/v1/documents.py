@@ -5,7 +5,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from fastapi.responses import Response
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.models.document import DocumentMetadata
 from app.schemas.document import DocumentResponse, DocumentVersionsResponse
 from app.services.document_service import document_service
@@ -34,7 +34,7 @@ async def upload_document(
     project_id: Optional[str] = Form(None),
     category: Optional[str] = Form(None),
     tags: Optional[str] = Form(None),  # Comma-separated
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Upload a new document."""
     content = await file.read()
@@ -46,7 +46,7 @@ async def upload_document(
     )
 
     doc = await document_service.create_document(
-        tenant_id=user.tenant_id,
+        organization_id=user.organization_id,
         name=file.filename,
         content=content,
         content_type=file.content_type or "application/octet-stream",
@@ -61,7 +61,7 @@ async def upload_document(
 async def upload_new_version(
     document_key: str,
     file: UploadFile = File(...),
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Upload a new version of an existing document."""
     # Verify document exists and belongs to tenant
@@ -72,7 +72,7 @@ async def upload_new_version(
             detail="Document not found",
         )
 
-    if current.tenant_id != user.tenant_id:
+    if current.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
@@ -94,7 +94,7 @@ async def upload_new_version(
 @router.get("/{document_key}", response_model=DocumentResponse)
 async def get_document(
     document_key: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get the current version of a document."""
     doc = await document_service.get_current(document_key)
@@ -105,7 +105,7 @@ async def get_document(
             detail="Document not found",
         )
 
-    if doc.tenant_id != user.tenant_id:
+    if doc.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
@@ -117,7 +117,7 @@ async def get_document(
 @router.get("/{document_key}/download")
 async def download_document(
     document_key: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Download the current version of a document."""
     doc = await document_service.get_current(document_key)
@@ -128,7 +128,7 @@ async def download_document(
             detail="Document not found",
         )
 
-    if doc.tenant_id != user.tenant_id:
+    if doc.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
@@ -148,7 +148,7 @@ async def download_document(
 @router.get("/{document_key}/versions", response_model=DocumentVersionsResponse)
 async def list_versions(
     document_key: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """List all versions of a document."""
     versions = await document_service.get_versions(document_key)
@@ -159,7 +159,7 @@ async def list_versions(
             detail="Document not found",
         )
 
-    if versions[0].tenant_id != user.tenant_id:
+    if versions[0].organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
@@ -176,7 +176,7 @@ async def list_versions(
 async def get_version(
     document_key: str,
     version: int,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get a specific version of a document."""
     doc = await document_service.get_version(document_key, version)
@@ -187,7 +187,7 @@ async def get_version(
             detail="Document version not found",
         )
 
-    if doc.tenant_id != user.tenant_id:
+    if doc.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",
@@ -199,7 +199,7 @@ async def get_version(
 @router.delete("/{document_key}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
     document_key: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Soft-delete a document and all its versions."""
     doc = await document_service.get_current(document_key)
@@ -210,7 +210,7 @@ async def delete_document(
             detail="Document not found",
         )
 
-    if doc.tenant_id != user.tenant_id:
+    if doc.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found",

@@ -55,8 +55,8 @@ class LatestArtifact(MongoModel):
 class Project(MongoModel, TimestampMixin):
     """Project model."""
 
-    tenant_id: PyObjectId
-    owner_id: PyObjectId
+    organization_id: str  # Identity organization UUID
+    owner_id: str  # Identity user UUID
     name: str
     description: Optional[str] = None
     visibility: Visibility = Visibility.PRIVATE

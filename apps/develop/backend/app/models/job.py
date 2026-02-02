@@ -28,7 +28,7 @@ class JobType(str, Enum):
 class Job(MongoModel):
     """Generic job queue model."""
 
-    tenant_id: PyObjectId
+    organization_id: str  # Identity organization UUID
 
     # Job identification
     job_type: JobType
@@ -45,7 +45,7 @@ class Job(MongoModel):
     elapsed_ms: Optional[int] = None
 
     # Context
-    requested_by: Optional[PyObjectId] = None
+    requested_by: Optional[str] = None  # Identity user UUID
     project_id: Optional[PyObjectId] = None
 
     # Type-specific params (stored as JSON)

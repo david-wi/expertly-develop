@@ -4,7 +4,7 @@ from typing import Optional
 from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.api.deps import UserContext, get_current_user
+from app.api.deps import UserContext, get_user_context
 from app.models.project import Visibility, SiteCredentials
 from app.schemas.project import (
     ProjectCreate,
@@ -44,18 +44,18 @@ async def list_projects(
     visibility: Optional[Visibility] = None,
     limit: int = 50,
     offset: int = 0,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """List projects accessible to the current user."""
     projects = await project_service.list_projects(
-        tenant_id=user.tenant_id,
+        organization_id=user.organization_id,
         user_id=user.user_id,
         visibility=visibility,
         limit=limit,
         offset=offset,
     )
 
-    total = await project_service.count_projects(user.tenant_id)
+    total = await project_service.count_projects(user.organization_id)
 
     return ProjectListResponse(
         items=[project_to_response(p, user) for p in projects],
@@ -68,11 +68,11 @@ async def list_projects(
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 async def create_project(
     data: ProjectCreate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Create a new project."""
     project = await project_service.create_project(
-        tenant_id=user.tenant_id,
+        organization_id=user.organization_id,
         owner_id=user.user_id,
         name=data.name,
         description=data.description,
@@ -86,7 +86,7 @@ async def create_project(
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Get a project by ID."""
     project = await project_service.get_project(ObjectId(project_id))
@@ -98,7 +98,7 @@ async def get_project(
         )
 
     # Check access
-    if project.tenant_id != user.tenant_id:
+    if project.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
@@ -111,12 +111,12 @@ async def get_project(
 async def update_project(
     project_id: str,
     data: ProjectUpdate,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Update a project."""
     # Verify project exists and user has access
     existing = await project_service.get_project(ObjectId(project_id))
-    if not existing or existing.tenant_id != user.tenant_id:
+    if not existing or existing.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
@@ -138,11 +138,11 @@ async def update_project(
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_project(
     project_id: str,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Soft-delete a project."""
     existing = await project_service.get_project(ObjectId(project_id))
-    if not existing or existing.tenant_id != user.tenant_id:
+    if not existing or existing.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",
@@ -161,11 +161,11 @@ async def delete_project(
 async def update_project_credentials(
     project_id: str,
     credentials: SiteCredentialsInput,
-    user: UserContext = Depends(get_current_user),
+    user: UserContext = Depends(get_user_context),
 ):
     """Update project site credentials."""
     existing = await project_service.get_project(ObjectId(project_id))
-    if not existing or existing.tenant_id != user.tenant_id:
+    if not existing or existing.organization_id != user.organization_id:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Project not found",

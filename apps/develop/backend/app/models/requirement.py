@@ -28,7 +28,7 @@ class DocumentType(str, Enum):
 class Requirement(MongoModel, TimestampMixin):
     """Requirement model."""
 
-    tenant_id: PyObjectId
+    organization_id: str  # Identity organization UUID
     project_id: Optional[PyObjectId] = None  # null = meta-requirements for Expertly Develop
 
     title: str
@@ -36,7 +36,7 @@ class Requirement(MongoModel, TimestampMixin):
     document_id: Optional[PyObjectId] = None  # Content in documents collection
     status: RequirementStatus = RequirementStatus.DRAFT
 
-    created_by: Optional[PyObjectId] = None
+    created_by: Optional[str] = None  # Identity user UUID
 
     class Config:
         json_schema_extra = {

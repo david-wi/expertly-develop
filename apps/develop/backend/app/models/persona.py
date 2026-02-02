@@ -18,7 +18,7 @@ class Persona(MongoModel, TimestampMixin):
     """Persona model representing a user role within a project."""
 
     project_id: PyObjectId
-    tenant_id: PyObjectId
+    organization_id: str  # Identity organization UUID
     name: str
     role_description: Optional[str] = None
     goals: List[str] = Field(default_factory=list)

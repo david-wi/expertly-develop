@@ -19,7 +19,7 @@ class DocumentMetadata(MongoModel):
 class Document(MongoModel):
     """Versioned document storage model."""
 
-    tenant_id: PyObjectId
+    organization_id: str  # Identity organization UUID
 
     # Grouping key - same for all versions of a document
     document_key: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -41,7 +41,7 @@ class Document(MongoModel):
     metadata: DocumentMetadata = Field(default_factory=DocumentMetadata)
 
     # Audit
-    created_by: Optional[PyObjectId] = None
+    created_by: Optional[str] = None  # Identity user UUID
     created_at: datetime = Field(default_factory=lambda: datetime.now())
     deleted_at: Optional[datetime] = None
 

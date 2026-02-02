@@ -23,11 +23,11 @@ class DocumentService:
 
     async def create_document(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         name: str,
         content: bytes,
         content_type: str,
-        created_by: Optional[ObjectId] = None,
+        created_by: Optional[str] = None,
         metadata: Optional[DocumentMetadata] = None,
     ) -> Document:
         """Create a new document (first version)."""
@@ -43,11 +43,11 @@ class DocumentService:
             storage_type = "gridfs"
             inline_content = None
             file_id = await storage_service.store_file(
-                content, name, content_type, {"tenant_id": str(tenant_id)}
+                content, name, content_type, {"organization_id": organization_id}
             )
 
         doc = Document(
-            tenant_id=tenant_id,
+            organization_id=organization_id,
             document_key=str(uuid.uuid4()),
             version=1,
             is_current=True,
@@ -71,7 +71,7 @@ class DocumentService:
         document_key: str,
         content: bytes,
         content_type: str,
-        created_by: Optional[ObjectId] = None,
+        created_by: Optional[str] = None,
         name: Optional[str] = None,
     ) -> Document:
         """Create a new version of an existing document."""
@@ -101,11 +101,11 @@ class DocumentService:
                 content,
                 name or current.name,
                 content_type,
-                {"tenant_id": str(current.tenant_id)},
+                {"organization_id": current.organization_id},
             )
 
         new_doc = Document(
-            tenant_id=current.tenant_id,
+            organization_id=current.organization_id,
             document_key=document_key,
             version=current.version + 1,
             is_current=True,
@@ -177,13 +177,13 @@ class DocumentService:
 
     async def list_by_project(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         project_id: ObjectId,
         current_only: bool = True,
     ) -> List[Document]:
         """List documents for a project."""
         query = {
-            "tenant_id": tenant_id,
+            "organization_id": organization_id,
             "metadata.project_id": project_id,
             "deleted_at": None,
         }
@@ -195,13 +195,13 @@ class DocumentService:
 
     async def list_by_tenant(
         self,
-        tenant_id: ObjectId,
+        organization_id: str,
         category: Optional[str] = None,
         current_only: bool = True,
     ) -> List[Document]:
         """List documents for a tenant."""
         query = {
-            "tenant_id": tenant_id,
+            "organization_id": organization_id,
             "deleted_at": None,
         }
         if current_only:

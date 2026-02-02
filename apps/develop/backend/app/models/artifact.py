@@ -11,8 +11,8 @@ class Artifact(MongoModel, TimestampMixin):
     """Artifact model for generated outputs."""
 
     project_id: Optional[PyObjectId] = None
-    tenant_id: PyObjectId
-    created_by: Optional[PyObjectId] = None
+    organization_id: str  # Identity organization UUID
+    created_by: Optional[str] = None  # Identity user UUID
     job_id: Optional[PyObjectId] = None
 
     label: str

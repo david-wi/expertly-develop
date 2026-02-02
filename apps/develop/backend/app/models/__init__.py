@@ -1,8 +1,10 @@
-"""Models package."""
+"""Models package.
+
+Note: User and organization data comes from Identity service.
+Local models only store app-specific data.
+"""
 
 from app.models.base import PyObjectId, MongoModel, TimestampMixin
-from app.models.tenant import Tenant
-from app.models.user import User
 from app.models.project import Project, SiteCredentials, RequirementsConfig, LatestArtifact
 from app.models.persona import Persona
 from app.models.document import Document
@@ -15,8 +17,6 @@ __all__ = [
     "PyObjectId",
     "MongoModel",
     "TimestampMixin",
-    "Tenant",
-    "User",
     "Project",
     "SiteCredentials",
     "RequirementsConfig",
