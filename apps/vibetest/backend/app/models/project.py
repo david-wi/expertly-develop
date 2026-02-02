@@ -1,5 +1,5 @@
 """Project model."""
-from sqlalchemy import Column, String, Text, ForeignKey
+from sqlalchemy import Column, String, Text, Index
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 
@@ -13,18 +13,14 @@ class Project(Base, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "projects"
 
     id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
-    organization_id = Column(
-        UUID(as_uuid=False),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=False
-    )
+    # Organization ID from Identity service (UUID string, no FK)
+    organization_id = Column(UUID(as_uuid=False), nullable=False, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     settings = Column(JSONB, default=dict)
     status = Column(String(50), default="active", nullable=False)
 
-    # Relationships
-    organization = relationship("Organization", back_populates="projects")
+    # Relationships (Organization now comes from Identity service)
     environments = relationship("Environment", back_populates="project", cascade="all, delete-orphan")
     test_cases = relationship("TestCase", back_populates="project", cascade="all, delete-orphan")
     test_suites = relationship("TestSuite", back_populates="project", cascade="all, delete-orphan")

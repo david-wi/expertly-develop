@@ -13,11 +13,9 @@ class QuickStartSession(Base, TimestampMixin):
     __tablename__ = "quick_start_sessions"
 
     id = Column(UUID(as_uuid=False), primary_key=True, default=generate_uuid)
-    organization_id = Column(
-        UUID(as_uuid=False),
-        ForeignKey("organizations.id", ondelete="CASCADE"),
-        nullable=True  # Nullable for sessions without auth
-    )
+    # Organization ID from Identity service (UUID string, no FK)
+    # Nullable for sessions without auth
+    organization_id = Column(UUID(as_uuid=False), nullable=True, index=True)
     url = Column(String(500), nullable=False)
     credentials_encrypted = Column(Text, nullable=True)
     status = Column(String(50), default="pending", nullable=False)  # pending, exploring, generating, completed, failed

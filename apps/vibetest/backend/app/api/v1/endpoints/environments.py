@@ -7,7 +7,8 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Environment, Project, User
+from app.models import Environment, Project
+from identity_client.models import User as IdentityUser
 from app.schemas import EnvironmentCreate, EnvironmentUpdate, EnvironmentResponse
 from app.services.encryption import get_encryption_service
 from app.api.deps import get_current_user
@@ -18,7 +19,7 @@ router = APIRouter()
 @router.get("", response_model=list[EnvironmentResponse])
 async def list_environments(
     project_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List all environments for a project."""
@@ -48,7 +49,7 @@ async def list_environments(
 async def create_environment(
     project_id: str,
     env_in: EnvironmentCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new environment."""
@@ -104,7 +105,7 @@ async def create_environment(
 async def get_environment(
     project_id: str,
     environment_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get an environment by ID."""
@@ -139,7 +140,7 @@ async def update_environment(
     project_id: str,
     environment_id: str,
     env_in: EnvironmentUpdate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Update an environment."""
@@ -203,7 +204,7 @@ async def update_environment(
 async def delete_environment(
     project_id: str,
     environment_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete an environment."""

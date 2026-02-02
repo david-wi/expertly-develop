@@ -8,7 +8,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Project, Environment, TestCase, TestRun, User
+from app.models import Project, Environment, TestCase, TestRun
+from identity_client.models import User as IdentityUser
 from app.schemas import (
     ProjectCreate,
     ProjectUpdate,
@@ -31,7 +32,7 @@ router.include_router(runs.router, prefix="/{project_id}/runs", tags=["runs"])
 @router.get("", response_model=list[ProjectResponse])
 async def list_projects(
     status: Optional[str] = Query(None, pattern="^(active|archived)$"),
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List all projects for the current user's organization."""
@@ -54,7 +55,7 @@ async def list_projects(
 @router.post("", response_model=ProjectResponse, status_code=201)
 async def create_project(
     project_in: ProjectCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Create a new project."""

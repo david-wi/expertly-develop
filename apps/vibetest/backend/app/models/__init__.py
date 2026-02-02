@@ -1,6 +1,4 @@
 """Database models."""
-from app.models.organization import Organization
-from app.models.user import User
 from app.models.project import Project
 from app.models.environment import Environment
 from app.models.test_case import TestCase, TestCaseHistory
@@ -10,9 +8,10 @@ from app.models.test_result import TestResult
 from app.models.artifact import Artifact
 from app.models.quick_start import QuickStartSession
 
+# Note: User and Organization data now comes from Identity service
+# Use identity_client.models.User (IdentityUser) instead
+
 __all__ = [
-    "Organization",
-    "User",
     "Project",
     "Environment",
     "TestCase",

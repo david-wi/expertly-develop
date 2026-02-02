@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import TestRun, TestResult, TestCase, Environment, Project, Artifact, User, TestSuite
+from app.models import TestRun, TestResult, TestCase, Environment, Project, Artifact, TestSuite
+from identity_client.models import User as IdentityUser
 from app.schemas import TestRunCreate, TestRunResponse, TestRunDetailResponse, RunSummary
 from app.services.test_runner import TestRunnerService
 from app.api.deps import get_current_user
@@ -19,7 +20,7 @@ async def list_runs(
     project_id: str,
     status: Optional[str] = Query(None),
     limit: int = Query(50, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """List test runs for a project."""
@@ -84,7 +85,7 @@ async def list_runs(
 async def start_run(
     project_id: str,
     run_in: TestRunCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Start a new test run."""
@@ -157,7 +158,7 @@ async def start_run(
 async def get_run(
     project_id: str,
     run_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get a test run with results."""
@@ -253,7 +254,7 @@ async def get_run(
 async def get_run_results(
     project_id: str,
     run_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: IdentityUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Get test results for a run."""
