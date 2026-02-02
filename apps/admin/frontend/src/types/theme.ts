@@ -29,11 +29,20 @@ export interface ThemeBorderColors {
   subtle: string
 }
 
+export interface ThemeSidebarColors {
+  background: string
+  backgroundHover: string
+  text: string
+  textMuted: string
+  border: string
+}
+
 export interface ThemeModeColors {
   primary: ThemePrimaryColors
   background: ThemeBackgroundColors
   text: ThemeTextColors
   border: ThemeBorderColors
+  sidebar?: ThemeSidebarColors
 }
 
 export interface ThemeColors {

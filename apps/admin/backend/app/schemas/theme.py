@@ -43,12 +43,22 @@ class ThemeBorderColors(BaseModel):
     subtle: str
 
 
+class ThemeSidebarColors(BaseModel):
+    """Sidebar colors (optional - allows dark sidebar in light mode)."""
+    background: str
+    backgroundHover: str
+    text: str
+    textMuted: str
+    border: str
+
+
 class ThemeModeColors(BaseModel):
     """Colors for a specific mode (light or dark)."""
     primary: ThemePrimaryColors
     background: ThemeBackgroundColors
     text: ThemeTextColors
     border: ThemeBorderColors
+    sidebar: Optional[ThemeSidebarColors] = None
 
 
 class ThemeColorsSchema(BaseModel):

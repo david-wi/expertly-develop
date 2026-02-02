@@ -35,6 +35,14 @@ export interface ThemeColors {
     default: string
     subtle: string
   }
+  // Sidebar colors (optional - falls back to background/text if not provided)
+  sidebar?: {
+    background: string
+    backgroundHover: string
+    text: string
+    textMuted: string
+    border: string
+  }
 }
 
 export interface Theme {
@@ -79,6 +87,14 @@ export const themes: Record<ThemeId, Theme> = {
           default: '#e5e7eb', // gray-200
           subtle: '#f3f4f6', // gray-100
         },
+        // Light sidebar (matches content area)
+        sidebar: {
+          background: '#ffffff',
+          backgroundHover: '#f3f4f6', // gray-100
+          text: '#4b5563', // gray-600
+          textMuted: '#9ca3af', // gray-400
+          border: '#e5e7eb', // gray-200
+        },
       },
       dark: {
         primary: {
@@ -107,6 +123,13 @@ export const themes: Record<ThemeId, Theme> = {
         border: {
           default: '#374151', // gray-700
           subtle: '#1f2937', // gray-800
+        },
+        sidebar: {
+          background: '#1f2937', // gray-800
+          backgroundHover: '#374151', // gray-700
+          text: '#9ca3af', // gray-400
+          textMuted: '#6b7280', // gray-500
+          border: '#374151', // gray-700
         },
       },
     },
@@ -143,6 +166,14 @@ export const themes: Record<ThemeId, Theme> = {
           default: '#e5e7eb', // gray-200
           subtle: '#f3f4f6', // gray-100
         },
+        // Light sidebar
+        sidebar: {
+          background: '#ffffff',
+          backgroundHover: '#f3f4f6',
+          text: '#4b5563',
+          textMuted: '#9ca3af',
+          border: '#e5e7eb',
+        },
       },
       dark: {
         primary: {
@@ -171,6 +202,13 @@ export const themes: Record<ThemeId, Theme> = {
         border: {
           default: '#334155', // slate-700
           subtle: '#1e293b', // slate-800
+        },
+        sidebar: {
+          background: '#1e293b', // slate-800
+          backgroundHover: '#334155', // slate-700
+          text: '#94a3b8', // slate-400
+          textMuted: '#64748b', // slate-500
+          border: '#334155', // slate-700
         },
       },
     },
@@ -207,6 +245,14 @@ export const themes: Record<ThemeId, Theme> = {
           default: '#e7e5e4', // stone-200
           subtle: '#f5f5f4', // stone-100
         },
+        // Dark sidebar even in light mode (matching mockup design)
+        sidebar: {
+          background: '#1c1917', // stone-900
+          backgroundHover: '#292524', // stone-800
+          text: '#a8a29e', // stone-400
+          textMuted: '#57534e', // stone-600
+          border: '#292524', // stone-800
+        },
       },
       dark: {
         primary: {
@@ -235,6 +281,13 @@ export const themes: Record<ThemeId, Theme> = {
         border: {
           default: '#44403c', // stone-700
           subtle: '#292524', // stone-800
+        },
+        sidebar: {
+          background: '#1c1917', // stone-900
+          backgroundHover: '#292524', // stone-800
+          text: '#a8a29e', // stone-400
+          textMuted: '#57534e', // stone-600
+          border: '#292524', // stone-800
         },
       },
     },

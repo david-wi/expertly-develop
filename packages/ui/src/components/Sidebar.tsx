@@ -14,7 +14,6 @@ import {
 import { useState } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
-import { useTheme } from '../theme/useTheme'
 import { VersionChecker } from './VersionChecker'
 import { UserMenu, type UserMenuConfig } from './UserMenu'
 import { createRenderLink } from '../utils/createRenderLink'
@@ -157,35 +156,33 @@ export function Sidebar({
     throw new Error('Sidebar requires either `navigate` or `renderLink` prop')
   }
 
-  // Get current theme mode for styling
-  let isDark = false
-  try {
-    const themeContext = useTheme()
-    isDark = themeContext.mode === 'dark'
-  } catch {
-    // ThemeProvider not available, use light mode
-    isDark = false
-  }
-
   // Theme-aware classes using CSS variables
-  const sidebarBg = 'bg-theme-bg-surface'
+  // Sidebar uses dedicated sidebar colors (allows dark sidebar in light mode)
+  const sidebarBg = 'bg-theme-sidebar-bg'
+  const sidebarBorderColor = 'border-theme-sidebar-border'
+  const sidebarText = 'text-theme-sidebar-text'
+  const sidebarTextMuted = 'text-theme-sidebar-text-muted'
+  const sidebarHoverBg = 'hover:bg-theme-sidebar-bg-hover'
+
+  // Sidebar active states - using primary colors with light text for visibility
+  const activeBg = 'bg-primary-500/15'
+  const activeText = 'text-primary-300'
+
+  // Content area colors (for dropdowns that appear over content)
   const borderColor = 'border-theme-border'
-  const textPrimary = 'text-theme-text-primary'
   const textSecondary = 'text-theme-text-secondary'
   const textMuted = 'text-theme-text-muted'
   const hoverBg = 'hover:bg-theme-bg-elevated'
-  const activeBg = isDark ? 'bg-primary-900/50' : 'bg-primary-50'
-  const activeText = isDark ? 'text-primary-300' : 'text-primary-700'
-  const navHoverBg = 'hover:bg-theme-bg-elevated'
-  const userBg = isDark ? 'bg-theme-bg-elevated' : 'bg-theme-bg'
-  const avatarBg = isDark ? 'bg-primary-900' : 'bg-primary-100'
-  const avatarText = isDark ? 'text-primary-300' : 'text-primary-700'
+  const navHoverBg = sidebarHoverBg
+  const userBg = 'bg-theme-sidebar-bg-hover'
+  const avatarBg = 'bg-primary-900'
+  const avatarText = 'text-primary-300'
   const dropdownBg = 'bg-theme-bg-surface'
 
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col ${sidebarBorderColor}`}>
       {/* Version Update Banner */}
       {versionCheck?.currentCommit && (
         <VersionChecker
@@ -196,14 +193,14 @@ export function Sidebar({
 
       {/* Logo / Product Switcher */}
       <div className="relative flex-shrink-0">
-        <div className={`flex h-14 items-center justify-between px-4 border-b ${borderColor}`}>
+        <div className={`flex h-14 items-center justify-between px-4 border-b ${sidebarBorderColor}`}>
           <button
             onClick={() => setShowProductSwitcher(!showProductSwitcher)}
-            className={`flex items-center gap-2 ${hoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
+            className={`flex items-center gap-2 ${sidebarHoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
           >
             <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
-            <span className={`font-semibold ${textPrimary} text-base whitespace-nowrap`}>Expertly {productName}</span>
-            <ChevronDown className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
+            <span className={`font-semibold text-white text-base whitespace-nowrap`}>Expertly {productName}</span>
+            <ChevronDown className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
 
           {/* Compact Language Selector */}
@@ -211,7 +208,7 @@ export function Sidebar({
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
-                className={`p-1.5 rounded-lg ${hoverBg} transition-colors`}
+                className={`p-1.5 rounded-lg ${sidebarHoverBg} transition-colors`}
                 title={currentLang.name}
               >
                 <span className="text-base">{currentLang.flag}</span>
@@ -325,7 +322,7 @@ export function Sidebar({
                         transition-colors duration-150
                         ${isActive
                           ? `${activeBg} ${activeText}`
-                          : `${textSecondary} ${navHoverBg} hover:${textPrimary}`
+                          : `${sidebarText} ${navHoverBg} hover:text-white`
                         }
                       `,
                       children: (
@@ -355,26 +352,26 @@ export function Sidebar({
 
       {/* Theme Switcher */}
       {showThemeSwitcher && (
-        <div className={`px-4 py-3 border-t ${borderColor} flex-shrink-0`}>
+        <div className={`px-4 py-3 border-t ${sidebarBorderColor} flex-shrink-0`}>
           <ThemeSwitcher />
         </div>
       )}
 
       {/* Bottom Section (optional - for logout buttons, etc.) */}
       {bottomSection && (
-        <div className={`border-t ${borderColor} flex-shrink-0`}>
+        <div className={`border-t ${sidebarBorderColor} flex-shrink-0`}>
           {bottomSection}
         </div>
       )}
 
       {/* User */}
       {user && (
-        <div className={`p-4 border-t ${borderColor} ${userBg} flex-shrink-0 relative`}>
+        <div className={`p-4 border-t ${sidebarBorderColor} ${userBg} flex-shrink-0 relative`}>
           {userMenu ? (
             <>
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className={`w-full flex items-center gap-3 ${hoverBg} rounded-lg p-1 -m-1 transition-colors`}
+                className={`w-full flex items-center gap-3 ${sidebarHoverBg} rounded-lg p-1 -m-1 transition-colors`}
               >
                 <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
                   <span className={`${avatarText} font-medium text-sm`}>
@@ -382,11 +379,11 @@ export function Sidebar({
                   </span>
                 </div>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
-                  {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
-                  {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
+                  <p className={`text-sm font-medium text-white truncate`}>{user.name || 'Loading...'}</p>
+                  {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
+                  {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
                 </div>
-                <ChevronUp className={`w-4 h-4 ${textMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
+                <ChevronUp className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
               </button>
               <UserMenu
                 config={userMenu}
@@ -403,9 +400,9 @@ export function Sidebar({
                 </span>
               </div>
               <div className="min-w-0">
-                <p className={`text-sm font-medium ${textPrimary} truncate`}>{user.name || 'Loading...'}</p>
-                {user.organization && <p className={`text-xs ${textMuted} truncate`}>{user.organization}</p>}
-                {!user.organization && user.role && <p className={`text-xs ${textMuted} capitalize`}>{user.role}</p>}
+                <p className={`text-sm font-medium text-white truncate`}>{user.name || 'Loading...'}</p>
+                {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
+                {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
               </div>
             </div>
           )}
