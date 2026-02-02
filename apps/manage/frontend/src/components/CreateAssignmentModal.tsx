@@ -160,9 +160,9 @@ export default function CreateAssignmentModal({
 
   // Filtered playbooks for typeahead (exclude groups, sort alphabetically)
   const filteredPlaybooks = useMemo(() => {
-    // Only include actual playbooks (not groups)
+    // Exclude groups - include playbooks and any legacy items without item_type
     const actualPlaybooks = playbooks
-      .filter((p) => p.item_type === 'playbook')
+      .filter((p) => p.item_type !== 'group')
       .sort((a, b) => a.name.localeCompare(b.name))
 
     if (!playbookSearch.trim()) return actualPlaybooks.slice(0, 10)
