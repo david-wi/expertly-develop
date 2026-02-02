@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { InlineVoiceTranscription } from '@expertly/ui'
 import { projectsApi, testsApi, runsApi, environmentsApi } from '../api/client'
 import { Project, TestCase, TestRun, Environment } from '../types'
 import {
@@ -257,14 +258,22 @@ export default function ProjectDetail() {
                     <h2 className="text-lg font-semibold text-gray-900 mb-4">
                       {t('tests.newTest')}
                     </h2>
-                    <input
-                      type="text"
-                      value={newTestTitle}
-                      onChange={(e) => setNewTestTitle(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-                      placeholder="Test case title..."
-                      required
-                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newTestTitle}
+                        onChange={(e) => setNewTestTitle(e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                        placeholder="Test case title..."
+                        required
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setNewTestTitle(newTestTitle ? newTestTitle + ' ' + text : text)}
+                        size="md"
+                        className="self-center"
+                      />
+                    </div>
                   </div>
                   <div className="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
                     <button

@@ -6,6 +6,7 @@ import { themesApi } from '@/services/api'
 import { ColorPaletteEditor } from '@/components/themes/ColorPaletteEditor'
 import { ThemePreview } from '@/components/themes/ThemePreview'
 import type { ThemeColors, ThemeCreateInput } from '@/types/theme'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 // Default colors based on violet theme
 const DEFAULT_COLORS: ThemeColors = {
@@ -171,15 +172,23 @@ export function ThemeCreate() {
                   <label className="block text-sm font-medium text-theme-text-secondary mb-1">
                     Name *
                   </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => handleNameChange(e.target.value)}
-                    placeholder="e.g., Sunset"
-                    className={`w-full px-3 py-2 bg-theme-bg border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.name ? 'border-red-500' : 'border-theme-border'
-                    }`}
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => handleNameChange(e.target.value)}
+                      placeholder="e.g., Sunset"
+                      className={`flex-1 px-3 py-2 bg-theme-bg border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                        errors.name ? 'border-red-500' : 'border-theme-border'
+                      }`}
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => handleNameChange(name ? name + ' ' + text : text)}
+                      size="md"
+                      className="self-center"
+                    />
+                  </div>
                   {errors.name && (
                     <p className="text-red-500 text-sm mt-1">{errors.name}</p>
                   )}
@@ -211,13 +220,21 @@ export function ThemeCreate() {
                   <label className="block text-sm font-medium text-theme-text-secondary mb-1">
                     Description
                   </label>
-                  <textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                    placeholder="A brief description of this theme..."
-                    className="w-full px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
+                  <div className="flex gap-2">
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      rows={2}
+                      placeholder="A brief description of this theme..."
+                      className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => setDescription(description ? description + ' ' + text : text)}
+                      size="md"
+                      className="self-start mt-1"
+                    />
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <input

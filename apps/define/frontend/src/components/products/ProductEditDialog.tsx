@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { productsApi, Product } from '@/api/client'
 import { Loader2 } from 'lucide-react'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface ProductEditDialogProps {
   open: boolean
@@ -79,23 +80,40 @@ export function ProductEditDialog({
             <label className="text-sm font-medium text-gray-700 mb-1 block">
               Name
             </label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Project name"
-            />
+            <div className="flex gap-2">
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Project name"
+                className="flex-1"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setName(name ? name + ' ' + text : text)}
+                size="md"
+              />
+            </div>
           </div>
 
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">
               Description
             </label>
-            <Textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief description of this project..."
-              rows={4}
-            />
+            <div className="flex gap-2">
+              <Textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief description of this project..."
+                rows={4}
+                className="flex-1"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setDescription(description ? description + ' ' + text : text)}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
 
           {error && (

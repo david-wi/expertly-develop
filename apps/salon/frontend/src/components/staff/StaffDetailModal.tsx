@@ -8,6 +8,7 @@ import { Input } from '../ui/Input';
 import { StaffScheduleEditor } from './StaffScheduleEditor';
 import { ScheduleOverrideModal } from './ScheduleOverrideModal';
 import { PhotoUpload } from '../ui/PhotoUpload';
+import { InlineVoiceTranscription } from '@expertly/ui';
 
 interface Props {
   staff: Staff | null;
@@ -107,26 +108,56 @@ export function StaffDetailModal({ staff, isOpen, onClose, mode }: Props) {
               />
               <div className="flex-1 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    label="First Name"
-                    value={formData.first_name}
-                    onChange={(e) => handleInputChange('first_name', e.target.value)}
-                    required
-                    autoFocus
-                  />
-                  <Input
-                    label="Last Name"
-                    value={formData.last_name}
-                    onChange={(e) => handleInputChange('last_name', e.target.value)}
-                    required
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        label="First Name"
+                        value={formData.first_name}
+                        onChange={(e) => handleInputChange('first_name', e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => handleInputChange('first_name', formData.first_name ? formData.first_name + ' ' + text : text)}
+                      size="md"
+                      className="self-end mb-[2px]"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input
+                        label="Last Name"
+                        value={formData.last_name}
+                        onChange={(e) => handleInputChange('last_name', e.target.value)}
+                        required
+                      />
+                    </div>
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => handleInputChange('last_name', formData.last_name ? formData.last_name + ' ' + text : text)}
+                      size="md"
+                      className="self-end mb-[2px]"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Input
+                      label="Display Name"
+                      value={formData.display_name}
+                      onChange={(e) => handleInputChange('display_name', e.target.value)}
+                      placeholder="Name shown to clients"
+                    />
+                  </div>
+                  <InlineVoiceTranscription
+                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    onTranscribe={(text) => handleInputChange('display_name', formData.display_name ? formData.display_name + ' ' + text : text)}
+                    size="md"
+                    className="self-end mb-[2px]"
                   />
                 </div>
-                <Input
-                  label="Display Name"
-                  value={formData.display_name}
-                  onChange={(e) => handleInputChange('display_name', e.target.value)}
-                  placeholder="Name shown to clients"
-                />
               </div>
             </div>
 

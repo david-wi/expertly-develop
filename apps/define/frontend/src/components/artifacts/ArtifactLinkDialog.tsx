@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/dialog'
 import { Link2, Loader2 } from 'lucide-react'
 import { artifactsApi } from '@/api/client'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface ArtifactLinkDialogProps {
   productId: string
@@ -107,12 +108,20 @@ export function ArtifactLinkDialog({
           <div className="space-y-4 py-4">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-1 block">Name</label>
-              <Input
-                placeholder="e.g., Design Mockups, API Documentation"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g., Design Mockups, API Documentation"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                  className="flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setName(name ? name + ' ' + text : text)}
+                  size="md"
+                />
+              </div>
             </div>
 
             <div>
@@ -130,12 +139,21 @@ export function ArtifactLinkDialog({
               <label className="text-sm font-medium text-gray-700 mb-1 block">
                 Description (optional)
               </label>
-              <Textarea
-                placeholder="Brief description of this link..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={2}
-              />
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Brief description of this link..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={2}
+                  className="flex-1"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setDescription(description ? description + ' ' + text : text)}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
             </div>
 
             {error && <p className="text-sm text-red-600">{error}</p>}

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { InlineVoiceTranscription } from '@expertly/ui'
 import { projectsApi, environmentsApi } from '../api/client'
 import { Environment, Project } from '../types'
 import Breadcrumbs from '../components/Breadcrumbs'
@@ -390,13 +391,21 @@ export default function EnvironmentSetup() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Notes (optional)
             </label>
-            <textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              rows={2}
-              placeholder="Any notes about this environment..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
+            <div className="flex gap-2">
+              <textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                rows={2}
+                placeholder="Any notes about this environment..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setFormData({ ...formData, notes: formData.notes ? formData.notes + ' ' + text : text })}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-3">

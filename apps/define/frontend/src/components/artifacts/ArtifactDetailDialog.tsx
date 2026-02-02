@@ -19,6 +19,7 @@ import { Loader2, Upload, Trash2, Save, File, Link2, ExternalLink } from 'lucide
 import { ArtifactWithVersions, artifactsApi } from '@/api/client'
 import { ArtifactVersionHistory } from './ArtifactVersionHistory'
 import { MarkdownViewer } from './MarkdownViewer'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface ArtifactDetailDialogProps {
   artifactId: string | null
@@ -191,10 +192,18 @@ export function ArtifactDetailDialog({
               <div className="space-y-3">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">Name</label>
-                  <Input
-                    value={editForm.name}
-                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      className="flex-1"
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => setEditForm({ ...editForm, name: editForm.name ? editForm.name + ' ' + text : text })}
+                      size="sm"
+                    />
+                  </div>
                 </div>
                 {artifact.artifact_type === 'link' && (
                   <div>
@@ -209,11 +218,20 @@ export function ArtifactDetailDialog({
                 )}
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
-                  <Textarea
-                    value={editForm.description}
-                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                    rows={2}
-                  />
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={editForm.description}
+                      onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                      rows={2}
+                      className="flex-1"
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => setEditForm({ ...editForm, description: editForm.description ? editForm.description + ' ' + text : text })}
+                      size="sm"
+                      className="self-start mt-1"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">Status</label>
@@ -277,11 +295,19 @@ export function ArtifactDetailDialog({
                       className="hidden"
                       onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                     />
-                    <Input
-                      placeholder="Change summary (optional)"
-                      value={changeSummary}
-                      onChange={(e) => setChangeSummary(e.target.value)}
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Change summary (optional)"
+                        value={changeSummary}
+                        onChange={(e) => setChangeSummary(e.target.value)}
+                        className="flex-1"
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setChangeSummary(changeSummary ? changeSummary + ' ' + text : text)}
+                        size="sm"
+                      />
+                    </div>
                     <Button
                       onClick={handleUploadVersion}
                       disabled={uploading || !uploadFile}

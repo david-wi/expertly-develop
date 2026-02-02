@@ -41,6 +41,7 @@ import { BulkImportDialog } from '@/components/BulkImportDialog'
 import { ProductAvatar } from '@/components/products/ProductAvatar'
 import { AvatarDialog } from '@/components/products/AvatarDialog'
 import { ProductEditDialog } from '@/components/products/ProductEditDialog'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface TreeNode extends Requirement {
   children: TreeNode[]
@@ -350,57 +351,101 @@ export default function ProductDetail() {
                                 <label className="text-sm font-medium text-gray-700 mb-1 block">
                                   Title
                                 </label>
-                                <Input
-                                  placeholder="e.g., Version History"
-                                  value={newReq.title}
-                                  onChange={(e) => setNewReq({ ...newReq, title: e.target.value })}
-                                  required
-                                />
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="e.g., Version History"
+                                    value={newReq.title}
+                                    onChange={(e) => setNewReq({ ...newReq, title: e.target.value })}
+                                    required
+                                    className="flex-1"
+                                  />
+                                  <InlineVoiceTranscription
+                                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                    onTranscribe={(text) => setNewReq({ ...newReq, title: newReq.title ? newReq.title + ' ' + text : text })}
+                                    size="md"
+                                  />
+                                </div>
                               </div>
                               <div className="grid grid-cols-2 gap-4">
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     What this does
                                   </label>
-                                  <Textarea
-                                    placeholder="Users can view, compare, and restore previous versions..."
-                                    value={newReq.what_this_does}
-                                    onChange={(e) => setNewReq({ ...newReq, what_this_does: e.target.value })}
-                                    rows={3}
-                                  />
+                                  <div className="flex gap-2">
+                                    <Textarea
+                                      placeholder="Users can view, compare, and restore previous versions..."
+                                      value={newReq.what_this_does}
+                                      onChange={(e) => setNewReq({ ...newReq, what_this_does: e.target.value })}
+                                      rows={3}
+                                      className="flex-1"
+                                    />
+                                    <InlineVoiceTranscription
+                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      onTranscribe={(text) => setNewReq({ ...newReq, what_this_does: newReq.what_this_does ? newReq.what_this_does + ' ' + text : text })}
+                                      size="sm"
+                                      className="self-start mt-1"
+                                    />
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     Why this exists
                                   </label>
-                                  <Textarea
-                                    placeholder="This helps people understand changes over time..."
-                                    value={newReq.why_this_exists}
-                                    onChange={(e) => setNewReq({ ...newReq, why_this_exists: e.target.value })}
-                                    rows={3}
-                                  />
+                                  <div className="flex gap-2">
+                                    <Textarea
+                                      placeholder="This helps people understand changes over time..."
+                                      value={newReq.why_this_exists}
+                                      onChange={(e) => setNewReq({ ...newReq, why_this_exists: e.target.value })}
+                                      rows={3}
+                                      className="flex-1"
+                                    />
+                                    <InlineVoiceTranscription
+                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      onTranscribe={(text) => setNewReq({ ...newReq, why_this_exists: newReq.why_this_exists ? newReq.why_this_exists + ' ' + text : text })}
+                                      size="sm"
+                                      className="self-start mt-1"
+                                    />
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     Acceptance criteria
                                   </label>
-                                  <Textarea
-                                    placeholder="How we'll know this is done..."
-                                    value={newReq.acceptance_criteria}
-                                    onChange={(e) => setNewReq({ ...newReq, acceptance_criteria: e.target.value })}
-                                    rows={3}
-                                  />
+                                  <div className="flex gap-2">
+                                    <Textarea
+                                      placeholder="How we'll know this is done..."
+                                      value={newReq.acceptance_criteria}
+                                      onChange={(e) => setNewReq({ ...newReq, acceptance_criteria: e.target.value })}
+                                      rows={3}
+                                      className="flex-1"
+                                    />
+                                    <InlineVoiceTranscription
+                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      onTranscribe={(text) => setNewReq({ ...newReq, acceptance_criteria: newReq.acceptance_criteria ? newReq.acceptance_criteria + ' ' + text : text })}
+                                      size="sm"
+                                      className="self-start mt-1"
+                                    />
+                                  </div>
                                 </div>
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     Not included (out of scope)
                                   </label>
-                                  <Textarea
-                                    placeholder="Things explicitly not part of this requirement..."
-                                    value={newReq.not_included}
-                                    onChange={(e) => setNewReq({ ...newReq, not_included: e.target.value })}
-                                    rows={3}
-                                  />
+                                  <div className="flex gap-2">
+                                    <Textarea
+                                      placeholder="Things explicitly not part of this requirement..."
+                                      value={newReq.not_included}
+                                      onChange={(e) => setNewReq({ ...newReq, not_included: e.target.value })}
+                                      rows={3}
+                                      className="flex-1"
+                                    />
+                                    <InlineVoiceTranscription
+                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      onTranscribe={(text) => setNewReq({ ...newReq, not_included: newReq.not_included ? newReq.not_included + ' ' + text : text })}
+                                      size="sm"
+                                      className="self-start mt-1"
+                                    />
+                                  </div>
                                 </div>
                               </div>
                               <div className="grid grid-cols-4 gap-4">

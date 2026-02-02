@@ -6,6 +6,7 @@ import { Card, CardContent } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Badge } from '../components/common/Badge'
 import { Input, Textarea, Select } from '../components/common/Input'
+import { InlineVoiceTranscription } from '@expertly/ui'
 import { projectsApi, type ProjectCreate } from '../api/client'
 import { formatDistanceToNow } from 'date-fns'
 
@@ -147,21 +148,45 @@ function CreateProjectModal({
         <h2 className="text-xl font-semibold text-theme-text-primary mb-4">Create Project</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Project Name"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            placeholder="My Application"
-            required
-          />
+          <div>
+            <div className="flex gap-2 items-end">
+              <div className="flex-1">
+                <Input
+                  label="Project Name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="My Application"
+                  required
+                />
+              </div>
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
+                size="md"
+                className="mb-[2px]"
+              />
+            </div>
+          </div>
 
-          <Textarea
-            label="Description"
-            value={formData.description}
-            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            placeholder="Brief description of the project..."
-            rows={3}
-          />
+          <div>
+            <div className="flex gap-2 items-start">
+              <div className="flex-1">
+                <Textarea
+                  label="Description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Brief description of the project..."
+                  rows={3}
+                />
+              </div>
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
+                size="md"
+                className="mt-6"
+              />
+            </div>
+          </div>
 
           <Input
             label="Site URL"

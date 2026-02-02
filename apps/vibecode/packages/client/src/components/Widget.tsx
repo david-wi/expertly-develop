@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Terminal,
 } from 'lucide-react';
+import { InlineVoiceTranscription } from '@expertly/ui';
 import { useDashboardStore, type Session, type Widget as WidgetType, type ExecutionMode, type QueuedMessage } from '../store/dashboard-store';
 import type { useWebSocket } from '../hooks/useWebSocket';
 import MessageList from './MessageList';
@@ -334,20 +335,28 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
         <div className="flex-1 p-4 flex flex-col gap-3 overflow-auto bg-white">
           <div className="relative">
             <label className="block text-xs text-gray-500 mb-1">Session Name</label>
-            <input
-              ref={nameInputRef}
-              type="text"
-              value={setupName}
-              onChange={(e) => {
-                setSetupName(e.target.value);
-                setShowNameSuggestions(true);
-              }}
-              onFocus={() => setShowNameSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
-              placeholder="My Task"
-              className="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400"
-              autoComplete="off"
-            />
+            <div className="flex gap-2">
+              <input
+                ref={nameInputRef}
+                type="text"
+                value={setupName}
+                onChange={(e) => {
+                  setSetupName(e.target.value);
+                  setShowNameSuggestions(true);
+                }}
+                onFocus={() => setShowNameSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowNameSuggestions(false), 150)}
+                placeholder="My Task"
+                className="flex-1 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400"
+                autoComplete="off"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setSetupName(setupName ? setupName + ' ' + text : text)}
+                size="md"
+                className="self-center"
+              />
+            </div>
             {/* Autocomplete dropdown */}
             {showNameSuggestions && nameSuggestions.length > 0 && (
               <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-40 overflow-y-auto">
@@ -424,13 +433,21 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
 
           <div className="flex-1">
             <label className="block text-xs text-gray-500 mb-1">Initial Prompt (optional)</label>
-            <textarea
-              value={setupPrompt}
-              onChange={(e) => setSetupPrompt(e.target.value)}
-              placeholder="What should Claude work on?"
-              rows={3}
-              className="w-full px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-none"
-            />
+            <div className="flex gap-2">
+              <textarea
+                value={setupPrompt}
+                onChange={(e) => setSetupPrompt(e.target.value)}
+                placeholder="What should Claude work on?"
+                rows={3}
+                className="flex-1 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-none"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setSetupPrompt(setupPrompt ? setupPrompt + ' ' + text : text)}
+                size="md"
+                className="self-start mt-1"
+              />
+            </div>
           </div>
           <button
             onClick={handleCreateSession}
@@ -503,6 +520,12 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
                 placeholder={session?.state === 'busy' ? 'Type to queue message...' : 'Send a message...'}
                 disabled={!session}
                 className="flex-1 px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400 disabled:opacity-50"
+              />
+              <InlineVoiceTranscription
+                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                onTranscribe={(text) => setInput(input ? input + ' ' + text : text)}
+                size="md"
+                className="self-center"
               />
               <button
                 onClick={handleSend}

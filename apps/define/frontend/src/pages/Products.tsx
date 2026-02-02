@@ -16,7 +16,7 @@ import {
 import { Plus, FolderTree, Loader2 } from 'lucide-react'
 import { productsApi, Product } from '@/api/client'
 import { ProductAvatar } from '@/components/products/ProductAvatar'
-import { ErrorState, createErrorLogger } from '@expertly/ui'
+import { ErrorState, createErrorLogger, InlineVoiceTranscription } from '@expertly/ui'
 
 const logger = createErrorLogger('define')
 
@@ -100,20 +100,36 @@ export default function Products() {
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Product Name
                   </label>
-                  <Input
-                    placeholder="e.g., Automation Designer"
-                    value={newProduct.name}
-                    onChange={(e) => {
-                      const name = e.target.value
-                      const suggested = suggestPrefix(name)
-                      if (!newProduct.prefix || newProduct.prefix === suggestPrefix(newProduct.name)) {
-                        setNewProduct({ ...newProduct, name, prefix: suggested })
-                      } else {
-                        setNewProduct({ ...newProduct, name })
-                      }
-                    }}
-                    required
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="e.g., Automation Designer"
+                      value={newProduct.name}
+                      onChange={(e) => {
+                        const name = e.target.value
+                        const suggested = suggestPrefix(name)
+                        if (!newProduct.prefix || newProduct.prefix === suggestPrefix(newProduct.name)) {
+                          setNewProduct({ ...newProduct, name, prefix: suggested })
+                        } else {
+                          setNewProduct({ ...newProduct, name })
+                        }
+                      }}
+                      required
+                      className="flex-1"
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => {
+                        const name = newProduct.name ? newProduct.name + ' ' + text : text
+                        const suggested = suggestPrefix(name)
+                        if (!newProduct.prefix || newProduct.prefix === suggestPrefix(newProduct.name)) {
+                          setNewProduct({ ...newProduct, name, prefix: suggested })
+                        } else {
+                          setNewProduct({ ...newProduct, name })
+                        }
+                      }}
+                      size="md"
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
@@ -135,12 +151,21 @@ export default function Products() {
                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                     Description (optional)
                   </label>
-                  <Textarea
-                    placeholder="What does this product do?"
-                    value={newProduct.description}
-                    onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
-                    rows={3}
-                  />
+                  <div className="flex gap-2">
+                    <Textarea
+                      placeholder="What does this product do?"
+                      value={newProduct.description}
+                      onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      rows={3}
+                      className="flex-1"
+                    />
+                    <InlineVoiceTranscription
+                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      onTranscribe={(text) => setNewProduct({ ...newProduct, description: newProduct.description ? newProduct.description + ' ' + text : text })}
+                      size="md"
+                      className="self-start mt-1"
+                    />
+                  </div>
                 </div>
               </div>
               <DialogFooter>

@@ -4,6 +4,7 @@ import { Plus, Search, Phone, Mail, Calendar } from 'lucide-react';
 import { Button, Input, Card, Modal, ModalFooter } from '../components/ui';
 import { clients as clientsApi } from '../services/api';
 import type { Client, ClientCreate } from '../types';
+import { InlineVoiceTranscription } from '@expertly/ui';
 
 export function ClientsPage() {
   const queryClient = useQueryClient();
@@ -156,23 +157,43 @@ function CreateClientModal({
     <Modal isOpen={isOpen} onClose={onClose} title="Add New Client">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="First Name"
-            value={formData.first_name}
-            onChange={(e) =>
-              setFormData({ ...formData, first_name: e.target.value })
-            }
-            required
-            autoFocus
-          />
-          <Input
-            label="Last Name"
-            value={formData.last_name}
-            onChange={(e) =>
-              setFormData({ ...formData, last_name: e.target.value })
-            }
-            required
-          />
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                label="First Name"
+                value={formData.first_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, first_name: e.target.value })
+                }
+                required
+                autoFocus
+              />
+            </div>
+            <InlineVoiceTranscription
+              wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+              onTranscribe={(text) => setFormData({ ...formData, first_name: formData.first_name ? formData.first_name + ' ' + text : text })}
+              size="md"
+              className="self-end mb-[2px]"
+            />
+          </div>
+          <div className="flex gap-2">
+            <div className="flex-1">
+              <Input
+                label="Last Name"
+                value={formData.last_name}
+                onChange={(e) =>
+                  setFormData({ ...formData, last_name: e.target.value })
+                }
+                required
+              />
+            </div>
+            <InlineVoiceTranscription
+              wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+              onTranscribe={(text) => setFormData({ ...formData, last_name: formData.last_name ? formData.last_name + ' ' + text : text })}
+              size="md"
+              className="self-end mb-[2px]"
+            />
+          </div>
         </div>
         <Input
           label="Phone"

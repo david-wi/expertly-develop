@@ -5,6 +5,7 @@ import { Play, ArrowLeft } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { Input, Textarea, Select } from '../components/common/Input'
+import { InlineVoiceTranscription } from '@expertly/ui'
 import { projectsApi, scenariosApi, personasApi, walkthroughsApi } from '../api/client'
 
 export default function WalkthroughPage() {
@@ -123,35 +124,71 @@ export default function WalkthroughPage() {
             />
 
             {/* Scenario Text */}
-            <Textarea
-              label="Scenario Steps"
-              value={formData.scenario_text}
-              onChange={(e) => setFormData({ ...formData, scenario_text: e.target.value })}
-              placeholder={`Enter scenario steps, one per line:
+            <div>
+              <div className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <Textarea
+                    label="Scenario Steps"
+                    value={formData.scenario_text}
+                    onChange={(e) => setFormData({ ...formData, scenario_text: e.target.value })}
+                    placeholder={`Enter scenario steps, one per line:
 Navigate to /
 Capture "Homepage"
 Click .nav-link
 Wait 2 seconds
 Capture "After navigation"`}
-              rows={10}
-            />
+                    rows={10}
+                  />
+                </div>
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, scenario_text: formData.scenario_text ? formData.scenario_text + '\n' + text : text })}
+                  size="md"
+                  className="mt-6"
+                />
+              </div>
+            </div>
 
             {/* Label */}
-            <Input
-              label="Label (optional)"
-              value={formData.label}
-              onChange={(e) => setFormData({ ...formData, label: e.target.value })}
-              placeholder="My Visual Walkthrough"
-            />
+            <div>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1">
+                  <Input
+                    label="Label (optional)"
+                    value={formData.label}
+                    onChange={(e) => setFormData({ ...formData, label: e.target.value })}
+                    placeholder="My Visual Walkthrough"
+                  />
+                </div>
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, label: formData.label ? formData.label + ' ' + text : text })}
+                  size="md"
+                  className="mb-[2px]"
+                />
+              </div>
+            </div>
 
             {/* Description */}
-            <Textarea
-              label="Description (optional)"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Brief description of what this walkthrough covers..."
-              rows={2}
-            />
+            <div>
+              <div className="flex gap-2 items-start">
+                <div className="flex-1">
+                  <Textarea
+                    label="Description (optional)"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Brief description of what this walkthrough covers..."
+                    rows={2}
+                  />
+                </div>
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
+                  size="md"
+                  className="mt-6"
+                />
+              </div>
+            </div>
 
             {/* Persona */}
             {formData.project_id && (personas?.items?.length ?? 0) > 0 && (

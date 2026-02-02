@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Modal, ModalFooter } from '@expertly/ui'
+import { Modal, ModalFooter, InlineVoiceTranscription } from '@expertly/ui'
 import { teamsApi, usersApi, Team, TeamDetail, TeamMember, User, getOrganizationId } from '../services/api'
 
 export default function TeamsPage() {
@@ -325,25 +325,41 @@ export default function TeamsPage() {
           <form onSubmit={handleCreate} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                placeholder="e.g., Engineering"
-                required
-                autoFocus
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  placeholder="e.g., Engineering"
+                  required
+                  autoFocus
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
+                  size="md"
+                  className="self-center"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                rows={3}
-                placeholder="What does this team do?"
-              />
+              <div className="flex gap-2">
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  rows={3}
+                  placeholder="What does this team do?"
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
             </div>
             <ModalFooter>
               <button
@@ -375,22 +391,38 @@ export default function TeamsPage() {
           <form onSubmit={handleEdit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  required
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
+                  size="md"
+                  className="self-center"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-                rows={3}
-              />
+              <div className="flex gap-2">
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2"
+                  rows={3}
+                />
+                <InlineVoiceTranscription
+                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
+                  size="md"
+                  className="self-start mt-1"
+                />
+              </div>
             </div>
             <ModalFooter>
               <button

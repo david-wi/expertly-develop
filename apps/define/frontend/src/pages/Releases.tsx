@@ -24,6 +24,7 @@ import {
 import { Plus, Package, Loader2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { productsApi, releasesApi, Product, ReleaseSnapshot } from '@/api/client'
+import { InlineVoiceTranscription } from '@expertly/ui'
 
 export default function Releases() {
   const [products, setProducts] = useState<Product[]>([])
@@ -140,23 +141,40 @@ export default function Releases() {
                     <label className="text-sm font-medium text-gray-700 mb-1 block">
                       Version Name
                     </label>
-                    <Input
-                      placeholder="e.g., v1.0.0"
-                      value={newRelease.version_name}
-                      onChange={(e) => setNewRelease({ ...newRelease, version_name: e.target.value })}
-                      required
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="e.g., v1.0.0"
+                        value={newRelease.version_name}
+                        onChange={(e) => setNewRelease({ ...newRelease, version_name: e.target.value })}
+                        required
+                        className="flex-1"
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setNewRelease({ ...newRelease, version_name: newRelease.version_name ? newRelease.version_name + ' ' + text : text })}
+                        size="md"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700 mb-1 block">
                       Description (optional)
                     </label>
-                    <Textarea
-                      placeholder="Release notes..."
-                      value={newRelease.description}
-                      onChange={(e) => setNewRelease({ ...newRelease, description: e.target.value })}
-                      rows={3}
-                    />
+                    <div className="flex gap-2">
+                      <Textarea
+                        placeholder="Release notes..."
+                        value={newRelease.description}
+                        onChange={(e) => setNewRelease({ ...newRelease, description: e.target.value })}
+                        rows={3}
+                        className="flex-1"
+                      />
+                      <InlineVoiceTranscription
+                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        onTranscribe={(text) => setNewRelease({ ...newRelease, description: newRelease.description ? newRelease.description + ' ' + text : text })}
+                        size="md"
+                        className="self-start mt-1"
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
