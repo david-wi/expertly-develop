@@ -187,6 +187,11 @@ export const api = {
     request<void>(`/api/v1/tasks/${id}`, {
       method: 'DELETE',
     }),
+  reorderTasks: (items: TaskReorderItem[]) =>
+    request<{ success: boolean; updated_count: number }>('/api/v1/tasks/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    }),
 
   // Task Phase Transitions
   markTaskReady: (id: string) =>
@@ -685,6 +690,8 @@ export interface Task {
   scheduled_start?: string
   scheduled_end?: string
   schedule_timezone?: string
+  // Manual ordering
+  sequence?: number
   created_at: string
   updated_at: string
 }
@@ -730,6 +737,13 @@ export interface UpdateTaskRequest {
   scheduled_start?: string | null
   scheduled_end?: string | null
   schedule_timezone?: string | null
+  // Manual ordering
+  sequence?: number
+}
+
+export interface TaskReorderItem {
+  id: string
+  sequence: number
 }
 
 export interface CreateQueueRequest {

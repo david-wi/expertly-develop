@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
+from pydantic import BaseModel
 
 from app.database import get_database
 from app.models import (
@@ -13,6 +14,26 @@ from app.models import (
 from app.api.deps import get_current_user
 
 router = APIRouter()
+
+
+class TaskReorderItem(BaseModel):
+    """Schema for reordering a task."""
+    id: str
+    sequence: float
+
+
+class TaskReorderRequest(BaseModel):
+    """Schema for bulk reordering tasks."""
+    items: list[TaskReorderItem]
+
+
+def generate_initial_sequence() -> float:
+    """Generate initial sequence value: YYYYMMDD.HHMMSS0001 format, 2 days from now."""
+    future = datetime.now(timezone.utc) + timedelta(days=2)
+    # Format: YYYYMMDD.HHMMSS0001
+    date_part = int(future.strftime("%Y%m%d"))
+    time_part = float(future.strftime("%H%M%S")) / 1000000  # Make it a decimal
+    return date_part + time_part + 0.0001
 
 
 def serialize_task(task: dict) -> dict:
@@ -62,7 +83,8 @@ async def list_tasks(
             raise HTTPException(status_code=400, detail="Invalid project ID")
         query["project_id"] = ObjectId(project_id)
 
-    cursor = db.tasks.find(query).sort([("priority", 1), ("created_at", 1)]).limit(limit)
+    # Sort by sequence (manual ordering) first, then priority, then created_at
+    cursor = db.tasks.find(query).sort([("sequence", 1), ("priority", 1), ("created_at", 1)]).limit(limit)
     tasks = await cursor.to_list(limit)
 
     return [serialize_task(t) for t in tasks]
@@ -127,6 +149,7 @@ async def create_task(
         scheduled_start=data.scheduled_start,
         scheduled_end=data.scheduled_end,
         schedule_timezone=data.schedule_timezone,
+        sequence=generate_initial_sequence(),
     )
 
     await db.tasks.insert_one(task.model_dump_mongo())
@@ -771,3 +794,26 @@ async def create_task_update(
         "task_id": str(update.task_id),
         "user_id": str(update.user_id)
     }
+
+
+@router.post("/reorder")
+async def reorder_tasks(
+    data: TaskReorderRequest,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Update sequence values for multiple tasks to reorder them."""
+    db = get_database()
+
+    for item in data.items:
+        if not ObjectId.is_valid(item.id):
+            raise HTTPException(status_code=400, detail=f"Invalid task ID: {item.id}")
+
+        await db.tasks.update_one(
+            {
+                "_id": ObjectId(item.id),
+                "organization_id": current_user.organization_id
+            },
+            {"$set": {"sequence": item.sequence, "updated_at": datetime.now(timezone.utc)}}
+        )
+
+    return {"success": True, "updated_count": len(data.items)}

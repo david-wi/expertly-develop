@@ -96,6 +96,10 @@ class Task(MongoModel):
     scheduled_end: Optional[datetime] = None  # Optional: work window closes
     schedule_timezone: Optional[str] = None  # Timezone for scheduling
 
+    # Manual ordering - decimal for easy insertion between items
+    # Initial value: YYYYMMDD.HHMMSS0001 (2 days after creation)
+    sequence: Optional[float] = None
+
 
 class TaskCreate(BaseModel):
     """Schema for creating a task."""
@@ -138,6 +142,8 @@ class TaskUpdate(BaseModel):
     scheduled_start: Optional[datetime] = None
     scheduled_end: Optional[datetime] = None
     schedule_timezone: Optional[str] = None
+    # Manual ordering
+    sequence: Optional[float] = None
 
 
 class TaskCheckout(BaseModel):
