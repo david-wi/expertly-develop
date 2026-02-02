@@ -517,21 +517,31 @@ class IdentityClient:
     # Teams
     # -------------------------------------------------------------------------
 
-    async def get_team(self, team_id: str, session_token: str) -> Team:
+    async def get_team(
+        self,
+        team_id: str,
+        session_token: str,
+        organization_id: Optional[str] = None,
+    ) -> Team:
         """
         Get a team by ID.
 
         Args:
             team_id: The team ID.
             session_token: Session token for authentication.
+            organization_id: Optional organization ID (required by Identity API).
 
         Returns:
             Team object.
         """
         client = await self._get_client()
+        headers = self._headers(session_token)
+        if organization_id:
+            headers["X-Organization-Id"] = organization_id
+
         response = await client.get(
             f"/api/v1/teams/{team_id}",
-            headers=self._headers(session_token),
+            headers=headers,
         )
         response.raise_for_status()
         return Team(**response.json())
@@ -552,14 +562,13 @@ class IdentityClient:
             TeamListResponse with items and total count.
         """
         client = await self._get_client()
-        params = {}
+        headers = self._headers(session_token)
         if organization_id:
-            params["organization_id"] = organization_id
+            headers["X-Organization-Id"] = organization_id
 
         response = await client.get(
             "/api/v1/teams",
-            headers=self._headers(session_token),
-            params=params,
+            headers=headers,
         )
         response.raise_for_status()
         data = response.json()

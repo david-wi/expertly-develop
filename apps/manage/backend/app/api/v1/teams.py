@@ -120,7 +120,9 @@ async def get_team(
 
     client = get_identity_client()
     try:
-        team = await client.get_team(team_id, session_token)
+        team = await client.get_team(
+            team_id, session_token, organization_id=current_user.organization_id
+        )
         return _team_to_dict(team.model_dump())
     except Exception as e:
         if "404" in str(e) or "not found" in str(e).lower():
@@ -244,7 +246,9 @@ async def update_team(
                 result = response.json()
             else:
                 # Just fetch the current team
-                team = await client.get_team(team_id, session_token)
+                team = await client.get_team(
+                    team_id, session_token, organization_id=current_user.organization_id
+                )
                 result = team.model_dump()
 
         return _team_to_dict(result)
@@ -335,7 +339,9 @@ async def add_team_member(
             response.raise_for_status()
 
         # Fetch updated team
-        team = await client.get_team(team_id, session_token)
+        team = await client.get_team(
+            team_id, session_token, organization_id=current_user.organization_id
+        )
         return _team_to_dict(team.model_dump())
 
     except HTTPException:
@@ -377,7 +383,9 @@ async def remove_team_member(
             response.raise_for_status()
 
         # Fetch updated team
-        team = await client.get_team(team_id, session_token)
+        team = await client.get_team(
+            team_id, session_token, organization_id=current_user.organization_id
+        )
         return _team_to_dict(team.model_dump())
 
     except HTTPException:
