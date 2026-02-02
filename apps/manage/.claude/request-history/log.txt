@@ -10,3 +10,4 @@
 20260131 - Playbook step editor improvements: Compact layout with Playbook to Use and Instructions on first row, conditional assignment section, unified assignee/approver selector with typeahead for people/bots/teams, hide Queue when playbook selected, Advanced section with Parallel Group explanation, visual indentation
 20260131 - In Assignments -> Assignment Details, put Playbook in first column (not Queue). Queue should show friendly language when Playbook with default queue is selected.
 20260131 - Add autoFocus to first field in Create dialogs, Escape to cancel, Enter to submit - apply across all similar modals site-wide
+20260202 - My Active Tasks: Remove Queue column (add to hover tooltip), compact layout (smaller text, less padding), add drag handles for reordering with sequence field
