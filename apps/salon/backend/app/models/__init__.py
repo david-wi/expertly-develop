@@ -1,6 +1,6 @@
 from .base import PyObjectId, MongoModel, TimestampMixin
 from .salon import Salon, SalonSettings, CancellationPolicy
-from .user import User, UserRole
+from .user import User, UserRole, SalonMembership, SalonRole
 from .staff import Staff, WorkingHours, DaySchedule, StaffScheduleOverride
 from .service import Service, ServiceCategory
 from .client import Client, ClientStats
@@ -15,6 +15,8 @@ __all__ = [
     "CancellationPolicy",
     "User",
     "UserRole",
+    "SalonMembership",
+    "SalonRole",
     "Staff",
     "WorkingHours",
     "DaySchedule",

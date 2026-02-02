@@ -34,9 +34,10 @@ async def create_indexes() -> None:
     # Salons
     await db.database.salons.create_index("slug", unique=True)
 
-    # Users
-    await db.database.users.create_index("email", unique=True)
-    await db.database.users.create_index("salon_id")
+    # Salon Memberships (links Identity users to salons)
+    await db.database.salon_memberships.create_index("identity_user_id", unique=True)
+    await db.database.salon_memberships.create_index("salon_id")
+    await db.database.salon_memberships.create_index("email")
 
     # Staff
     await db.database.staff.create_index("salon_id")
