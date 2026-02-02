@@ -157,7 +157,7 @@ export default function Notifications() {
         <div className="flex items-center space-x-3">
           <Bell className="h-8 w-8 text-blue-600" />
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
+            <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Notifications</h2>
             <p className="text-sm text-gray-500">
               {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
             </p>

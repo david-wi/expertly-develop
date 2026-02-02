@@ -349,7 +349,7 @@ export default function ProjectDetail() {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-gray-900">{project.name}</h1>
+            <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">{project.name}</h1>
             <span
               className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProjectStatusBadgeColor(project.status)}`}
             >

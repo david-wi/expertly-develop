@@ -88,7 +88,7 @@ export default function Artifacts() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Artifacts</h1>
+        <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">Artifacts</h1>
         <p className="text-gray-600 mt-1">
           Database seeds, documentation, and work plans
         </p>

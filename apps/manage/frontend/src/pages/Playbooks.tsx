@@ -2190,7 +2190,7 @@ export default function Playbooks() {
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Playbooks</h2>
+        <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Playbooks</h2>
         <div className="flex items-center space-x-3">
           <button
             onClick={loadData}

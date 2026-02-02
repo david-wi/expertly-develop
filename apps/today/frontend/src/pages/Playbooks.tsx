@@ -37,7 +37,7 @@ export function Playbooks() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Playbooks</h1>
+          <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">Playbooks</h1>
           <p className="text-sm text-gray-500">Procedures and guidelines for Claude</p>
         </div>
         <span className="text-sm text-gray-500">{playbooks.length} playbooks</span>

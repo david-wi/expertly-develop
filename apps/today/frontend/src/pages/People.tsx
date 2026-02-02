@@ -41,7 +41,7 @@ export function People() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">People</h1>
+          <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">People</h1>
           <p className="text-sm text-gray-500">Contacts and relationships</p>
         </div>
         <span className="text-sm text-gray-500">{people.length} people</span>

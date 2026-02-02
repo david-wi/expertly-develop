@@ -221,7 +221,7 @@ export default function Connections() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Connections</h2>
+          <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Connections</h2>
           <p className="text-sm text-gray-500 mt-1">
             Connect external services to use with your tasks
           </p>

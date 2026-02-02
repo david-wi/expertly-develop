@@ -57,7 +57,7 @@ export function Questions() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Questions</h1>
+          <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">Questions</h1>
           <p className="text-sm text-gray-500">Questions from Claude that need your input</p>
         </div>
       </div>

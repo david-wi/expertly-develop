@@ -640,7 +640,7 @@ export default function Projects() {
       )}
 
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">Projects</h2>
+        <h2 className="text-2xl font-bold text-[var(--theme-text-heading)]">Projects</h2>
         <button
           onClick={openCreateModal}
           className="bg-blue-600 text-white px-3 py-1.5 rounded-md text-sm hover:bg-blue-700 transition-colors"

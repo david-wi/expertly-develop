@@ -274,14 +274,17 @@ async def validate_session(
 
 @router.get("/me", response_model=AuthUserResponse)
 async def get_current_user(
-    session_token: Optional[str] = Header(None, alias="X-Session-Token"),
+    request: Request,
+    session_token_header: Optional[str] = Header(None, alias="X-Session-Token"),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Get the current authenticated user.
 
+    Accepts session token from header or cookie.
     Returns 401 if not authenticated.
     """
+    session_token = _get_session_token(request, session_token_header)
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
@@ -296,17 +299,20 @@ async def get_current_user(
 
 @router.get("/me/organizations", response_model=AccessibleOrganizationsResponse)
 async def get_accessible_organizations(
-    session_token: Optional[str] = Header(None, alias="X-Session-Token"),
+    request: Request,
+    session_token_header: Optional[str] = Header(None, alias="X-Session-Token"),
     db: AsyncSession = Depends(get_db),
 ):
     """
     Get all organizations the current user can access.
 
+    Accepts session token from header or cookie.
     Returns organizations based on:
     1. User's primary organization
     2. Organization memberships
     3. All organizations if user is an Expertly Admin
     """
+    session_token = _get_session_token(request, session_token_header)
     if not session_token:
         raise HTTPException(status_code=401, detail="Not authenticated")
 
