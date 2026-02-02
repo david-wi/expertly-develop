@@ -40,7 +40,6 @@ export function TeamMembersWidget({ widgetId }: WidgetProps) {
             <div
               key={user.id}
               className="flex flex-col items-center group relative"
-              title={user.title || user.role}
             >
               {/* Avatar */}
               <div className="relative">
@@ -71,12 +70,12 @@ export function TeamMembersWidget({ widgetId }: WidgetProps) {
               <span className="mt-2 text-sm font-medium text-gray-700 text-center max-w-[80px] truncate">
                 {user.name.split(' ')[0]}
               </span>
-              {/* Tooltip */}
-              <div className="absolute bottom-full mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+              {/* Tooltip - positioned below to avoid overflow clipping */}
+              <div className="absolute top-full mt-1 left-1/2 -translate-x-1/2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-gray-900" />
                 <div className="font-medium">{user.name}</div>
                 {user.title && <div className="text-gray-300">{user.title}</div>}
                 {!user.title && <div className="text-gray-300 capitalize">{user.role}</div>}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />
               </div>
             </div>
           ))}
