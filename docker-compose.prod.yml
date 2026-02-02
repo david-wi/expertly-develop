@@ -261,6 +261,7 @@ services:
       # AI features
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
     networks:
       - traefik

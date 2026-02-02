@@ -59,3 +59,4 @@ Warns users before losing changes on modal close or page refresh.
 20260202 - Migrated Today, Vibetest, Salon, Develop apps to use Identity service for all user management. Created PR #263.
 20260202 - Upgrade Deepgram model from nova-2 to nova-3 for better transcription accuracy (54% lower WER)
 20260202 - Add playbook_generation use case to AI config for Manage app's AI Assist feature
+20260202 - Add Groq support to Manage AI service for playbook generation

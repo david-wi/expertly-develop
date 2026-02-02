@@ -63,7 +63,7 @@ Do not include any text before or after the JSON array."""
         """Check if the AI service is properly configured."""
         import os
         # Check if at least one AI provider is configured
-        return bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY"))
+        return bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GROQ_API_KEY"))
 
     async def generate_steps(
         self,
@@ -122,6 +122,10 @@ Do not include any text before or after the JSON array."""
             response_text = await self._call_anthropic(
                 model_id, user_message, max_tokens, temperature
             )
+        elif provider == "groq":
+            response_text = await self._call_groq(
+                model_id, user_message, max_tokens, temperature
+            )
         else:
             response_text = await self._call_openai(
                 model_id, user_message, max_tokens, temperature
@@ -176,6 +180,36 @@ Do not include any text before or after the JSON array."""
     ) -> str:
         """Call OpenAI API."""
         client = self.ai_client.get_openai_client()
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": user_message},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content.strip()
+
+    async def _call_groq(
+        self, model_id: str, user_message: str, max_tokens: int, temperature: float
+    ) -> str:
+        """Call Groq API (OpenAI-compatible)."""
+        import os
+        try:
+            import openai
+        except ImportError:
+            raise ImportError("openai package not installed. Run: pip install openai")
+
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY environment variable not set")
+
+        # Groq uses OpenAI-compatible API
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url="https://api.groq.com/openai/v1"
+        )
         response = client.chat.completions.create(
             model=model_id,
             messages=[
