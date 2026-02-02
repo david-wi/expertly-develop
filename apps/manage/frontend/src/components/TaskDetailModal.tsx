@@ -25,7 +25,7 @@ import {
   Check,
 } from 'lucide-react'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase } from '../services/api'
-import MarkdownEditor from './MarkdownEditor'
+import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
 import PlaybookStepExecutor from './PlaybookStepExecutor'
@@ -832,17 +832,17 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 </div>
 
                 {/* Add comment - compact compose area */}
-                <div className="mb-3 bg-theme-bg-elevated rounded-lg border border-theme-border p-2">
-                  <MarkdownEditor
+                <div className="mb-3">
+                  <RichTextEditor
                     value={newComment}
                     onChange={setNewComment}
                     placeholder="Add a comment..."
-                    rows={2}
+                    minHeight={36}
                   />
                   <div className="flex justify-end mt-2">
                     <button
                       onClick={handleAddComment}
-                      disabled={!newComment.trim() || addingComment}
+                      disabled={isRichTextEmpty(newComment) || addingComment}
                       className="px-3 py-1 bg-primary-600 text-white text-xs rounded-lg hover:bg-primary-700 disabled:opacity-50"
                     >
                       {addingComment ? 'Adding...' : 'Add'}
