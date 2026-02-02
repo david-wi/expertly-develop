@@ -32,6 +32,7 @@ describe('dashboardStore', () => {
         { id: 'monitors-summary', type: 'monitors-summary', config: {}, layout: { x: 0, y: 7, w: 12, h: 3 } },
       ],
       editMode: false,
+      isLoaded: true,  // Set to true so updateAllLayouts works in tests
     })
   })
 
@@ -105,6 +106,23 @@ describe('dashboardStore', () => {
       expect(stats?.layout.w).toBe(6)
       expect(tasks?.layout.x).toBe(6)
     })
+
+    it('ignores updates before loadFromStorage is called (prevents race condition)', () => {
+      // Simulate initial state before loadFromStorage
+      useDashboardStore.setState({ isLoaded: false })
+      const originalWidgets = useDashboardStore.getState().widgets
+      const originalLayout = { ...originalWidgets[0].layout }
+
+      // Attempt to update layouts before load
+      useDashboardStore.getState().updateAllLayouts([
+        { i: 'stats-overview', x: 0, y: 0, w: 6, h: 3 },
+      ])
+
+      // Layout should NOT have changed
+      const widgets = useDashboardStore.getState().widgets
+      const stats = widgets.find(w => w.id === 'stats-overview')
+      expect(stats?.layout.w).toBe(originalLayout.w)
+    })
   })
 
   describe('resetToDefault', () => {
@@ -114,7 +132,7 @@ describe('dashboardStore', () => {
       expect(useDashboardStore.getState().widgets).toHaveLength(2)
 
       useDashboardStore.getState().resetToDefault()
-      expect(useDashboardStore.getState().widgets).toHaveLength(4)
+      expect(useDashboardStore.getState().widgets).toHaveLength(5)  // 5 default widgets including team-members
     })
 
     it('turns off edit mode', () => {
@@ -140,6 +158,25 @@ describe('dashboardStore', () => {
       localStorageMock.getItem.mockReturnValueOnce(null)
       useDashboardStore.getState().loadFromStorage()
       expect(useDashboardStore.getState().widgets).toHaveLength(4)
+    })
+
+    it('sets isLoaded to true after loading from storage', () => {
+      useDashboardStore.setState({ isLoaded: false })
+      const customWidgets = [
+        { id: 'custom-1', type: 'stats-overview', config: {}, layout: { x: 0, y: 0, w: 6, h: 2 } },
+      ]
+      localStorageMock.getItem.mockReturnValueOnce(JSON.stringify(customWidgets))
+
+      useDashboardStore.getState().loadFromStorage()
+      expect(useDashboardStore.getState().isLoaded).toBe(true)
+    })
+
+    it('sets isLoaded to true even if storage is empty', () => {
+      useDashboardStore.setState({ isLoaded: false })
+      localStorageMock.getItem.mockReturnValueOnce(null)
+
+      useDashboardStore.getState().loadFromStorage()
+      expect(useDashboardStore.getState().isLoaded).toBe(true)
     })
   })
 })

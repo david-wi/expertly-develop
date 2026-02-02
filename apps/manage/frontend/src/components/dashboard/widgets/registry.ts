@@ -12,9 +12,9 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
     name: 'My Team',
     description: 'View your team members with avatars',
     icon: Users,
-    defaultSize: { w: 12, h: 2 },
-    minSize: { w: 6, h: 2 },
-    maxSize: { w: 12, h: 3 },
+    defaultSize: { w: 12, h: 3 },
+    minSize: { w: 6, h: 3 },
+    maxSize: { w: 12, h: 4 },
     component: TeamMembersWidget,
   },
   'stats-overview': {

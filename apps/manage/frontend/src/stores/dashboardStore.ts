@@ -6,6 +6,7 @@ const STORAGE_KEY = 'expertly-manage-dashboard-layout'
 export interface DashboardState {
   widgets: WidgetInstance[]
   editMode: boolean
+  isLoaded: boolean  // Tracks if we've loaded from storage to prevent race condition
 
   setEditMode: (editMode: boolean) => void
   addWidget: (type: string, config?: WidgetConfig) => void
@@ -22,31 +23,31 @@ const DEFAULT_WIDGETS: WidgetInstance[] = [
     id: 'team-members',
     type: 'team-members',
     config: {},
-    layout: { x: 0, y: 0, w: 12, h: 2 },
+    layout: { x: 0, y: 0, w: 12, h: 3 },
   },
   {
     id: 'stats-overview',
     type: 'stats-overview',
     config: {},
-    layout: { x: 0, y: 2, w: 12, h: 2 },
+    layout: { x: 0, y: 3, w: 12, h: 2 },
   },
   {
     id: 'my-active-tasks',
     type: 'my-active-tasks',
     config: {},
-    layout: { x: 0, y: 4, w: 8, h: 5 },
+    layout: { x: 0, y: 5, w: 8, h: 5 },
   },
   {
     id: 'my-queues',
     type: 'my-queues',
     config: {},
-    layout: { x: 8, y: 4, w: 4, h: 5 },
+    layout: { x: 8, y: 5, w: 4, h: 5 },
   },
   {
     id: 'monitors-summary',
     type: 'monitors-summary',
     config: {},
-    layout: { x: 0, y: 9, w: 12, h: 3 },
+    layout: { x: 0, y: 10, w: 12, h: 3 },
   },
 ]
 
@@ -86,6 +87,7 @@ function findNextPosition(widgets: WidgetInstance[]): { x: number; y: number } {
 export const useDashboardStore = create<DashboardState>((set, get) => ({
   widgets: DEFAULT_WIDGETS,
   editMode: false,
+  isLoaded: false,
 
   setEditMode: (editMode) => set({ editMode }),
 
@@ -142,7 +144,11 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   },
 
   updateAllLayouts: (layouts) => {
-    const { widgets } = get()
+    const { widgets, isLoaded } = get()
+    // Don't save during initial load to prevent race condition overwriting saved state
+    if (!isLoaded) {
+      return
+    }
     const newWidgets = widgets.map(w => {
       const layoutUpdate = layouts.find(l => l.i === w.id)
       if (layoutUpdate) {
@@ -170,7 +176,9 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   loadFromStorage: () => {
     const stored = loadFromLocalStorage()
     if (stored && stored.length > 0) {
-      set({ widgets: stored })
+      set({ widgets: stored, isLoaded: true })
+    } else {
+      set({ isLoaded: true })
     }
   },
 }))
