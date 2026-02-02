@@ -10,8 +10,8 @@ const renderWithRouter = (component: React.ReactNode) => {
 describe('LandingPage', () => {
   it('renders the main heading', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Your AI-Powered/)).toBeInTheDocument()
-    expect(screen.getAllByText('Chief of Staff').length).toBeGreaterThan(0)
+    expect(screen.getByText(/Mission Control for/)).toBeInTheDocument()
+    expect(screen.getByText(/the Amplified Team/)).toBeInTheDocument()
   })
 
   it('renders the product name in navigation', () => {
@@ -21,7 +21,7 @@ describe('LandingPage', () => {
 
   it('displays the tagline', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Map your processes. Build your bot army. Let AI push everything forward./)).toBeInTheDocument()
+    expect(screen.getByText(/You. Your inner circle. AI specialists multiplying each one./)).toBeInTheDocument()
   })
 
   it('renders Sign In link', () => {
@@ -46,9 +46,9 @@ describe('LandingPage', () => {
 
   it('displays all capability cards', () => {
     renderWithRouter(<LandingPage />)
-    // "Map Your Processes" appears in capabilities and steps section
+    // "Map Your Processes" and "Deploy AI Specialists" appear in capabilities and steps section
     expect(screen.getAllByText('Map Your Processes').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Build Your Bot Army')).toBeInTheDocument()
+    expect(screen.getAllByText('Deploy AI Specialists').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Unified Task Hub')).toBeInTheDocument()
     expect(screen.getByText('Proactive Head Starts')).toBeInTheDocument()
     expect(screen.getByText('Multiply Leadership')).toBeInTheDocument()
@@ -59,14 +59,14 @@ describe('LandingPage', () => {
     renderWithRouter(<LandingPage />)
     // These descriptions appear in multiple places
     expect(screen.getAllByText(/Define who does what/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/Gradually delegate steps to specialized bots/).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Gradually delegate steps to specialized AI/).length).toBeGreaterThan(0)
   })
 
   it('displays all benefits', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Your AI Chief of Staff')).toBeInTheDocument()
+    expect(screen.getByText('Mission Control + Digital Workforce')).toBeInTheDocument()
     expect(screen.getByText('Processes on autopilot')).toBeInTheDocument()
-    expect(screen.getByText('Bots that multiply you')).toBeInTheDocument()
+    expect(screen.getByText('AI specialists multiply your team')).toBeInTheDocument()
     expect(screen.getByText('Full context everywhere')).toBeInTheDocument()
     expect(screen.getByText('Nothing falls through')).toBeInTheDocument()
     expect(screen.getByText('Scale without chaos')).toBeInTheDocument()
@@ -82,8 +82,8 @@ describe('LandingPage', () => {
     renderWithRouter(<LandingPage />)
     // Map Your Processes appears in both capabilities and steps
     expect(screen.getAllByText('Map Your Processes').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getByText('Build Your Bots')).toBeInTheDocument()
-    expect(screen.getByText('Centralize Everything')).toBeInTheDocument()
+    expect(screen.getAllByText('Deploy AI Specialists').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Unify in Mission Control')).toBeInTheDocument()
     expect(screen.getByText('Let AI Push Forward')).toBeInTheDocument()
   })
 
@@ -97,7 +97,7 @@ describe('LandingPage', () => {
 
   it('renders the CTA section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Ready for your AI Chief of Staff?')).toBeInTheDocument()
+    expect(screen.getByText('Ready to build your Amplified Team?')).toBeInTheDocument()
     expect(screen.getByText('Start Your Free Trial')).toBeInTheDocument()
   })
 
@@ -122,16 +122,16 @@ describe('LandingPage', () => {
 
   it('renders the vision section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Imagine this...')).toBeInTheDocument()
+    expect(screen.getByText(/The future isn't a bigger org/)).toBeInTheDocument()
     expect(screen.getByText('For You')).toBeInTheDocument()
-    expect(screen.getByText('For Your Bots')).toBeInTheDocument()
+    expect(screen.getByText('For Your AI Specialists')).toBeInTheDocument()
     expect(screen.getByText('For Your Leaders')).toBeInTheDocument()
   })
 
   it('renders the hero section with proper structure', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Define how your organization works/)).toBeInTheDocument()
-    expect(screen.getByText(/watch as bots take over more and more steps/)).toBeInTheDocument()
+    expect(screen.getByText(/Build a leaner, better organization/)).toBeInTheDocument()
+    expect(screen.getByText(/amplified by AI specialists/)).toBeInTheDocument()
   })
 
   it('renders the capabilities section heading', () => {
