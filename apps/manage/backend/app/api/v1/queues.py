@@ -13,11 +13,20 @@ router = APIRouter()
 
 def serialize_queue(queue: dict) -> dict:
     """Convert ObjectIds to strings in queue document."""
+    # Handle both ObjectId and string UUID formats for backwards compatibility
+    org_id = queue.get("organization_id")
+    if isinstance(org_id, ObjectId):
+        org_id = str(org_id)
+
+    scope_id = queue.get("scope_id")
+    if isinstance(scope_id, ObjectId):
+        scope_id = str(scope_id)
+
     return {
         **queue,
         "_id": str(queue["_id"]),
-        "organization_id": queue["organization_id"],  # Already a string UUID
-        "scope_id": queue["scope_id"] if queue.get("scope_id") else None  # Already a string UUID
+        "organization_id": org_id,
+        "scope_id": scope_id
     }
 
 

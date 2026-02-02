@@ -63,3 +63,7 @@ Warns users before losing changes on modal close or page refresh.
 20260202 08:12:16 - Eliminate local users/tenants collections from Develop app - changed tenant_id to organization_id, removed shadow user creation, updated all API endpoints and services to use Identity service directly
 20260202: Fixed identity avatar images lost during blue-green deployments. Made identity_uploads volume external and shared. Created shared_identity_uploads volume on server and migrated all avatars from blue/green volumes.
 20260202 Continue Manage app migration to eliminate local User collection - update notifications, task_comments, notification_service, and seed to use Identity service
+20260202 - Fix sidebar theme colors: Violet/Ocean light mode had invisible product name (text-white on white bg), low-contrast active items (primary-300), hardcoded violet colors in product dropdown
+20260202 - Add unit tests for theme contrast validation to prevent invisible text issues
+20260202 - Fix Manage dashboard: (1) Widget customization not persisting after refresh (race condition), (2) My Team widget default height too short for names
+20260202 - Fix queues API serialization error - handle ObjectId fields from legacy data
