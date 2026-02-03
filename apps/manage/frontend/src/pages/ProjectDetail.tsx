@@ -17,6 +17,7 @@ import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
 import Breadcrumbs, { buildProjectBreadcrumbs } from '../components/Breadcrumbs'
 import ProjectTypeahead from '../components/ProjectTypeahead'
+import RichTextEditor, { isRichTextEmpty } from '../components/RichTextEditor'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -367,10 +368,10 @@ export default function ProjectDetail() {
 
   // Comment handlers
   const handleAddComment = () => {
-    if (!newComment.trim()) return
+    if (isRichTextEmpty(newComment)) return
     const comment: ProjectComment = {
       id: crypto.randomUUID(),
-      content: newComment.trim(),
+      content: newComment, // HTML content from rich text editor
       author_id: 'current-user', // Would come from auth context
       author_name: 'David', // Would come from auth context
       created_at: new Date().toISOString(),
@@ -991,9 +992,9 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Discussion - Full Width */}
+      {/* Timeline and Discussion - Full Width */}
       <div className="bg-white shadow rounded-lg p-4">
-        <h3 className="text-sm font-medium text-gray-900 mb-4">Discussion</h3>
+        <h3 className="text-sm font-medium text-gray-900 mb-4">Timeline and Discussion</h3>
 
         {/* Add comment */}
         <div className="flex gap-3 mb-6">
@@ -1001,22 +1002,21 @@ export default function ProjectDetail() {
             <span className="text-white text-sm font-medium">D</span>
           </div>
           <div className="flex-1">
-            <textarea
+            <RichTextEditor
               value={newComment}
-              onChange={(e) => setNewComment(e.target.value)}
+              onChange={setNewComment}
               placeholder="Add a comment..."
-              className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none min-h-[80px] placeholder-gray-400"
+              minHeight={80}
             />
-            {newComment.trim() && (
-              <div className="flex justify-end mt-2">
-                <button
-                  onClick={handleAddComment}
-                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Post Comment
-                </button>
-              </div>
-            )}
+            <div className="flex justify-end mt-2">
+              <button
+                onClick={handleAddComment}
+                disabled={isRichTextEmpty(newComment)}
+                className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Post Comment
+              </button>
+            </div>
           </div>
         </div>
 
