@@ -139,7 +139,15 @@ async def list_users(
 async def get_current_user_info(
     current_user: IdentityUser = Depends(get_current_user)
 ) -> dict:
-    """Get current user information."""
+    """Get current user information and ensure system queues exist."""
+    # Ensure system queues exist for this user (creates them if not)
+    db = get_database()
+    await create_system_queues(
+        db,
+        current_user.organization_id,
+        ScopeType.USER,
+        current_user.id
+    )
     return _user_to_dict(current_user)
 
 

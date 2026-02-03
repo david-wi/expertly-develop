@@ -733,6 +733,8 @@ export interface UpdateTaskRequest {
   approval_required?: boolean
   // Dependencies
   depends_on?: string[]
+  // Playbook tracking
+  playbook_id?: string
   // Scheduling fields
   scheduled_start?: string | null
   scheduled_end?: string | null

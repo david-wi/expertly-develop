@@ -3,32 +3,75 @@ import { Link } from 'react-router-dom'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
-import { api, User as UserType, Team, TaskReorderItem } from '../../../services/api'
+import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
 
+interface Playbook {
+  _id?: string
+  id: string
+  name: string
+}
+
+// Build a display name with parent hierarchy
+function getProjectDisplayName(project: Project, allProjects: Project[]): string {
+  if (!project.parent_project_id) return project.name
+  const parent = allProjects.find(p => (p._id || p.id) === project.parent_project_id)
+  if (parent) {
+    return `${getProjectDisplayName(parent, allProjects)} > ${project.name}`
+  }
+  return project.name
+}
+
 export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
-  const { user, tasks, queues, loading, fetchTasks } = useAppStore()
+  const { user, tasks, queues, loading, fetchTasks, viewingUserId, setViewingUserId } = useAppStore()
   const [selectedQueueFilter, setSelectedQueueFilter] = useState<string>('all')
   const [users, setUsers] = useState<UserType[]>([])
   const [teams, setTeams] = useState<Team[]>([])
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const [newTaskTitle, setNewTaskTitle] = useState('')
-  const [newTaskInstructions, setNewTaskInstructions] = useState('')
-  const [isCreating, setIsCreating] = useState(false)
+  // Top add task (adds to top of list)
+  const [topTaskTitle, setTopTaskTitle] = useState('')
+  const [topTaskProjectId, setTopTaskProjectId] = useState('')
+  const [topTaskProjectQuery, setTopTaskProjectQuery] = useState('')
+  const [topTaskInstructions, setTopTaskInstructions] = useState('')
+  const [isCreatingTop, setIsCreatingTop] = useState(false)
+  const [showTopProjectDropdown, setShowTopProjectDropdown] = useState(false)
+  // Bottom add task (adds to bottom of list)
+  const [bottomTaskTitle, setBottomTaskTitle] = useState('')
+  const [bottomTaskProjectId, setBottomTaskProjectId] = useState('')
+  const [bottomTaskProjectQuery, setBottomTaskProjectQuery] = useState('')
+  const [bottomTaskInstructions, setBottomTaskInstructions] = useState('')
+  const [isCreatingBottom, setIsCreatingBottom] = useState(false)
+  const [showBottomProjectDropdown, setShowBottomProjectDropdown] = useState(false)
+  // Edit panel state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
+  const [editProjectId, setEditProjectId] = useState('')
   const [editDescription, setEditDescription] = useState('')
+  const [editPlaybookId, setEditPlaybookId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
-  const titleInputRef = useRef<HTMLInputElement>(null)
-  const instructionsRef = useRef<HTMLTextAreaElement>(null)
+  // Refs
+  const topTitleRef = useRef<HTMLInputElement>(null)
+  const topProjectRef = useRef<HTMLInputElement>(null)
+  const topInstructionsRef = useRef<HTMLTextAreaElement>(null)
+  const bottomTitleRef = useRef<HTMLInputElement>(null)
+  const bottomProjectRef = useRef<HTMLInputElement>(null)
+  const bottomInstructionsRef = useRef<HTMLTextAreaElement>(null)
   const editTitleRef = useRef<HTMLInputElement>(null)
+  const editProjectRef = useRef<HTMLSelectElement>(null)
+  const editInstructionsRef = useRef<HTMLTextAreaElement>(null)
+  const editPlaybookRef = useRef<HTMLSelectElement>(null)
+  const editDoneRef = useRef<HTMLButtonElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error)
     api.getTeams().then(setTeams).catch(console.error)
+    api.getPlaybooks({ active_only: true }).then(setPlaybooks).catch(console.error)
+    api.getProjects({ status: 'active' }).then(setProjects).catch(console.error)
   }, [])
 
   const getQueueDisplayName = (queue: { scope_type: string; scope_id?: string; purpose: string }): string => {
@@ -46,6 +89,11 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     return `Everyone > ${queue.purpose}`
   }
 
+  // Determine which user's tasks to show
+  const displayUserId = viewingUserId || user?.id
+  const displayUser = viewingUserId ? users.find(u => (u._id || u.id) === viewingUserId) : user
+  const isViewingOther = viewingUserId && viewingUserId !== user?.id
+
   const allActiveTasks = tasks.filter((t) => ['queued', 'checked_out', 'in_progress'].includes(t.status))
 
   // Sort by sequence (ascending), then by created_at for tasks without sequence
@@ -60,12 +108,27 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     ? sortedActiveTasks
     : sortedActiveTasks.filter((t) => t.queue_id === selectedQueueFilter)
 
-  const userQueues = queues.filter((q) => q.scope_type === 'user' && q.scope_id === user?.id)
+  const userQueues = queues.filter((q) => q.scope_type === 'user' && q.scope_id === displayUserId)
   const teamQueues = queues.filter((q) => q.scope_type === 'team')
   const orgQueues = queues.filter((q) => q.scope_type === 'organization')
 
+  // Widget title changes based on whose tasks we're viewing
+  const widgetTitle = isViewingOther
+    ? `${displayUser?.name || 'User'}'s Active Tasks`
+    : 'My Active Tasks'
+
   const headerAction = (
-    <span className="text-xs text-gray-500">{activeTasks.length} task{activeTasks.length !== 1 ? 's' : ''}</span>
+    <div className="flex items-center gap-2">
+      {isViewingOther && (
+        <button
+          onClick={() => setViewingUserId(null)}
+          className="text-xs text-primary-600 hover:text-primary-700"
+        >
+          ← Back to mine
+        </button>
+      )}
+      <span className="text-xs text-gray-500">{activeTasks.length} task{activeTasks.length !== 1 ? 's' : ''}</span>
+    </div>
   )
 
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
@@ -148,67 +211,158 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   // Get user's default queue for quick task creation
   const defaultQueue = userQueues[0]
 
-  const handleCreateTask = async () => {
-    if (!newTaskTitle.trim() || !defaultQueue || isCreating) return
+  // Create task at top (low sequence number)
+  const handleCreateTopTask = async () => {
+    if (!topTaskTitle.trim() || !defaultQueue || isCreatingTop) return
 
-    setIsCreating(true)
+    setIsCreatingTop(true)
     try {
+      // Calculate sequence to put at top (lower than first task)
+      const firstTask = activeTasks[0]
+      const topSequence = firstTask?.sequence ? firstTask.sequence - 1 : 0
+
       await api.createTask({
         queue_id: defaultQueue._id || defaultQueue.id,
-        title: newTaskTitle.trim(),
-        description: newTaskInstructions.trim() || undefined,
+        title: topTaskTitle.trim(),
+        description: topTaskInstructions.trim() || undefined,
+        project_id: topTaskProjectId || undefined,
       })
-      setNewTaskTitle('')
-      setNewTaskInstructions('')
+      // Reorder to put at top
+      const newTasks = await api.getTasks()
+      const createdTask = newTasks.find(t => t.title === topTaskTitle.trim())
+      if (createdTask) {
+        await api.reorderTasks([{ id: createdTask._id || createdTask.id, sequence: topSequence }])
+      }
+
+      setTopTaskTitle('')
+      setTopTaskProjectId('')
+      setTopTaskProjectQuery('')
+      setTopTaskInstructions('')
       fetchTasks()
-      // Re-focus title input for next task
-      setTimeout(() => titleInputRef.current?.focus(), 0)
+      setTimeout(() => topTitleRef.current?.focus(), 0)
     } catch (err) {
       console.error('Failed to create task:', err)
     } finally {
-      setIsCreating(false)
+      setIsCreatingTop(false)
     }
   }
 
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+  // Create task at bottom (high sequence number)
+  const handleCreateBottomTask = async () => {
+    if (!bottomTaskTitle.trim() || !defaultQueue || isCreatingBottom) return
+
+    setIsCreatingBottom(true)
+    try {
+      await api.createTask({
+        queue_id: defaultQueue._id || defaultQueue.id,
+        title: bottomTaskTitle.trim(),
+        description: bottomTaskInstructions.trim() || undefined,
+        project_id: bottomTaskProjectId || undefined,
+      })
+      setBottomTaskTitle('')
+      setBottomTaskProjectId('')
+      setBottomTaskProjectQuery('')
+      setBottomTaskInstructions('')
+      fetchTasks()
+      setTimeout(() => bottomTitleRef.current?.focus(), 0)
+    } catch (err) {
+      console.error('Failed to create task:', err)
+    } finally {
+      setIsCreatingBottom(false)
+    }
+  }
+
+  // Top input handlers
+  const handleTopTitleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (newTaskTitle.trim()) {
-        handleCreateTask()
+      if (topTaskTitle.trim()) {
+        handleCreateTopTask()
+      }
+    } else if (e.key === 'Tab' && !e.shiftKey && topTaskTitle.trim()) {
+      e.preventDefault()
+      topProjectRef.current?.focus()
+      setShowTopProjectDropdown(true)
+    }
+  }
+
+  const handleTopProjectKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      // If dropdown is showing and there's a matching project, select it
+      const filteredProjects = projects.filter(p =>
+        getProjectDisplayName(p, projects).toLowerCase().includes(topTaskProjectQuery.toLowerCase())
+      )
+      if (filteredProjects.length === 1) {
+        setTopTaskProjectId(filteredProjects[0]._id || filteredProjects[0].id)
+        setTopTaskProjectQuery(getProjectDisplayName(filteredProjects[0], projects))
+      }
+      setShowTopProjectDropdown(false)
+      if (topTaskTitle.trim()) {
+        handleCreateTopTask()
       }
     } else if (e.key === 'Tab' && !e.shiftKey) {
       e.preventDefault()
-      instructionsRef.current?.focus()
+      setShowTopProjectDropdown(false)
+      topInstructionsRef.current?.focus()
+    } else if (e.key === 'Escape') {
+      setShowTopProjectDropdown(false)
     }
   }
 
-  const handleInstructionsKeyDown = (e: React.KeyboardEvent) => {
+  const handleTopInstructionsKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      if (newTaskTitle.trim()) {
-        handleCreateTask()
+      if (topTaskTitle.trim()) {
+        handleCreateTopTask()
       }
-    } else if (e.key === 'Tab' && e.shiftKey) {
+    }
+  }
+
+  // Bottom input handlers
+  const handleBottomTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
-      titleInputRef.current?.focus()
+      if (bottomTaskTitle.trim()) {
+        handleCreateBottomTask()
+      }
+    } else if (e.key === 'Tab' && !e.shiftKey && bottomTaskTitle.trim()) {
+      e.preventDefault()
+      bottomProjectRef.current?.focus()
+      setShowBottomProjectDropdown(true)
     }
   }
 
-  const handleTitleBlur = (e: React.FocusEvent) => {
-    // Check if focus is moving to the instructions field
-    if (e.relatedTarget === instructionsRef.current) return
-    // Don't submit if empty
-    if (newTaskTitle.trim() && !isCreating) {
-      handleCreateTask()
+  const handleBottomProjectKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      // If dropdown is showing and there's a matching project, select it
+      const filteredProjects = projects.filter(p =>
+        getProjectDisplayName(p, projects).toLowerCase().includes(bottomTaskProjectQuery.toLowerCase())
+      )
+      if (filteredProjects.length === 1) {
+        setBottomTaskProjectId(filteredProjects[0]._id || filteredProjects[0].id)
+        setBottomTaskProjectQuery(getProjectDisplayName(filteredProjects[0], projects))
+      }
+      setShowBottomProjectDropdown(false)
+      if (bottomTaskTitle.trim()) {
+        handleCreateBottomTask()
+      }
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault()
+      setShowBottomProjectDropdown(false)
+      bottomInstructionsRef.current?.focus()
+    } else if (e.key === 'Escape') {
+      setShowBottomProjectDropdown(false)
     }
   }
 
-  const handleInstructionsBlur = (e: React.FocusEvent) => {
-    // Check if focus is moving to the title field
-    if (e.relatedTarget === titleInputRef.current) return
-    // Don't submit if title is empty
-    if (newTaskTitle.trim() && !isCreating) {
-      handleCreateTask()
+  const handleBottomInstructionsKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (bottomTaskTitle.trim()) {
+        handleCreateBottomTask()
+      }
     }
   }
 
@@ -218,8 +372,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     if (task) {
       setEditingTaskId(taskId)
       setEditTitle(task.title)
+      setEditProjectId(task.project_id || '')
       setEditDescription(task.description || '')
-      // Focus the title input after render
+      setEditPlaybookId(task.playbook_id || '')
       setTimeout(() => editTitleRef.current?.focus(), 0)
     }
   }
@@ -232,7 +387,12 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     if (!originalTask) return
 
     // Only save if something changed
-    if (editTitle === originalTask.title && editDescription === (originalTask.description || '')) {
+    const titleChanged = editTitle !== originalTask.title
+    const projectChanged = editProjectId !== (originalTask.project_id || '')
+    const descChanged = editDescription !== (originalTask.description || '')
+    const playbookChanged = editPlaybookId !== (originalTask.playbook_id || '')
+
+    if (!titleChanged && !projectChanged && !descChanged && !playbookChanged) {
       return
     }
 
@@ -242,7 +402,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     try {
       await api.updateTask(editingTaskId, {
         title: editTitle.trim(),
+        project_id: editProjectId || undefined,
         description: editDescription.trim() || undefined,
+        playbook_id: editPlaybookId || undefined,
       })
       fetchTasks()
     } catch (err) {
@@ -253,18 +415,20 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   }
 
   // Close the edit panel
-  const closeEditPanel = () => {
+  const closeEditPanel = async () => {
     if (editingTaskId) {
-      saveEditedTask()
+      await saveEditedTask()
     }
     setEditingTaskId(null)
     setEditTitle('')
+    setEditProjectId('')
     setEditDescription('')
+    setEditPlaybookId('')
   }
 
   return (
   <>
-    <WidgetWrapper widgetId={widgetId} title="My Active Tasks" headerAction={headerAction}>
+    <WidgetWrapper widgetId={widgetId} title={widgetTitle} headerAction={headerAction}>
       <div className="flex flex-col h-full">
         <div className="px-3 py-2 flex flex-wrap gap-1.5 border-b border-gray-100">
           <button
@@ -330,37 +494,83 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         <div className="flex-1 flex overflow-hidden">
           {/* Task list (left side) */}
           <div className={`${editingTaskId ? 'w-1/2' : 'flex-1'} overflow-auto border-r border-gray-100 transition-all`} ref={dragRef}>
-            {/* Quick task creation row */}
-            {defaultQueue && (
-              <div className="flex items-start gap-2 px-2 py-1.5 border-b border-gray-100 bg-gray-50/50">
-                <div className="flex-shrink-0 text-gray-300 pt-0.5">
+            {/* Top quick task creation (adds to top of list) */}
+            {defaultQueue && !isViewingOther && (
+              <div className="flex items-start gap-2 px-2 py-1.5 border-b border-gray-100 bg-blue-50/30">
+                <div className="flex-shrink-0 text-blue-400 pt-0.5">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <div className="flex-1 min-w-0 flex flex-col gap-1">
-                  <input
-                    ref={titleInputRef}
-                    type="text"
-                    placeholder="Add task... (Enter to save)"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyDown={handleTitleKeyDown}
-                    onBlur={handleTitleBlur}
-                    disabled={isCreating}
-                    className="w-full text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
-                  />
-                  {newTaskTitle && (
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={topTitleRef}
+                      type="text"
+                      placeholder="Add priority task (top)..."
+                      value={topTaskTitle}
+                      onChange={(e) => setTopTaskTitle(e.target.value)}
+                      onKeyDown={handleTopTitleKeyDown}
+                      disabled={isCreatingTop}
+                      className="flex-1 text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
+                    />
+                    {topTaskTitle && (
+                      <div className="relative w-28 flex-shrink-0">
+                        <input
+                          ref={topProjectRef}
+                          type="text"
+                          placeholder="Project..."
+                          value={topTaskProjectQuery}
+                          onChange={(e) => {
+                            setTopTaskProjectQuery(e.target.value)
+                            setShowTopProjectDropdown(true)
+                            // Clear selection if typing
+                            if (topTaskProjectId) {
+                              const selectedProject = projects.find(p => (p._id || p.id) === topTaskProjectId)
+                              if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
+                                setTopTaskProjectId('')
+                              }
+                            }
+                          }}
+                          onFocus={() => setShowTopProjectDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowTopProjectDropdown(false), 200)}
+                          onKeyDown={handleTopProjectKeyDown}
+                          disabled={isCreatingTop}
+                          className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                        />
+                        {showTopProjectDropdown && topTaskProjectQuery && (
+                          <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+                            {projects
+                              .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(topTaskProjectQuery.toLowerCase()))
+                              .slice(0, 5)
+                              .map(project => (
+                                <div
+                                  key={project._id || project.id}
+                                  className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
+                                  onMouseDown={() => {
+                                    setTopTaskProjectId(project._id || project.id)
+                                    setTopTaskProjectQuery(getProjectDisplayName(project, projects))
+                                    setShowTopProjectDropdown(false)
+                                  }}
+                                >
+                                  {getProjectDisplayName(project, projects)}
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {topTaskTitle && (
                     <textarea
-                      ref={instructionsRef}
-                      placeholder="Instructions (optional, Tab to focus)"
-                      value={newTaskInstructions}
-                      onChange={(e) => setNewTaskInstructions(e.target.value)}
-                      onKeyDown={handleInstructionsKeyDown}
-                      onBlur={handleInstructionsBlur}
-                      disabled={isCreating}
+                      ref={topInstructionsRef}
+                      placeholder="Instructions (Tab to focus, Enter to save)"
+                      value={topTaskInstructions}
+                      onChange={(e) => setTopTaskInstructions(e.target.value)}
+                      onKeyDown={handleTopInstructionsKeyDown}
+                      disabled={isCreatingTop}
                       rows={2}
-                      className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200 resize-none"
+                      className="w-full mt-1 text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200 resize-none"
                     />
                   )}
                 </div>
@@ -369,7 +579,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
             {loading.tasks ? (
               <div className="p-3 text-xs text-gray-500">Loading...</div>
-            ) : activeTasks.length === 0 && !newTaskTitle ? (
+            ) : activeTasks.length === 0 && !topTaskTitle && !bottomTaskTitle ? (
               <div className="p-3 text-xs text-gray-500">No active tasks</div>
             ) : (
               <div className="divide-y divide-gray-100">
@@ -380,6 +590,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                   const isDragging = draggedTaskId === taskId
                   const isDragOver = dragOverTaskId === taskId
                   const isSelected = editingTaskId === taskId
+                  const taskProject = task.project_id ? projects.find(p => (p._id || p.id) === task.project_id) : null
 
                   return (
                     <div
@@ -409,9 +620,101 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                           {task.title}
                         </p>
                       </div>
+
+                      {/* Project column */}
+                      {taskProject && (
+                        <div className="flex-shrink-0 w-24">
+                          <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded truncate block">
+                            {taskProject.name}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
+              </div>
+            )}
+
+            {/* Bottom quick task creation (adds to bottom of list) */}
+            {defaultQueue && !isViewingOther && (
+              <div className="flex items-start gap-2 px-2 py-1.5 border-t border-gray-100 bg-gray-50/30">
+                <div className="flex-shrink-0 text-gray-400 pt-0.5">
+                  <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={bottomTitleRef}
+                      type="text"
+                      placeholder="Add task (bottom)..."
+                      value={bottomTaskTitle}
+                      onChange={(e) => setBottomTaskTitle(e.target.value)}
+                      onKeyDown={handleBottomTitleKeyDown}
+                      disabled={isCreatingBottom}
+                      className="flex-1 text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
+                    />
+                    {bottomTaskTitle && (
+                      <div className="relative w-28 flex-shrink-0">
+                        <input
+                          ref={bottomProjectRef}
+                          type="text"
+                          placeholder="Project..."
+                          value={bottomTaskProjectQuery}
+                          onChange={(e) => {
+                            setBottomTaskProjectQuery(e.target.value)
+                            setShowBottomProjectDropdown(true)
+                            // Clear selection if typing
+                            if (bottomTaskProjectId) {
+                              const selectedProject = projects.find(p => (p._id || p.id) === bottomTaskProjectId)
+                              if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
+                                setBottomTaskProjectId('')
+                              }
+                            }
+                          }}
+                          onFocus={() => setShowBottomProjectDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowBottomProjectDropdown(false), 200)}
+                          onKeyDown={handleBottomProjectKeyDown}
+                          disabled={isCreatingBottom}
+                          className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                        />
+                        {showBottomProjectDropdown && bottomTaskProjectQuery && (
+                          <div className="absolute z-10 bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+                            {projects
+                              .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(bottomTaskProjectQuery.toLowerCase()))
+                              .slice(0, 5)
+                              .map(project => (
+                                <div
+                                  key={project._id || project.id}
+                                  className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
+                                  onMouseDown={() => {
+                                    setBottomTaskProjectId(project._id || project.id)
+                                    setBottomTaskProjectQuery(getProjectDisplayName(project, projects))
+                                    setShowBottomProjectDropdown(false)
+                                  }}
+                                >
+                                  {getProjectDisplayName(project, projects)}
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {bottomTaskTitle && (
+                    <textarea
+                      ref={bottomInstructionsRef}
+                      placeholder="Instructions (Tab to focus, Enter to save)"
+                      value={bottomTaskInstructions}
+                      onChange={(e) => setBottomTaskInstructions(e.target.value)}
+                      onKeyDown={handleBottomInstructionsKeyDown}
+                      disabled={isCreatingBottom}
+                      rows={2}
+                      className="w-full mt-1 text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200 resize-none"
+                    />
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -437,6 +740,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                           saveEditedTask()
                         } else if (e.key === 'Escape') {
                           closeEditPanel()
+                        } else if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault()
+                          editProjectRef.current?.focus()
                         }
                       }}
                       disabled={isSaving}
@@ -445,18 +751,52 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                     />
                   </div>
 
+                  {/* Project selector */}
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1 block">
+                      Project
+                    </label>
+                    <select
+                      ref={editProjectRef}
+                      value={editProjectId}
+                      onChange={(e) => setEditProjectId(e.target.value)}
+                      onBlur={saveEditedTask}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          closeEditPanel()
+                        } else if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault()
+                          editInstructionsRef.current?.focus()
+                        }
+                      }}
+                      disabled={isSaving}
+                      className="w-full text-xs text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                    >
+                      <option value="">No project</option>
+                      {projects.map((project) => (
+                        <option key={project._id || project.id} value={project._id || project.id}>
+                          {getProjectDisplayName(project, projects)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Editable instructions */}
                   <div>
                     <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1 block">
                       Instructions
                     </label>
                     <textarea
+                      ref={editInstructionsRef}
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                       onBlur={saveEditedTask}
                       onKeyDown={(e) => {
                         if (e.key === 'Escape') {
                           closeEditPanel()
+                        } else if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault()
+                          editPlaybookRef.current?.focus()
                         }
                       }}
                       disabled={isSaving}
@@ -466,27 +806,59 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                     />
                   </div>
 
-                  {/* Playbook info (read-only for now) */}
-                  {editingTask.playbook_id && (
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1">Playbook</p>
-                      <p className="text-xs text-primary-600">{editingTask.playbook_id}</p>
-                    </div>
-                  )}
+                  {/* Playbook selector */}
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1 block">
+                      Playbook
+                    </label>
+                    <select
+                      ref={editPlaybookRef}
+                      value={editPlaybookId}
+                      onChange={(e) => setEditPlaybookId(e.target.value)}
+                      onBlur={saveEditedTask}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          closeEditPanel()
+                        } else if (e.key === 'Escape') {
+                          closeEditPanel()
+                        } else if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault()
+                          editDoneRef.current?.focus()
+                        }
+                      }}
+                      disabled={isSaving}
+                      className="w-full text-xs text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                    >
+                      <option value="">No playbook</option>
+                      {playbooks.map((pb) => (
+                        <option key={pb._id || pb.id} value={pb._id || pb.id}>
+                          {pb.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 pt-1">
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                     <button
                       onClick={() => setSelectedTaskId(editingTaskId)}
-                      className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                    >
-                      Full details →
-                    </button>
-                    <button
-                      onClick={closeEditPanel}
                       className="text-xs text-gray-500 hover:text-gray-700"
                     >
-                      Close
+                      More options...
+                    </button>
+                    <button
+                      ref={editDoneRef}
+                      onClick={closeEditPanel}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          closeEditPanel()
+                        }
+                      }}
+                      className="px-3 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded"
+                    >
+                      Done
                     </button>
                   </div>
                 </div>
