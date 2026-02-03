@@ -64,6 +64,15 @@ async def list_providers(
                 "Read user info",
             ],
         },
+        {
+            "id": "microsoft",
+            "name": "Microsoft",
+            "description": "Connect Outlook email",
+            "scopes": [
+                "Read email",
+                "User profile",
+            ],
+        },
     ]
 
     # Add configuration status and setup instructions

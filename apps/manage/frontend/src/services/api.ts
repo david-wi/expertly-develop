@@ -1264,6 +1264,20 @@ export interface SlackConfig {
   my_mentions?: boolean
 }
 
+export interface GmailConfig {
+  folders?: string[]
+  from_addresses?: string[]
+  subject_contains?: string[]
+  unread_only?: boolean
+}
+
+export interface OutlookConfig {
+  folders?: string[]
+  from_addresses?: string[]
+  subject_contains?: string[]
+  unread_only?: boolean
+}
+
 export interface Monitor {
   _id?: string
   id: string
@@ -1274,7 +1288,7 @@ export interface Monitor {
   scope_id?: string
   provider: MonitorProviderType
   connection_id: string
-  provider_config: SlackConfig | Record<string, unknown>
+  provider_config: SlackConfig | GmailConfig | OutlookConfig | Record<string, unknown>
   playbook_id: string
   input_data_template?: Record<string, unknown>
   queue_id?: string
@@ -1313,7 +1327,7 @@ export interface CreateMonitorRequest {
   scope_id?: string
   provider: MonitorProviderType
   connection_id: string
-  provider_config: SlackConfig | Record<string, unknown>
+  provider_config: SlackConfig | GmailConfig | OutlookConfig | Record<string, unknown>
   playbook_id: string
   input_data_template?: Record<string, unknown>
   queue_id?: string
@@ -1324,7 +1338,7 @@ export interface CreateMonitorRequest {
 export interface UpdateMonitorRequest {
   name?: string
   description?: string
-  provider_config?: SlackConfig | Record<string, unknown>
+  provider_config?: SlackConfig | GmailConfig | OutlookConfig | Record<string, unknown>
   playbook_id?: string
   input_data_template?: Record<string, unknown>
   queue_id?: string

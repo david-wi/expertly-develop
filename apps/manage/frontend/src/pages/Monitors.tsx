@@ -13,6 +13,8 @@ import {
   Project,
   MonitorProviderType,
   SlackConfig,
+  GmailConfig,
+  OutlookConfig,
 } from '../services/api'
 
 const PROVIDER_LABELS: Record<MonitorProviderType, string> = {
@@ -48,6 +50,16 @@ interface MonitorFormData {
   slack_my_mentions: boolean
   slack_keywords: string
   slack_context_messages: number
+  // Gmail config
+  gmail_folders: string
+  gmail_from_addresses: string
+  gmail_subject_contains: string
+  gmail_unread_only: boolean
+  // Outlook config
+  outlook_folders: string
+  outlook_from_addresses: string
+  outlook_subject_contains: string
+  outlook_unread_only: boolean
 }
 
 const defaultFormData: MonitorFormData = {
@@ -64,6 +76,14 @@ const defaultFormData: MonitorFormData = {
   slack_my_mentions: false,
   slack_keywords: '',
   slack_context_messages: 5,
+  gmail_folders: 'INBOX',
+  gmail_from_addresses: '',
+  gmail_subject_contains: '',
+  gmail_unread_only: true,
+  outlook_folders: 'Inbox',
+  outlook_from_addresses: '',
+  outlook_subject_contains: '',
+  outlook_unread_only: true,
 }
 
 export default function Monitors() {
@@ -145,7 +165,7 @@ export default function Monitors() {
     }
   }
 
-  const buildProviderConfig = (): SlackConfig => {
+  const buildProviderConfig = (): SlackConfig | GmailConfig | OutlookConfig | Record<string, unknown> => {
     if (formData.provider === 'slack') {
       return {
         channel_ids: formData.slack_channel_ids
@@ -157,6 +177,34 @@ export default function Monitors() {
           ? formData.slack_keywords.split(',').map((s) => s.trim()).filter(Boolean)
           : [],
         context_messages: formData.slack_context_messages,
+      }
+    }
+    if (formData.provider === 'gmail') {
+      return {
+        folders: formData.gmail_folders
+          ? formData.gmail_folders.split(',').map((s) => s.trim()).filter(Boolean)
+          : ['INBOX'],
+        from_addresses: formData.gmail_from_addresses
+          ? formData.gmail_from_addresses.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        subject_contains: formData.gmail_subject_contains
+          ? formData.gmail_subject_contains.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        unread_only: formData.gmail_unread_only,
+      }
+    }
+    if (formData.provider === 'outlook') {
+      return {
+        folders: formData.outlook_folders
+          ? formData.outlook_folders.split(',').map((s) => s.trim()).filter(Boolean)
+          : ['Inbox'],
+        from_addresses: formData.outlook_from_addresses
+          ? formData.outlook_from_addresses.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        subject_contains: formData.outlook_subject_contains
+          ? formData.outlook_subject_contains.split(',').map((s) => s.trim()).filter(Boolean)
+          : [],
+        unread_only: formData.outlook_unread_only,
       }
     }
     return {}
@@ -293,6 +341,8 @@ export default function Monitors() {
   const openEditModal = (monitor: Monitor) => {
     setSelectedMonitor(monitor)
     const slackConfig = monitor.provider_config as SlackConfig
+    const gmailConfig = monitor.provider_config as GmailConfig
+    const outlookConfig = monitor.provider_config as OutlookConfig
     setFormData({
       name: monitor.name,
       description: monitor.description || '',
@@ -302,11 +352,22 @@ export default function Monitors() {
       queue_id: monitor.queue_id || '',
       project_id: monitor.project_id || '',
       poll_interval_seconds: monitor.poll_interval_seconds,
+      // Slack
       slack_channel_ids: slackConfig?.channel_ids?.join(', ') || '',
       slack_workspace_wide: slackConfig?.workspace_wide || false,
       slack_my_mentions: slackConfig?.my_mentions || false,
       slack_keywords: slackConfig?.keywords?.join(', ') || '',
       slack_context_messages: slackConfig?.context_messages || 5,
+      // Gmail
+      gmail_folders: gmailConfig?.folders?.join(', ') || 'INBOX',
+      gmail_from_addresses: gmailConfig?.from_addresses?.join(', ') || '',
+      gmail_subject_contains: gmailConfig?.subject_contains?.join(', ') || '',
+      gmail_unread_only: gmailConfig?.unread_only ?? true,
+      // Outlook
+      outlook_folders: outlookConfig?.folders?.join(', ') || 'Inbox',
+      outlook_from_addresses: outlookConfig?.from_addresses?.join(', ') || '',
+      outlook_subject_contains: outlookConfig?.subject_contains?.join(', ') || '',
+      outlook_unread_only: outlookConfig?.unread_only ?? true,
     })
     setShowEditModal(true)
   }
@@ -726,6 +787,118 @@ export default function Monitors() {
                   max={20}
                 />
                 <p className="text-xs text-gray-500 mt-1">Number of surrounding messages to capture</p>
+              </div>
+            </div>
+          )}
+
+          {/* Gmail-specific config */}
+          {formData.provider === 'gmail' && (
+            <div className="border-t pt-4 space-y-3">
+              <h4 className="text-sm font-medium text-gray-900">Gmail Settings</h4>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Folders/Labels (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.gmail_folders}
+                  onChange={(e) => setFormData({ ...formData, gmail_folders: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="INBOX, Important, Work"
+                />
+                <p className="text-xs text-gray-500 mt-1">Gmail folders or labels to monitor</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">From addresses (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.gmail_from_addresses}
+                  onChange={(e) => setFormData({ ...formData, gmail_from_addresses: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="client@example.com, alerts@service.com"
+                />
+                <p className="text-xs text-gray-500 mt-1">Only capture emails from these senders</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Subject keywords (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.gmail_subject_contains}
+                  onChange={(e) => setFormData({ ...formData, gmail_subject_contains: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="urgent, help, support"
+                />
+                <p className="text-xs text-gray-500 mt-1">Only capture emails with subjects containing these keywords</p>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="gmail_unread_only"
+                  checked={formData.gmail_unread_only}
+                  onChange={(e) => setFormData({ ...formData, gmail_unread_only: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                />
+                <label htmlFor="gmail_unread_only" className="ml-2 text-sm text-gray-700">
+                  Only monitor unread emails
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Outlook-specific config */}
+          {formData.provider === 'outlook' && (
+            <div className="border-t pt-4 space-y-3">
+              <h4 className="text-sm font-medium text-gray-900">Outlook Settings</h4>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Folders (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.outlook_folders}
+                  onChange={(e) => setFormData({ ...formData, outlook_folders: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="Inbox, Archive, Work"
+                />
+                <p className="text-xs text-gray-500 mt-1">Outlook folders to monitor (Inbox, Sent, Drafts, etc.)</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">From addresses (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.outlook_from_addresses}
+                  onChange={(e) => setFormData({ ...formData, outlook_from_addresses: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="client@example.com, alerts@service.com"
+                />
+                <p className="text-xs text-gray-500 mt-1">Only capture emails from these senders</p>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-700 mb-1">Subject keywords (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.outlook_subject_contains}
+                  onChange={(e) => setFormData({ ...formData, outlook_subject_contains: e.target.value })}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                  placeholder="urgent, help, support"
+                />
+                <p className="text-xs text-gray-500 mt-1">Only capture emails with subjects containing these keywords</p>
+              </div>
+
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="outlook_unread_only"
+                  checked={formData.outlook_unread_only}
+                  onChange={(e) => setFormData({ ...formData, outlook_unread_only: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                />
+                <label htmlFor="outlook_unread_only" className="ml-2 text-sm text-gray-700">
+                  Only monitor unread emails
+                </label>
               </div>
             </div>
           )}

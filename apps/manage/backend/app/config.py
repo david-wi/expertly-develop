@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     slack_client_id: str = ""
     slack_client_secret: str = ""
 
+    # OAuth - Microsoft
+    microsoft_client_id: str = ""
+    microsoft_client_secret: str = ""
+
     # Encryption key for tokens (Fernet key)
     connection_encryption_key: str = ""
 

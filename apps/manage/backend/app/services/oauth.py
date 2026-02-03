@@ -83,6 +83,20 @@ def get_provider_config(provider: str) -> OAuthProviderConfig:
             ],
             redirect_uri=f"{base_url}/api/v1/connections/oauth/slack/callback",
         ),
+        "microsoft": OAuthProviderConfig(
+            name="Microsoft",
+            client_id=settings.microsoft_client_id,
+            client_secret=settings.microsoft_client_secret,
+            auth_url="https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
+            token_url="https://login.microsoftonline.com/common/oauth2/v2.0/token",
+            userinfo_url="https://graph.microsoft.com/v1.0/me",
+            scopes=[
+                "Mail.Read",
+                "User.Read",
+                "offline_access",
+            ],
+            redirect_uri=f"{base_url}/api/v1/connections/oauth/microsoft/callback",
+        ),
     }
 
     if provider not in providers:
@@ -295,6 +309,8 @@ def is_provider_configured(provider: str) -> bool:
         return bool(settings.google_client_id and settings.google_client_secret)
     elif provider == "slack":
         return bool(settings.slack_client_id and settings.slack_client_secret)
+    elif provider == "microsoft":
+        return bool(settings.microsoft_client_id and settings.microsoft_client_secret)
 
     return False
 
@@ -327,6 +343,19 @@ def get_provider_setup_instructions(provider: str) -> dict:
             ],
             "console_url": "https://api.slack.com/apps",
             "docs_url": "https://api.slack.com/authentication/oauth-v2",
+        },
+        "microsoft": {
+            "steps": [
+                "Go to Azure Portal: https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+                "Register a new application",
+                f"Add redirect URI (Web): {base_url}/api/v1/connections/oauth/microsoft/callback",
+                "Under API permissions, add: Mail.Read, User.Read, offline_access",
+                "Under Certificates & secrets, create a new client secret",
+                "Copy the Application (client) ID and client secret value",
+                "Set MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET environment variables",
+            ],
+            "console_url": "https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade",
+            "docs_url": "https://learn.microsoft.com/en-us/graph/auth-v2-user",
         },
     }
 
