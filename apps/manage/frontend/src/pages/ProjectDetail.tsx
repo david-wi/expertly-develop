@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef, DragEvent } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
 import {
@@ -11,6 +11,7 @@ import {
   ProjectStatus,
   ProjectResource,
   ProjectCustomField,
+  ProjectComment,
 } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
@@ -60,12 +61,26 @@ function formatProjectStatus(status: ProjectStatus): string {
 
 type TabType = 'tasks' | 'completed' | 'recurring'
 
-// Default custom fields for new projects
 const DEFAULT_CUSTOM_FIELDS: ProjectCustomField[] = [
   { label: 'URL', value: '' },
   { label: 'Contact Name', value: '' },
   { label: 'Contact Email', value: '' },
 ]
+
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const minutes = Math.floor(diff / 60000)
+  const hours = Math.floor(diff / 3600000)
+  const days = Math.floor(diff / 86400000)
+
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes}m ago`
+  if (hours < 24) return `${hours}h ago`
+  if (days < 7) return `${days}d ago`
+  return date.toLocaleDateString()
+}
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
@@ -81,7 +96,7 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Tab state
+  // Tab state for assignments
   const [activeTab, setActiveTab] = useState<TabType>('tasks')
 
   // Modal states
@@ -93,17 +108,21 @@ export default function ProjectDetail() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [selectedRecurringTask, setSelectedRecurringTask] = useState<RecurringTask | null>(null)
 
-  // Right panel edit states
-  const [editingResources, setEditingResources] = useState(false)
-  const [editingFields, setEditingFields] = useState(false)
-  const [editingNextSteps, setEditingNextSteps] = useState(false)
+  // Local states for inline editing
   const [localResources, setLocalResources] = useState<ProjectResource[]>([])
   const [localFields, setLocalFields] = useState<ProjectCustomField[]>([])
   const [localNextSteps, setLocalNextSteps] = useState('')
+  const [localComments, setLocalComments] = useState<ProjectComment[]>([])
+  const [newComment, setNewComment] = useState('')
+  const [isDraggingFile, setIsDraggingFile] = useState(false)
+
+  // Inline add states
   const [newResourceTitle, setNewResourceTitle] = useState('')
   const [newResourceUrl, setNewResourceUrl] = useState('')
   const [newFieldLabel, setNewFieldLabel] = useState('')
-  const [newFieldValue, setNewFieldValue] = useState('')
+
+  // Refs
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Recurring task edit form state
   const [recurringForm, setRecurringForm] = useState<{
@@ -157,9 +176,9 @@ export default function ProjectDetail() {
       ] = await Promise.all([
         api.getProject(id),
         api.getProjectChildren(id),
-        api.getProjects(), // Fetch all projects for breadcrumbs and typeahead
-        api.getProjectTasks(id, { status: undefined, include_subtasks: true }), // Get non-completed tasks including subprojects
-        api.getProjectTasks(id, { status: 'completed', include_subtasks: true }), // Include completed tasks from subprojects
+        api.getProjects(),
+        api.getProjectTasks(id, { status: undefined, include_subtasks: true }),
+        api.getProjectTasks(id, { status: 'completed', include_subtasks: true }),
         api.getProjectRecurringTasks(id),
         api.getQueues(),
       ])
@@ -167,13 +186,11 @@ export default function ProjectDetail() {
       setProject(projectData)
       setSubprojects(subprojectsData)
       setAllProjects(allProjectsData)
-      // Filter out completed tasks from the main tasks list
       setTasks(tasksData.filter((t) => t.status !== 'completed'))
       setCompletedTasks(completedTasksData)
       setRecurringTasks(recurringTasksData)
       setQueues(queuesData)
 
-      // Initialize project form
       setProjectForm({
         name: projectData.name,
         description: projectData.description || '',
@@ -181,16 +198,11 @@ export default function ProjectDetail() {
         parent_project_id: projectData.parent_project_id || null,
       })
 
-      // Initialize right panel local states
       setLocalResources(projectData.resources || [])
-      // Use existing custom fields or populate with defaults if empty
       const existingFields = projectData.custom_fields || []
-      if (existingFields.length === 0) {
-        setLocalFields(DEFAULT_CUSTOM_FIELDS)
-      } else {
-        setLocalFields(existingFields)
-      }
+      setLocalFields(existingFields.length === 0 ? DEFAULT_CUSTOM_FIELDS : existingFields)
       setLocalNextSteps(projectData.next_steps || '')
+      setLocalComments(projectData.comments || [])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load project'
       setError(message)
@@ -199,10 +211,11 @@ export default function ProjectDetail() {
     }
   }
 
-  const getQueueName = (queueId: string): string => {
+  const _getQueueName = (queueId: string): string => {
     const queue = queues.find((q) => (q._id || q.id) === queueId)
     return queue?.purpose || 'Unknown Queue'
   }
+  void _getQueueName // Silences unused warning - available for future use
 
   const handleUpdateProject = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -226,88 +239,147 @@ export default function ProjectDetail() {
     }
   }
 
-  // Save resources
-  const handleSaveResources = async () => {
+  // Auto-save helpers
+  const saveResources = async (resources: ProjectResource[]) => {
     if (!id) return
-    setSaving(true)
     try {
-      await api.updateProject(id, { resources: localResources })
-      await loadData()
-      setEditingResources(false)
+      await api.updateProject(id, { resources })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save resources'
-      alert(message)
-    } finally {
-      setSaving(false)
+      console.error('Failed to save resources:', err)
     }
   }
 
-  // Save custom fields
-  const handleSaveFields = async () => {
+  const saveFields = async (fields: ProjectCustomField[]) => {
     if (!id) return
-    setSaving(true)
     try {
-      await api.updateProject(id, { custom_fields: localFields })
-      await loadData()
-      setEditingFields(false)
+      await api.updateProject(id, { custom_fields: fields })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save fields'
-      alert(message)
-    } finally {
-      setSaving(false)
+      console.error('Failed to save fields:', err)
     }
   }
 
-  // Save next steps
-  const handleSaveNextSteps = async () => {
+  const saveNextSteps = async (nextSteps: string) => {
     if (!id) return
-    setSaving(true)
     try {
-      await api.updateProject(id, { next_steps: localNextSteps })
-      await loadData()
-      setEditingNextSteps(false)
+      await api.updateProject(id, { next_steps: nextSteps })
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to save next steps'
-      alert(message)
-    } finally {
-      setSaving(false)
+      console.error('Failed to save next steps:', err)
     }
   }
 
-  // Add resource
+  const saveComments = async (comments: ProjectComment[]) => {
+    if (!id) return
+    try {
+      await api.updateProject(id, { comments })
+    } catch (err) {
+      console.error('Failed to save comments:', err)
+    }
+  }
+
+  // Resource handlers
   const handleAddResource = () => {
     if (!newResourceTitle.trim() || !newResourceUrl.trim()) return
-    setLocalResources([
+    const updated = [
       ...localResources,
-      { title: newResourceTitle.trim(), url: newResourceUrl.trim(), type: 'link' },
-    ])
+      { title: newResourceTitle.trim(), url: newResourceUrl.trim(), type: 'link' as const },
+    ]
+    setLocalResources(updated)
     setNewResourceTitle('')
     setNewResourceUrl('')
+    saveResources(updated)
   }
 
-  // Remove resource
   const handleRemoveResource = (index: number) => {
-    setLocalResources(localResources.filter((_, i) => i !== index))
+    const updated = localResources.filter((_, i) => i !== index)
+    setLocalResources(updated)
+    saveResources(updated)
   }
 
-  // Add custom field
+  // File drag & drop
+  const handleFileDragOver = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDraggingFile(true)
+  }
+
+  const handleFileDragLeave = () => {
+    setIsDraggingFile(false)
+  }
+
+  const handleFileDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDraggingFile(false)
+    const files = Array.from(e.dataTransfer.files)
+    handleFileUpload(files)
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      handleFileUpload(Array.from(e.target.files))
+    }
+  }
+
+  const handleFileUpload = (files: File[]) => {
+    // For now, add as file entries (in production, would upload to storage)
+    const newResources: ProjectResource[] = files.map((file) => ({
+      title: file.name,
+      url: `file://${file.name}`,
+      type: 'file' as const,
+    }))
+    const updated = [...localResources, ...newResources]
+    setLocalResources(updated)
+    saveResources(updated)
+  }
+
+  // Field handlers
   const handleAddField = () => {
     if (!newFieldLabel.trim()) return
-    setLocalFields([...localFields, { label: newFieldLabel.trim(), value: newFieldValue }])
+    const updated = [...localFields, { label: newFieldLabel.trim(), value: '' }]
+    setLocalFields(updated)
     setNewFieldLabel('')
-    setNewFieldValue('')
+    saveFields(updated)
   }
 
-  // Remove custom field
   const handleRemoveField = (index: number) => {
-    setLocalFields(localFields.filter((_, i) => i !== index))
+    const updated = localFields.filter((_, i) => i !== index)
+    setLocalFields(updated)
+    saveFields(updated)
   }
 
-  // Update custom field value
   const handleUpdateFieldValue = (index: number, value: string) => {
     const updated = [...localFields]
     updated[index] = { ...updated[index], value }
     setLocalFields(updated)
+  }
+
+  const handleFieldBlur = () => {
+    saveFields(localFields)
+  }
+
+  // Next steps handlers
+  const handleNextStepsBlur = () => {
+    saveNextSteps(localNextSteps)
+  }
+
+  // Comment handlers
+  const handleAddComment = () => {
+    if (!newComment.trim()) return
+    const comment: ProjectComment = {
+      id: crypto.randomUUID(),
+      content: newComment.trim(),
+      author_id: 'current-user', // Would come from auth context
+      author_name: 'David', // Would come from auth context
+      created_at: new Date().toISOString(),
+    }
+    const updated = [comment, ...localComments] // Newest first
+    setLocalComments(updated)
+    setNewComment('')
+    saveComments(updated)
+  }
+
+  const handleDeleteComment = (commentId: string) => {
+    const updated = localComments.filter((c) => c.id !== commentId)
+    setLocalComments(updated)
+    saveComments(updated)
   }
 
   // Copy text to clipboard
@@ -428,21 +500,13 @@ export default function ProjectDetail() {
 
   const activeTasks = tasks.filter((t) => t.status !== 'completed')
 
-  // Build breadcrumb items - must be before early returns to follow rules of hooks
   const breadcrumbItems = useMemo(() => {
     if (!project) return []
-    const projectForBreadcrumb = {
-      ...project,
-      id: project._id || project.id,
-    }
-    const allProjectsForBreadcrumb = allProjects.map((p) => ({
-      ...p,
-      id: p._id || p.id,
-    }))
+    const projectForBreadcrumb = { ...project, id: project._id || project.id }
+    const allProjectsForBreadcrumb = allProjects.map((p) => ({ ...p, id: p._id || p.id }))
     return buildProjectBreadcrumbs(projectForBreadcrumb, allProjectsForBreadcrumb)
   }, [project, allProjects])
 
-  // Convert projects to format expected by ProjectTypeahead
   const typeaheadProjects = useMemo(() => {
     return allProjects.map((p) => ({
       id: p._id || p.id,
@@ -451,7 +515,6 @@ export default function ProjectDetail() {
     }))
   }, [allProjects])
 
-  // Get current project ID for exclusion
   const currentProjectId = project ? project._id || project.id : undefined
 
   if (loading) {
@@ -477,7 +540,6 @@ export default function ProjectDetail() {
 
   return (
     <div className="space-y-4">
-      {/* Breadcrumbs */}
       {breadcrumbItems.length > 0 && <Breadcrumbs items={breadcrumbItems} className="mb-2" />}
 
       {/* Header */}
@@ -512,9 +574,10 @@ export default function ProjectDetail() {
       </div>
 
       {/* Two-Column Layout */}
-      <div className="flex gap-4">
-        {/* Left Column - Subprojects (narrower) */}
-        <div className="w-64 flex-shrink-0">
+      <div className="flex gap-6">
+        {/* Left Column - Subprojects + Assignments */}
+        <div className="w-72 flex-shrink-0 space-y-3">
+          {/* Subprojects */}
           <div className="bg-white shadow rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
@@ -552,48 +615,167 @@ export default function ProjectDetail() {
               <p className="text-xs text-gray-400 px-2">No subprojects</p>
             )}
           </div>
+
+          {/* Assignments */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                Assignments
+              </h3>
+              <span className="text-[10px] text-gray-400">{activeTasks.length} active</span>
+            </div>
+            {/* Tabs */}
+            <div className="flex gap-2 mb-2 border-b border-gray-100 pb-2">
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  activeTab === 'tasks'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Active ({activeTasks.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  activeTab === 'completed'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Done ({completedTasks.length})
+              </button>
+              <button
+                onClick={() => setActiveTab('recurring')}
+                className={`text-[10px] px-1.5 py-0.5 rounded ${
+                  activeTab === 'recurring'
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Recurring ({recurringTasks.length})
+              </button>
+            </div>
+
+            {activeTab === 'tasks' && (
+              <ul className="space-y-0.5 max-h-64 overflow-y-auto">
+                {activeTasks.map((task) => (
+                  <li
+                    key={task._id || task.id}
+                    onClick={() => setSelectedTaskId(task._id || task.id)}
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                  >
+                    <span className="text-xs text-gray-900 truncate flex-1">{task.title}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${
+                        STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
+                      }`}
+                    >
+                      {task.status.replace('_', ' ')}
+                    </span>
+                  </li>
+                ))}
+                {activeTasks.length === 0 && (
+                  <p className="text-xs text-gray-400 px-2">No active assignments</p>
+                )}
+              </ul>
+            )}
+
+            {activeTab === 'completed' && (
+              <ul className="space-y-0.5 max-h-64 overflow-y-auto">
+                {completedTasks.map((task) => (
+                  <li
+                    key={task._id || task.id}
+                    onClick={() => setSelectedTaskId(task._id || task.id)}
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                  >
+                    <span className="text-xs text-gray-500 truncate flex-1 line-through">
+                      {task.title}
+                    </span>
+                  </li>
+                ))}
+                {completedTasks.length === 0 && (
+                  <p className="text-xs text-gray-400 px-2">No completed assignments</p>
+                )}
+              </ul>
+            )}
+
+            {activeTab === 'recurring' && (
+              <ul className="space-y-0.5 max-h-64 overflow-y-auto">
+                {recurringTasks.map((task) => (
+                  <li
+                    key={task._id || task.id}
+                    className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded transition-colors group ${!task.is_active ? 'opacity-50' : ''}`}
+                  >
+                    <span
+                      onClick={() => openEditRecurringModal(task)}
+                      className="text-xs text-gray-900 truncate flex-1 cursor-pointer"
+                    >
+                      {task.title}
+                    </span>
+                    <span className="text-[10px] text-gray-400 group-hover:hidden">
+                      {formatRecurrence(task)}
+                    </span>
+                    <div className="hidden group-hover:flex gap-1">
+                      <button
+                        onClick={() => handleTriggerRecurring(task)}
+                        className="text-[10px] text-green-600 hover:text-green-800"
+                        title="Run now"
+                      >
+                        Run
+                      </button>
+                      <button
+                        onClick={() => handleToggleRecurringActive(task)}
+                        className={`text-[10px] ${task.is_active ? 'text-yellow-600 hover:text-yellow-800' : 'text-green-600 hover:text-green-800'}`}
+                      >
+                        {task.is_active ? 'Pause' : 'Resume'}
+                      </button>
+                    </div>
+                  </li>
+                ))}
+                {recurringTasks.length === 0 && (
+                  <p className="text-xs text-gray-400 px-2">No recurring assignments</p>
+                )}
+              </ul>
+            )}
+          </div>
         </div>
 
-        {/* Right Column - Project Details */}
-        <div className="flex-1 space-y-4">
-          {/* Resources Section */}
-          <div className="bg-white shadow rounded-lg p-3">
+        {/* Right Column - Project Details (half width) */}
+        <div className="w-1/2 space-y-3">
+          {/* Resources */}
+          <div
+            className={`bg-white shadow rounded-lg p-3 transition-colors ${
+              isDraggingFile ? 'ring-2 ring-blue-400 bg-blue-50' : ''
+            }`}
+            onDragOver={handleFileDragOver}
+            onDragLeave={handleFileDragLeave}
+            onDrop={handleFileDrop}
+          >
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
                 Resources
               </h3>
-              {!editingResources ? (
-                <button
-                  onClick={() => setEditingResources(true)}
-                  className="text-blue-600 hover:text-blue-800 text-xs"
-                >
-                  Edit
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setLocalResources(project.resources || [])
-                      setEditingResources(false)
-                    }}
-                    className="text-gray-500 hover:text-gray-700 text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveResources}
-                    disabled={saving}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              )}
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="text-blue-600 hover:text-blue-800 text-xs"
+              >
+                Upload
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={handleFileInputChange}
+              />
             </div>
-            {editingResources ? (
-              <div className="space-y-2">
+
+            {localResources.length > 0 && (
+              <ul className="space-y-1 mb-2">
                 {localResources.map((res, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
+                  <li key={idx} className="flex items-center gap-2 text-xs group">
                     <a
                       href={res.url}
                       target="_blank"
@@ -604,478 +786,178 @@ export default function ProjectDetail() {
                     </a>
                     <button
                       onClick={() => handleRemoveResource(idx)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      Remove
+                      ×
                     </button>
-                  </div>
-                ))}
-                <div className="flex gap-2 mt-2">
-                  <input
-                    type="text"
-                    placeholder="Title"
-                    value={newResourceTitle}
-                    onChange={(e) => setNewResourceTitle(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
-                  />
-                  <input
-                    type="url"
-                    placeholder="URL"
-                    value={newResourceUrl}
-                    onChange={(e) => setNewResourceUrl(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
-                  />
-                  <button
-                    onClick={handleAddResource}
-                    className="text-blue-600 hover:text-blue-800 text-xs px-2"
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-            ) : localResources.length > 0 ? (
-              <ul className="space-y-1">
-                {localResources.map((res, idx) => (
-                  <li key={idx} className="text-xs">
-                    <a
-                      href={res.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      {res.title}
-                    </a>
                   </li>
                 ))}
               </ul>
-            ) : (
-              <p className="text-xs text-gray-400">No resources added</p>
             )}
-          </div>
 
-          {/* Fields & Values Section */}
-          <div className="bg-white shadow rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                Fields & Values
-              </h3>
-              {!editingFields ? (
-                <button
-                  onClick={() => setEditingFields(true)}
-                  className="text-blue-600 hover:text-blue-800 text-xs"
-                >
-                  Edit
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      const existingFields = project.custom_fields || []
-                      setLocalFields(existingFields.length === 0 ? DEFAULT_CUSTOM_FIELDS : existingFields)
-                      setEditingFields(false)
-                    }}
-                    className="text-gray-500 hover:text-gray-700 text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveFields}
-                    disabled={saving}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              )}
+            <div className="flex gap-1">
+              <input
+                type="text"
+                placeholder="Title..."
+                value={newResourceTitle}
+                onChange={(e) => setNewResourceTitle(e.target.value)}
+                className="flex-1 text-xs border-0 border-b border-transparent focus:border-gray-300 bg-transparent px-0 py-1 outline-none placeholder-gray-300"
+              />
+              <input
+                type="url"
+                placeholder="URL..."
+                value={newResourceUrl}
+                onChange={(e) => setNewResourceUrl(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddResource()}
+                className="flex-1 text-xs border-0 border-b border-transparent focus:border-gray-300 bg-transparent px-0 py-1 outline-none placeholder-gray-300"
+              />
             </div>
-            {editingFields ? (
-              <div className="space-y-2">
-                {localFields.map((field, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
-                    <span className="text-xs text-gray-600 w-24 flex-shrink-0">{field.label}:</span>
-                    <input
-                      type="text"
-                      value={field.value}
-                      onChange={(e) => handleUpdateFieldValue(idx, e.target.value)}
-                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
-                    />
-                    <button
-                      onClick={() => handleRemoveField(idx)}
-                      className="text-red-500 hover:text-red-700 text-xs"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-                <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
-                  <input
-                    type="text"
-                    placeholder="Field name"
-                    value={newFieldLabel}
-                    onChange={(e) => setNewFieldLabel(e.target.value)}
-                    className="w-24 border border-gray-300 rounded px-2 py-1 text-xs"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Value"
-                    value={newFieldValue}
-                    onChange={(e) => setNewFieldValue(e.target.value)}
-                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
-                  />
-                  <button
-                    onClick={handleAddField}
-                    className="text-blue-600 hover:text-blue-800 text-xs px-2"
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-            ) : localFields.length > 0 ? (
-              <div className="space-y-1">
-                {localFields.map((field, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
-                    <span className="text-gray-600 w-24 flex-shrink-0">{field.label}:</span>
-                    <span className="text-gray-900 truncate">{field.value || '—'}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">No custom fields</p>
+            {isDraggingFile && (
+              <p className="text-xs text-blue-500 mt-2 text-center">Drop files here</p>
             )}
           </div>
 
-          {/* Next Steps Section */}
+          {/* Fields & Values */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">
+              Fields & Values
+            </h3>
+
+            <div className="space-y-1">
+              {localFields.map((field, idx) => (
+                <div key={idx} className="flex items-center gap-2 group">
+                  <span className="text-xs text-gray-500 w-24 flex-shrink-0">{field.label}:</span>
+                  <input
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => handleUpdateFieldValue(idx, e.target.value)}
+                    onBlur={handleFieldBlur}
+                    placeholder="—"
+                    className="flex-1 text-xs text-gray-900 border-0 border-b border-transparent hover:border-gray-200 focus:border-gray-300 bg-transparent px-0 py-1 outline-none"
+                  />
+                  <button
+                    onClick={() => handleRemoveField(idx)}
+                    className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 pt-2 border-t border-gray-100">
+              <input
+                type="text"
+                placeholder="Add field..."
+                value={newFieldLabel}
+                onChange={(e) => setNewFieldLabel(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddField()}
+                className="w-full text-xs text-gray-500 border-0 bg-transparent px-0 py-1 outline-none placeholder-gray-300"
+              />
+            </div>
+          </div>
+
+          {/* Next Steps */}
           <div className="bg-white shadow rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
                 Next Steps
               </h3>
-              {!editingNextSteps ? (
-                <button
-                  onClick={() => setEditingNextSteps(true)}
-                  className="text-blue-600 hover:text-blue-800 text-xs"
-                >
-                  Edit
-                </button>
-              ) : (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => {
-                      setLocalNextSteps(project.next_steps || '')
-                      setEditingNextSteps(false)
-                    }}
-                    className="text-gray-500 hover:text-gray-700 text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSaveNextSteps}
-                    disabled={saving}
-                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                </div>
-              )}
-            </div>
-            {editingNextSteps ? (
-              <textarea
-                value={localNextSteps}
-                onChange={(e) => setLocalNextSteps(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2 py-1 text-xs min-h-[80px]"
-                placeholder="Write your next steps here..."
-              />
-            ) : localNextSteps ? (
-              <div className="relative group">
-                <p className="text-xs text-gray-700 whitespace-pre-wrap">{localNextSteps}</p>
+              {localNextSteps && (
                 <button
                   onClick={() => handleCopy(localNextSteps)}
-                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs transition-opacity"
-                  title="Copy to clipboard"
+                  className="text-gray-400 hover:text-gray-600 text-xs"
                 >
                   Copy
                 </button>
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400">No next steps defined</p>
-            )}
+              )}
+            </div>
+            <textarea
+              value={localNextSteps}
+              onChange={(e) => setLocalNextSteps(e.target.value)}
+              onBlur={handleNextStepsBlur}
+              placeholder="Write next steps..."
+              className="w-full text-xs text-gray-700 border-0 bg-transparent px-0 py-1 outline-none resize-none min-h-[60px] placeholder-gray-300"
+            />
           </div>
 
-          {/* AI Suggestions Section */}
+          {/* AI Suggestions */}
           <div className="bg-white shadow rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
                 AI Suggestions
               </h3>
-            </div>
-            {project.ai_suggestions ? (
-              <div className="relative group">
-                <p className="text-xs text-gray-700 whitespace-pre-wrap">{project.ai_suggestions}</p>
+              {project.ai_suggestions && (
                 <button
                   onClick={() => handleCopy(project.ai_suggestions || '')}
-                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs transition-opacity"
-                  title="Copy to clipboard"
+                  className="text-gray-400 hover:text-gray-600 text-xs"
                 >
                   Copy
                 </button>
+              )}
+            </div>
+            {project.ai_suggestions ? (
+              <p className="text-xs text-gray-700 whitespace-pre-wrap">{project.ai_suggestions}</p>
+            ) : (
+              <p className="text-xs text-gray-300 italic">No AI suggestions available</p>
+            )}
+          </div>
+
+          {/* Discussion */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">
+              Discussion
+            </h3>
+
+            {/* Add comment */}
+            <div className="mb-3">
+              <textarea
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                placeholder="Add a comment..."
+                className="w-full text-xs text-gray-700 border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-blue-300 resize-none min-h-[50px] placeholder-gray-300"
+              />
+              {newComment.trim() && (
+                <div className="flex justify-end mt-1">
+                  <button
+                    onClick={handleAddComment}
+                    className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
+                  >
+                    Post
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Comments list (newest first) */}
+            {localComments.length > 0 ? (
+              <div className="space-y-3">
+                {localComments.map((comment) => (
+                  <div key={comment.id} className="group">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium text-gray-900">{comment.author_name}</span>
+                      <span className="text-[10px] text-gray-400">
+                        {formatRelativeTime(comment.created_at)}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] ml-auto"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <div
+                      className="text-xs text-gray-700"
+                      dangerouslySetInnerHTML={{ __html: comment.content }}
+                    />
+                  </div>
+                ))}
               </div>
             ) : (
-              <p className="text-xs text-gray-400 italic">No AI suggestions available</p>
+              <p className="text-xs text-gray-300 italic">No comments yet</p>
             )}
           </div>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="-mb-px flex space-x-8">
-          <button
-            onClick={() => setActiveTab('tasks')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'tasks'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Assignments ({activeTasks.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('completed')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'completed'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Completed ({completedTasks.length})
-          </button>
-          <button
-            onClick={() => setActiveTab('recurring')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'recurring'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Recurring ({recurringTasks.length})
-          </button>
-        </nav>
-      </div>
-
-      {/* Tab Content */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        {activeTab === 'tasks' && (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assignment
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Queue
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Priority
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {activeTasks.map((task) => (
-                <tr
-                  key={task._id || task.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setSelectedTaskId(task._id || task.id)}
-                >
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium text-gray-900">{task.title}</p>
-                      {task.description && (
-                        <p className="text-xs text-gray-500 truncate max-w-xs">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {getQueueName(task.queue_id)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {task.status.replace('_', ' ')}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">P{task.priority}</td>
-                </tr>
-              ))}
-              {activeTasks.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center text-gray-500">
-                    No active assignments. Create one to get started.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-
-        {activeTab === 'completed' && (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assignment
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Queue
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Completed
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {completedTasks.map((task) => (
-                <tr
-                  key={task._id || task.id}
-                  className="hover:bg-gray-50 cursor-pointer"
-                  onClick={() => setSelectedTaskId(task._id || task.id)}
-                >
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium text-gray-900">{task.title}</p>
-                      {task.description && (
-                        <p className="text-xs text-gray-500 truncate max-w-xs">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {getQueueName(task.queue_id)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {new Date(task.updated_at).toLocaleDateString()}
-                  </td>
-                </tr>
-              ))}
-              {completedTasks.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-gray-500">
-                    No completed assignments yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
-
-        {activeTab === 'recurring' && (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Assignment
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Queue
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Schedule
-                </th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {recurringTasks.map((task) => (
-                <tr
-                  key={task._id || task.id}
-                  className={`hover:bg-gray-50 ${!task.is_active ? 'opacity-50' : ''}`}
-                >
-                  <td className="px-4 py-3">
-                    <div>
-                      <p className="font-medium text-gray-900">{task.title}</p>
-                      {task.description && (
-                        <p className="text-xs text-gray-500 truncate max-w-xs">
-                          {task.description}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {getQueueName(task.queue_id)}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700 capitalize">
-                    {formatRecurrence(task)}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        task.is_active
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {task.is_active ? 'Active' : 'Paused'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => handleTriggerRecurring(task)}
-                      className="text-green-600 hover:text-green-800 text-sm mr-2"
-                      title="Create assignment now"
-                    >
-                      Run
-                    </button>
-                    <button
-                      onClick={() => handleToggleRecurringActive(task)}
-                      className={`text-sm mr-2 ${
-                        task.is_active
-                          ? 'text-yellow-600 hover:text-yellow-800'
-                          : 'text-green-600 hover:text-green-800'
-                      }`}
-                    >
-                      {task.is_active ? 'Pause' : 'Resume'}
-                    </button>
-                    <button
-                      onClick={() => openEditRecurringModal(task)}
-                      className="text-blue-600 hover:text-blue-800 text-sm mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedRecurringTask(task)
-                        setShowDeleteRecurringConfirm(true)
-                      }}
-                      className="text-red-600 hover:text-red-800 text-sm"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {recurringTasks.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                    No recurring assignments. Create one to automate assignment creation.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
       </div>
 
       {/* Task Detail Modal */}
@@ -1142,7 +1024,9 @@ export default function ProjectDetail() {
             <ProjectTypeahead
               projects={typeaheadProjects}
               selectedProjectId={projectForm.parent_project_id}
-              onChange={(parentId) => setProjectForm({ ...projectForm, parent_project_id: parentId })}
+              onChange={(parentId) =>
+                setProjectForm({ ...projectForm, parent_project_id: parentId })
+              }
               excludeIds={currentProjectId ? [currentProjectId] : []}
               placeholder="Search for parent project..."
             />
@@ -1224,7 +1108,6 @@ export default function ProjectDetail() {
             <p className="text-xs text-gray-500 mt-1">1 = highest, 10 = lowest</p>
           </div>
 
-          {/* Recurrence Settings */}
           <div className="border-t pt-4 mt-4">
             <h4 className="text-sm font-medium text-gray-900 mb-3">Schedule</h4>
             <div className="space-y-3">
@@ -1254,7 +1137,10 @@ export default function ProjectDetail() {
                     type="number"
                     value={recurringForm.interval}
                     onChange={(e) =>
-                      setRecurringForm({ ...recurringForm, interval: parseInt(e.target.value) || 1 })
+                      setRecurringForm({
+                        ...recurringForm,
+                        interval: parseInt(e.target.value) || 1,
+                      })
                     }
                     className="w-20 border border-gray-300 rounded-md px-3 py-2"
                     min={1}
@@ -1298,7 +1184,10 @@ export default function ProjectDetail() {
                     type="number"
                     value={recurringForm.day_of_month}
                     onChange={(e) =>
-                      setRecurringForm({ ...recurringForm, day_of_month: parseInt(e.target.value) || 1 })
+                      setRecurringForm({
+                        ...recurringForm,
+                        day_of_month: parseInt(e.target.value) || 1,
+                      })
                     }
                     className="w-20 border border-gray-300 rounded-md px-3 py-2"
                     min={1}

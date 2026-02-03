@@ -1005,6 +1005,14 @@ export interface ProjectCustomField {
   value: string
 }
 
+export interface ProjectComment {
+  id: string
+  content: string
+  author_id: string
+  author_name: string
+  created_at: string
+}
+
 export interface Project {
   _id?: string
   id: string
@@ -1019,6 +1027,7 @@ export interface Project {
   custom_fields?: ProjectCustomField[]
   next_steps?: string
   ai_suggestions?: string
+  comments?: ProjectComment[]
   created_at: string
   updated_at?: string
 }
@@ -1045,6 +1054,7 @@ export interface UpdateProjectRequest {
   custom_fields?: ProjectCustomField[]
   next_steps?: string
   ai_suggestions?: string
+  comments?: ProjectComment[]
 }
 
 // Backlog types

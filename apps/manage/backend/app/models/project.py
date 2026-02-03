@@ -25,6 +25,15 @@ class ProjectCustomField(BaseModel):
     value: str
 
 
+class ProjectComment(BaseModel):
+    """A comment on a project."""
+    id: str  # UUID
+    content: str  # HTML content for rich text
+    author_id: str  # User ID
+    author_name: str
+    created_at: str  # ISO timestamp
+
+
 class Project(MongoModel):
     """Project model - hierarchical containers for tasks."""
     organization_id: str  # UUID from Identity service
@@ -44,6 +53,7 @@ class Project(MongoModel):
     custom_fields: list[ProjectCustomField] = Field(default_factory=list)
     next_steps: Optional[str] = None
     ai_suggestions: Optional[str] = None
+    comments: list[ProjectComment] = Field(default_factory=list)
 
 
 class ProjectCreate(BaseModel):
@@ -70,3 +80,4 @@ class ProjectUpdate(BaseModel):
     custom_fields: Optional[list[ProjectCustomField]] = None
     next_steps: Optional[str] = None
     ai_suggestions: Optional[str] = None
+    comments: Optional[list[ProjectComment]] = None
