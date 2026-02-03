@@ -21,6 +21,8 @@ vi.mock('../../../services/api', () => ({
     getUsers: vi.fn(() => Promise.resolve([])),
     getTeams: vi.fn(() => Promise.resolve([])),
     getMonitorStats: vi.fn(() => Promise.resolve({ total: 0 })),
+    getPlaybooks: vi.fn(() => Promise.resolve([])),
+    getProjects: vi.fn(() => Promise.resolve([])),
   },
 }))
 
@@ -137,6 +139,40 @@ describe('Widgets', () => {
         </BrowserRouter>
       )
       expect(screen.getByText('All (0)')).toBeInTheDocument()
+    })
+
+    it('clears selected task when focusing on add task input', async () => {
+      const { fireEvent } = await import('@testing-library/react')
+      vi.mocked(useAppStore).mockReturnValue({
+        ...mockAppStoreDefault,
+        tasks: [
+          { id: '1', _id: '1', title: 'Task 1', status: 'queued', queue_id: 'q1', created_at: new Date().toISOString() },
+        ],
+        queues: [
+          { id: 'q1', _id: 'q1', purpose: 'My Tasks', scope_type: 'user', scope_id: 'user-1' },
+        ],
+        fetchTasks: vi.fn(),
+      } as unknown as ReturnType<typeof useAppStore>)
+
+      render(
+        <BrowserRouter>
+          <MyActiveTasksWidget {...mockWidgetProps} />
+        </BrowserRouter>
+      )
+
+      // Click on task to select it (opens edit panel)
+      const task = screen.getByText('Task 1')
+      fireEvent.click(task)
+
+      // Edit panel should be visible
+      expect(screen.getByPlaceholderText('Task title')).toBeInTheDocument()
+
+      // Focus on "Add task..." input should close the edit panel
+      const addTaskInput = screen.getByPlaceholderText('Add task...')
+      fireEvent.focus(addTaskInput)
+
+      // Edit panel should no longer show the task title input
+      expect(screen.queryByPlaceholderText('Task title')).not.toBeInTheDocument()
     })
   })
 
