@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '../test/test-utils'
 import userEvent from '@testing-library/user-event'
 import MagicCodePage from './MagicCodePage'
@@ -12,19 +12,23 @@ vi.mock('../services/api', () => ({
   setOrganizationId: vi.fn(),
 }))
 
-// Mock useNavigate
+// Mock useNavigate and useSearchParams
 const mockNavigate = vi.fn()
+let mockSearchParams = new URLSearchParams()
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom')
   return {
     ...actual,
     useNavigate: () => mockNavigate,
+    useSearchParams: () => [mockSearchParams],
   }
 })
 
 describe('MagicCodePage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSearchParams = new URLSearchParams()
   })
 
   describe('Email Step', () => {
@@ -225,6 +229,114 @@ describe('MagicCodePage', () => {
       await waitFor(() => {
         expect(screen.getByText(/sign in with email code/i)).toBeInTheDocument()
       })
+    })
+  })
+
+  describe('Return URL Redirect', () => {
+    const mockVerifyResponse = {
+      session_token: 'token-123',
+      expires_at: '2026-12-31T00:00:00Z',
+      user: {
+        id: 'user-123',
+        name: 'Test User',
+        email: 'test@expertly.com',
+        organization_id: 'org-123',
+        organization_name: 'Test Org',
+        role: 'member',
+        avatar_url: null,
+      },
+    }
+
+    let originalLocation: Location
+
+    beforeEach(() => {
+      // Save original location
+      originalLocation = window.location
+      // Mock window.location
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: { ...originalLocation, href: '' },
+        writable: true,
+      })
+    })
+
+    afterEach(() => {
+      // Restore original location
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+        writable: true,
+      })
+    })
+
+    const setupCodeStepWithReturnUrl = async (returnUrlParam: string) => {
+      mockSearchParams = new URLSearchParams(returnUrlParam)
+
+      const { authApi } = await import('../services/api')
+      const mockRequestMagicCode = vi.mocked(authApi.requestMagicCode)
+      mockRequestMagicCode.mockResolvedValue({ message: 'Code sent', expires_in_minutes: 15 })
+
+      const user = userEvent.setup()
+      render(<MagicCodePage />)
+
+      await user.type(screen.getByPlaceholderText(/you@expertly.com/i), 'test@expertly.com')
+      await user.click(screen.getByRole('button', { name: /send login code/i }))
+
+      await waitFor(() => {
+        expect(screen.getByText(/enter the 6-character code/i)).toBeInTheDocument()
+      })
+
+      return { user, authApi }
+    }
+
+    it('redirects to return_url (snake_case) after successful verification', async () => {
+      const { user, authApi } = await setupCodeStepWithReturnUrl('return_url=https://vibetest.ai.devintensive.com')
+      const mockVerifyMagicCode = vi.mocked(authApi.verifyMagicCode)
+      mockVerifyMagicCode.mockResolvedValue(mockVerifyResponse)
+
+      const inputs = screen.getAllByRole('textbox')
+      await user.type(inputs[0], 'ABC123')
+
+      await user.click(screen.getByRole('button', { name: /verify code/i }))
+
+      await waitFor(() => {
+        expect(window.location.href).toBe('https://vibetest.ai.devintensive.com')
+      })
+      // Should NOT navigate internally when redirecting externally
+      expect(mockNavigate).not.toHaveBeenCalled()
+    })
+
+    it('redirects to returnUrl (camelCase) after successful verification', async () => {
+      const { user, authApi } = await setupCodeStepWithReturnUrl('returnUrl=https://manage.ai.devintensive.com')
+      const mockVerifyMagicCode = vi.mocked(authApi.verifyMagicCode)
+      mockVerifyMagicCode.mockResolvedValue(mockVerifyResponse)
+
+      const inputs = screen.getAllByRole('textbox')
+      await user.type(inputs[0], 'ABC123')
+
+      await user.click(screen.getByRole('button', { name: /verify code/i }))
+
+      await waitFor(() => {
+        expect(window.location.href).toBe('https://manage.ai.devintensive.com')
+      })
+      // Should NOT navigate internally when redirecting externally
+      expect(mockNavigate).not.toHaveBeenCalled()
+    })
+
+    it('passes return_url to login link', () => {
+      mockSearchParams = new URLSearchParams('return_url=https://vibetest.ai.devintensive.com')
+      render(<MagicCodePage />)
+
+      const loginLink = screen.getByRole('link', { name: /sign in with password instead/i })
+      expect(loginLink).toHaveAttribute('href', expect.stringContaining('return_url='))
+    })
+
+    it('passes returnUrl to login link', () => {
+      mockSearchParams = new URLSearchParams('returnUrl=https://vibetest.ai.devintensive.com')
+      render(<MagicCodePage />)
+
+      const loginLink = screen.getByRole('link', { name: /sign in with password instead/i })
+      expect(loginLink).toHaveAttribute('href', expect.stringContaining('return_url='))
     })
   })
 })

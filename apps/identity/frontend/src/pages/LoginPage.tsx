@@ -6,7 +6,8 @@ import { authApi, setOrganizationId } from '../services/api'
 export default function LoginPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const returnUrl = searchParams.get('return_url')
+  // Support both snake_case and camelCase for backwards compatibility
+  const returnUrl = searchParams.get('return_url') || searchParams.get('returnUrl')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
