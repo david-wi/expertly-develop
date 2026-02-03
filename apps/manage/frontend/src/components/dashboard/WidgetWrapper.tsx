@@ -26,7 +26,12 @@ export function WidgetWrapper({ widgetId, title, children, headerAction }: Widge
           {headerAction}
           {editMode && (
             <button
-              onClick={() => removeWidget(widgetId)}
+              onClick={(e) => {
+                e.stopPropagation()
+                removeWidget(widgetId)
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
               title="Remove widget"
             >

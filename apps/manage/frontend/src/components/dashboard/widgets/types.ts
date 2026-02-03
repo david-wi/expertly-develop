@@ -22,6 +22,8 @@ export interface WidgetDefinition {
   minSize?: { w: number; h: number }
   maxSize?: { w: number; h: number }
   component: React.ComponentType<WidgetProps>
+  requiresConfig?: 'queue' | 'team' | 'user'
+  allowMultiple?: boolean
 }
 
 export interface WidgetInstance {
