@@ -16,32 +16,40 @@ interface StatCardProps {
 function StatCard({ label, value, icon, color, tooltip, trend }: StatCardProps) {
   const colorStyles = {
     blue: {
-      bg: 'bg-blue-50',
-      iconBg: 'bg-blue-100',
-      iconColor: 'text-blue-600',
+      gradient: 'from-blue-50 to-blue-100/50',
+      border: 'border-blue-200/60',
+      iconBg: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      iconShadow: 'shadow-blue-500/25',
       valueColor: 'text-blue-700',
       trendColor: 'text-blue-600',
+      trendBg: 'bg-blue-100/80',
     },
     green: {
-      bg: 'bg-emerald-50',
-      iconBg: 'bg-emerald-100',
-      iconColor: 'text-emerald-600',
+      gradient: 'from-emerald-50 to-emerald-100/50',
+      border: 'border-emerald-200/60',
+      iconBg: 'bg-gradient-to-br from-emerald-500 to-emerald-600',
+      iconShadow: 'shadow-emerald-500/25',
       valueColor: 'text-emerald-700',
       trendColor: 'text-emerald-600',
+      trendBg: 'bg-emerald-100/80',
     },
     purple: {
-      bg: 'bg-violet-50',
-      iconBg: 'bg-violet-100',
-      iconColor: 'text-violet-600',
+      gradient: 'from-violet-50 to-violet-100/50',
+      border: 'border-violet-200/60',
+      iconBg: 'bg-gradient-to-br from-violet-500 to-violet-600',
+      iconShadow: 'shadow-violet-500/25',
       valueColor: 'text-violet-700',
       trendColor: 'text-violet-600',
+      trendBg: 'bg-violet-100/80',
     },
     amber: {
-      bg: 'bg-amber-50',
-      iconBg: 'bg-amber-100',
-      iconColor: 'text-amber-600',
+      gradient: 'from-amber-50 to-amber-100/50',
+      border: 'border-amber-200/60',
+      iconBg: 'bg-gradient-to-br from-amber-500 to-amber-600',
+      iconShadow: 'shadow-amber-500/25',
       valueColor: 'text-amber-700',
       trendColor: 'text-amber-600',
+      trendBg: 'bg-amber-100/80',
     },
   }
 
@@ -49,22 +57,32 @@ function StatCard({ label, value, icon, color, tooltip, trend }: StatCardProps) 
 
   return (
     <Tooltip content={tooltip} position="top">
-      <div className={`${styles.bg} rounded-xl p-4 transition-all hover:shadow-md cursor-default`}>
-        <div className="flex items-center justify-between">
-          <div className={`${styles.iconBg} ${styles.iconColor} p-2 rounded-lg`}>
+      <div
+        className={`bg-gradient-to-br ${styles.gradient} border ${styles.border} rounded-2xl p-5 transition-all duration-200 hover:shadow-lg hover:scale-[1.02] cursor-default h-full flex flex-col justify-between min-h-[120px]`}
+      >
+        <div className="flex items-start justify-between">
+          <div
+            className={`${styles.iconBg} text-white p-2.5 rounded-xl shadow-lg ${styles.iconShadow}`}
+          >
             {icon}
           </div>
-          <div className="flex items-center gap-2">
-            {trend && (
-              <div className={`flex items-center gap-1 text-xs font-medium ${styles.trendColor}`}>
-                <TrendingUp className="w-3 h-3" />
-                <span>{trend.value}</span>
-              </div>
-            )}
-            <p className={`text-3xl font-bold ${styles.valueColor}`}>{value}</p>
+          <div className="text-right">
+            <p className={`text-3xl font-bold ${styles.valueColor} tracking-tight`}>{value}</p>
           </div>
         </div>
-        <p className="text-sm text-gray-600 mt-2">{label}</p>
+        <div className="flex items-center justify-between mt-3">
+          <p className="text-sm font-medium text-gray-600">{label}</p>
+          <div className="h-5">
+            {trend && trend.value > 0 && (
+              <div
+                className={`flex items-center gap-1 text-xs font-semibold ${styles.trendColor} ${styles.trendBg} px-2 py-0.5 rounded-full`}
+              >
+                <TrendingUp className="w-3 h-3" />
+                <span>+{trend.value}</span>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </Tooltip>
   )
@@ -101,7 +119,7 @@ export function StatsOverviewWidget({ widgetId }: WidgetProps) {
   return (
     <WidgetWrapper widgetId={widgetId} title="Overview">
       <div className="p-4">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 auto-rows-fr">
           <StatCard
             label="Active Tasks"
             value={activeTasks.length}
