@@ -17,9 +17,13 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [newTaskTitle, setNewTaskTitle] = useState('')
   const [newTaskInstructions, setNewTaskInstructions] = useState('')
   const [isCreating, setIsCreating] = useState(false)
-  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const instructionsRef = useRef<HTMLTextAreaElement>(null)
+  const editTitleRef = useRef<HTMLInputElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -208,6 +212,56 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }
 
+  // Start editing a task in the side panel
+  const startEditing = (taskId: string) => {
+    const task = activeTasks.find(t => (t._id || t.id) === taskId)
+    if (task) {
+      setEditingTaskId(taskId)
+      setEditTitle(task.title)
+      setEditDescription(task.description || '')
+      // Focus the title input after render
+      setTimeout(() => editTitleRef.current?.focus(), 0)
+    }
+  }
+
+  // Save edited task
+  const saveEditedTask = async () => {
+    if (!editingTaskId || isSaving) return
+
+    const originalTask = activeTasks.find(t => (t._id || t.id) === editingTaskId)
+    if (!originalTask) return
+
+    // Only save if something changed
+    if (editTitle === originalTask.title && editDescription === (originalTask.description || '')) {
+      return
+    }
+
+    if (!editTitle.trim()) return
+
+    setIsSaving(true)
+    try {
+      await api.updateTask(editingTaskId, {
+        title: editTitle.trim(),
+        description: editDescription.trim() || undefined,
+      })
+      fetchTasks()
+    } catch (err) {
+      console.error('Failed to update task:', err)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  // Close the edit panel
+  const closeEditPanel = () => {
+    if (editingTaskId) {
+      saveEditedTask()
+    }
+    setEditingTaskId(null)
+    setEditTitle('')
+    setEditDescription('')
+  }
+
   return (
   <>
     <WidgetWrapper widgetId={widgetId} title="My Active Tasks" headerAction={headerAction}>
@@ -275,7 +329,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
         <div className="flex-1 flex overflow-hidden">
           {/* Task list (left side) */}
-          <div className={`${hoveredTaskId ? 'w-1/2' : 'flex-1'} overflow-auto border-r border-gray-100 transition-all`} ref={dragRef}>
+          <div className={`${editingTaskId ? 'w-1/2' : 'flex-1'} overflow-auto border-r border-gray-100 transition-all`} ref={dragRef}>
             {/* Quick task creation row */}
             {defaultQueue && (
               <div className="flex items-start gap-2 px-2 py-1.5 border-b border-gray-100 bg-gray-50/50">
@@ -325,7 +379,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                   const queueName = queue ? getQueueDisplayName(queue) : 'Unknown'
                   const isDragging = draggedTaskId === taskId
                   const isDragOver = dragOverTaskId === taskId
-                  const isHovered = hoveredTaskId === taskId
+                  const isSelected = editingTaskId === taskId
 
                   return (
                     <div
@@ -336,11 +390,10 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       onDragLeave={handleDragLeave}
                       onDrop={(e) => handleDrop(e, taskId)}
                       onDragEnd={handleDragEnd}
-                      onMouseEnter={() => setHoveredTaskId(taskId)}
-                      onMouseLeave={() => setHoveredTaskId(null)}
+                      onClick={() => startEditing(taskId)}
                       className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 transition-colors cursor-pointer ${
                         isDragging ? 'opacity-50 bg-gray-100' : ''
-                      } ${isDragOver ? 'border-t-2 border-primary-500' : ''} ${isHovered ? 'bg-primary-50' : ''}`}
+                      } ${isDragOver ? 'border-t-2 border-primary-500' : ''} ${isSelected ? 'bg-primary-50 border-l-2 border-primary-500' : ''}`}
                       title={queueName}
                     >
                       {/* Drag handle */}
@@ -352,13 +405,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
                       {/* Task content */}
                       <div className="flex-1 min-w-0">
-                        <p
-                          className="text-xs font-medium text-gray-900 truncate cursor-pointer hover:text-primary-600"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedTaskId(taskId)
-                          }}
-                        >
+                        <p className={`text-xs font-medium truncate ${isSelected ? 'text-primary-700' : 'text-gray-900'}`}>
                           {task.title}
                         </p>
                       </div>
@@ -369,33 +416,79 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             )}
           </div>
 
-          {/* Detail panel (right side) - shows on hover */}
-          {hoveredTaskId && (() => {
-            const hoveredTask = activeTasks.find(t => (t._id || t.id) === hoveredTaskId)
-            if (!hoveredTask) return null
+          {/* Editable detail panel (right side) - shows on click */}
+          {editingTaskId && (() => {
+            const editingTask = activeTasks.find(t => (t._id || t.id) === editingTaskId)
+            if (!editingTask) return null
             return (
-              <div className="w-1/2 p-3 overflow-auto bg-gray-50/50">
-                <div className="space-y-2">
-                  {hoveredTask.description ? (
-                    <div>
-                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1">Instructions</p>
-                      <p className="text-xs text-gray-700 whitespace-pre-wrap">{hoveredTask.description}</p>
-                    </div>
-                  ) : (
-                    <p className="text-xs text-gray-400 italic">No instructions</p>
-                  )}
-                  {hoveredTask.playbook_id && (
+              <div className="w-1/2 p-3 overflow-auto bg-gray-50/50 border-l border-gray-200">
+                <div className="space-y-3">
+                  {/* Editable title */}
+                  <div>
+                    <input
+                      ref={editTitleRef}
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onBlur={saveEditedTask}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          saveEditedTask()
+                        } else if (e.key === 'Escape') {
+                          closeEditPanel()
+                        }
+                      }}
+                      disabled={isSaving}
+                      className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                      placeholder="Task title"
+                    />
+                  </div>
+
+                  {/* Editable instructions */}
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1 block">
+                      Instructions
+                    </label>
+                    <textarea
+                      value={editDescription}
+                      onChange={(e) => setEditDescription(e.target.value)}
+                      onBlur={saveEditedTask}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          closeEditPanel()
+                        }
+                      }}
+                      disabled={isSaving}
+                      rows={4}
+                      className="w-full text-xs text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200 resize-none"
+                      placeholder="Add instructions..."
+                    />
+                  </div>
+
+                  {/* Playbook info (read-only for now) */}
+                  {editingTask.playbook_id && (
                     <div>
                       <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1">Playbook</p>
-                      <p className="text-xs text-primary-600">{hoveredTask.playbook_id}</p>
+                      <p className="text-xs text-primary-600">{editingTask.playbook_id}</p>
                     </div>
                   )}
-                  <button
-                    onClick={() => setSelectedTaskId(hoveredTaskId)}
-                    className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-                  >
-                    Open details →
-                  </button>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => setSelectedTaskId(editingTaskId)}
+                      className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+                    >
+                      Full details →
+                    </button>
+                    <button
+                      onClick={closeEditPanel}
+                      className="text-xs text-gray-500 hover:text-gray-700"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
               </div>
             )
