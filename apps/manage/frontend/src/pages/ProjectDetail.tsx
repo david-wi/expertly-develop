@@ -576,13 +576,11 @@ export default function ProjectDetail() {
       {/* Two-Column Layout */}
       <div className="flex gap-6">
         {/* Left Column - Subprojects + Assignments */}
-        <div className="w-72 flex-shrink-0 space-y-3">
+        <div className="w-1/2 space-y-3">
           {/* Subprojects */}
           <div className="bg-white shadow rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                Subprojects
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900">Subprojects</h3>
               <Link
                 to={`/projects?parent=${id}`}
                 className="text-blue-600 hover:text-blue-800 text-xs"
@@ -619,9 +617,7 @@ export default function ProjectDetail() {
           {/* Assignments */}
           <div className="bg-white shadow rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                Assignments
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900">Assignments</h3>
               <span className="text-[10px] text-gray-400">{activeTasks.length} active</span>
             </div>
             {/* Tabs */}
@@ -744,6 +740,28 @@ export default function ProjectDetail() {
 
         {/* Right Column - Project Details (half width) */}
         <div className="w-1/2 space-y-3">
+          {/* Next Steps */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-gray-900">Next Steps</h3>
+              {localNextSteps && (
+                <button
+                  onClick={() => handleCopy(localNextSteps)}
+                  className="text-gray-400 hover:text-gray-600 text-xs"
+                >
+                  Copy
+                </button>
+              )}
+            </div>
+            <textarea
+              value={localNextSteps}
+              onChange={(e) => setLocalNextSteps(e.target.value)}
+              onBlur={handleNextStepsBlur}
+              placeholder="Write next steps..."
+              className="w-full text-xs text-gray-700 border-0 bg-transparent px-0 py-1 outline-none resize-none min-h-[60px] placeholder-gray-300"
+            />
+          </div>
+
           {/* Resources */}
           <div
             className={`bg-white shadow rounded-lg p-3 transition-colors ${
@@ -754,9 +772,7 @@ export default function ProjectDetail() {
             onDrop={handleFileDrop}
           >
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                Resources
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900">Resources</h3>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="text-blue-600 hover:text-blue-800 text-xs"
@@ -819,9 +835,7 @@ export default function ProjectDetail() {
 
           {/* Fields & Values */}
           <div className="bg-white shadow rounded-lg p-3">
-            <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">
-              Fields & Values
-            </h3>
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Fields & Values</h3>
 
             <div className="space-y-1">
               {localFields.map((field, idx) => (
@@ -857,36 +871,10 @@ export default function ProjectDetail() {
             </div>
           </div>
 
-          {/* Next Steps */}
-          <div className="bg-white shadow rounded-lg p-3">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                Next Steps
-              </h3>
-              {localNextSteps && (
-                <button
-                  onClick={() => handleCopy(localNextSteps)}
-                  className="text-gray-400 hover:text-gray-600 text-xs"
-                >
-                  Copy
-                </button>
-              )}
-            </div>
-            <textarea
-              value={localNextSteps}
-              onChange={(e) => setLocalNextSteps(e.target.value)}
-              onBlur={handleNextStepsBlur}
-              placeholder="Write next steps..."
-              className="w-full text-xs text-gray-700 border-0 bg-transparent px-0 py-1 outline-none resize-none min-h-[60px] placeholder-gray-300"
-            />
-          </div>
-
           {/* AI Suggestions */}
           <div className="bg-white shadow rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
-                AI Suggestions
-              </h3>
+              <h3 className="text-sm font-semibold text-gray-900">AI Suggestions</h3>
               {project.ai_suggestions && (
                 <button
                   onClick={() => handleCopy(project.ai_suggestions || '')}
@@ -902,62 +890,75 @@ export default function ProjectDetail() {
               <p className="text-xs text-gray-300 italic">No AI suggestions available</p>
             )}
           </div>
+        </div>
+      </div>
 
-          {/* Discussion */}
-          <div className="bg-white shadow rounded-lg p-3">
-            <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide mb-2">
-              Discussion
-            </h3>
+      {/* Discussion - Full Width */}
+      <div className="bg-white shadow rounded-lg p-4">
+        <h3 className="text-sm font-medium text-gray-900 mb-4">Discussion</h3>
 
-            {/* Add comment */}
-            <div className="mb-3">
-              <textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="w-full text-xs text-gray-700 border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-blue-300 resize-none min-h-[50px] placeholder-gray-300"
-              />
-              {newComment.trim() && (
-                <div className="flex justify-end mt-1">
-                  <button
-                    onClick={handleAddComment}
-                    className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
-                  >
-                    Post
-                  </button>
-                </div>
-              )}
-            </div>
+        {/* Add comment */}
+        <div className="flex gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm font-medium">D</span>
+          </div>
+          <div className="flex-1">
+            <textarea
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Add a comment..."
+              className="w-full text-sm text-gray-700 border border-gray-200 rounded-lg px-3 py-2 outline-none focus:border-blue-300 focus:ring-1 focus:ring-blue-300 resize-none min-h-[80px] placeholder-gray-400"
+            />
+            {newComment.trim() && (
+              <div className="flex justify-end mt-2">
+                <button
+                  onClick={handleAddComment}
+                  className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Post Comment
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
-            {/* Comments list (newest first) */}
-            {localComments.length > 0 ? (
-              <div className="space-y-3">
-                {localComments.map((comment) => (
-                  <div key={comment.id} className="group">
+        {/* Comments list (newest first) */}
+        {localComments.length > 0 ? (
+          <div className="space-y-4 divide-y divide-gray-100">
+            {localComments.map((comment) => (
+              <div key={comment.id} className="group pt-4 first:pt-0">
+                <div className="flex gap-3">
+                  {/* Avatar */}
+                  <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-sm font-medium">
+                      {comment.author_name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium text-gray-900">{comment.author_name}</span>
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-sm font-medium text-gray-900">{comment.author_name}</span>
+                      <span className="text-xs text-gray-400">
                         {formatRelativeTime(comment.created_at)}
                       </span>
                       <button
                         onClick={() => handleDeleteComment(comment.id)}
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-[10px] ml-auto"
+                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs ml-auto"
                       >
                         Delete
                       </button>
                     </div>
                     <div
-                      className="text-xs text-gray-700"
+                      className="text-sm text-gray-700 prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: comment.content }}
                     />
                   </div>
-                ))}
+                </div>
               </div>
-            ) : (
-              <p className="text-xs text-gray-300 italic">No comments yet</p>
-            )}
+            ))}
           </div>
-        </div>
+        ) : (
+          <p className="text-sm text-gray-400 text-center py-8">No comments yet. Start the discussion!</p>
+        )}
       </div>
 
       {/* Task Detail Modal */}
