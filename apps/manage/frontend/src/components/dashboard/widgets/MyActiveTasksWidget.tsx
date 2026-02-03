@@ -4,6 +4,7 @@ import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
 import { api, User as UserType, Team, TaskReorderItem } from '../../../services/api'
+import TaskDetailModal from '../../../components/TaskDetailModal'
 
 export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const { user, tasks, queues, loading, fetchTasks } = useAppStore()
@@ -12,6 +13,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [teams, setTeams] = useState<Team[]>([])
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const dragRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -96,22 +98,22 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     const targetSeq = targetTask.sequence ?? 0
 
     if (draggedIndex < targetIndex) {
-      // Moving down - place after target
+      // Moving down - place after target (need LARGER sequence)
       const nextTask = activeTasks[targetIndex + 1]
       if (nextTask) {
         const nextSeq = nextTask.sequence ?? targetSeq + 2
         newSequence = (targetSeq + nextSeq) / 2
       } else {
-        newSequence = targetSeq - 1
+        newSequence = targetSeq + 1
       }
     } else {
-      // Moving up - place before target
+      // Moving up - place before target (need SMALLER sequence)
       const prevTask = activeTasks[targetIndex - 1]
       if (prevTask) {
         const prevSeq = prevTask.sequence ?? targetSeq - 2
         newSequence = (prevSeq + targetSeq) / 2
       } else {
-        newSequence = targetSeq + 1
+        newSequence = targetSeq - 1
       }
     }
 
@@ -134,6 +136,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   }
 
   return (
+  <>
     <WidgetWrapper widgetId={widgetId} title="My Active Tasks" headerAction={headerAction}>
       <div className="flex flex-col h-full">
         <div className="px-3 py-2 flex flex-wrap gap-1.5 border-b border-gray-100">
@@ -234,7 +237,15 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
                     {/* Task content */}
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-gray-900 truncate">{task.title}</p>
+                      <p
+                        className="text-xs font-medium text-gray-900 truncate cursor-pointer hover:text-primary-600"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setSelectedTaskId(taskId)
+                        }}
+                      >
+                        {task.title}
+                      </p>
                     </div>
                   </div>
                 )
@@ -252,5 +263,15 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         )}
       </div>
     </WidgetWrapper>
+
+    {selectedTaskId && (
+      <TaskDetailModal
+        taskId={selectedTaskId}
+        isOpen={!!selectedTaskId}
+        onClose={() => setSelectedTaskId(null)}
+        onUpdate={() => fetchTasks()}
+      />
+    )}
+  </>
   )
 }
