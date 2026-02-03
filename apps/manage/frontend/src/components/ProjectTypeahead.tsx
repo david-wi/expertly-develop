@@ -83,20 +83,29 @@ export default function ProjectTypeahead({
   // Build depth map for hierarchy display
   const depthMap = useMemo(() => buildDepthMap(projects), [projects])
 
-  // Filter projects
+  // Filter and sort projects - alphabetically within each group (siblings at same level)
   const filteredProjects = useMemo(() => {
-    return projects
-      .filter((p) => {
-        if (excludeSet.has(p.id)) return false
-        if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
-        return true
-      })
-      .sort((a, b) => {
-        // Sort by hierarchy path
-        const aPath = getProjectPath(a.id, projects)
-        const bPath = getProjectPath(b.id, projects)
-        return aPath.localeCompare(bPath)
-      })
+    const filtered = projects.filter((p) => {
+      if (excludeSet.has(p.id)) return false
+      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+
+    // Build tree and flatten with alphabetical sorting at each level
+    const buildSortedTree = (parentId: string | null): ProjectOption[] => {
+      const children = filtered
+        .filter((p) => (p.parent_project_id || null) === parentId)
+        .sort((a, b) => a.name.localeCompare(b.name))
+
+      const result: ProjectOption[] = []
+      for (const child of children) {
+        result.push(child)
+        result.push(...buildSortedTree(child.id))
+      }
+      return result
+    }
+
+    return buildSortedTree(null)
   }, [projects, excludeSet, search])
 
   // Get selected project
@@ -203,22 +212,4 @@ export default function ProjectTypeahead({
       )}
     </div>
   )
-}
-
-// Helper to get the full path of a project
-function getProjectPath(projectId: string, projects: ProjectOption[]): string {
-  const projectMap = new Map<string, ProjectOption>()
-  for (const p of projects) {
-    projectMap.set(p.id, p)
-  }
-
-  const path: string[] = []
-  let currentId: string | null | undefined = projectId
-  while (currentId) {
-    const currentProject = projectMap.get(currentId)
-    if (!currentProject) break
-    path.unshift(currentProject.name)
-    currentId = currentProject.parent_project_id
-  }
-  return path.join(' → ')
 }

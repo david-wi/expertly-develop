@@ -13,6 +13,7 @@ import {
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
 import Breadcrumbs, { buildProjectBreadcrumbs } from '../components/Breadcrumbs'
+import ProjectTypeahead from '../components/ProjectTypeahead'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -320,77 +321,17 @@ export default function ProjectDetail() {
     return buildProjectBreadcrumbs(projectForBreadcrumb, allProjectsForBreadcrumb)
   }, [project, allProjects])
 
-  // Get all descendant IDs of a project (to prevent circular references)
-  const getDescendantIds = (projectId: string): Set<string> => {
-    const descendants = new Set<string>()
-    const findDescendants = (parentId: string) => {
-      for (const p of allProjects) {
-        const pId = p._id || p.id
-        if (p.parent_project_id === parentId) {
-          descendants.add(pId)
-          findDescendants(pId)
-        }
-      }
-    }
-    findDescendants(projectId)
-    return descendants
-  }
+  // Convert projects to format expected by ProjectTypeahead
+  const typeaheadProjects = useMemo(() => {
+    return allProjects.map((p) => ({
+      id: p._id || p.id,
+      name: p.name,
+      parent_project_id: p.parent_project_id,
+    }))
+  }, [allProjects])
 
-  // Get the display path for a project (shows hierarchy)
-  const getProjectPath = (projectId: string): string => {
-    const projectMap = new Map<string, Project>()
-    for (const p of allProjects) {
-      const pId = p._id || p.id
-      projectMap.set(pId, p)
-    }
-
-    const path: string[] = []
-    let currentId: string | null | undefined = projectId
-    while (currentId) {
-      const currentProject = projectMap.get(currentId)
-      if (!currentProject) break
-      path.unshift(currentProject.name)
-      currentId = currentProject.parent_project_id
-    }
-    return path.join(' → ')
-  }
-
-  // Get available parent projects (exclude current project and its descendants to prevent circular refs)
-  const availableParents = useMemo(() => {
-    if (!project) return []
-    const currentId = project._id || project.id
-    const excludedIds = new Set<string>()
-    excludedIds.add(currentId)
-    const descendants = getDescendantIds(currentId)
-    descendants.forEach((descId) => excludedIds.add(descId))
-
-    // Build depth map
-    const depthMap = new Map<string, number>()
-    const getDepth = (projectId: string): number => {
-      if (depthMap.has(projectId)) return depthMap.get(projectId)!
-      const p = allProjects.find((proj) => (proj._id || proj.id) === projectId)
-      if (!p || !p.parent_project_id) {
-        depthMap.set(projectId, 0)
-        return 0
-      }
-      const parentDepth = getDepth(p.parent_project_id)
-      const depth = parentDepth + 1
-      depthMap.set(projectId, depth)
-      return depth
-    }
-
-    return allProjects
-      .filter((p) => {
-        const pId = p._id || p.id
-        return !excludedIds.has(pId)
-      })
-      .map((p) => ({
-        project: p,
-        path: getProjectPath(p._id || p.id),
-        depth: getDepth(p._id || p.id),
-      }))
-      .sort((a, b) => a.path.localeCompare(b.path))
-  }, [project, allProjects])
+  // Get current project ID for exclusion
+  const currentProjectId = project ? (project._id || project.id) : undefined
 
   if (loading) {
     return (
@@ -800,20 +741,13 @@ export default function ProjectDetail() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Parent Project</label>
-            <select
-              value={projectForm.parent_project_id || ''}
-              onChange={(e) =>
-                setProjectForm({ ...projectForm, parent_project_id: e.target.value || null })
-              }
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            >
-              <option value="">None (top-level project)</option>
-              {availableParents.map(({ project: p, depth }) => (
-                <option key={p._id || p.id} value={p._id || p.id}>
-                  {'─'.repeat(depth)}{depth > 0 ? ' ' : ''}{p.name}
-                </option>
-              ))}
-            </select>
+            <ProjectTypeahead
+              projects={typeaheadProjects}
+              selectedProjectId={projectForm.parent_project_id}
+              onChange={(parentId) => setProjectForm({ ...projectForm, parent_project_id: parentId })}
+              excludeIds={currentProjectId ? [currentProjectId] : []}
+              placeholder="Search for parent project..."
+            />
           </div>
           <ModalFooter>
             <button
