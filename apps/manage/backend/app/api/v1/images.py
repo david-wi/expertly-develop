@@ -111,8 +111,9 @@ async def generate_project_avatar(
         prompt = f"""Simple, minimalist white icon or logo design on a solid black background.
 User's description: {request.custom_prompt}
 Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000).
-Keep the design very simple - it needs to be recognizable even at very small sizes (16x16 pixels).
-Do NOT include any border, frame, or outline around the edge of the image.
+IMPORTANT: The icon must be LARGE, filling approximately 85-90% of the image area. Leave only a small 5-8% margin/buffer around the edges.
+Keep the design simple - it needs to be recognizable at small sizes.
+Do NOT include any border, frame, decorative outline, or box around the icon.
 Square format, solid black background, white icon only."""
     else:
         # Generate based on project name and description
@@ -122,8 +123,9 @@ Project name: "{request.project_name}"
 {description_text}
 Create a simple icon or symbol that represents this project's theme or purpose.
 Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000).
-Keep the design very simple - it needs to be recognizable even at very small sizes (16x16 pixels).
-Do NOT include any border, frame, or outline around the edge of the image.
+IMPORTANT: The icon must be LARGE, filling approximately 85-90% of the image area. Leave only a small 5-8% margin/buffer around the edges.
+Keep the design simple - it needs to be recognizable at small sizes.
+Do NOT include any border, frame, decorative outline, or box around the icon.
 Square format, solid black background, white icon only."""
 
     try:
