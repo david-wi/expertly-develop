@@ -520,6 +520,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       value={topTaskTitle}
                       onChange={(e) => setTopTaskTitle(e.target.value)}
                       onKeyDown={handleTopTitleKeyDown}
+                      onFocus={() => setEditingTaskId(null)}
                       disabled={isCreatingTop}
                       className="flex-1 text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
                     />
@@ -661,6 +662,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       value={bottomTaskTitle}
                       onChange={(e) => setBottomTaskTitle(e.target.value)}
                       onKeyDown={handleBottomTitleKeyDown}
+                      onFocus={() => setEditingTaskId(null)}
                       disabled={isCreatingBottom}
                       className="flex-1 text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
                     />
