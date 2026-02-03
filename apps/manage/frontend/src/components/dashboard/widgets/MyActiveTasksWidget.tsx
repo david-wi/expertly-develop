@@ -772,6 +772,10 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         setEditProjectId(projectId || '')
                         setTimeout(() => saveEditedTask(), 0)
                       }}
+                      onProjectCreated={() => {
+                        // Refresh projects list after creating a new one
+                        api.getProjects({ status: 'active' }).then(setProjects).catch(console.error)
+                      }}
                       placeholder="Search projects..."
                       disabled={isSaving}
                       className="text-xs"
