@@ -7,6 +7,7 @@ interface AppState {
   queues: Queue[]
   tasks: Task[]
   selectedQueueId: string | null
+  viewingUserId: string | null // For viewing another user's tasks
 
   // Loading states
   loading: {
@@ -23,6 +24,7 @@ interface AppState {
   setQueues: (queues: Queue[]) => void
   setTasks: (tasks: Task[]) => void
   setSelectedQueueId: (queueId: string | null) => void
+  setViewingUserId: (userId: string | null) => void
   setWsConnected: (connected: boolean) => void
 
   // Async actions
@@ -40,6 +42,7 @@ export const useAppStore = create<AppState>((set, _get) => ({
   queues: [],
   tasks: [],
   selectedQueueId: null,
+  viewingUserId: null,
   loading: {
     user: false,
     queues: false,
@@ -51,6 +54,7 @@ export const useAppStore = create<AppState>((set, _get) => ({
   setQueues: (queues) => set({ queues }),
   setTasks: (tasks) => set({ tasks }),
   setSelectedQueueId: (queueId) => set({ selectedQueueId: queueId }),
+  setViewingUserId: (userId) => set({ viewingUserId: userId }),
   setWsConnected: (connected) => set({ wsConnected: connected }),
 
   fetchUser: async () => {
