@@ -91,14 +91,25 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Hero Image */}
+          {/* Hero Video */}
           <div className="mt-16 relative max-w-5xl mx-auto">
             <div className="bg-gradient-to-b from-primary-100 to-primary-50 rounded-2xl shadow-2xl overflow-hidden border border-primary-200">
-              <img
-                src="/images/bot-office.png"
-                alt="AI specialists and humans working together in mission control"
+              <video
+                autoPlay
+                loop
+                muted
+                playsInline
+                preload="auto"
+                poster="/images/hero-poster.jpg"
                 className="w-full h-auto"
-              />
+              >
+                <source src="/images/hero-video.mp4" type="video/mp4" />
+                <img
+                  src="/images/hero-poster.jpg"
+                  alt="AI specialists and humans working together in mission control"
+                  className="w-full h-auto"
+                />
+              </video>
             </div>
           </div>
         </div>
