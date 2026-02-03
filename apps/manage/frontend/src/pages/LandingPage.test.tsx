@@ -21,9 +21,10 @@ describe('LandingPage', () => {
 
   it('displays the tagline pills', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('You')).toBeInTheDocument()
-    expect(screen.getByText('Your inner circle')).toBeInTheDocument()
-    expect(screen.getByText('AI specialists multiplying each one')).toBeInTheDocument()
+    // "You" appears in tagline pill and three-ring section
+    expect(screen.getAllByText('You').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Your best people')).toBeInTheDocument()
+    expect(screen.getByText('AI multiplying each one')).toBeInTheDocument()
   })
 
   it('renders Sign In link', () => {
@@ -36,57 +37,97 @@ describe('LandingPage', () => {
     expect(screen.getByText('Get Started')).toBeInTheDocument()
   })
 
-  it('renders Start Free Trial button', () => {
+  it('renders Start Free Trial buttons', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Start Free Trial')).toBeInTheDocument()
+    // Appears in hero and CTA sections
+    expect(screen.getAllByText('Start Free Trial').length).toBeGreaterThanOrEqual(2)
   })
 
-  it('renders See How It Works link', () => {
+  it('renders Watch Demo button', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('See How It Works')).toBeInTheDocument()
+    expect(screen.getByText('Watch Demo')).toBeInTheDocument()
   })
 
-  it('displays all capability cards', () => {
+  it('displays the stats bar with big numbers', () => {
     renderWithRouter(<LandingPage />)
-    // "Map Your Processes" and "Deploy AI Specialists" appear in capabilities and steps section
-    expect(screen.getAllByText('Map Your Processes').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Deploy AI Specialists').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Unified Task Hub')).toBeInTheDocument()
-    expect(screen.getByText('Proactive Head Starts')).toBeInTheDocument()
-    expect(screen.getByText('Multiply Leadership')).toBeInTheDocument()
-    expect(screen.getByText('Follow-Up Intelligence')).toBeInTheDocument()
+    expect(screen.getByText('10x')).toBeInTheDocument()
+    expect(screen.getByText('Zero')).toBeInTheDocument()
+    expect(screen.getByText('24/7')).toBeInTheDocument()
+    expect(screen.getByText('Team output multiplier')).toBeInTheDocument()
+    expect(screen.getByText('Tasks falling through cracks')).toBeInTheDocument()
+    expect(screen.getByText('AI specialists working for you')).toBeInTheDocument()
   })
 
-  it('displays capability descriptions', () => {
+  it('renders the three-ring model section', () => {
     renderWithRouter(<LandingPage />)
-    // These descriptions appear in multiple places
-    expect(screen.getAllByText(/Define who does what/).length).toBeGreaterThan(0)
-    expect(screen.getAllByText(/Gradually delegate steps to specialized AI/).length).toBeGreaterThan(0)
+    expect(screen.getByText(/The future isn't a bigger team/)).toBeInTheDocument()
+    expect(screen.getByText(/It's a better one/)).toBeInTheDocument()
   })
 
-  it('displays all benefits', () => {
+  it('displays the three rings - You, Inner Circle, AI Specialists', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Mission Control')).toBeInTheDocument()
-    expect(screen.getByText('Processes on autopilot')).toBeInTheDocument()
-    expect(screen.getByText('AI multiplies your team')).toBeInTheDocument()
-    expect(screen.getByText('Full context everywhere')).toBeInTheDocument()
-    expect(screen.getByText('Nothing falls through')).toBeInTheDocument()
-    expect(screen.getByText('Scale without chaos')).toBeInTheDocument()
+    // "You" appears in tagline pill and model section
+    expect(screen.getAllByText('You').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('Your Inner Circle')).toBeInTheDocument()
+    expect(screen.getByText('AI Specialists')).toBeInTheDocument()
+  })
+
+  it('displays inner circle role examples', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('Sales lead')).toBeInTheDocument()
+    expect(screen.getByText('Ops manager')).toBeInTheDocument()
+    expect(screen.getByText('Creative director')).toBeInTheDocument()
+  })
+
+  it('displays AI specialist examples', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('Sales AI')).toBeInTheDocument()
+    expect(screen.getByText('Support AI')).toBeInTheDocument()
+    expect(screen.getByText('Ops AI')).toBeInTheDocument()
+  })
+
+  it('renders the before/after comparison section', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('What changes')).toBeInTheDocument()
+    expect(screen.getByText('Without Expertly Manage')).toBeInTheDocument()
+    expect(screen.getByText('With Expertly Manage')).toBeInTheDocument()
+  })
+
+  it('displays before comparison points', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('Tasks scattered across 10 different tools')).toBeInTheDocument()
+    expect(screen.getByText('Constant context switching kills focus')).toBeInTheDocument()
+    expect(screen.getByText('Things fall through cracks weekly')).toBeInTheDocument()
+    expect(screen.getByText('Need more headcount to scale')).toBeInTheDocument()
+  })
+
+  it('displays after comparison points', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('One unified command center for everything')).toBeInTheDocument()
+    expect(screen.getByText('AI gathers context before you even start')).toBeInTheDocument()
+    expect(screen.getByText('Automatic follow-ups, nothing forgotten')).toBeInTheDocument()
+    expect(screen.getByText('Your 5-person team operates like 15')).toBeInTheDocument()
+  })
+
+  it('renders the social proof section', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText(/We went from 12 people drowning in coordination/)).toBeInTheDocument()
+    expect(screen.getByText('Engineering Director')).toBeInTheDocument()
+    expect(screen.getByText('Series B SaaS Company')).toBeInTheDocument()
   })
 
   it('renders the How It Works section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('From chaos to autopilot')).toBeInTheDocument()
-    expect(screen.getByText('Four steps to transform how your organization operates')).toBeInTheDocument()
+    expect(screen.getByText('How it works')).toBeInTheDocument()
+    expect(screen.getByText('From scattered chaos to smooth autopilot in four steps')).toBeInTheDocument()
   })
 
   it('displays the four steps', () => {
     renderWithRouter(<LandingPage />)
-    // Map Your Processes appears in both capabilities and steps
-    expect(screen.getAllByText('Map Your Processes').length).toBeGreaterThanOrEqual(2)
-    expect(screen.getAllByText('Deploy AI Specialists').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText('Unify in Mission Control')).toBeInTheDocument()
-    expect(screen.getByText('Let AI Push Forward')).toBeInTheDocument()
+    expect(screen.getByText('Map your processes')).toBeInTheDocument()
+    expect(screen.getByText('Deploy AI specialists')).toBeInTheDocument()
+    expect(screen.getByText('Unify everything')).toBeInTheDocument()
+    expect(screen.getByText('Let AI push forward')).toBeInTheDocument()
   })
 
   it('renders step numbers', () => {
@@ -97,10 +138,20 @@ describe('LandingPage', () => {
     expect(screen.getByText('4')).toBeInTheDocument()
   })
 
+  it('renders the integrations section', () => {
+    renderWithRouter(<LandingPage />)
+    expect(screen.getByText('Pulls work from everywhere')).toBeInTheDocument()
+    expect(screen.getByText('Email')).toBeInTheDocument()
+    expect(screen.getByText('Slack')).toBeInTheDocument()
+    expect(screen.getByText('Jira')).toBeInTheDocument()
+    expect(screen.getByText('Teamwork')).toBeInTheDocument()
+    expect(screen.getByText('+ more')).toBeInTheDocument()
+  })
+
   it('renders the CTA section', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Ready to build your Amplified Team?')).toBeInTheDocument()
-    expect(screen.getByText('Start Your Free Trial')).toBeInTheDocument()
+    expect(screen.getByText('Ready to amplify your team?')).toBeInTheDocument()
+    expect(screen.getByText('Book a Demo')).toBeInTheDocument()
   })
 
   it('renders the footer', () => {
@@ -118,37 +169,13 @@ describe('LandingPage', () => {
 
   it('has how-it-works section anchor', () => {
     renderWithRouter(<LandingPage />)
-    const howItWorksLink = screen.getByText('See How It Works')
-    expect(howItWorksLink.closest('a')).toHaveAttribute('href', '#how-it-works')
-  })
-
-  it('renders the vision section', () => {
-    renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/The future isn't a bigger org/)).toBeInTheDocument()
-    expect(screen.getByText('For You')).toBeInTheDocument()
-    expect(screen.getByText('For Your AI Specialists')).toBeInTheDocument()
-    expect(screen.getByText('For Your Leaders')).toBeInTheDocument()
+    const watchDemoLink = screen.getByText('Watch Demo')
+    expect(watchDemoLink.closest('a')).toHaveAttribute('href', '#demo')
   })
 
   it('renders the hero section with proper structure', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/Build a leaner, better organization/)).toBeInTheDocument()
-    expect(screen.getByText(/amplified by AI specialists/)).toBeInTheDocument()
-  })
-
-  it('renders the capabilities section heading', () => {
-    renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Everything you need to run on autopilot')).toBeInTheDocument()
-    expect(screen.getByText('From process mapping to proactive AI assistance')).toBeInTheDocument()
-  })
-
-  it('renders the integrations section', () => {
-    renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Pull work from everywhere')).toBeInTheDocument()
-    expect(screen.getByText('Email')).toBeInTheDocument()
-    expect(screen.getByText('Slack')).toBeInTheDocument()
-    expect(screen.getByText('Jira')).toBeInTheDocument()
-    expect(screen.getByText('Teamwork')).toBeInTheDocument()
-    expect(screen.getByText('+ more')).toBeInTheDocument()
+    expect(screen.getByText(/A leaner team. Better people/)).toBeInTheDocument()
+    expect(screen.getByText(/Each one 10x more effective/)).toBeInTheDocument()
   })
 })
