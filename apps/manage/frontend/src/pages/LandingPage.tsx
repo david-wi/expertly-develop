@@ -273,8 +273,8 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Quote className="w-12 h-12 text-primary-200 mx-auto mb-6" />
           <blockquote className="text-2xl sm:text-3xl font-medium text-gray-900 leading-relaxed">
-            "We're handling twice the client load we did last year—
-            <span className="text-primary-600">same team</span>.
+            "We're handling twice the client load we did last year, with the
+            <span className="text-primary-600"> same team</span>.
             The AI takes care of all the coordination that used to eat everyone's day."
           </blockquote>
           <div className="mt-8">
