@@ -93,7 +93,7 @@ export default function LandingPage() {
 
           {/* Hero Video */}
           <div className="mt-16 relative max-w-5xl mx-auto">
-            <div className="bg-gradient-to-b from-primary-100 to-primary-50 rounded-2xl shadow-2xl overflow-hidden border border-primary-200">
+            <div className="rounded-2xl overflow-hidden">
               <video
                 autoPlay
                 loop
