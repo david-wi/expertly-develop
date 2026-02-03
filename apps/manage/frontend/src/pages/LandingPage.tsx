@@ -265,7 +265,7 @@ export default function LandingPage() {
               </div>
             ))}
             <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-lg border border-gray-200 shadow-sm">
-              <span className="font-medium text-gray-500">+ more coming</span>
+              <span className="font-medium text-gray-500">+ more</span>
             </div>
           </div>
         </div>
