@@ -1,87 +1,89 @@
-@import "tailwindcss";
-
-@theme {
-  /* Warm salon palette - Primary (rose/blush) */
-  --color-primary-50: #FDF8F6;
-  --color-primary-100: #F9EEEB;
-  --color-primary-200: #F2D9D3;
-  --color-primary-300: #E8C4C4;
-  --color-primary-400: #D4A5A5;
-  --color-primary-500: #C08888;
-  --color-primary-600: #A66B6B;
-  --color-primary-700: #8B5252;
-  --color-primary-800: #6B3D3D;
-  --color-primary-900: #4A2B2B;
-
-  /* Accent (gold/champagne) */
-  --color-accent-50: #FDFCFA;
-  --color-accent-100: #F9F5ED;
-  --color-accent-200: #F0E6D3;
-  --color-accent-300: #E5D4B3;
-  --color-accent-400: #D4BD8C;
-  --color-accent-500: #C9A86C;
-  --color-accent-600: #B08E4F;
-  --color-accent-700: #8A6E3E;
-  --color-accent-800: #675231;
-  --color-accent-900: #453724;
-
-  /* Warm neutrals */
-  --color-warm-50: #FAF7F5;
-  --color-warm-100: #F5F0EB;
-  --color-warm-200: #EDE5DD;
-  --color-warm-300: #DDD0C4;
-  --color-warm-400: #C5B5A5;
-  --color-warm-500: #A89888;
-  --color-warm-600: #8A7A6A;
-  --color-warm-700: #6B5D4F;
-  --color-warm-800: #4A4039;
-  --color-warm-900: #2D2622;
-
-  /* Success (sage green) */
-  --color-success-50: #F4F9F4;
-  --color-success-100: #E8F2E8;
-  --color-success-200: #D0E5D0;
-  --color-success-300: #A8C5A8;
-  --color-success-400: #7AA87A;
-  --color-success-500: #5A8A5A;
-  --color-success-600: #476B47;
-  --color-success-700: #375237;
-  --color-success-800: #2A3D2A;
-  --color-success-900: #1D2A1D;
-
-  /* Warning (warm amber) */
-  --color-warning-50: #FFFBF5;
-  --color-warning-100: #FEF3E6;
-  --color-warning-200: #FCE5C7;
-  --color-warning-300: #F5D0A0;
-  --color-warning-400: #E5B87A;
-  --color-warning-500: #D4A05A;
-  --color-warning-600: #B88545;
-  --color-warning-700: #946835;
-  --color-warning-800: #704F28;
-  --color-warning-900: #4D361C;
-
-  /* Error (muted coral) */
-  --color-error-50: #FDF7F7;
-  --color-error-100: #FAECEC;
-  --color-error-200: #F5D5D5;
-  --color-error-300: #E8B3B3;
-  --color-error-400: #D98A8A;
-  --color-error-500: #C66666;
-  --color-error-600: #A84A4A;
-  --color-error-700: #853838;
-  --color-error-800: #632A2A;
-  --color-error-900: #421D1D;
-
-  /* Typography */
-  --font-family-sans: 'Inter', system-ui, sans-serif;
-
-  /* Shadows */
-  --shadow-warm: 0 2px 8px rgba(74, 64, 57, 0.08);
-  --shadow-warm-lg: 0 4px 16px rgba(74, 64, 57, 0.12);
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 @layer base {
+  :root {
+    /* Warm salon palette - Primary (rose/blush) */
+    --color-primary-50: #FDF8F6;
+    --color-primary-100: #F9EEEB;
+    --color-primary-200: #F2D9D3;
+    --color-primary-300: #E8C4C4;
+    --color-primary-400: #D4A5A5;
+    --color-primary-500: #C08888;
+    --color-primary-600: #A66B6B;
+    --color-primary-700: #8B5252;
+    --color-primary-800: #6B3D3D;
+    --color-primary-900: #4A2B2B;
+
+    /* Accent (gold/champagne) */
+    --color-accent-50: #FDFCFA;
+    --color-accent-100: #F9F5ED;
+    --color-accent-200: #F0E6D3;
+    --color-accent-300: #E5D4B3;
+    --color-accent-400: #D4BD8C;
+    --color-accent-500: #C9A86C;
+    --color-accent-600: #B08E4F;
+    --color-accent-700: #8A6E3E;
+    --color-accent-800: #675231;
+    --color-accent-900: #453724;
+
+    /* Warm neutrals */
+    --color-warm-50: #FAF7F5;
+    --color-warm-100: #F5F0EB;
+    --color-warm-200: #EDE5DD;
+    --color-warm-300: #DDD0C4;
+    --color-warm-400: #C5B5A5;
+    --color-warm-500: #A89888;
+    --color-warm-600: #8A7A6A;
+    --color-warm-700: #6B5D4F;
+    --color-warm-800: #4A4039;
+    --color-warm-900: #2D2622;
+
+    /* Success (sage green) */
+    --color-success-50: #F4F9F4;
+    --color-success-100: #E8F2E8;
+    --color-success-200: #D0E5D0;
+    --color-success-300: #A8C5A8;
+    --color-success-400: #7AA87A;
+    --color-success-500: #5A8A5A;
+    --color-success-600: #476B47;
+    --color-success-700: #375237;
+    --color-success-800: #2A3D2A;
+    --color-success-900: #1D2A1D;
+
+    /* Warning (warm amber) */
+    --color-warning-50: #FFFBF5;
+    --color-warning-100: #FEF3E6;
+    --color-warning-200: #FCE5C7;
+    --color-warning-300: #F5D0A0;
+    --color-warning-400: #E5B87A;
+    --color-warning-500: #D4A05A;
+    --color-warning-600: #B88545;
+    --color-warning-700: #946835;
+    --color-warning-800: #704F28;
+    --color-warning-900: #4D361C;
+
+    /* Error (muted coral) */
+    --color-error-50: #FDF7F7;
+    --color-error-100: #FAECEC;
+    --color-error-200: #F5D5D5;
+    --color-error-300: #E8B3B3;
+    --color-error-400: #D98A8A;
+    --color-error-500: #C66666;
+    --color-error-600: #A84A4A;
+    --color-error-700: #853838;
+    --color-error-800: #632A2A;
+    --color-error-900: #421D1D;
+
+    /* Typography */
+    --font-family-sans: 'Inter', system-ui, sans-serif;
+
+    /* Shadows */
+    --shadow-warm: 0 2px 8px rgba(74, 64, 57, 0.08);
+    --shadow-warm-lg: 0 4px 16px rgba(74, 64, 57, 0.12);
+  }
+
   body {
     @apply bg-warm-50 text-warm-800 antialiased;
     font-family: var(--font-family-sans);
