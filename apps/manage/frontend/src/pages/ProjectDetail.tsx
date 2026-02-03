@@ -1096,13 +1096,6 @@ export default function ProjectDetail() {
               rows={3}
             />
           </div>
-          <div className="bg-gray-50 rounded-md p-3 text-xs text-gray-600">
-            <p className="font-medium mb-1">Project context:</p>
-            <p><span className="font-medium">Name:</span> {project?.name}</p>
-            {project?.description && (
-              <p><span className="font-medium">Description:</span> {project.description}</p>
-            )}
-          </div>
           <ModalFooter>
             <button
               type="button"
