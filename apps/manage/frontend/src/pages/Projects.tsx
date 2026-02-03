@@ -397,11 +397,22 @@ export default function Projects() {
   //    - Can't drop a project onto itself
   //    - Can't drop a project onto its own descendants (would create a cycle)
   //    - The getDescendantIds() helper finds all descendants to check this
+  //
+  // 4. EDGE-BASED DROP ZONES:
+  //    Dropping on a row can result in different parent assignments:
+  //    - Middle of row (50% center): Makes dragged item a CHILD of target
+  //    - Top/bottom edge (25% each): Makes dragged item a SIBLING of target
+  //      (same parent as target)
+  //    Visual feedback: Blue ring for child drop, blue line for sibling drop
+  //    This allows "pulling out" an item to a higher level without using the
+  //    root drop zone.
   // ==========================================================================
 
   const [draggedProjectId, setDraggedProjectId] = useState<string | null>(null)
   const [dragOverProjectId, setDragOverProjectId] = useState<string | null>(null)
   const [isDraggingToRoot, setIsDraggingToRoot] = useState(false)
+  // Drop zone type: 'inside' = make child, 'before'/'after' = make sibling (same parent as target)
+  const [dropZone, setDropZone] = useState<'inside' | 'before' | 'after'>('inside')
   // Ref to track dragged ID without triggering re-renders (see explanation above)
   const draggedIdRef = useRef<string | null>(null)
 
@@ -422,6 +433,7 @@ export default function Projects() {
     setDraggedProjectId(null)
     setDragOverProjectId(null)
     setIsDraggingToRoot(false)
+    setDropZone('inside')
   }
 
   const handleDragOver = (e: React.DragEvent, projectId: string) => {
@@ -435,15 +447,30 @@ export default function Projects() {
       if (!descendants.has(projectId)) {
         setDragOverProjectId(projectId)
         setIsDraggingToRoot(false)
+
+        // Detect drop zone based on mouse position within the row
+        // Edge zones (top/bottom 25%) = drop as sibling, middle = drop as child
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+        const relativeY = e.clientY - rect.top
+        const edgeThreshold = rect.height * 0.25
+
+        if (relativeY < edgeThreshold) {
+          setDropZone('before')
+        } else if (relativeY > rect.height - edgeThreshold) {
+          setDropZone('after')
+        } else {
+          setDropZone('inside')
+        }
       }
     }
   }
 
   const handleDragLeave = () => {
     setDragOverProjectId(null)
+    setDropZone('inside')
   }
 
-  const handleDrop = async (e: React.DragEvent, targetProjectId: string | null) => {
+  const handleDrop = async (e: React.DragEvent, targetProjectId: string | null, zone: 'inside' | 'before' | 'after' = 'inside') => {
     e.preventDefault()
     const sourceProjectId = e.dataTransfer.getData('text/plain')
     if (!sourceProjectId || sourceProjectId === targetProjectId) {
@@ -460,11 +487,23 @@ export default function Projects() {
       }
     }
 
+    // Determine the new parent based on drop zone
+    let newParentId: string | null = targetProjectId
+    if (zone === 'before' || zone === 'after') {
+      // Drop as sibling: use target's parent instead of target itself
+      if (targetProjectId) {
+        const targetProject = projects.find(p => (p._id || p.id) === targetProjectId)
+        newParentId = targetProject?.parent_project_id || null
+      } else {
+        newParentId = null
+      }
+    }
+
     try {
       // Pass null explicitly to make a project top-level (removing parent)
-      // Pass the targetProjectId to make it a child of that project
+      // Pass the newParentId to make it a child of that project
       await api.updateProject(sourceProjectId, {
-        parent_project_id: targetProjectId,
+        parent_project_id: newParentId,
       })
       await loadData()
     } catch (err) {
@@ -725,11 +764,20 @@ export default function Projects() {
                   return (
                     <tr
                       key={projectId}
-                      className={`group hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                      className={`group hover:bg-gray-50 relative ${
+                        isDraggedOver && dropZone === 'inside' ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''
+                      } ${isDragging ? 'opacity-50' : ''}`}
                       onDragOver={(e) => handleDragOver(e, projectId)}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, projectId)}
+                      onDrop={(e) => handleDrop(e, projectId, dropZone)}
                     >
+                      {/* Edge drop indicator line */}
+                      {isDraggedOver && dropZone === 'before' && (
+                        <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-500 z-10" />
+                      )}
+                      {isDraggedOver && dropZone === 'after' && (
+                        <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-blue-500 z-10" />
+                      )}
                       {/* Entire cell is draggable (not just the grip icon) for easier drag initiation.
                           The grip icon is just a visual indicator. See comment block above for details. */}
                       <td
@@ -910,11 +958,20 @@ export default function Projects() {
                   return (
                     <tr
                       key={projectId}
-                      className={`group hover:bg-gray-50 ${isDraggedOver ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''} ${isDragging ? 'opacity-50' : ''}`}
+                      className={`group hover:bg-gray-50 relative ${
+                        isDraggedOver && dropZone === 'inside' ? 'bg-blue-50 ring-2 ring-blue-400 ring-inset' : ''
+                      } ${isDragging ? 'opacity-50' : ''}`}
                       onDragOver={(e) => handleDragOver(e, projectId)}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, projectId)}
+                      onDrop={(e) => handleDrop(e, projectId, dropZone)}
                     >
+                      {/* Edge drop indicator line */}
+                      {isDraggedOver && dropZone === 'before' && (
+                        <div className="absolute left-0 right-0 top-0 h-0.5 bg-blue-500 z-10" />
+                      )}
+                      {isDraggedOver && dropZone === 'after' && (
+                        <div className="absolute left-0 right-0 bottom-0 h-0.5 bg-blue-500 z-10" />
+                      )}
                       {/* Entire cell is draggable - see tree view comment above */}
                       <td
                         className="px-4 py-3 cursor-grab active:cursor-grabbing"
