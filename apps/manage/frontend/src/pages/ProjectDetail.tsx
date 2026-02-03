@@ -1211,7 +1211,7 @@ export default function ProjectDetail() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Describe the icon you'd like (optional)
+              What icon or symbol would you like?
             </label>
             <textarea
               value={avatarPrompt}
