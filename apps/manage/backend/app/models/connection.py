@@ -31,6 +31,7 @@ class Connection(MongoModel):
     provider: ConnectionProvider
     provider_user_id: Optional[str] = None
     provider_email: Optional[str] = None
+    provider_account_name: Optional[str] = None  # Slack workspace name, Google domain, etc.
     access_token_encrypted: str
     refresh_token_encrypted: Optional[str] = None
     token_expires_at: Optional[datetime] = None
@@ -50,6 +51,7 @@ class ConnectionResponse(BaseModel):
     id: str
     provider: str
     provider_email: Optional[str] = None
+    provider_account_name: Optional[str] = None  # Slack workspace name, etc.
     status: str
     scopes: list[str]
     connected_at: datetime
