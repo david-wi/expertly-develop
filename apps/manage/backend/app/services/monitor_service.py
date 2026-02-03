@@ -8,9 +8,10 @@ from typing import Optional
 from bson import ObjectId
 
 from app.database import get_database
-from app.models import Monitor, MonitorEvent, MonitorProvider, MonitorStatus
+from app.models import Monitor, MonitorEvent, MonitorProvider, MonitorStatus, TaskComment
 from app.services.encryption import decrypt_token
 from app.services.monitor_providers import MonitorAdapter, MonitorAdapterEvent, SlackMonitorAdapter
+from app.services.ai_service import get_slack_title_service
 
 logger = logging.getLogger(__name__)
 
@@ -255,8 +256,11 @@ class MonitorService:
             "provider_timestamp": event.provider_timestamp.isoformat() if event.provider_timestamp else None
         }
 
-        # Create task title from event
-        task_title = self._generate_task_title(monitor, event)
+        # Generate task title - use AI for Slack mentions
+        task_title = await self._generate_ai_task_title(monitor, event)
+
+        # Extract source_url from event (e.g., Slack permalink)
+        source_url = event.event_data.get("permalink")
 
         # Create the task
         from app.models import Task, TaskStatus
@@ -270,7 +274,8 @@ class MonitorService:
             project_id=monitor.get("project_id"),
             input_data=input_data,
             source_monitor_id=monitor["_id"],
-            source_playbook_id=playbook_id
+            source_playbook_id=playbook_id,
+            source_url=source_url
         )
 
         # Check if Task model has the required fields, add them if we can
@@ -278,11 +283,94 @@ class MonitorService:
         task_dict["input_data"] = input_data
         task_dict["source_monitor_id"] = monitor["_id"]
         task_dict["source_playbook_id"] = playbook_id
+        task_dict["source_url"] = source_url
 
         result = await self.db.tasks.insert_one(task_dict)
-        logger.info(f"Created task {result.inserted_id} from monitor {monitor['_id']}")
+        task_id = result.inserted_id
+        logger.info(f"Created task {task_id} from monitor {monitor['_id']}")
 
-        return result.inserted_id
+        # Create initial context comment with conversation details
+        await self._create_context_comment(task_id, monitor, event)
+
+        return task_id
+
+    async def _generate_ai_task_title(self, monitor: dict, event: MonitorAdapterEvent) -> str:
+        """Generate an AI-powered task title for Slack mentions, fallback to simple title."""
+        provider = monitor.get("provider", "unknown")
+        provider_config = monitor.get("provider_config", {})
+
+        # Only use AI for Slack mentions (my_mentions mode)
+        if provider == "slack" and provider_config.get("my_mentions"):
+            try:
+                slack_title_service = get_slack_title_service()
+                message_text = event.event_data.get("text", "")
+
+                # Build context from thread if available
+                context = None
+                if event.context_data and event.context_data.get("thread"):
+                    thread_messages = event.context_data["thread"][:5]
+                    context = "\n".join([m.get("text", "")[:200] for m in thread_messages])
+
+                return await slack_title_service.generate_title(message_text, context)
+            except Exception as e:
+                logger.warning(f"AI title generation failed: {e}")
+
+        # Fallback to simple title generation
+        return self._generate_task_title(monitor, event)
+
+    async def _create_context_comment(
+        self,
+        task_id: ObjectId,
+        monitor: dict,
+        event: MonitorAdapterEvent
+    ) -> None:
+        """Create an initial comment with conversation context."""
+        provider = monitor.get("provider", "unknown")
+
+        if provider != "slack":
+            return  # Only create context comments for Slack for now
+
+        # Build comment content
+        lines = ["**Slack Conversation Context**", ""]
+
+        # Main message
+        message_text = event.event_data.get("text", "")
+        timestamp = event.provider_timestamp
+        if timestamp:
+            lines.append(f"**Message** ({timestamp.strftime('%Y-%m-%d %H:%M UTC')}):")
+        else:
+            lines.append("**Message:**")
+        lines.append(f"> {message_text}")
+        lines.append("")
+
+        # Thread context
+        if event.context_data and event.context_data.get("thread"):
+            thread_messages = event.context_data["thread"][:10]
+            if len(thread_messages) > 1:
+                lines.append("**Thread context:**")
+                for msg in thread_messages:
+                    msg_text = msg.get("text", "")[:300]
+                    if len(msg.get("text", "")) > 300:
+                        msg_text += "..."
+                    lines.append(f"- {msg_text}")
+                lines.append("")
+
+        # Source link
+        permalink = event.event_data.get("permalink")
+        if permalink:
+            lines.append(f"[View in Slack]({permalink})")
+
+        content = "\n".join(lines)
+
+        # Insert comment
+        comment = TaskComment(
+            organization_id=monitor["organization_id"],
+            task_id=task_id,
+            user_id="system",
+            user_name="Slack Monitor",
+            content=content
+        )
+        await self.db.task_comments.insert_one(comment.model_dump_mongo())
 
     def _generate_task_title(self, monitor: dict, event: MonitorAdapterEvent) -> str:
         """Generate a task title from the event."""

@@ -698,6 +698,8 @@ export interface Task {
   schedule_timezone?: string
   // Manual ordering
   sequence?: number
+  // Source tracking
+  source_url?: string
   created_at: string
   updated_at: string
 }
@@ -722,6 +724,8 @@ export interface CreateTaskRequest {
   scheduled_start?: string
   scheduled_end?: string
   schedule_timezone?: string
+  // Source tracking
+  source_url?: string
 }
 
 export interface UpdateTaskRequest {
@@ -1256,6 +1260,7 @@ export interface SlackConfig {
   tagged_user_ids?: string[]
   keywords?: string[]
   context_messages?: number
+  my_mentions?: boolean
 }
 
 export interface Monitor {

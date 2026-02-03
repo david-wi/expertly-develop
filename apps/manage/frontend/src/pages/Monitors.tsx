@@ -45,6 +45,7 @@ interface MonitorFormData {
   // Slack config
   slack_channel_ids: string
   slack_workspace_wide: boolean
+  slack_my_mentions: boolean
   slack_keywords: string
   slack_context_messages: number
 }
@@ -60,6 +61,7 @@ const defaultFormData: MonitorFormData = {
   poll_interval_seconds: 300,
   slack_channel_ids: '',
   slack_workspace_wide: false,
+  slack_my_mentions: false,
   slack_keywords: '',
   slack_context_messages: 5,
 }
@@ -149,7 +151,8 @@ export default function Monitors() {
         channel_ids: formData.slack_channel_ids
           ? formData.slack_channel_ids.split(',').map((s) => s.trim()).filter(Boolean)
           : [],
-        workspace_wide: formData.slack_workspace_wide,
+        workspace_wide: formData.slack_workspace_wide || formData.slack_my_mentions,
+        my_mentions: formData.slack_my_mentions,
         keywords: formData.slack_keywords
           ? formData.slack_keywords.split(',').map((s) => s.trim()).filter(Boolean)
           : [],
@@ -301,6 +304,7 @@ export default function Monitors() {
       poll_interval_seconds: monitor.poll_interval_seconds,
       slack_channel_ids: slackConfig?.channel_ids?.join(', ') || '',
       slack_workspace_wide: slackConfig?.workspace_wide || false,
+      slack_my_mentions: slackConfig?.my_mentions || false,
       slack_keywords: slackConfig?.keywords?.join(', ') || '',
       slack_context_messages: slackConfig?.context_messages || 5,
     })
@@ -642,30 +646,57 @@ export default function Monitors() {
             <div className="border-t pt-4 space-y-3">
               <h4 className="text-sm font-medium text-gray-900">Slack Settings</h4>
 
-              <div>
-                <label className="block text-sm text-gray-700 mb-1">Channel IDs (comma-separated)</label>
-                <input
-                  type="text"
-                  value={formData.slack_channel_ids}
-                  onChange={(e) => setFormData({ ...formData, slack_channel_ids: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                  placeholder="C01234567, C07654321"
-                />
-                <p className="text-xs text-gray-500 mt-1">Leave empty if watching all channels</p>
-              </div>
-
-              <div className="flex items-center">
+              <div className="flex items-center p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <input
                   type="checkbox"
-                  id="workspace_wide"
-                  checked={formData.slack_workspace_wide}
-                  onChange={(e) => setFormData({ ...formData, slack_workspace_wide: e.target.checked })}
+                  id="my_mentions"
+                  checked={formData.slack_my_mentions}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    slack_my_mentions: e.target.checked,
+                    // Auto-clear channel filters when my_mentions is enabled
+                    slack_channel_ids: e.target.checked ? '' : formData.slack_channel_ids,
+                  })}
                   className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                 />
-                <label htmlFor="workspace_wide" className="ml-2 text-sm text-gray-700">
-                  Monitor all channels (workspace-wide)
-                </label>
+                <div className="ml-2">
+                  <label htmlFor="my_mentions" className="text-sm font-medium text-blue-800">
+                    Monitor my @mentions (recommended)
+                  </label>
+                  <p className="text-xs text-blue-600">
+                    Automatically create tasks when someone mentions you in any channel
+                  </p>
+                </div>
               </div>
+
+              {!formData.slack_my_mentions && (
+                <>
+                  <div>
+                    <label className="block text-sm text-gray-700 mb-1">Channel IDs (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={formData.slack_channel_ids}
+                      onChange={(e) => setFormData({ ...formData, slack_channel_ids: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      placeholder="C01234567, C07654321"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave empty if watching all channels</p>
+                  </div>
+
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="workspace_wide"
+                      checked={formData.slack_workspace_wide}
+                      onChange={(e) => setFormData({ ...formData, slack_workspace_wide: e.target.checked })}
+                      className="h-4 w-4 text-blue-600 border-gray-300 rounded"
+                    />
+                    <label htmlFor="workspace_wide" className="ml-2 text-sm text-gray-700">
+                      Monitor all channels (workspace-wide)
+                    </label>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm text-gray-700 mb-1">Keywords (comma-separated)</label>

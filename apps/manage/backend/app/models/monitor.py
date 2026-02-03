@@ -38,6 +38,7 @@ class SlackConfig(BaseModel):
     tagged_user_ids: list[str] = Field(default_factory=list)
     keywords: list[str] = Field(default_factory=list)
     context_messages: int = 5  # Number of surrounding messages to capture
+    my_mentions: bool = False  # Monitor for @mentions of the connected user
 
 
 class GoogleDriveConfig(BaseModel):
