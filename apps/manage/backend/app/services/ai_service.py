@@ -222,8 +222,151 @@ Do not include any text before or after the JSON array."""
         return response.choices[0].message.content.strip()
 
 
-# Singleton instance
+class SlackMentionTitleService:
+    """Service for generating task titles from Slack mentions using AI."""
+
+    SYSTEM_PROMPT = """You are a task title generator. Given a Slack message where someone was mentioned, generate a short, actionable task title.
+
+Guidelines:
+1. Start with an action verb when possible (Review, Respond to, Help with, etc.)
+2. Keep it under 60 characters
+3. Capture the essence of what's being asked
+4. Don't include the @mention itself
+5. If no clear action, use "Review Slack message from [topic/context]"
+
+Respond with ONLY the task title, nothing else."""
+
+    USE_CASE = "categorization"
+    FALLBACK_USE_CASE = "analysis_small"
+
+    def __init__(self):
+        self._ai_client: Optional[AIConfigClient] = None
+
+    @property
+    def ai_client(self) -> AIConfigClient:
+        """Get the AI config client."""
+        if self._ai_client is None:
+            self._ai_client = get_ai_config_client()
+        return self._ai_client
+
+    def is_configured(self) -> bool:
+        """Check if the AI service is properly configured."""
+        import os
+        return bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GROQ_API_KEY"))
+
+    async def generate_title(self, message_text: str, context: Optional[str] = None) -> str:
+        """
+        Generate a task title from a Slack message.
+
+        Args:
+            message_text: The main message text
+            context: Optional context (thread messages, etc.)
+
+        Returns:
+            Generated task title
+        """
+        if not self.is_configured():
+            return self._fallback_title(message_text)
+
+        try:
+            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
+        except Exception:
+            try:
+                use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
+            except Exception:
+                return self._fallback_title(message_text)
+
+        model_id = use_case_config.model_id
+        provider = use_case_config.provider_name
+        max_tokens = min(use_case_config.max_tokens, 100)  # Title should be short
+        temperature = use_case_config.temperature
+
+        # Build prompt
+        prompt = f"Slack message: {message_text}"
+        if context:
+            prompt += f"\n\nContext:\n{context}"
+
+        try:
+            if provider == "groq":
+                response_text = await self._call_groq(model_id, prompt, max_tokens, temperature)
+            elif provider == "anthropic":
+                response_text = await self._call_anthropic(model_id, prompt, max_tokens, temperature)
+            else:
+                response_text = await self._call_openai(model_id, prompt, max_tokens, temperature)
+
+            # Clean up response
+            title = response_text.strip().strip('"').strip("'")
+            if len(title) > 80:
+                title = title[:77] + "..."
+            return title
+
+        except Exception as e:
+            logger.warning(f"AI title generation failed: {e}")
+            return self._fallback_title(message_text)
+
+    def _fallback_title(self, message_text: str) -> str:
+        """Generate a simple fallback title."""
+        # Remove mentions
+        import re
+        clean_text = re.sub(r'<@[A-Z0-9]+>', '', message_text).strip()
+
+        if len(clean_text) > 50:
+            return f"[Slack] {clean_text[:47]}..."
+        elif clean_text:
+            return f"[Slack] {clean_text}"
+        return "[Slack] New mention"
+
+    async def _call_groq(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call Groq API."""
+        import os
+        import openai
+
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError("GROQ_API_KEY not set")
+
+        client = openai.OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content.strip()
+
+    async def _call_anthropic(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call Anthropic API."""
+        client = self.ai_client.get_anthropic_client()
+        response = client.messages.create(
+            model=model_id,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=self.SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        return response.content[0].text.strip()
+
+    async def _call_openai(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call OpenAI API."""
+        client = self.ai_client.get_openai_client()
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=[
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        return response.choices[0].message.content.strip()
+
+
+# Singleton instances
 _ai_service: Optional[PlaybookAIService] = None
+_slack_title_service: Optional[SlackMentionTitleService] = None
 
 
 def get_ai_service() -> PlaybookAIService:
@@ -232,3 +375,11 @@ def get_ai_service() -> PlaybookAIService:
     if _ai_service is None:
         _ai_service = PlaybookAIService()
     return _ai_service
+
+
+def get_slack_title_service() -> SlackMentionTitleService:
+    """Get the singleton Slack title service instance."""
+    global _slack_title_service
+    if _slack_title_service is None:
+        _slack_title_service = SlackMentionTitleService()
+    return _slack_title_service

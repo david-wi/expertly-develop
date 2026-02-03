@@ -106,6 +106,31 @@ const formatRelativeTime = (dateStr: string) => {
   return date.toLocaleDateString()
 }
 
+const COMMENT_TRUNCATE_LENGTH = 500
+
+function CommentContent({ content }: { content: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const shouldTruncate = content.length > COMMENT_TRUNCATE_LENGTH
+
+  if (!shouldTruncate) {
+    return <div className="text-xs text-theme-text-primary whitespace-pre-wrap leading-relaxed">{content}</div>
+  }
+
+  return (
+    <div className="text-xs text-theme-text-primary leading-relaxed">
+      <div className="whitespace-pre-wrap">
+        {expanded ? content : `${content.slice(0, COMMENT_TRUNCATE_LENGTH)}...`}
+      </div>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="text-primary-600 hover:text-primary-700 font-medium mt-1"
+      >
+        {expanded ? 'Show less' : 'Show more'}
+      </button>
+    </div>
+  )
+}
+
 export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: TaskDetailModalProps) {
   const [task, setTask] = useState<Task | null>(null)
   const [queues, setQueues] = useState<Queue[]>([])
@@ -833,12 +858,32 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 )}
               </div>
 
-              {/* Comments Section */}
+              {/* Source URL - Link back to originating source (e.g., Slack message) */}
+              {task?.source_url && (
+                <div className="border-t border-theme-border pt-4">
+                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <ExternalLink className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-blue-800">Source</p>
+                      <a
+                        href={task.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline truncate block"
+                      >
+                        View original message
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline and Discussion Section */}
               <div className="border-t border-theme-border pt-4">
                 <div className="flex items-center gap-1.5 mb-3">
                   <MessageSquare className="w-3.5 h-3.5 text-theme-text-secondary" />
                   <label className="text-xs font-medium text-theme-text-secondary">
-                    Comments ({comments.length})
+                    Timeline and Discussion ({comments.length})
                   </label>
                 </div>
 
@@ -894,9 +939,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                               <Trash2 className="w-3 h-3 text-red-500" />
                             </button>
                           </div>
-                          <div className="text-xs text-theme-text-primary whitespace-pre-wrap leading-relaxed">
-                            {comment.content}
-                          </div>
+                          <CommentContent content={comment.content} />
                         </div>
                       </div>
                     ))}

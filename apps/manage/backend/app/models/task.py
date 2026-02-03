@@ -75,6 +75,9 @@ class Task(MongoModel):
     input_data: Optional[dict[str, Any]] = None
     output_data: Optional[dict[str, Any]] = None
 
+    # Source tracking
+    source_url: Optional[str] = None  # Direct link to source (e.g., Slack message permalink)
+
     # Timing
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
@@ -121,6 +124,8 @@ class TaskCreate(BaseModel):
     scheduled_start: Optional[datetime] = None
     scheduled_end: Optional[datetime] = None
     schedule_timezone: Optional[str] = None
+    # Source tracking
+    source_url: Optional[str] = None
 
 
 class TaskUpdate(BaseModel):
@@ -144,6 +149,8 @@ class TaskUpdate(BaseModel):
     schedule_timezone: Optional[str] = None
     # Manual ordering
     sequence: Optional[float] = None
+    # Source tracking
+    source_url: Optional[str] = None
 
 
 class TaskCheckout(BaseModel):

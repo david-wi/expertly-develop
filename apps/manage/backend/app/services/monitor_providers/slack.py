@@ -25,6 +25,7 @@ class SlackMonitorAdapter(MonitorAdapter):
     def __init__(self, connection_data: dict, provider_config: dict):
         super().__init__(connection_data, provider_config)
         self.access_token = connection_data.get("access_token")
+        self.provider_user_id = connection_data.get("provider_user_id")
 
         # Parse config
         self.channel_ids: list[str] = provider_config.get("channel_ids", [])
@@ -32,6 +33,7 @@ class SlackMonitorAdapter(MonitorAdapter):
         self.tagged_user_ids: list[str] = provider_config.get("tagged_user_ids", [])
         self.keywords: list[str] = provider_config.get("keywords", [])
         self.context_messages: int = provider_config.get("context_messages", 5)
+        self.my_mentions: bool = provider_config.get("my_mentions", False)
 
     async def _slack_request(self, method: str, params: dict = None, data: dict = None) -> dict:
         """Make a request to the Slack API."""
@@ -87,7 +89,8 @@ class SlackMonitorAdapter(MonitorAdapter):
         if self.channel_ids:
             return self.channel_ids
 
-        if self.workspace_wide:
+        # my_mentions mode or workspace_wide both need to scan all channels
+        if self.workspace_wide or self.my_mentions:
             try:
                 result = await self._slack_request("conversations.list", {
                     "types": "public_channel,private_channel",
@@ -145,6 +148,9 @@ class SlackMonitorAdapter(MonitorAdapter):
                         message.get("thread_ts")
                     )
 
+                # Fetch permalink for direct link back to Slack
+                permalink = await self._get_message_permalink(channel_id, message.get("ts"))
+
                 event = MonitorAdapterEvent(
                     provider_event_id=f"{channel_id}:{message.get('ts')}",
                     event_type="message",
@@ -155,6 +161,7 @@ class SlackMonitorAdapter(MonitorAdapter):
                         "user": message.get("user"),
                         "ts": message.get("ts"),
                         "thread_ts": message.get("thread_ts"),
+                        "permalink": permalink,
                     },
                     context_data=context_data,
                     provider_timestamp=self._parse_slack_ts(message.get("ts"))
@@ -171,9 +178,18 @@ class SlackMonitorAdapter(MonitorAdapter):
         if message.get("subtype") in ["bot_message", "channel_join", "channel_leave"]:
             return False
 
+        # Check for my_mentions mode - filter for messages mentioning the connected user
+        if self.my_mentions:
+            if not self.provider_user_id:
+                logger.warning("my_mentions enabled but no provider_user_id available")
+                return False
+            if f"<@{self.provider_user_id}>" not in message.get("text", ""):
+                return False
+            # If my_mentions is enabled, we found a match - skip other filters
+            return True
+
         # Check for tagged users
         if self.tagged_user_ids:
-            mentions = [m for m in message.get("blocks", []) if m.get("type") == "rich_text"]
             user_mentioned = False
             for user_id in self.tagged_user_ids:
                 if f"<@{user_id}>" in message.get("text", ""):
@@ -189,6 +205,18 @@ class SlackMonitorAdapter(MonitorAdapter):
                 return False
 
         return True
+
+    async def _get_message_permalink(self, channel_id: str, message_ts: str) -> Optional[str]:
+        """Fetch the permalink URL for a Slack message."""
+        try:
+            result = await self._slack_request("chat.getPermalink", {
+                "channel": channel_id,
+                "message_ts": message_ts
+            })
+            return result.get("permalink")
+        except Exception as e:
+            logger.warning(f"Failed to get message permalink: {e}")
+            return None
 
     async def _fetch_message_context(
         self,
@@ -258,9 +286,9 @@ class SlackMonitorAdapter(MonitorAdapter):
         except Exception as e:
             return False, f"Failed to connect to Slack: {str(e)}"
 
-        # Verify we have channels to poll
-        if not self.channel_ids and not self.workspace_wide:
-            return False, "Either channel_ids or workspace_wide must be set"
+        # Verify we have channels to poll or my_mentions mode enabled
+        if not self.channel_ids and not self.workspace_wide and not self.my_mentions:
+            return False, "Either channel_ids, workspace_wide, or my_mentions must be set"
 
         # Verify channel access if specific channels configured
         if self.channel_ids:
@@ -326,6 +354,9 @@ class SlackMonitorAdapter(MonitorAdapter):
                             event.get("thread_ts")
                         )
 
+                    # Fetch permalink for direct link back to Slack
+                    permalink = await self._get_message_permalink(channel_id, event.get("ts"))
+
                     adapter_event = MonitorAdapterEvent(
                         provider_event_id=f"{channel_id}:{event.get('ts')}",
                         event_type="message",
@@ -336,6 +367,7 @@ class SlackMonitorAdapter(MonitorAdapter):
                             "user": event.get("user"),
                             "ts": event.get("ts"),
                             "thread_ts": event.get("thread_ts"),
+                            "permalink": permalink,
                         },
                         context_data=context_data,
                         provider_timestamp=self._parse_slack_ts(event.get("ts"))
