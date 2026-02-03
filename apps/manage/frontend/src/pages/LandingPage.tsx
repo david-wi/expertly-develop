@@ -70,7 +70,7 @@ export default function LandingPage() {
             </div>
 
             <p className="mt-8 text-xl text-gray-600 max-w-2xl mx-auto">
-              A leaner team. Better people. Each one 10x more effective.
+              Multiply what your best people can achieve—excellently.
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -109,16 +109,16 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-white">10x</div>
-              <div className="mt-2 text-gray-400 font-medium">Team output multiplier</div>
+              <div className="text-4xl sm:text-5xl font-bold text-white">Multiply</div>
+              <div className="mt-2 text-gray-400 font-medium">what your key people achieve</div>
             </div>
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-white">Zero</div>
-              <div className="mt-2 text-gray-400 font-medium">Tasks falling through cracks</div>
+              <div className="text-4xl sm:text-5xl font-bold text-white">Capture</div>
+              <div className="mt-2 text-gray-400 font-medium">every task, nothing slips</div>
             </div>
             <div>
               <div className="text-4xl sm:text-5xl font-bold text-white">24/7</div>
-              <div className="mt-2 text-gray-400 font-medium">AI specialists working for you</div>
+              <div className="mt-2 text-gray-400 font-medium">AI pushing work forward</div>
             </div>
           </div>
         </div>
@@ -129,9 +129,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              The future isn't a bigger team.
+              The future isn't more headcount.
               <br />
-              <span className="text-primary-600">It's a better one.</span>
+              <span className="text-primary-600">It's more leverage.</span>
             </h2>
           </div>
 
@@ -180,8 +180,8 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900">AI Specialists</h3>
                   <p className="mt-2 text-gray-600">
-                    The rote work, handled.<br />
-                    Follow-ups, automatic.
+                    Handle repetitive work, chase follow-ups,<br />
+                    and keep everything moving.
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center lg:justify-start gap-2">
                     <span className="px-3 py-1 bg-purple-100 rounded-full text-sm font-medium text-purple-700">Sales AI</span>
@@ -260,7 +260,7 @@ export default function LandingPage() {
                   <span className="mt-1">
                     <Check className="w-5 h-5 text-primary-200" />
                   </span>
-                  <span>Your 5-person team operates like 15</span>
+                  <span>Scale your impact without scaling headcount</span>
                 </li>
               </ul>
             </div>
@@ -273,13 +273,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Quote className="w-12 h-12 text-primary-200 mx-auto mb-6" />
           <blockquote className="text-2xl sm:text-3xl font-medium text-gray-900 leading-relaxed">
-            "We went from 12 people drowning in coordination to 7 people
-            <span className="text-primary-600"> actually building things</span>.
-            The AI handles what used to take 3 full-time coordinators."
+            "We're handling twice the client load we did last year—
+            <span className="text-primary-600">same team</span>.
+            The AI takes care of all the coordination that used to eat everyone's day."
           </blockquote>
           <div className="mt-8">
-            <div className="font-semibold text-gray-900">Engineering Director</div>
-            <div className="text-gray-500">Series B SaaS Company</div>
+            <div className="font-semibold text-gray-900">Operations Lead</div>
+            <div className="text-gray-500">Professional Services Firm</div>
           </div>
         </div>
       </div>
@@ -296,10 +296,10 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
-              { num: '1', title: 'Map your processes', desc: 'Define who does what. We capture your workflows, approvals, and handoffs.' },
-              { num: '2', title: 'Deploy AI specialists', desc: 'Assign tasks to AI that follows your playbooks and escalates when needed.' },
-              { num: '3', title: 'Unify everything', desc: 'Pull tasks from email, Slack, Jira into one hub. Full context, always.' },
-              { num: '4', title: 'Let AI push forward', desc: 'Watch as AI proactively advances every initiative while you sleep.' },
+              { num: '1', title: 'Map Your Workflows', desc: 'Define who does what, when, and how. Capture approvals, handoffs, and escalation paths.' },
+              { num: '2', title: 'Deploy AI Specialists', desc: 'Assign repetitive tasks to AI that follows your playbooks and asks for help when needed.' },
+              { num: '3', title: 'Centralize Your Tasks', desc: 'Pull todos from email, Slack, Jira, and more into one hub with full context attached.' },
+              { num: '4', title: 'Watch AI Drive Progress', desc: 'AI drafts responses, chases follow-ups, and advances work—even while you sleep.' },
             ].map((step, i) => (
               <div key={i} className="relative">
                 <div className="bg-white rounded-2xl p-6 h-full border border-gray-100 shadow-sm">
@@ -350,7 +350,7 @@ export default function LandingPage() {
             Ready to amplify your team?
           </h2>
           <p className="mt-6 text-xl text-primary-100 max-w-xl mx-auto">
-            Work with fewer, better people. Let AI handle the rest.
+            Give your team superpowers. Let AI handle the busywork.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
