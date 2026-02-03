@@ -507,7 +507,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                     <input
                       ref={topTitleRef}
                       type="text"
-                      placeholder="Add priority task (top)..."
+                      placeholder="Add priority task..."
                       value={topTaskTitle}
                       onChange={(e) => setTopTaskTitle(e.target.value)}
                       onKeyDown={handleTopTitleKeyDown}
@@ -648,7 +648,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                     <input
                       ref={bottomTitleRef}
                       type="text"
-                      placeholder="Add task (bottom)..."
+                      placeholder="Add task..."
                       value={bottomTaskTitle}
                       onChange={(e) => setBottomTaskTitle(e.target.value)}
                       onKeyDown={handleBottomTitleKeyDown}

@@ -11,3 +11,4 @@
 20260131 - In Assignments -> Assignment Details, put Playbook in first column (not Queue). Queue should show friendly language when Playbook with default queue is selected.
 20260131 - Add autoFocus to first field in Create dialogs, Escape to cancel, Enter to submit - apply across all similar modals site-wide
 20260202 - My Active Tasks: Remove Queue column (add to hover tooltip), compact layout (smaller text, less padding), add drag handles for reordering with sequence field
+20260202 Remove (top) and (bottom) labels from Add task placeholders in MyActiveTasksWidget
