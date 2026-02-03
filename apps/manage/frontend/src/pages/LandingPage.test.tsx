@@ -147,6 +147,6 @@ describe('LandingPage', () => {
     expect(screen.getByText('Slack')).toBeInTheDocument()
     expect(screen.getByText('Jira')).toBeInTheDocument()
     expect(screen.getByText('Teamwork')).toBeInTheDocument()
-    expect(screen.getByText('+ more coming')).toBeInTheDocument()
+    expect(screen.getByText('+ more')).toBeInTheDocument()
   })
 })
