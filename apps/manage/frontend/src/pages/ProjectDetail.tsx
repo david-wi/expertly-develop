@@ -597,19 +597,19 @@ export default function ProjectDetail() {
         <div className="flex items-start gap-4">
           {/* Avatar */}
           <div className="relative group">
-            {project.avatar_url ? (
-              <img
-                src={project.avatar_url}
-                alt={project.name}
-                className="w-16 h-16 rounded-lg object-cover shadow-sm"
-              />
-            ) : (
-              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
+            <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm overflow-hidden">
+              {project.avatar_url ? (
+                <img
+                  src={project.avatar_url}
+                  alt={project.name}
+                  className="w-full h-full object-cover mix-blend-screen"
+                />
+              ) : (
                 <span className="text-2xl font-bold text-white">
                   {project.name.charAt(0).toUpperCase()}
                 </span>
-              </div>
-            )}
+              )}
+            </div>
             {/* Avatar actions overlay */}
             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
               <button
@@ -1081,8 +1081,8 @@ export default function ProjectDetail() {
       >
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
-            Generate an AI avatar for this project. By default, it will be based on the project name and description.
-            Optionally, describe what you'd like the avatar to look like.
+            Generate a white icon for this project that will appear on the gradient background.
+            Optionally, describe what icon or symbol you'd like.
           </p>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1091,7 +1091,7 @@ export default function ProjectDetail() {
             <textarea
               value={avatarPrompt}
               onChange={(e) => setAvatarPrompt(e.target.value)}
-              placeholder="e.g., A rocket ship launching into space with colorful trails..."
+              placeholder="e.g., A rocket ship, a lightbulb, a handshake..."
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
               rows={3}
             />

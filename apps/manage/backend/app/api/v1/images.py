@@ -107,20 +107,22 @@ async def generate_project_avatar(
     client = get_openai_client()
 
     if request.custom_prompt:
-        # Use custom prompt but add style guidelines
-        prompt = f"""Modern flat vector illustration, icon-style, representing a project or initiative.
+        # Use custom prompt but add style guidelines for white icon on black
+        prompt = f"""Simple, minimalist white icon or logo design on a solid black background.
 User's description: {request.custom_prompt}
-Style: Clean lines, vibrant colors, minimal shading, professional and modern.
-Square format, simple background, suitable as a project icon/avatar."""
+Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000).
+The icon should be centered, simple enough to be recognizable at small sizes.
+Square format, solid black background, white icon only."""
     else:
         # Generate based on project name and description
         description_text = f"Description: {request.project_description}" if request.project_description else ""
-        prompt = f"""Modern flat vector illustration, icon-style, representing a project or initiative.
+        prompt = f"""Simple, minimalist white icon or logo design on a solid black background.
 Project name: "{request.project_name}"
 {description_text}
-Create a visual that captures the essence or theme of this project.
-Style: Clean lines, vibrant colors, minimal shading, professional and modern.
-Square format, simple background, suitable as a project icon/avatar."""
+Create a simple icon or symbol that represents this project's theme or purpose.
+Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000).
+The icon should be centered, simple enough to be recognizable at small sizes.
+Square format, solid black background, white icon only."""
 
     try:
         # Get model config for image generation
