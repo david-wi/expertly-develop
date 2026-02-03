@@ -5,6 +5,7 @@ import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
 import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
+import ProjectTypeahead from '../../../components/ProjectTypeahead'
 
 interface Playbook {
   _id?: string
@@ -61,7 +62,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const bottomProjectRef = useRef<HTMLInputElement>(null)
   const bottomInstructionsRef = useRef<HTMLTextAreaElement>(null)
   const editTitleRef = useRef<HTMLInputElement>(null)
-  const editProjectRef = useRef<HTMLSelectElement>(null)
   const editInstructionsRef = useRef<HTMLTextAreaElement>(null)
   const editPlaybookRef = useRef<HTMLSelectElement>(null)
   const editDoneRef = useRef<HTMLButtonElement>(null)
@@ -742,7 +742,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                           closeEditPanel()
                         } else if (e.key === 'Tab' && !e.shiftKey) {
                           e.preventDefault()
-                          editProjectRef.current?.focus()
+                          editInstructionsRef.current?.focus()
                         }
                       }}
                       disabled={isSaving}
@@ -756,29 +756,17 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                     <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1 block">
                       Project
                     </label>
-                    <select
-                      ref={editProjectRef}
-                      value={editProjectId}
-                      onChange={(e) => setEditProjectId(e.target.value)}
-                      onBlur={saveEditedTask}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Escape') {
-                          closeEditPanel()
-                        } else if (e.key === 'Tab' && !e.shiftKey) {
-                          e.preventDefault()
-                          editInstructionsRef.current?.focus()
-                        }
+                    <ProjectTypeahead
+                      projects={projects.map(p => ({ id: p._id || p.id, name: p.name, parent_project_id: p.parent_project_id }))}
+                      selectedProjectId={editProjectId || null}
+                      onChange={(projectId) => {
+                        setEditProjectId(projectId || '')
+                        setTimeout(() => saveEditedTask(), 0)
                       }}
+                      placeholder="Search projects..."
                       disabled={isSaving}
-                      className="w-full text-xs text-gray-700 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
-                    >
-                      <option value="">No project</option>
-                      {projects.map((project) => (
-                        <option key={project._id || project.id} value={project._id || project.id}>
-                          {getProjectDisplayName(project, projects)}
-                        </option>
-                      ))}
-                    </select>
+                      className="text-xs"
+                    />
                   </div>
 
                   {/* Editable instructions */}
