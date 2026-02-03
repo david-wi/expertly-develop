@@ -19,9 +19,11 @@ describe('LandingPage', () => {
     expect(screen.getAllByText('Expertly Manage').length).toBeGreaterThan(0)
   })
 
-  it('displays the tagline', () => {
+  it('displays the tagline pills', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText(/You. Your inner circle. AI specialists multiplying each one./)).toBeInTheDocument()
+    expect(screen.getByText('You')).toBeInTheDocument()
+    expect(screen.getByText('Your inner circle')).toBeInTheDocument()
+    expect(screen.getByText('AI specialists multiplying each one')).toBeInTheDocument()
   })
 
   it('renders Sign In link', () => {
@@ -64,9 +66,9 @@ describe('LandingPage', () => {
 
   it('displays all benefits', () => {
     renderWithRouter(<LandingPage />)
-    expect(screen.getByText('Mission Control + Digital Workforce')).toBeInTheDocument()
+    expect(screen.getByText('Mission Control')).toBeInTheDocument()
     expect(screen.getByText('Processes on autopilot')).toBeInTheDocument()
-    expect(screen.getByText('AI specialists multiply your team')).toBeInTheDocument()
+    expect(screen.getByText('AI multiplies your team')).toBeInTheDocument()
     expect(screen.getByText('Full context everywhere')).toBeInTheDocument()
     expect(screen.getByText('Nothing falls through')).toBeInTheDocument()
     expect(screen.getByText('Scale without chaos')).toBeInTheDocument()

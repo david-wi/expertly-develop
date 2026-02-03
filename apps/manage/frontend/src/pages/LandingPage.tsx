@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   Workflow,
   ArrowRight,
-  Check,
+  ChevronRight,
   Layers,
   Mail,
   MessageSquare,
@@ -15,6 +15,12 @@ import {
   Brain,
   TrendingUp,
   Bell,
+  Sparkles,
+  Target,
+  Cpu,
+  BarChart3,
+  Shield,
+  Rocket,
 } from 'lucide-react'
 
 const capabilities = [
@@ -58,12 +64,12 @@ const integrations = [
 ]
 
 const benefits = [
-  'Mission Control + Digital Workforce',
-  'Processes on autopilot',
-  'AI specialists multiply your team',
-  'Full context everywhere',
-  'Nothing falls through',
-  'Scale without chaos',
+  { text: 'Mission Control', icon: Target },
+  { text: 'Processes on autopilot', icon: Cpu },
+  { text: 'AI multiplies your team', icon: Sparkles },
+  { text: 'Full context everywhere', icon: BarChart3 },
+  { text: 'Nothing falls through', icon: Shield },
+  { text: 'Scale without chaos', icon: Rocket },
 ]
 
 export default function LandingPage() {
@@ -107,9 +113,13 @@ export default function LandingPage() {
               <br />
               <span className="text-primary-600">the Amplified Team</span>
             </h1>
-            <p className="mt-3 text-lg font-medium text-primary-600 italic">
-              You. Your inner circle. AI specialists multiplying each one.
-            </p>
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 text-lg">
+              <span className="px-4 py-2 bg-gray-900 text-white rounded-full font-semibold">You</span>
+              <ChevronRight className="hidden sm:block w-5 h-5 text-gray-400" />
+              <span className="px-4 py-2 bg-primary-100 text-primary-700 rounded-full font-semibold">Your inner circle</span>
+              <ChevronRight className="hidden sm:block w-5 h-5 text-gray-400" />
+              <span className="px-4 py-2 bg-primary-600 text-white rounded-full font-semibold">AI specialists multiplying each one</span>
+            </div>
             <p className="mt-6 text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
               Build a leaner, better organization. Work with the talented people you love working with —
               each one amplified by AI specialists who handle the rote work, gather context,
@@ -147,13 +157,13 @@ export default function LandingPage() {
       </div>
 
       {/* Benefits Bar */}
-      <div className="bg-gray-900 py-8">
+      <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 py-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+          <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
             {benefits.map((benefit) => (
-              <div key={benefit} className="flex items-center gap-2 text-white">
-                <Check className="w-5 h-5 text-primary-400" />
-                <span className="text-sm font-medium">{benefit}</span>
+              <div key={benefit.text} className="flex items-center gap-2 text-white/90 hover:text-white transition-colors">
+                <benefit.icon className="w-4 h-4 text-primary-400" />
+                <span className="text-sm font-medium">{benefit.text}</span>
               </div>
             ))}
           </div>
@@ -178,35 +188,35 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="group bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl hover:border-blue-200 transition-all duration-300">
+              <div className="w-14 h-14 bg-blue-100 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-7 h-7 text-blue-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">For You</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 leading-relaxed">
                 Every task you own gets a head start. Context gathered, drafts prepared, next steps suggested.
                 Iterate from AI's work or ignore it — but you're never starting from zero.
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+            <div className="group bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl hover:border-purple-200 transition-all duration-300">
+              <div className="w-14 h-14 bg-purple-100 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Bot className="w-7 h-7 text-purple-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">For Your AI Specialists</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 leading-relaxed">
                 Sales AI handles outreach. Marketing AI manages campaigns. Support AI triages tickets.
                 Each follows your playbooks precisely and escalates when needed.
               </p>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-6">
+            <div className="group bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-xl hover:border-green-200 transition-all duration-300">
+              <div className="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <ShieldCheck className="w-7 h-7 text-green-600" />
               </div>
               <h3 className="text-xl font-bold text-gray-900 mb-3">For Your Leaders</h3>
-              <p className="text-gray-600">
+              <p className="text-gray-600 leading-relaxed">
                 Your managers approve bot work instead of doing it themselves.
                 Their span of control expands exponentially. Quality stays high.
               </p>
@@ -227,19 +237,19 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {capabilities.map((capability) => (
               <div
                 key={capability.name}
-                className="bg-gray-50 rounded-xl p-6 hover:bg-gray-100 transition-colors"
+                className="group bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-lg hover:border-primary-200 hover:-translate-y-1 transition-all duration-300"
               >
-                <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <capability.icon className="w-6 h-6 text-primary-600" />
+                <div className="w-12 h-12 bg-primary-100 rounded-xl flex items-center justify-center group-hover:bg-primary-600 group-hover:scale-110 transition-all duration-300">
+                  <capability.icon className="w-6 h-6 text-primary-600 group-hover:text-white transition-colors duration-300" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                <h3 className="mt-5 text-lg font-semibold text-gray-900">
                   {capability.name}
                 </h3>
-                <p className="mt-2 text-gray-600">{capability.description}</p>
+                <p className="mt-2 text-gray-600 leading-relaxed">{capability.description}</p>
               </div>
             ))}
           </div>
@@ -283,69 +293,83 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
-                1
+          <div className="mt-16 relative">
+            {/* Connecting line - hidden on mobile */}
+            <div className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-0.5 bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-6">
+              <div className="text-center relative">
+                <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold shadow-lg shadow-primary-600/30 relative z-10">
+                  1
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                  Map Your Processes
+                </h3>
+                <p className="mt-3 text-gray-600">
+                  Define who does what, when, and how. Capture approval flows and handoffs.
+                </p>
               </div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Map Your Processes
-              </h3>
-              <p className="mt-3 text-gray-600">
-                Define who does what, when, and how. Capture approval flows and handoffs.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
-                2
+              <div className="text-center relative">
+                <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold shadow-lg shadow-primary-600/30 relative z-10">
+                  2
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                  Deploy AI Specialists
+                </h3>
+                <p className="mt-3 text-gray-600">
+                  Gradually delegate steps to specialized AI that follows your playbooks.
+                </p>
               </div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Deploy AI Specialists
-              </h3>
-              <p className="mt-3 text-gray-600">
-                Gradually delegate steps to specialized AI that follows your playbooks.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
-                3
+              <div className="text-center relative">
+                <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold shadow-lg shadow-primary-600/30 relative z-10">
+                  3
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                  Unify in Mission Control
+                </h3>
+                <p className="mt-3 text-gray-600">
+                  Pull todos from everywhere into one hub, mapped to projects for full context.
+                </p>
               </div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Unify in Mission Control
-              </h3>
-              <p className="mt-3 text-gray-600">
-                Pull todos from everywhere into one hub, mapped to projects for full context.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
-                4
+              <div className="text-center relative">
+                <div className="w-16 h-16 bg-primary-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold shadow-lg shadow-primary-600/30 relative z-10">
+                  4
+                </div>
+                <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                  Let AI Push Forward
+                </h3>
+                <p className="mt-3 text-gray-600">
+                  Watch as your AI specialists proactively advance every initiative.
+                </p>
               </div>
-              <h3 className="mt-6 text-xl font-semibold text-gray-900">
-                Let AI Push Forward
-              </h3>
-              <p className="mt-3 text-gray-600">
-                Watch as your AI specialists proactively advance every initiative.
-              </p>
             </div>
           </div>
         </div>
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-to-r from-primary-600 to-primary-700 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Brain className="w-16 h-16 text-white/80 mx-auto mb-6" />
-          <h2 className="text-3xl sm:text-4xl font-bold text-white">
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-purple-800 py-24">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white rounded-full blur-3xl" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="w-20 h-20 bg-white/10 backdrop-blur rounded-2xl flex items-center justify-center mx-auto mb-8">
+            <Brain className="w-10 h-10 text-white" />
+          </div>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
             Ready to build your Amplified Team?
           </h2>
-          <p className="mt-4 text-xl text-primary-100 max-w-2xl mx-auto">
+          <p className="mt-6 text-xl text-primary-100 max-w-2xl mx-auto leading-relaxed">
             Work with the people you love. Let AI specialists handle the rest.
+            <br className="hidden sm:block" />
             Your inner circle, multiplied.
           </p>
           <Link
             to="/"
-            className="mt-8 inline-flex items-center gap-2 px-8 py-4 bg-white text-primary-600 rounded-lg hover:bg-primary-50 transition-colors font-semibold text-lg"
+            className="mt-10 inline-flex items-center gap-2 px-8 py-4 bg-white text-primary-600 rounded-xl hover:bg-primary-50 hover:scale-105 transition-all duration-300 font-semibold text-lg shadow-xl shadow-black/20"
           >
             Start Your Free Trial
             <ArrowRight className="w-5 h-5" />
