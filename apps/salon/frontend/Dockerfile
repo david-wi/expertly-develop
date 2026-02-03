@@ -21,8 +21,11 @@ COPY apps/salon/frontend/package*.json ./apps/salon/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
 # Use --ignore-scripts to skip husky, then rebuild native modules
-RUN npm install --workspace=apps/salon/frontend --ignore-scripts && \
-    npm install @rollup/rollup-linux-x64-musl --save-optional
+RUN npm ci --ignore-scripts
+
+# Explicitly install the vite build dependencies with specific versions
+# (npm ci doesn't always hoist devDependencies correctly in monorepo Docker builds)
+RUN npm install "@vitejs/plugin-react@^4.3.4" "autoprefixer@^10.4.20" "postcss@^8.4.49" "tailwindcss@^3.4.17" "@rollup/rollup-linux-x64-musl" --save-optional
 
 # Copy source code
 COPY apps/salon/frontend ./apps/salon/frontend
