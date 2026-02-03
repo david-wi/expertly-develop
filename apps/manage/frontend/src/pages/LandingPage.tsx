@@ -103,7 +103,8 @@ export default function LandingPage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight">
-              Mission Control for{' '}
+              Mission Control for
+              <br />
               <span className="text-primary-600">the Amplified Team</span>
             </h1>
             <p className="mt-3 text-lg font-medium text-primary-600 italic">
