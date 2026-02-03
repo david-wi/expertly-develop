@@ -1,10 +1,11 @@
-import { LayoutDashboard, ListTodo, Inbox, Activity, Users } from 'lucide-react'
+import { LayoutDashboard, ListTodo, Inbox, Activity, Users, ListChecks } from 'lucide-react'
 import { WidgetDefinition } from './types'
 import { StatsOverviewWidget } from './StatsOverviewWidget'
 import { MyActiveTasksWidget } from './MyActiveTasksWidget'
 import { MyQueuesWidget } from './MyQueuesWidget'
 import { MonitorsSummaryWidget } from './MonitorsSummaryWidget'
 import { TeamMembersWidget } from './TeamMembersWidget'
+import { SingleQueueWidget } from './SingleQueueWidget'
 
 export const widgetRegistry: Record<string, WidgetDefinition> = {
   'team-members': {
@@ -56,6 +57,18 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
     minSize: { w: 6, h: 2 },
     maxSize: { w: 12, h: 4 },
     component: MonitorsSummaryWidget,
+  },
+  'single-queue': {
+    id: 'single-queue',
+    name: 'Queue',
+    description: 'View tasks for a specific queue',
+    icon: ListChecks,
+    defaultSize: { w: 4, h: 4 },
+    minSize: { w: 3, h: 3 },
+    maxSize: { w: 12, h: 8 },
+    component: SingleQueueWidget,
+    requiresConfig: 'queue',
+    allowMultiple: true,
   },
 }
 
