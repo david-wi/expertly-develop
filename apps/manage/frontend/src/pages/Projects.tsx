@@ -819,6 +819,21 @@ export default function Projects() {
                               <circle cx="15" cy="18" r="1.5" />
                             </svg>
                           </div>
+                          {/* Project Avatar */}
+                          {project.avatar_url ? (
+                            <img
+                              src={project.avatar_url}
+                              alt={project.name}
+                              className="w-6 h-6 rounded object-cover mr-2"
+                              draggable={false}
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mr-2 flex-shrink-0">
+                              <span className="text-xs font-bold text-white">
+                                {project.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex items-center gap-2 flex-wrap">
                             <Link
                               to={`/projects/${projectId}`}
@@ -993,6 +1008,21 @@ export default function Projects() {
                               <circle cx="15" cy="18" r="1.5" />
                             </svg>
                           </div>
+                          {/* Project Avatar */}
+                          {project.avatar_url ? (
+                            <img
+                              src={project.avatar_url}
+                              alt={project.name}
+                              className="w-6 h-6 rounded object-cover mr-2 mt-0.5 flex-shrink-0"
+                              draggable={false}
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center mr-2 mt-0.5 flex-shrink-0">
+                              <span className="text-xs font-bold text-white">
+                                {project.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                          )}
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Link
