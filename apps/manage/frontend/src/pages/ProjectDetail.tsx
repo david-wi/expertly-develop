@@ -1209,13 +1209,9 @@ export default function ProjectDetail() {
         size="sm"
       >
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
-            Generate a white icon for this project that will appear on the gradient background.
-            Optionally, describe what icon or symbol you'd like.
-          </p>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Custom prompt (optional)
+              Describe the icon you'd like (optional)
             </label>
             <textarea
               value={avatarPrompt}
