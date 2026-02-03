@@ -10,7 +10,13 @@ from bson import ObjectId
 from app.database import get_database
 from app.models import Monitor, MonitorEvent, MonitorProvider, MonitorStatus, TaskComment
 from app.services.encryption import decrypt_token
-from app.services.monitor_providers import MonitorAdapter, MonitorAdapterEvent, SlackMonitorAdapter
+from app.services.monitor_providers import (
+    MonitorAdapter,
+    MonitorAdapterEvent,
+    SlackMonitorAdapter,
+    GmailMonitorAdapter,
+    OutlookMonitorAdapter,
+)
 from app.services.ai_service import get_slack_title_service
 
 logger = logging.getLogger(__name__)
@@ -24,6 +30,10 @@ def get_adapter_for_provider(
     """Get the appropriate adapter for a provider."""
     if provider == MonitorProvider.SLACK:
         return SlackMonitorAdapter(connection_data, provider_config)
+    elif provider == MonitorProvider.GMAIL:
+        return GmailMonitorAdapter(connection_data, provider_config)
+    elif provider == MonitorProvider.OUTLOOK:
+        return OutlookMonitorAdapter(connection_data, provider_config)
     # Add more providers as they're implemented
     # elif provider == MonitorProvider.GOOGLE_DRIVE:
     #     return GoogleDriveMonitorAdapter(connection_data, provider_config)
@@ -383,6 +393,18 @@ class MonitorService:
                 text = text[:47] + "..."
             return f"[Slack] {text}" if text else "[Slack] New message"
 
+        if provider == "gmail":
+            subject = event.event_data.get("subject", "")
+            if len(subject) > 50:
+                subject = subject[:47] + "..."
+            return f"[Gmail] {subject}" if subject else "[Gmail] New email"
+
+        if provider == "outlook":
+            subject = event.event_data.get("subject", "")
+            if len(subject) > 50:
+                subject = subject[:47] + "..."
+            return f"[Outlook] {subject}" if subject else "[Outlook] New email"
+
         return f"[{monitor.get('name', 'Monitor')}] Event detected"
 
     def _generate_task_description(self, monitor: dict, event: MonitorAdapterEvent) -> str:
@@ -408,6 +430,28 @@ class MonitorService:
                     lines.append("**Thread context:**")
                     for msg in event.context_data["thread"][:5]:
                         lines.append(f"- {msg.get('text', '')[:100]}")
+
+        elif provider in ("gmail", "outlook"):
+            from_info = event.event_data.get("from", {})
+            from_email = from_info.get("email", "Unknown")
+            from_name = from_info.get("name", "")
+            from_display = f"{from_name} <{from_email}>" if from_name else from_email
+
+            lines.append("")
+            lines.append(f"**From:** {from_display}")
+            lines.append(f"**Subject:** {event.event_data.get('subject', 'No subject')}")
+
+            snippet = event.event_data.get("snippet", "")
+            if snippet:
+                lines.append("")
+                lines.append("**Preview:**")
+                lines.append(snippet[:500] + "..." if len(snippet) > 500 else snippet)
+
+            permalink = event.event_data.get("permalink")
+            if permalink:
+                lines.append("")
+                provider_name = "Gmail" if provider == "gmail" else "Outlook"
+                lines.append(f"[View in {provider_name}]({permalink})")
 
         return "\n".join(lines)
 
