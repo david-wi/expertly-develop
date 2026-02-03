@@ -70,7 +70,7 @@ export default function LandingPage() {
             </div>
 
             <p className="mt-8 text-xl text-gray-600 max-w-2xl mx-auto">
-              Multiply what your best people can achieve—excellently.
+              Multiply what your best people can achieve.
             </p>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
