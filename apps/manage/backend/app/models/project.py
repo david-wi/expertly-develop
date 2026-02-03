@@ -1,6 +1,6 @@
 from enum import Enum
-from typing import Optional
-from pydantic import BaseModel
+from typing import Optional, Any
+from pydantic import BaseModel, Field
 
 from app.models.base import MongoModel, PyObjectId
 
@@ -10,6 +10,19 @@ class ProjectStatus(str, Enum):
     ON_HOLD = "on_hold"
     COMPLETED = "completed"
     CANCELLED = "cancelled"
+
+
+class ProjectResource(BaseModel):
+    """A resource link or file associated with a project."""
+    title: str
+    url: str
+    type: str = "link"  # "link" or "file"
+
+
+class ProjectCustomField(BaseModel):
+    """A custom field for a project."""
+    label: str
+    value: str
 
 
 class Project(MongoModel):
@@ -26,6 +39,12 @@ class Project(MongoModel):
     owner_user_id: Optional[str] = None
     team_id: Optional[str] = None
 
+    # Project details panel
+    resources: list[ProjectResource] = Field(default_factory=list)
+    custom_fields: list[ProjectCustomField] = Field(default_factory=list)
+    next_steps: Optional[str] = None
+    ai_suggestions: Optional[str] = None
+
 
 class ProjectCreate(BaseModel):
     """Schema for creating a project."""
@@ -34,6 +53,9 @@ class ProjectCreate(BaseModel):
     parent_project_id: Optional[str] = None
     owner_user_id: Optional[str] = None
     team_id: Optional[str] = None
+    resources: Optional[list[ProjectResource]] = None
+    custom_fields: Optional[list[ProjectCustomField]] = None
+    next_steps: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -44,3 +66,7 @@ class ProjectUpdate(BaseModel):
     parent_project_id: Optional[str] = None
     owner_user_id: Optional[str] = None
     team_id: Optional[str] = None
+    resources: Optional[list[ProjectResource]] = None
+    custom_fields: Optional[list[ProjectCustomField]] = None
+    next_steps: Optional[str] = None
+    ai_suggestions: Optional[str] = None
