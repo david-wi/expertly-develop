@@ -30,7 +30,7 @@ interface AppState {
   // Async actions
   fetchUser: () => Promise<void>
   fetchQueues: () => Promise<void>
-  fetchTasks: (queueId?: string) => Promise<void>
+  fetchTasks: (queueId?: string, userId?: string) => Promise<void>
   createTask: (data: { queue_id: string; title: string; description?: string }) => Promise<Task>
 
   // WebSocket event handlers
@@ -81,10 +81,10 @@ export const useAppStore = create<AppState>((set, _get) => ({
     }
   },
 
-  fetchTasks: async (queueId?: string) => {
+  fetchTasks: async (queueId?: string, userId?: string) => {
     set((state) => ({ loading: { ...state.loading, tasks: true } }))
     try {
-      const tasks = await api.getTasks({ queue_id: queueId })
+      const tasks = await api.getTasks({ queue_id: queueId, user_id: userId })
       set({ tasks })
     } catch (error) {
       console.error('Failed to fetch tasks:', error)

@@ -55,11 +55,16 @@ async def list_tasks(
     status: str | None = None,
     phase: str | None = None,
     assigned_to_me: bool = False,
+    user_id: str | None = None,
     project_id: str | None = None,
     limit: int = 100,
     current_user: User = Depends(get_current_user)
 ) -> list[dict]:
-    """List tasks."""
+    """List tasks.
+
+    Args:
+        user_id: Filter tasks to queues owned by this user (scope_type='user', scope_id=user_id)
+    """
     db = get_database()
 
     query = {"organization_id": current_user.organization_id}
@@ -68,6 +73,24 @@ async def list_tasks(
         if not ObjectId.is_valid(queue_id):
             raise HTTPException(status_code=400, detail="Invalid queue ID")
         query["queue_id"] = ObjectId(queue_id)
+
+    # Filter by user's queues if user_id is provided
+    if user_id:
+        if not ObjectId.is_valid(user_id):
+            raise HTTPException(status_code=400, detail="Invalid user ID")
+        # Get all queues owned by this user
+        user_queues_cursor = db.queues.find({
+            "organization_id": current_user.organization_id,
+            "scope_type": "user",
+            "scope_id": user_id
+        })
+        user_queues = await user_queues_cursor.to_list(100)
+        user_queue_ids = [q["_id"] for q in user_queues]
+        if user_queue_ids:
+            query["queue_id"] = {"$in": user_queue_ids}
+        else:
+            # No queues for this user, return empty list
+            return []
 
     if status:
         query["status"] = status

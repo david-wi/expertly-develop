@@ -164,11 +164,12 @@ export const api = {
     }),
 
   // Tasks
-  getTasks: (params?: { queue_id?: string; status?: string; phase?: string }) => {
+  getTasks: (params?: { queue_id?: string; status?: string; phase?: string; user_id?: string }) => {
     const searchParams = new URLSearchParams()
     if (params?.queue_id) searchParams.set('queue_id', params.queue_id)
     if (params?.status) searchParams.set('status', params.status)
     if (params?.phase) searchParams.set('phase', params.phase)
+    if (params?.user_id) searchParams.set('user_id', params.user_id)
     const query = searchParams.toString()
     return request<Task[]>(`/api/v1/tasks${query ? `?${query}` : ''}`)
   },

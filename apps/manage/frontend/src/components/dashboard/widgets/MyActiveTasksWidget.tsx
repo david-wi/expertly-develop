@@ -74,6 +74,15 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     api.getProjects({ status: 'active' }).then(setProjects).catch(console.error)
   }, [])
 
+  // Re-fetch tasks when viewing user changes
+  useEffect(() => {
+    if (viewingUserId) {
+      fetchTasks(undefined, viewingUserId)
+    } else if (user?.id) {
+      fetchTasks(undefined, user.id)
+    }
+  }, [viewingUserId, user?.id, fetchTasks])
+
   const getQueueDisplayName = (queue: { scope_type: string; scope_id?: string; purpose: string }): string => {
     if (queue.scope_type === 'user') {
       if (queue.scope_id === user?.id) {
@@ -495,7 +504,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
           {/* Task list (left side) */}
           <div className={`${editingTaskId ? 'w-1/2' : 'flex-1'} overflow-auto border-r border-gray-100 transition-all`} ref={dragRef}>
             {/* Top quick task creation (adds to top of list) */}
-            {defaultQueue && !isViewingOther && (
+            {defaultQueue && (
               <div className="flex items-start gap-2 px-2 py-1.5 border-b border-gray-100 bg-blue-50/30">
                 <div className="flex-shrink-0 text-blue-400 pt-0.5">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -636,7 +645,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             )}
 
             {/* Bottom quick task creation (adds to bottom of list) */}
-            {defaultQueue && !isViewingOther && (
+            {defaultQueue && (
               <div className="flex items-start gap-2 px-2 py-1.5 border-t border-gray-100 bg-gray-50/30">
                 <div className="flex-shrink-0 text-gray-400 pt-0.5">
                   <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
