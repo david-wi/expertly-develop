@@ -12,12 +12,15 @@ import {
   ProjectResource,
   ProjectCustomField,
   ProjectComment,
+  Playbook,
 } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
 import Breadcrumbs, { buildProjectBreadcrumbs } from '../components/Breadcrumbs'
 import ProjectTypeahead from '../components/ProjectTypeahead'
 import RichTextEditor, { isRichTextEmpty } from '../components/RichTextEditor'
+import { InlineTaskCreator } from '../components/InlineTaskCreator'
+import { TaskEditPanel } from '../components/TaskEditPanel'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -108,6 +111,8 @@ export default function ProjectDetail() {
   const [saving, setSaving] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [selectedRecurringTask, setSelectedRecurringTask] = useState<RecurringTask | null>(null)
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
 
   // Local states for inline editing
   const [localResources, setLocalResources] = useState<ProjectResource[]>([])
@@ -121,6 +126,10 @@ export default function ProjectDetail() {
   const [newResourceTitle, setNewResourceTitle] = useState('')
   const [newResourceUrl, setNewResourceUrl] = useState('')
   const [newFieldLabel, setNewFieldLabel] = useState('')
+
+  // Inline description editing
+  const [isEditingDescription, setIsEditingDescription] = useState(false)
+  const [localDescription, setLocalDescription] = useState('')
 
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -179,6 +188,7 @@ export default function ProjectDetail() {
         completedTasksData,
         recurringTasksData,
         queuesData,
+        playbooksData,
       ] = await Promise.all([
         api.getProject(id),
         api.getProjectChildren(id),
@@ -187,6 +197,7 @@ export default function ProjectDetail() {
         api.getProjectTasks(id, { status: 'completed', include_subtasks: true }),
         api.getProjectRecurringTasks(id),
         api.getQueues(),
+        api.getPlaybooks({ active_only: true }),
       ])
 
       setProject(projectData)
@@ -196,6 +207,7 @@ export default function ProjectDetail() {
       setCompletedTasks(completedTasksData)
       setRecurringTasks(recurringTasksData)
       setQueues(queuesData)
+      setPlaybooks(playbooksData)
 
       setProjectForm({
         name: projectData.name,
@@ -364,6 +376,26 @@ export default function ProjectDetail() {
   // Next steps handlers
   const handleNextStepsBlur = () => {
     saveNextSteps(localNextSteps)
+  }
+
+  // Description inline edit handlers
+  const handleDescriptionClick = () => {
+    setLocalDescription(project?.description || '')
+    setIsEditingDescription(true)
+  }
+
+  const handleDescriptionBlur = async () => {
+    if (!id) return
+    setIsEditingDescription(false)
+    const trimmed = localDescription.trim()
+    if (trimmed !== (project?.description || '')) {
+      try {
+        await api.updateProject(id, { description: trimmed || undefined })
+        await loadData()
+      } catch (err) {
+        console.error('Failed to save description:', err)
+      }
+    }
   }
 
   // Comment handlers
@@ -550,6 +582,26 @@ export default function ProjectDetail() {
 
   const activeTasks = tasks.filter((t) => t.status !== 'completed')
 
+  // Get the default queue for task creation (first user queue or first available)
+  const defaultQueue = queues[0]
+
+  // Handler for updating a task from the edit panel
+  const handleUpdateTask = async (updates: Partial<Task>) => {
+    if (!editingTaskId) return
+    try {
+      await api.updateTask(editingTaskId, updates)
+      await loadData()
+    } catch (err) {
+      console.error('Failed to update task:', err)
+    }
+  }
+
+  // Get the currently editing task
+  const editingTask = editingTaskId
+    ? activeTasks.find((t) => (t._id || t.id) === editingTaskId) ||
+      completedTasks.find((t) => (t._id || t.id) === editingTaskId)
+    : null
+
   const breadcrumbItems = useMemo(() => {
     if (!project) return []
     const projectForBreadcrumb = { ...project, id: project._id || project.id }
@@ -651,8 +703,30 @@ export default function ProjectDetail() {
                 {formatProjectStatus(project.status)}
               </span>
             </div>
-            {project.description && (
-              <p className="text-gray-500 mt-1">{project.description}</p>
+            {isEditingDescription ? (
+              <input
+                type="text"
+                value={localDescription}
+                onChange={(e) => setLocalDescription(e.target.value)}
+                onBlur={handleDescriptionBlur}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.currentTarget.blur()
+                  } else if (e.key === 'Escape') {
+                    setIsEditingDescription(false)
+                  }
+                }}
+                autoFocus
+                className="text-gray-500 mt-1 w-full border-0 border-b border-gray-300 bg-transparent px-0 py-0 outline-none focus:border-blue-500 focus:ring-0"
+                placeholder="Add a description..."
+              />
+            ) : (
+              <p
+                onClick={handleDescriptionClick}
+                className="text-gray-500 mt-1 cursor-pointer hover:text-gray-700 min-h-[1.5em]"
+              >
+                {project.description || <span className="text-gray-300 italic">Click to add description...</span>}
+              </p>
             )}
           </div>
         </div>
@@ -694,6 +768,20 @@ export default function ProjectDetail() {
                     key={sub._id || sub.id}
                     className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded transition-colors"
                   >
+                    {/* Subproject avatar */}
+                    {sub.avatar_url ? (
+                      <img
+                        src={sub.avatar_url}
+                        alt={sub.name}
+                        className="w-4 h-4 rounded object-cover flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                        <span className="text-[8px] font-bold text-white">
+                          {sub.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                     <Link
                       to={`/projects/${sub._id || sub.id}`}
                       className="text-xs font-medium text-blue-600 hover:text-blue-800 truncate flex-1"
@@ -754,27 +842,68 @@ export default function ProjectDetail() {
             </div>
 
             {activeTab === 'tasks' && (
-              <ul className="space-y-0.5 max-h-64 overflow-y-auto">
-                {activeTasks.map((task) => (
-                  <li
-                    key={task._id || task.id}
-                    onClick={() => setSelectedTaskId(task._id || task.id)}
-                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer transition-colors"
-                  >
-                    <span className="text-xs text-gray-900 truncate flex-1">{task.title}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded ${
-                        STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {task.status.replace('_', ' ')}
-                    </span>
-                  </li>
-                ))}
-                {activeTasks.length === 0 && (
-                  <p className="text-xs text-gray-400 px-2">No active assignments</p>
+              <div className="flex">
+                {/* Left: Task list with inline creator */}
+                <div className={`${editingTaskId ? 'w-1/2' : 'flex-1'} transition-all`}>
+                  {/* Inline task creator */}
+                  {defaultQueue && (
+                    <InlineTaskCreator
+                      defaultQueueId={defaultQueue._id || defaultQueue.id}
+                      projectId={id}
+                      onTaskCreated={loadData}
+                      placeholder="Add assignment..."
+                      position="top"
+                      existingTasks={activeTasks}
+                    />
+                  )}
+                  <ul className="space-y-0.5 max-h-64 overflow-y-auto">
+                    {activeTasks.map((task) => {
+                      const taskId = task._id || task.id
+                      const isSelected = editingTaskId === taskId
+                      return (
+                        <li
+                          key={taskId}
+                          onClick={() => setEditingTaskId(taskId)}
+                          className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded cursor-pointer transition-colors ${
+                            isSelected ? 'bg-primary-50 border-l-2 border-primary-500' : ''
+                          }`}
+                        >
+                          <span
+                            className={`text-xs truncate flex-1 ${isSelected ? 'text-primary-700 font-medium' : 'text-gray-900'}`}
+                          >
+                            {task.title}
+                          </span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded ${
+                              STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
+                            }`}
+                          >
+                            {task.status.replace('_', ' ')}
+                          </span>
+                        </li>
+                      )
+                    })}
+                    {activeTasks.length === 0 && (
+                      <p className="text-xs text-gray-400 px-2">No active assignments</p>
+                    )}
+                  </ul>
+                </div>
+
+                {/* Right: Edit panel (when task selected) */}
+                {editingTaskId && editingTask && (
+                  <TaskEditPanel
+                    task={editingTask}
+                    projects={allProjects}
+                    playbooks={playbooks}
+                    onSave={handleUpdateTask}
+                    onClose={() => setEditingTaskId(null)}
+                    onOpenFullModal={() => {
+                      setSelectedTaskId(editingTaskId)
+                      setEditingTaskId(null)
+                    }}
+                  />
                 )}
-              </ul>
+              </div>
             )}
 
             {activeTab === 'completed' && (
