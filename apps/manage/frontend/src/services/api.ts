@@ -114,6 +114,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  generateProjectAvatar: (data: { project_name: string; project_description?: string; custom_prompt?: string }) =>
+    request<{ url: string }>('/api/v1/images/generate-project-avatar', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 
   // Organizations
   getOrganizations: () => request<Organization[]>('/api/v1/organizations'),
@@ -1028,6 +1033,8 @@ export interface Project {
   next_steps?: string
   ai_suggestions?: string
   comments?: ProjectComment[]
+  avatar_url?: string
+  avatar_prompt?: string
   created_at: string
   updated_at?: string
 }
@@ -1041,6 +1048,8 @@ export interface CreateProjectRequest {
   resources?: ProjectResource[]
   custom_fields?: ProjectCustomField[]
   next_steps?: string
+  avatar_url?: string
+  avatar_prompt?: string
 }
 
 export interface UpdateProjectRequest {
@@ -1055,6 +1064,8 @@ export interface UpdateProjectRequest {
   next_steps?: string
   ai_suggestions?: string
   comments?: ProjectComment[]
+  avatar_url?: string
+  avatar_prompt?: string
 }
 
 // Backlog types

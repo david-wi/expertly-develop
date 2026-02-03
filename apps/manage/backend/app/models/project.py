@@ -55,6 +55,10 @@ class Project(MongoModel):
     ai_suggestions: Optional[str] = None
     comments: list[ProjectComment] = Field(default_factory=list)
 
+    # Avatar
+    avatar_url: Optional[str] = None
+    avatar_prompt: Optional[str] = None  # Custom prompt for avatar generation
+
 
 class ProjectCreate(BaseModel):
     """Schema for creating a project."""
@@ -66,6 +70,8 @@ class ProjectCreate(BaseModel):
     resources: Optional[list[ProjectResource]] = None
     custom_fields: Optional[list[ProjectCustomField]] = None
     next_steps: Optional[str] = None
+    avatar_url: Optional[str] = None
+    avatar_prompt: Optional[str] = None
 
 
 class ProjectUpdate(BaseModel):
@@ -81,3 +87,5 @@ class ProjectUpdate(BaseModel):
     next_steps: Optional[str] = None
     ai_suggestions: Optional[str] = None
     comments: Optional[list[ProjectComment]] = None
+    avatar_url: Optional[str] = None
+    avatar_prompt: Optional[str] = None

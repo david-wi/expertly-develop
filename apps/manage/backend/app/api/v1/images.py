@@ -20,6 +20,13 @@ class GenerateAvatarRequest(BaseModel):
     name: str | None = None
 
 
+class GenerateProjectAvatarRequest(BaseModel):
+    """Request to generate a project avatar image."""
+    project_name: str
+    project_description: str | None = None
+    custom_prompt: str | None = None  # Optional custom prompt to override the default
+
+
 class GenerateAvatarResponse(BaseModel):
     """Response containing the generated avatar URL."""
     url: str
@@ -83,4 +90,56 @@ NOT a photograph - stylized vector art illustration with a recognizable face."""
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate image: {str(e)}"
+        )
+
+
+@router.post("/generate-project-avatar", response_model=GenerateAvatarResponse)
+async def generate_project_avatar(
+    request: GenerateProjectAvatarRequest,
+    current_user: User = Depends(get_current_user)
+) -> GenerateAvatarResponse:
+    """Generate an avatar image for a project using DALL-E.
+
+    Creates a modern, professional icon/illustration that represents the project.
+    If a custom_prompt is provided, it will be used to guide the generation.
+    Otherwise, the project name and description are used to create an appropriate visual.
+    """
+    client = get_openai_client()
+
+    if request.custom_prompt:
+        # Use custom prompt but add style guidelines
+        prompt = f"""Modern flat vector illustration, icon-style, representing a project or initiative.
+User's description: {request.custom_prompt}
+Style: Clean lines, vibrant colors, minimal shading, professional and modern.
+Square format, simple background, suitable as a project icon/avatar."""
+    else:
+        # Generate based on project name and description
+        description_text = f"Description: {request.project_description}" if request.project_description else ""
+        prompt = f"""Modern flat vector illustration, icon-style, representing a project or initiative.
+Project name: "{request.project_name}"
+{description_text}
+Create a visual that captures the essence or theme of this project.
+Style: Clean lines, vibrant colors, minimal shading, professional and modern.
+Square format, simple background, suitable as a project icon/avatar."""
+
+    try:
+        # Get model config for image generation
+        use_case_config = get_use_case_config("image_generation")
+        logger.debug(f"Using model {use_case_config.model_id} for project avatar generation")
+
+        response = client.images.generate(
+            model=use_case_config.model_id,
+            prompt=prompt,
+            size="512x512",
+            quality="standard",
+            n=1,
+        )
+
+        image_url = response.data[0].url
+        return GenerateAvatarResponse(url=image_url)
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate project avatar: {str(e)}"
         )

@@ -124,6 +124,11 @@ export default function ProjectDetail() {
   // Refs
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Avatar generation state
+  const [generatingAvatar, setGeneratingAvatar] = useState(false)
+  const [showAvatarPromptModal, setShowAvatarPromptModal] = useState(false)
+  const [avatarPrompt, setAvatarPrompt] = useState('')
+
   // Recurring task edit form state
   const [recurringForm, setRecurringForm] = useState<{
     title: string
@@ -382,6 +387,50 @@ export default function ProjectDetail() {
     saveComments(updated)
   }
 
+  // Avatar generation handlers
+  const handleGenerateAvatar = async (customPrompt?: string) => {
+    if (!project || !id) return
+
+    setGeneratingAvatar(true)
+    try {
+      const result = await api.generateProjectAvatar({
+        project_name: project.name,
+        project_description: project.description || undefined,
+        custom_prompt: customPrompt || undefined,
+      })
+
+      // Save the avatar URL and prompt to the project
+      await api.updateProject(id, {
+        avatar_url: result.url,
+        avatar_prompt: customPrompt || undefined,
+      })
+
+      await loadData()
+      setShowAvatarPromptModal(false)
+      setAvatarPrompt('')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to generate avatar'
+      alert(message)
+    } finally {
+      setGeneratingAvatar(false)
+    }
+  }
+
+  const handleRemoveAvatar = async () => {
+    if (!id) return
+
+    try {
+      await api.updateProject(id, {
+        avatar_url: '',
+        avatar_prompt: '',
+      })
+      await loadData()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove avatar'
+      alert(message)
+    }
+  }
+
   // Copy text to clipboard
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -544,18 +593,67 @@ export default function ProjectDetail() {
 
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center space-x-3">
-            <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">{project.name}</h1>
-            <span
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProjectStatusBadgeColor(project.status)}`}
-            >
-              {formatProjectStatus(project.status)}
-            </span>
+        <div className="flex items-start gap-4">
+          {/* Avatar */}
+          <div className="relative group">
+            {project.avatar_url ? (
+              <img
+                src={project.avatar_url}
+                alt={project.name}
+                className="w-16 h-16 rounded-lg object-cover shadow-sm"
+              />
+            ) : (
+              <div className="w-16 h-16 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-sm">
+                <span className="text-2xl font-bold text-white">
+                  {project.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            )}
+            {/* Avatar actions overlay */}
+            <div className="absolute inset-0 bg-black bg-opacity-50 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              <button
+                onClick={() => setShowAvatarPromptModal(true)}
+                disabled={generatingAvatar}
+                className="p-1.5 bg-white rounded-full text-gray-700 hover:bg-gray-100 transition-colors"
+                title={project.avatar_url ? 'Regenerate avatar' : 'Generate avatar'}
+              >
+                {generatingAvatar ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
+              </button>
+              {project.avatar_url && (
+                <button
+                  onClick={handleRemoveAvatar}
+                  className="p-1.5 bg-white rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                  title="Remove avatar"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
-          {project.description && (
-            <p className="text-gray-500 mt-1 ml-8">{project.description}</p>
-          )}
+          <div>
+            <div className="flex items-center space-x-3">
+              <h1 className="text-2xl font-bold text-[var(--theme-text-heading)]">{project.name}</h1>
+              <span
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getProjectStatusBadgeColor(project.status)}`}
+              >
+                {formatProjectStatus(project.status)}
+              </span>
+            </div>
+            {project.description && (
+              <p className="text-gray-500 mt-1">{project.description}</p>
+            )}
+          </div>
         </div>
         <div className="flex space-x-2">
           <button
@@ -970,6 +1068,72 @@ export default function ProjectDetail() {
           onUpdate={() => loadData()}
         />
       )}
+
+      {/* Avatar Prompt Modal */}
+      <Modal
+        isOpen={showAvatarPromptModal}
+        onClose={() => {
+          setShowAvatarPromptModal(false)
+          setAvatarPrompt('')
+        }}
+        title="Generate Project Avatar"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Generate an AI avatar for this project. By default, it will be based on the project name and description.
+            Optionally, describe what you'd like the avatar to look like.
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Custom prompt (optional)
+            </label>
+            <textarea
+              value={avatarPrompt}
+              onChange={(e) => setAvatarPrompt(e.target.value)}
+              placeholder="e.g., A rocket ship launching into space with colorful trails..."
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              rows={3}
+            />
+          </div>
+          <div className="bg-gray-50 rounded-md p-3 text-xs text-gray-600">
+            <p className="font-medium mb-1">Project context:</p>
+            <p><span className="font-medium">Name:</span> {project?.name}</p>
+            {project?.description && (
+              <p><span className="font-medium">Description:</span> {project.description}</p>
+            )}
+          </div>
+          <ModalFooter>
+            <button
+              type="button"
+              onClick={() => {
+                setShowAvatarPromptModal(false)
+                setAvatarPrompt('')
+              }}
+              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => handleGenerateAvatar(avatarPrompt || undefined)}
+              disabled={generatingAvatar}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              {generatingAvatar ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Generating...
+                </>
+              ) : (
+                'Generate Avatar'
+              )}
+            </button>
+          </ModalFooter>
+        </div>
+      </Modal>
 
       {/* Create Assignment Modal */}
       <CreateAssignmentModal
