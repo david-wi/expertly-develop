@@ -7,10 +7,12 @@ import RequirementDetail from './pages/RequirementDetail'
 import Releases from './pages/Releases'
 import ReleaseDetail from './pages/ReleaseDetail'
 import Changelog from './pages/Changelog'
+import LandingPage from './pages/LandingPage'
 
 function App() {
   return (
     <Routes>
+      <Route path="/landing" element={<LandingPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Dashboard />} />
         <Route path="/products" element={<Products />} />
