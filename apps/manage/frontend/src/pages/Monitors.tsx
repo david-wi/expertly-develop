@@ -358,7 +358,12 @@ export default function Monitors() {
 
   const getConnectionLabel = (connectionId: string) => {
     const connection = connections.find((c) => c.id === connectionId)
-    return connection?.provider_email || connection?.provider || 'Unknown'
+    if (!connection) return 'Unknown'
+    // For Slack, show workspace name; for others, show email
+    if (connection.provider_account_name) {
+      return connection.provider_account_name
+    }
+    return connection.provider_email || connection.provider
   }
 
   const getPlaybookLabel = (playbookId: string) => {
@@ -627,7 +632,7 @@ export default function Monitors() {
               <option value="">Select a connection</option>
               {filteredConnections.map((conn) => (
                 <option key={conn.id} value={conn.id}>
-                  {conn.provider_email || conn.provider}
+                  {conn.provider_account_name || conn.provider_email || conn.provider}
                 </option>
               ))}
             </select>

@@ -81,6 +81,7 @@ def serialize_connection(conn: dict) -> ConnectionResponse:
         id=str(conn["_id"]),
         provider=conn["provider"],
         provider_email=conn.get("provider_email"),
+        provider_account_name=conn.get("provider_account_name"),
         status=conn["status"],
         scopes=conn.get("scopes", []),
         connected_at=conn["connected_at"],
@@ -262,19 +263,21 @@ async def oauth_callback(
 
         if existing:
             # Update existing connection with new tokens
+            update_fields = {
+                "access_token_encrypted": encrypt_token(tokens.access_token),
+                "refresh_token_encrypted": encrypt_token(tokens.refresh_token) if tokens.refresh_token else None,
+                "token_expires_at": token_expires_at,
+                "scopes": scopes,
+                "status": ConnectionStatus.ACTIVE.value,
+                "provider_email": user_info.email,
+                "updated_at": datetime.now(timezone.utc),
+            }
+            # Add workspace name for Slack
+            if tokens.team_name:
+                update_fields["provider_account_name"] = tokens.team_name
             await db.connections.update_one(
                 {"_id": existing["_id"]},
-                {
-                    "$set": {
-                        "access_token_encrypted": encrypt_token(tokens.access_token),
-                        "refresh_token_encrypted": encrypt_token(tokens.refresh_token) if tokens.refresh_token else None,
-                        "token_expires_at": token_expires_at,
-                        "scopes": scopes,
-                        "status": ConnectionStatus.ACTIVE.value,
-                        "provider_email": user_info.email,
-                        "updated_at": datetime.now(timezone.utc),
-                    }
-                },
+                {"$set": update_fields},
             )
         else:
             # Create new connection
@@ -284,6 +287,7 @@ async def oauth_callback(
                 provider=ConnectionProvider(provider),
                 provider_user_id=user_info.id,
                 provider_email=user_info.email,
+                provider_account_name=tokens.team_name,  # Slack workspace name
                 access_token_encrypted=encrypt_token(tokens.access_token),
                 refresh_token_encrypted=encrypt_token(tokens.refresh_token) if tokens.refresh_token else None,
                 token_expires_at=token_expires_at,

@@ -1118,6 +1118,7 @@ export interface Connection {
   id: string
   provider: ConnectionProviderType
   provider_email?: string
+  provider_account_name?: string  // Slack workspace name, etc.
   status: ConnectionStatusType
   scopes: string[]
   connected_at: string

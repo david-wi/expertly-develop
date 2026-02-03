@@ -31,6 +31,9 @@ class TokenResponse(BaseModel):
     expires_in: Optional[int] = None
     token_type: str = "Bearer"
     scope: Optional[str] = None
+    # Provider-specific fields
+    team_name: Optional[str] = None  # Slack workspace name
+    team_id: Optional[str] = None  # Slack workspace ID
 
 
 class UserInfo(BaseModel):
@@ -167,12 +170,16 @@ async def exchange_code_for_tokens(provider: str, code: str) -> TokenResponse:
                 raise ValueError(f"Token exchange failed: {data.get('error', 'Unknown error')}")
             # Slack returns user token in authed_user for user_scope
             authed_user = data.get("authed_user", {})
+            # Slack also returns team info
+            team = data.get("team", {})
             return TokenResponse(
                 access_token=authed_user.get("access_token", data.get("access_token")),
                 refresh_token=authed_user.get("refresh_token"),
                 expires_in=authed_user.get("expires_in"),
                 token_type="Bearer",
                 scope=authed_user.get("scope", data.get("scope")),
+                team_name=team.get("name"),
+                team_id=team.get("id"),
             )
 
         return TokenResponse(
