@@ -9,6 +9,8 @@ import {
   Queue,
   RecurrenceType,
   ProjectStatus,
+  ProjectResource,
+  ProjectCustomField,
 } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
@@ -58,6 +60,13 @@ function formatProjectStatus(status: ProjectStatus): string {
 
 type TabType = 'tasks' | 'completed' | 'recurring'
 
+// Default custom fields for new projects
+const DEFAULT_CUSTOM_FIELDS: ProjectCustomField[] = [
+  { label: 'URL', value: '' },
+  { label: 'Contact Name', value: '' },
+  { label: 'Contact Email', value: '' },
+]
+
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>()
 
@@ -83,6 +92,18 @@ export default function ProjectDetail() {
   const [saving, setSaving] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [selectedRecurringTask, setSelectedRecurringTask] = useState<RecurringTask | null>(null)
+
+  // Right panel edit states
+  const [editingResources, setEditingResources] = useState(false)
+  const [editingFields, setEditingFields] = useState(false)
+  const [editingNextSteps, setEditingNextSteps] = useState(false)
+  const [localResources, setLocalResources] = useState<ProjectResource[]>([])
+  const [localFields, setLocalFields] = useState<ProjectCustomField[]>([])
+  const [localNextSteps, setLocalNextSteps] = useState('')
+  const [newResourceTitle, setNewResourceTitle] = useState('')
+  const [newResourceUrl, setNewResourceUrl] = useState('')
+  const [newFieldLabel, setNewFieldLabel] = useState('')
+  const [newFieldValue, setNewFieldValue] = useState('')
 
   // Recurring task edit form state
   const [recurringForm, setRecurringForm] = useState<{
@@ -159,6 +180,17 @@ export default function ProjectDetail() {
         status: projectData.status,
         parent_project_id: projectData.parent_project_id || null,
       })
+
+      // Initialize right panel local states
+      setLocalResources(projectData.resources || [])
+      // Use existing custom fields or populate with defaults if empty
+      const existingFields = projectData.custom_fields || []
+      if (existingFields.length === 0) {
+        setLocalFields(DEFAULT_CUSTOM_FIELDS)
+      } else {
+        setLocalFields(existingFields)
+      }
+      setLocalNextSteps(projectData.next_steps || '')
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load project'
       setError(message)
@@ -192,6 +224,95 @@ export default function ProjectDetail() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // Save resources
+  const handleSaveResources = async () => {
+    if (!id) return
+    setSaving(true)
+    try {
+      await api.updateProject(id, { resources: localResources })
+      await loadData()
+      setEditingResources(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save resources'
+      alert(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Save custom fields
+  const handleSaveFields = async () => {
+    if (!id) return
+    setSaving(true)
+    try {
+      await api.updateProject(id, { custom_fields: localFields })
+      await loadData()
+      setEditingFields(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save fields'
+      alert(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Save next steps
+  const handleSaveNextSteps = async () => {
+    if (!id) return
+    setSaving(true)
+    try {
+      await api.updateProject(id, { next_steps: localNextSteps })
+      await loadData()
+      setEditingNextSteps(false)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to save next steps'
+      alert(message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Add resource
+  const handleAddResource = () => {
+    if (!newResourceTitle.trim() || !newResourceUrl.trim()) return
+    setLocalResources([
+      ...localResources,
+      { title: newResourceTitle.trim(), url: newResourceUrl.trim(), type: 'link' },
+    ])
+    setNewResourceTitle('')
+    setNewResourceUrl('')
+  }
+
+  // Remove resource
+  const handleRemoveResource = (index: number) => {
+    setLocalResources(localResources.filter((_, i) => i !== index))
+  }
+
+  // Add custom field
+  const handleAddField = () => {
+    if (!newFieldLabel.trim()) return
+    setLocalFields([...localFields, { label: newFieldLabel.trim(), value: newFieldValue }])
+    setNewFieldLabel('')
+    setNewFieldValue('')
+  }
+
+  // Remove custom field
+  const handleRemoveField = (index: number) => {
+    setLocalFields(localFields.filter((_, i) => i !== index))
+  }
+
+  // Update custom field value
+  const handleUpdateFieldValue = (index: number, value: string) => {
+    const updated = [...localFields]
+    updated[index] = { ...updated[index], value }
+    setLocalFields(updated)
+  }
+
+  // Copy text to clipboard
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
   }
 
   const toggleRecurringDayOfWeek = (day: number) => {
@@ -331,7 +452,7 @@ export default function ProjectDetail() {
   }, [allProjects])
 
   // Get current project ID for exclusion
-  const currentProjectId = project ? (project._id || project.id) : undefined
+  const currentProjectId = project ? project._id || project.id : undefined
 
   if (loading) {
     return (
@@ -355,11 +476,9 @@ export default function ProjectDetail() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Breadcrumbs */}
-      {breadcrumbItems.length > 0 && (
-        <Breadcrumbs items={breadcrumbItems} className="mb-2" />
-      )}
+      {breadcrumbItems.length > 0 && <Breadcrumbs items={breadcrumbItems} className="mb-2" />}
 
       {/* Header */}
       <div className="flex items-start justify-between">
@@ -392,41 +511,320 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* Subprojects Section */}
-      {(subprojects.length > 0 || true) && (
-        <div className="bg-white shadow rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium text-gray-900">Subprojects</h3>
-            <Link
-              to={`/projects?parent=${id}`}
-              className="text-blue-600 hover:text-blue-800 text-sm"
-            >
-              Add subproject
-            </Link>
+      {/* Two-Column Layout */}
+      <div className="flex gap-4">
+        {/* Left Column - Subprojects (narrower) */}
+        <div className="w-64 flex-shrink-0">
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                Subprojects
+              </h3>
+              <Link
+                to={`/projects?parent=${id}`}
+                className="text-blue-600 hover:text-blue-800 text-xs"
+              >
+                + Add
+              </Link>
+            </div>
+            {subprojects.length > 0 ? (
+              <ul className="space-y-0.5">
+                {subprojects.map((sub) => (
+                  <li
+                    key={sub._id || sub.id}
+                    className="flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 rounded transition-colors"
+                  >
+                    <Link
+                      to={`/projects/${sub._id || sub.id}`}
+                      className="text-xs font-medium text-blue-600 hover:text-blue-800 truncate flex-1"
+                    >
+                      {sub.name}
+                    </Link>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded ${getProjectStatusBadgeColor(sub.status)}`}
+                    >
+                      {formatProjectStatus(sub.status)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-gray-400 px-2">No subprojects</p>
+            )}
           </div>
-          {subprojects.length > 0 ? (
-            <ul className="divide-y divide-gray-100">
-              {subprojects.map((sub) => (
-                <li key={sub._id || sub.id} className="py-2">
-                  <Link
-                    to={`/projects/${sub._id || sub.id}`}
-                    className="text-blue-600 hover:text-blue-800"
-                  >
-                    {sub.name}
-                  </Link>
-                  <span
-                    className={`ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getProjectStatusBadgeColor(sub.status)}`}
-                  >
-                    {formatProjectStatus(sub.status)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500">No subprojects yet</p>
-          )}
         </div>
-      )}
+
+        {/* Right Column - Project Details */}
+        <div className="flex-1 space-y-4">
+          {/* Resources Section */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                Resources
+              </h3>
+              {!editingResources ? (
+                <button
+                  onClick={() => setEditingResources(true)}
+                  className="text-blue-600 hover:text-blue-800 text-xs"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setLocalResources(project.resources || [])
+                      setEditingResources(false)
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveResources}
+                    disabled={saving}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {editingResources ? (
+              <div className="space-y-2">
+                {localResources.map((res, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <a
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 truncate flex-1"
+                    >
+                      {res.title}
+                    </a>
+                    <button
+                      onClick={() => handleRemoveResource(idx)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    placeholder="Title"
+                    value={newResourceTitle}
+                    onChange={(e) => setNewResourceTitle(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                  />
+                  <input
+                    type="url"
+                    placeholder="URL"
+                    value={newResourceUrl}
+                    onChange={(e) => setNewResourceUrl(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                  />
+                  <button
+                    onClick={handleAddResource}
+                    className="text-blue-600 hover:text-blue-800 text-xs px-2"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+            ) : localResources.length > 0 ? (
+              <ul className="space-y-1">
+                {localResources.map((res, idx) => (
+                  <li key={idx} className="text-xs">
+                    <a
+                      href={res.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      {res.title}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-gray-400">No resources added</p>
+            )}
+          </div>
+
+          {/* Fields & Values Section */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                Fields & Values
+              </h3>
+              {!editingFields ? (
+                <button
+                  onClick={() => setEditingFields(true)}
+                  className="text-blue-600 hover:text-blue-800 text-xs"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const existingFields = project.custom_fields || []
+                      setLocalFields(existingFields.length === 0 ? DEFAULT_CUSTOM_FIELDS : existingFields)
+                      setEditingFields(false)
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveFields}
+                    disabled={saving}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {editingFields ? (
+              <div className="space-y-2">
+                {localFields.map((field, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600 w-24 flex-shrink-0">{field.label}:</span>
+                    <input
+                      type="text"
+                      value={field.value}
+                      onChange={(e) => handleUpdateFieldValue(idx, e.target.value)}
+                      className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                    />
+                    <button
+                      onClick={() => handleRemoveField(idx)}
+                      className="text-red-500 hover:text-red-700 text-xs"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2 mt-2 pt-2 border-t border-gray-100">
+                  <input
+                    type="text"
+                    placeholder="Field name"
+                    value={newFieldLabel}
+                    onChange={(e) => setNewFieldLabel(e.target.value)}
+                    className="w-24 border border-gray-300 rounded px-2 py-1 text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Value"
+                    value={newFieldValue}
+                    onChange={(e) => setNewFieldValue(e.target.value)}
+                    className="flex-1 border border-gray-300 rounded px-2 py-1 text-xs"
+                  />
+                  <button
+                    onClick={handleAddField}
+                    className="text-blue-600 hover:text-blue-800 text-xs px-2"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+            ) : localFields.length > 0 ? (
+              <div className="space-y-1">
+                {localFields.map((field, idx) => (
+                  <div key={idx} className="flex items-center gap-2 text-xs">
+                    <span className="text-gray-600 w-24 flex-shrink-0">{field.label}:</span>
+                    <span className="text-gray-900 truncate">{field.value || '—'}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No custom fields</p>
+            )}
+          </div>
+
+          {/* Next Steps Section */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                Next Steps
+              </h3>
+              {!editingNextSteps ? (
+                <button
+                  onClick={() => setEditingNextSteps(true)}
+                  className="text-blue-600 hover:text-blue-800 text-xs"
+                >
+                  Edit
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setLocalNextSteps(project.next_steps || '')
+                      setEditingNextSteps(false)
+                    }}
+                    className="text-gray-500 hover:text-gray-700 text-xs"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSaveNextSteps}
+                    disabled={saving}
+                    className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                  >
+                    {saving ? 'Saving...' : 'Save'}
+                  </button>
+                </div>
+              )}
+            </div>
+            {editingNextSteps ? (
+              <textarea
+                value={localNextSteps}
+                onChange={(e) => setLocalNextSteps(e.target.value)}
+                className="w-full border border-gray-300 rounded px-2 py-1 text-xs min-h-[80px]"
+                placeholder="Write your next steps here..."
+              />
+            ) : localNextSteps ? (
+              <div className="relative group">
+                <p className="text-xs text-gray-700 whitespace-pre-wrap">{localNextSteps}</p>
+                <button
+                  onClick={() => handleCopy(localNextSteps)}
+                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs transition-opacity"
+                  title="Copy to clipboard"
+                >
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400">No next steps defined</p>
+            )}
+          </div>
+
+          {/* AI Suggestions Section */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xs font-medium text-gray-700 uppercase tracking-wide">
+                AI Suggestions
+              </h3>
+            </div>
+            {project.ai_suggestions ? (
+              <div className="relative group">
+                <p className="text-xs text-gray-700 whitespace-pre-wrap">{project.ai_suggestions}</p>
+                <button
+                  onClick={() => handleCopy(project.ai_suggestions || '')}
+                  className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 text-xs transition-opacity"
+                  title="Copy to clipboard"
+                >
+                  Copy
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 italic">No AI suggestions available</p>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Tabs */}
       <div className="border-b border-gray-200">

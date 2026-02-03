@@ -994,6 +994,17 @@ export interface PlaybookReorderItem {
 // Project types
 export type ProjectStatus = 'active' | 'on_hold' | 'completed' | 'cancelled'
 
+export interface ProjectResource {
+  title: string
+  url: string
+  type: 'link' | 'file'
+}
+
+export interface ProjectCustomField {
+  label: string
+  value: string
+}
+
 export interface Project {
   _id?: string
   id: string
@@ -1004,6 +1015,10 @@ export interface Project {
   parent_project_id?: string | null
   owner_user_id?: string
   team_id?: string
+  resources?: ProjectResource[]
+  custom_fields?: ProjectCustomField[]
+  next_steps?: string
+  ai_suggestions?: string
   created_at: string
   updated_at?: string
 }
@@ -1014,6 +1029,9 @@ export interface CreateProjectRequest {
   parent_project_id?: string | null
   owner_user_id?: string
   team_id?: string
+  resources?: ProjectResource[]
+  custom_fields?: ProjectCustomField[]
+  next_steps?: string
 }
 
 export interface UpdateProjectRequest {
@@ -1023,6 +1041,10 @@ export interface UpdateProjectRequest {
   parent_project_id?: string | null
   owner_user_id?: string
   team_id?: string
+  resources?: ProjectResource[]
+  custom_fields?: ProjectCustomField[]
+  next_steps?: string
+  ai_suggestions?: string
 }
 
 // Backlog types
