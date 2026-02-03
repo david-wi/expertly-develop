@@ -202,7 +202,7 @@ export default function LandingPage() {
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900">AI Specialists</h3>
                   <p className="mt-2 text-gray-600">
-                    Handle repetitive work, chase follow-ups,<br />
+                    Handle repetitive work, chase <span className="whitespace-nowrap">follow-ups,</span><br />
                     and keep everything moving.
                   </p>
                   <div className="mt-4 flex flex-wrap justify-center lg:justify-start gap-2">
