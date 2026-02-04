@@ -676,6 +676,40 @@ export const api = {
   },
   getExpertiseDownloadUrl: (id: string) =>
     `${API_BASE}/api/v1/expertise/${id}/download`,
+
+  // Dashboard Notes
+  getDashboardNotes: (params?: { include_all?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.include_all) searchParams.set('include_all', 'true')
+    const query = searchParams.toString()
+    return request<DashboardNote[]>(`/api/v1/dashboard-notes${query ? `?${query}` : ''}`)
+  },
+  getDashboardNote: (id: string, includeHistory?: boolean) => {
+    const query = includeHistory ? '?include_history=true' : ''
+    return request<DashboardNote>(`/api/v1/dashboard-notes/${id}${query}`)
+  },
+  getDashboardNoteVersion: (id: string, version: number) =>
+    request<DashboardNoteVersionEntry>(`/api/v1/dashboard-notes/${id}/version/${version}`),
+  getDashboardNoteHistory: (id: string) =>
+    request<DashboardNoteVersionEntry[]>(`/api/v1/dashboard-notes/${id}/history`),
+  createDashboardNote: (data: CreateDashboardNoteRequest) =>
+    request<DashboardNote>('/api/v1/dashboard-notes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateDashboardNote: (id: string, data: UpdateDashboardNoteRequest) =>
+    request<DashboardNote>(`/api/v1/dashboard-notes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteDashboardNote: (id: string) =>
+    request<void>(`/api/v1/dashboard-notes/${id}`, {
+      method: 'DELETE',
+    }),
+  revertDashboardNoteToVersion: (id: string, version: number) =>
+    request<DashboardNote>(`/api/v1/dashboard-notes/${id}/revert/${version}`, {
+      method: 'POST',
+    }),
 }
 
 // Types
@@ -1671,4 +1705,41 @@ export interface UpdateExpertiseRequest {
   markdown_content?: string
   url?: string
   is_active?: boolean
+}
+
+// Dashboard Note types
+export interface DashboardNote {
+  id: string
+  organization_id: string
+  user_id: string
+  title: string
+  description?: string
+  content?: string
+  version: number
+  created_by?: string
+  updated_by?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface DashboardNoteVersionEntry {
+  version: number
+  title: string
+  description?: string
+  content?: string
+  changed_at: string
+  changed_by?: string
+  is_current: boolean
+}
+
+export interface CreateDashboardNoteRequest {
+  title: string
+  description?: string
+  content?: string
+}
+
+export interface UpdateDashboardNoteRequest {
+  title?: string
+  description?: string
+  content?: string
 }

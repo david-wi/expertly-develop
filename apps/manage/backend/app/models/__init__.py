@@ -65,6 +65,10 @@ from app.models.expertise import (
     Expertise, ExpertiseCreate, ExpertiseUpdate, ExpertiseResponse,
     ExpertiseHistoryEntry, ExpertiseContentType
 )
+from app.models.dashboard_note import (
+    DashboardNote, DashboardNoteCreate, DashboardNoteUpdate,
+    DashboardNoteResponse, DashboardNoteHistoryEntry, DashboardNoteVersionEntry
+)
 
 __all__ = [
     "PyObjectId",
@@ -180,4 +184,10 @@ __all__ = [
     "ExpertiseResponse",
     "ExpertiseHistoryEntry",
     "ExpertiseContentType",
+    "DashboardNote",
+    "DashboardNoteCreate",
+    "DashboardNoteUpdate",
+    "DashboardNoteResponse",
+    "DashboardNoteHistoryEntry",
+    "DashboardNoteVersionEntry",
 ]
