@@ -10,6 +10,7 @@ import {
 } from '../stores/timerStore'
 import { api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
+import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
 
 interface FloatingTimerWidgetProps {
   className?: string
@@ -25,12 +26,14 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     resumeTimer,
     addTime,
     setWhatNext,
+    setNotes,
     acknowledgeTimer,
     stopTimer,
   } = useTimerStore()
 
   const [isExpanded, setIsExpanded] = useState(true)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  const [savingNotes, setSavingNotes] = useState(false)
   const hasPlayedAlertRef = useRef<Set<string>>(new Set())
 
   // Get the active (non-acknowledged) timer
@@ -57,12 +60,32 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     })
   }, [timers])
 
+  // Save notes as a task comment if there are notes and a task context
+  const saveNotesAsComment = async (timer: Timer): Promise<void> => {
+    if (!timer.context?.taskId || !timer.notes || isRichTextEmpty(timer.notes)) {
+      return
+    }
+
+    setSavingNotes(true)
+    try {
+      await api.createTaskComment(timer.context.taskId, {
+        content: timer.notes,
+      })
+    } catch (err) {
+      console.error('Failed to save timer notes as comment:', err)
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
   // Handle completing the task
   const handleCompleteTask = async (timer: Timer) => {
     if (!timer.context?.taskId) return
 
     setCompletingTaskId(timer.context.taskId)
     try {
+      // Save notes as a comment first
+      await saveNotesAsComment(timer)
       await api.quickCompleteTask(timer.context.taskId)
       fetchTasks()
       stopTimer(timer.id)
@@ -74,7 +97,10 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   }
 
   // Handle dismissing the timer
-  const handleDismiss = (timer: Timer) => {
+  const handleDismiss = async (timer: Timer) => {
+    // Save notes as a comment before dismissing
+    await saveNotesAsComment(timer)
+
     if (timer.isComplete) {
       acknowledgeTimer(timer.id)
       stopTimer(timer.id)
@@ -212,6 +238,23 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
                 className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
+
+            {/* Session notes - only shown for task timers */}
+            {activeTimer.context?.type === 'task' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  Session Notes
+                  <span className="font-normal text-gray-400 ml-1">(saved to task)</span>
+                </label>
+                <RichTextEditor
+                  value={activeTimer.notes || ''}
+                  onChange={(notes) => setNotes(activeTimer.id, notes)}
+                  placeholder="Take notes while working..."
+                  minHeight={60}
+                  disabled={savingNotes}
+                />
+              </div>
+            )}
 
             {/* Completion actions */}
             {activeTimer.isComplete && (
