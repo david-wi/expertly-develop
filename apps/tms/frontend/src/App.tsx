@@ -10,6 +10,7 @@ import Customers from './pages/Customers'
 import Carriers from './pages/Carriers'
 import Invoices from './pages/Invoices'
 import Settings from './pages/Settings'
+import MarginDashboard from './pages/MarginDashboard'
 import LandingPage from './pages/LandingPage'
 import ProductComparison from './pages/ProductComparison'
 import Layout from './components/layout/Layout'
@@ -19,7 +20,6 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
-        <Route path="/compare" element={<ProductComparison />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="inbox" element={<Inbox />} />
@@ -31,7 +31,9 @@ function App() {
           <Route path="customers" element={<Customers />} />
           <Route path="carriers" element={<Carriers />} />
           <Route path="invoices" element={<Invoices />} />
+          <Route path="margins" element={<MarginDashboard />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="compare" element={<ProductComparison />} />
         </Route>
       </Routes>
     </BrowserRouter>

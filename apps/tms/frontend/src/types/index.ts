@@ -271,6 +271,78 @@ export interface Tender {
   created_at: string
 }
 
+// Analytics types
+export interface MarginSummary {
+  total_revenue: number
+  total_cost: number
+  total_margin: number
+  avg_margin_percent: number
+  shipment_count: number
+  low_margin_count: number
+}
+
+export interface CustomerMargin {
+  customer_id: string
+  customer_name: string
+  total_revenue: number
+  total_cost: number
+  total_margin: number
+  avg_margin_percent: number
+  shipment_count: number
+}
+
+export interface CarrierMargin {
+  carrier_id: string
+  carrier_name: string
+  total_revenue: number
+  total_cost: number
+  total_margin: number
+  avg_margin_percent: number
+  shipment_count: number
+}
+
+export interface LaneMargin {
+  origin: string
+  destination: string
+  total_revenue: number
+  total_cost: number
+  total_margin: number
+  avg_margin_percent: number
+  shipment_count: number
+}
+
+export interface MarginTrend {
+  date: string
+  total_revenue: number
+  total_cost: number
+  total_margin: number
+  avg_margin_percent: number
+  shipment_count: number
+}
+
+export interface LowMarginShipment {
+  shipment_id: string
+  shipment_number: string
+  customer_name?: string
+  carrier_name?: string
+  origin: string
+  destination: string
+  customer_price: number
+  carrier_cost: number
+  margin: number
+  margin_percent: number
+  created_at: string
+}
+
+export interface MarginDashboard {
+  summary: MarginSummary
+  by_customer: CustomerMargin[]
+  by_carrier: CarrierMargin[]
+  by_lane: LaneMargin[]
+  trends: MarginTrend[]
+  low_margin_shipments: LowMarginShipment[]
+}
+
 // Tracking Event types
 export type TrackingEventType = 'created' | 'dispatched' | 'picked_up' | 'in_transit' | 'check_call' | 'location_update' | 'delay' | 'exception' | 'delivered'
 

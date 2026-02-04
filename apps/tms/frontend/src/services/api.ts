@@ -10,6 +10,7 @@ import type {
   CarrierSuggestion,
   Tender,
   TrackingEvent,
+  MarginDashboard,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -186,4 +187,8 @@ export const api = {
   // AI
   extractEmail: (data: { subject?: string; body: string; sender_email?: string }) =>
     request<Record<string, { value?: string; confidence: number; evidence_text?: string }>>('/api/v1/ai/extract-email', { method: 'POST', body: JSON.stringify(data) }),
+
+  // Analytics
+  getMarginDashboard: (days: number = 30) =>
+    request<MarginDashboard>(`/api/v1/analytics/margins?days=${days}`),
 }
