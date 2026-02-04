@@ -34,6 +34,25 @@ class ProjectCommentAttachment(BaseModel):
     size_bytes: Optional[int] = None
 
 
+class ProjectContact(BaseModel):
+    """A person/contact associated with a project."""
+    id: str  # UUID
+    name: str
+    role: Optional[str] = None  # Their role/relationship to the project
+    emails: list[str] = []  # Email addresses
+    phones: list[str] = []  # Phone numbers
+    notes: Optional[str] = None
+
+
+class ProjectCompany(BaseModel):
+    """A company/organization associated with a project."""
+    id: str  # UUID
+    name: str
+    domains: list[str] = []  # Email domains (e.g., "qrcargo.com")
+    relationship: Optional[str] = None  # Relationship to the project (client, vendor, partner, etc.)
+    notes: Optional[str] = None
+
+
 class ProjectComment(BaseModel):
     """A comment on a project."""
     id: str  # UUID
@@ -71,6 +90,10 @@ class Project(MongoModel):
     # Content identification rules (for classifying emails, calendar items, etc.)
     identification_rules: Optional[str] = None
 
+    # Associations (for linking imported content)
+    contacts: list[ProjectContact] = Field(default_factory=list)
+    companies: list[ProjectCompany] = Field(default_factory=list)
+
     # Avatar
     avatar_url: Optional[str] = None
     avatar_prompt: Optional[str] = None  # Custom prompt for avatar generation
@@ -87,6 +110,8 @@ class ProjectCreate(BaseModel):
     custom_fields: Optional[list[ProjectCustomField]] = None
     next_steps: Optional[str] = None
     identification_rules: Optional[str] = None
+    contacts: Optional[list[ProjectContact]] = None
+    companies: Optional[list[ProjectCompany]] = None
     avatar_url: Optional[str] = None
     avatar_prompt: Optional[str] = None
 
@@ -105,5 +130,7 @@ class ProjectUpdate(BaseModel):
     ai_suggestions: Optional[str] = None
     comments: Optional[list[ProjectComment]] = None
     identification_rules: Optional[str] = None
+    contacts: Optional[list[ProjectContact]] = None
+    companies: Optional[list[ProjectCompany]] = None
     avatar_url: Optional[str] = None
     avatar_prompt: Optional[str] = None

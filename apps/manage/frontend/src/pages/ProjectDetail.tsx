@@ -13,6 +13,8 @@ import {
   ProjectCustomField,
   ProjectComment,
   ProjectCommentAttachment,
+  ProjectContact,
+  ProjectCompany,
   Playbook,
 } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
@@ -120,6 +122,8 @@ export default function ProjectDetail() {
   const [localFields, setLocalFields] = useState<ProjectCustomField[]>([])
   const [localNextSteps, setLocalNextSteps] = useState('')
   const [localIdentificationRules, setLocalIdentificationRules] = useState('')
+  const [localContacts, setLocalContacts] = useState<ProjectContact[]>([])
+  const [localCompanies, setLocalCompanies] = useState<ProjectCompany[]>([])
   const [localComments, setLocalComments] = useState<ProjectComment[]>([])
   const [newComment, setNewComment] = useState('')
   const [newCommentUrl, setNewCommentUrl] = useState('')
@@ -134,6 +138,8 @@ export default function ProjectDetail() {
   const [newResourceTitle, setNewResourceTitle] = useState('')
   const [newResourceUrl, setNewResourceUrl] = useState('')
   const [newFieldLabel, setNewFieldLabel] = useState('')
+  const [newContactName, setNewContactName] = useState('')
+  const [newCompanyName, setNewCompanyName] = useState('')
 
   // Inline description editing
   const [isEditingDescription, setIsEditingDescription] = useState(false)
@@ -229,6 +235,8 @@ export default function ProjectDetail() {
       setLocalFields(existingFields.length === 0 ? DEFAULT_CUSTOM_FIELDS : existingFields)
       setLocalNextSteps(projectData.next_steps || '')
       setLocalIdentificationRules(projectData.identification_rules || '')
+      setLocalContacts(projectData.contacts || [])
+      setLocalCompanies(projectData.companies || [])
       setLocalComments(projectData.comments || [])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load project'
@@ -300,6 +308,24 @@ export default function ProjectDetail() {
       await api.updateProject(id, { identification_rules: rules })
     } catch (err) {
       console.error('Failed to save identification rules:', err)
+    }
+  }
+
+  const saveContacts = async (contacts: ProjectContact[]) => {
+    if (!id) return
+    try {
+      await api.updateProject(id, { contacts })
+    } catch (err) {
+      console.error('Failed to save contacts:', err)
+    }
+  }
+
+  const saveCompanies = async (companies: ProjectCompany[]) => {
+    if (!id) return
+    try {
+      await api.updateProject(id, { companies })
+    } catch (err) {
+      console.error('Failed to save companies:', err)
     }
   }
 
@@ -399,6 +425,63 @@ export default function ProjectDetail() {
   // Identification rules handlers
   const handleIdentificationRulesBlur = () => {
     saveIdentificationRules(localIdentificationRules)
+  }
+
+  // Contact handlers
+  const handleAddContact = () => {
+    if (!newContactName.trim()) return
+    const contact: ProjectContact = {
+      id: crypto.randomUUID(),
+      name: newContactName.trim(),
+      emails: [],
+      phones: [],
+    }
+    const updated = [...localContacts, contact]
+    setLocalContacts(updated)
+    setNewContactName('')
+    saveContacts(updated)
+  }
+
+  const handleRemoveContact = (contactId: string) => {
+    const updated = localContacts.filter((c) => c.id !== contactId)
+    setLocalContacts(updated)
+    saveContacts(updated)
+  }
+
+  const handleUpdateContact = (contactId: string, updates: Partial<ProjectContact>) => {
+    const updated = localContacts.map((c) =>
+      c.id === contactId ? { ...c, ...updates } : c
+    )
+    setLocalContacts(updated)
+    saveContacts(updated)
+  }
+
+  // Company handlers
+  const handleAddCompany = () => {
+    if (!newCompanyName.trim()) return
+    const company: ProjectCompany = {
+      id: crypto.randomUUID(),
+      name: newCompanyName.trim(),
+      domains: [],
+    }
+    const updated = [...localCompanies, company]
+    setLocalCompanies(updated)
+    setNewCompanyName('')
+    saveCompanies(updated)
+  }
+
+  const handleRemoveCompany = (companyId: string) => {
+    const updated = localCompanies.filter((c) => c.id !== companyId)
+    setLocalCompanies(updated)
+    saveCompanies(updated)
+  }
+
+  const handleUpdateCompany = (companyId: string, updates: Partial<ProjectCompany>) => {
+    const updated = localCompanies.map((c) =>
+      c.id === companyId ? { ...c, ...updates } : c
+    )
+    setLocalCompanies(updated)
+    saveCompanies(updated)
   }
 
   // Description inline edit handlers
@@ -1202,6 +1285,131 @@ export default function ProjectDetail() {
               onBlur={handleIdentificationRulesBlur}
               placeholder="How to identify related content (emails, calendar items, etc.)...&#10;&#10;Examples:&#10;• Emails from @qrcargo.com&#10;• Mentions of 'Qatar Airways' (business context)&#10;• Calendar items with Mathias or Mirja"
               className="w-full text-xs text-gray-700 border-0 bg-transparent px-0 py-1 outline-none resize-none min-h-[80px] placeholder-gray-300"
+            />
+          </div>
+
+          {/* People / Contacts */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">People</h3>
+            {localContacts.length > 0 && (
+              <ul className="space-y-2 mb-2">
+                {localContacts.map((contact) => (
+                  <li key={contact.id} className="text-xs group">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{contact.name}</span>
+                          {contact.role && (
+                            <span className="text-gray-400">({contact.role})</span>
+                          )}
+                          <button
+                            onClick={() => handleRemoveContact(contact.id)}
+                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {contact.emails.map((email, i) => (
+                            <span key={i} className="text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+                              {email}
+                            </span>
+                          ))}
+                          {contact.phones.map((phone, i) => (
+                            <span key={i} className="text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                              {phone}
+                            </span>
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Add email or phone..."
+                          className="w-full text-xs border-0 border-b border-transparent hover:border-gray-200 focus:border-gray-300 bg-transparent px-0 py-1 outline-none mt-1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = (e.target as HTMLInputElement).value.trim()
+                              if (value) {
+                                if (value.includes('@')) {
+                                  handleUpdateContact(contact.id, { emails: [...contact.emails, value] })
+                                } else {
+                                  handleUpdateContact(contact.id, { phones: [...contact.phones, value] })
+                                }
+                                ;(e.target as HTMLInputElement).value = ''
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              type="text"
+              placeholder="Add person..."
+              value={newContactName}
+              onChange={(e) => setNewContactName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddContact()}
+              className="w-full text-xs text-gray-500 border-0 bg-transparent px-0 py-1 outline-none placeholder-gray-300"
+            />
+          </div>
+
+          {/* Companies */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <h3 className="text-sm font-semibold text-gray-900 mb-2">Companies</h3>
+            {localCompanies.length > 0 && (
+              <ul className="space-y-2 mb-2">
+                {localCompanies.map((company) => (
+                  <li key={company.id} className="text-xs group">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900">{company.name}</span>
+                          {company.relationship && (
+                            <span className="text-gray-400">({company.relationship})</span>
+                          )}
+                          <button
+                            onClick={() => handleRemoveCompany(company.id)}
+                            className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {company.domains.map((domain, i) => (
+                            <span key={i} className="text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded">
+                              @{domain}
+                            </span>
+                          ))}
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Add domain (e.g., qrcargo.com)..."
+                          className="w-full text-xs border-0 border-b border-transparent hover:border-gray-200 focus:border-gray-300 bg-transparent px-0 py-1 outline-none mt-1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              const value = (e.target as HTMLInputElement).value.trim().replace(/^@/, '')
+                              if (value) {
+                                handleUpdateCompany(company.id, { domains: [...company.domains, value] })
+                                ;(e.target as HTMLInputElement).value = ''
+                              }
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <input
+              type="text"
+              placeholder="Add company..."
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleAddCompany()}
+              className="w-full text-xs text-gray-500 border-0 bg-transparent px-0 py-1 outline-none placeholder-gray-300"
             />
           </div>
         </div>
