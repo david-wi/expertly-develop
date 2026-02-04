@@ -57,7 +57,22 @@ export default function MarginDashboard() {
   }
 
   if (!data) {
-    return <div className="p-8 text-center text-gray-500">No margin data available</div>
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BarChart3 className="h-7 w-7 text-emerald-600" />
+            Margin Dashboard
+          </h1>
+          <p className="text-gray-500">Profitability analytics across your operations</p>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500">No margin data available</p>
+          <p className="text-sm text-gray-400 mt-2">Complete some shipments with invoices to see margin analytics</p>
+        </div>
+      </div>
+    )
   }
 
   return (
