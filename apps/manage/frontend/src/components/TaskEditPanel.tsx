@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { Maximize2 } from 'lucide-react'
 import { Task, Project } from '../services/api'
 import ProjectTypeahead from './ProjectTypeahead'
 
@@ -45,12 +46,21 @@ export function TaskEditPanel({
     setTimeout(() => titleRef.current?.focus(), 0)
   }, [task])
 
+  // Save edited task
   const saveEditedTask = async () => {
+    await saveEditedTaskImpl()
+  }
+
+  // Internal save implementation - accepts optional overrides for values that may not be in state yet
+  const saveEditedTaskImpl = async (overrides?: { projectId?: string }) => {
     if (isSaving) return
+
+    // Use override if provided, otherwise use state
+    const projectIdToSave = overrides?.projectId !== undefined ? overrides.projectId : editProjectId
 
     // Only save if something changed
     const titleChanged = editTitle !== task.title
-    const projectChanged = editProjectId !== (task.project_id || '')
+    const projectChanged = projectIdToSave !== (task.project_id || '')
     const descChanged = editDescription !== (task.description || '')
     const playbookChanged = editPlaybookId !== (task.playbook_id || '')
 
@@ -64,7 +74,7 @@ export function TaskEditPanel({
     try {
       await onSave({
         title: editTitle.trim(),
-        project_id: editProjectId || undefined,
+        project_id: projectIdToSave || undefined,
         description: editDescription.trim() || undefined,
         playbook_id: editPlaybookId || undefined,
       })
@@ -122,7 +132,8 @@ export function TaskEditPanel({
             selectedProjectId={editProjectId || null}
             onChange={(projectId) => {
               setEditProjectId(projectId || '')
-              setTimeout(() => saveEditedTask(), 0)
+              // Pass projectId directly to avoid stale state
+              saveEditedTaskImpl({ projectId: projectId || '' })
             }}
             placeholder="Search projects..."
             disabled={isSaving}
@@ -189,13 +200,15 @@ export function TaskEditPanel({
         </div>
 
         {/* Actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-          {onOpenFullModal ? (
-            <button onClick={onOpenFullModal} className="text-xs text-gray-500 hover:text-gray-700">
-              More options...
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
+          {onOpenFullModal && (
+            <button
+              onClick={onOpenFullModal}
+              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+              title="Open full details"
+            >
+              <Maximize2 className="w-4 h-4" />
             </button>
-          ) : (
-            <div />
           )}
           <button
             ref={doneRef}
@@ -206,9 +219,9 @@ export function TaskEditPanel({
                 handleClose()
               }
             }}
-            className="px-3 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded"
+            className="px-3 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
           >
-            Done
+            Close
           </button>
         </div>
       </div>

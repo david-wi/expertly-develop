@@ -4,6 +4,7 @@ import { Modal, ModalFooter } from '@expertly/ui'
 import { ChevronRight } from 'lucide-react'
 import { api, Project, ProjectStatus, CreateProjectRequest } from '../services/api'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
+import ProjectTypeahead from '../components/ProjectTypeahead'
 
 // Local storage keys
 const COLLAPSED_KEY = 'expertly-manage-collapsed-projects'
@@ -71,25 +72,6 @@ function getDescendantIds(projectId: string, projects: Project[]): Set<string> {
   }
   findDescendants(projectId)
   return descendants
-}
-
-// Get the display path for a project (shows hierarchy)
-function getProjectPath(projectId: string, projects: Project[]): string {
-  const projectMap = new Map<string, Project>()
-  for (const p of projects) {
-    const pId = p._id || p.id
-    projectMap.set(pId, p)
-  }
-
-  const path: string[] = []
-  let currentId: string | null | undefined = projectId
-  while (currentId) {
-    const currentProject: Project | undefined = projectMap.get(currentId)
-    if (!currentProject) break
-    path.unshift(currentProject.name)
-    currentId = currentProject.parent_project_id
-  }
-  return path.join(' → ')
 }
 
 // Build tree structure from flat list
@@ -327,47 +309,6 @@ export default function Projects() {
     }
   }
   buildNodeMap(treeNodes)
-
-  // Get available parent projects (exclude current project and its descendants to prevent circular refs)
-  const getAvailableParents = useCallback(
-    (excludeId?: string): { project: Project; path: string; depth: number }[] => {
-      // Get descendants of the excluded project to prevent circular references
-      const excludedIds = new Set<string>()
-      if (excludeId) {
-        excludedIds.add(excludeId)
-        const descendants = getDescendantIds(excludeId, projects)
-        descendants.forEach((id) => excludedIds.add(id))
-      }
-
-      // Build depth map
-      const depthMap = new Map<string, number>()
-      const getDepth = (projectId: string): number => {
-        if (depthMap.has(projectId)) return depthMap.get(projectId)!
-        const project = projects.find((p) => (p._id || p.id) === projectId)
-        if (!project || !project.parent_project_id) {
-          depthMap.set(projectId, 0)
-          return 0
-        }
-        const parentDepth = getDepth(project.parent_project_id)
-        const depth = parentDepth + 1
-        depthMap.set(projectId, depth)
-        return depth
-      }
-
-      return projects
-        .filter((p) => {
-          const id = p._id || p.id
-          return !excludedIds.has(id)
-        })
-        .map((p) => ({
-          project: p,
-          path: getProjectPath(p._id || p.id, projects),
-          depth: getDepth(p._id || p.id),
-        }))
-        .sort((a, b) => a.path.localeCompare(b.path))
-    },
-    [projects]
-  )
 
   // ==========================================================================
   // DRAG AND DROP FOR PROJECT REPARENTING
@@ -1233,20 +1174,12 @@ export default function Projects() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Parent Project</label>
-            <select
-              value={formData.parent_project_id || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, parent_project_id: e.target.value || null })
-              }
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            >
-              <option value="">None (top-level project)</option>
-              {getAvailableParents().map(({ project: p, depth }) => (
-                <option key={p._id || p.id} value={p._id || p.id}>
-                  {'─'.repeat(depth)}{depth > 0 ? ' ' : ''}{p.name}
-                </option>
-              ))}
-            </select>
+            <ProjectTypeahead
+              projects={projects.map(p => ({ id: p._id || p.id, name: p.name, parent_project_id: p.parent_project_id }))}
+              selectedProjectId={formData.parent_project_id ?? null}
+              onChange={(projectId) => setFormData({ ...formData, parent_project_id: projectId })}
+              placeholder="Search parent projects..."
+            />
           </div>
           <ModalFooter>
             <button
@@ -1310,22 +1243,13 @@ export default function Projects() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Parent Project</label>
-            <select
-              value={formData.parent_project_id || ''}
-              onChange={(e) =>
-                setFormData({ ...formData, parent_project_id: e.target.value || null })
-              }
-              className="w-full border border-gray-300 rounded-md px-3 py-2"
-            >
-              <option value="">None (top-level project)</option>
-              {getAvailableParents(selectedProject?._id || selectedProject?.id).map(
-                ({ project: p, depth }) => (
-                  <option key={p._id || p.id} value={p._id || p.id}>
-                    {'─'.repeat(depth)}{depth > 0 ? ' ' : ''}{p.name}
-                  </option>
-                )
-              )}
-            </select>
+            <ProjectTypeahead
+              projects={projects.map(p => ({ id: p._id || p.id, name: p.name, parent_project_id: p.parent_project_id }))}
+              selectedProjectId={formData.parent_project_id ?? null}
+              onChange={(projectId) => setFormData({ ...formData, parent_project_id: projectId })}
+              excludeIds={selectedProject ? [selectedProject._id || selectedProject.id] : []}
+              placeholder="Search parent projects..."
+            />
           </div>
           <ModalFooter>
             <button
