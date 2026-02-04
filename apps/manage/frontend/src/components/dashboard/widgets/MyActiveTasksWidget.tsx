@@ -25,6 +25,29 @@ function getProjectDisplayName(project: Project, allProjects: Project[]): string
   return project.name
 }
 
+// Format seconds to H:MM or M:SS display (e.g., 600 -> "0:10" for 10 minutes)
+function formatDuration(seconds: number | undefined): string {
+  if (!seconds) return ''
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return `${hours}:${minutes.toString().padStart(2, '0')}`
+}
+
+// Parse H:MM or M:SS string to seconds (e.g., "0:10" -> 600 for 10 minutes)
+function parseDuration(value: string): number | null {
+  if (!value.trim()) return null
+  const parts = value.split(':')
+  if (parts.length === 2) {
+    const hours = parseInt(parts[0], 10) || 0
+    const minutes = parseInt(parts[1], 10) || 0
+    return hours * 3600 + minutes * 60
+  }
+  // If just a number, treat as minutes
+  const mins = parseInt(value, 10)
+  if (!isNaN(mins)) return mins * 60
+  return null
+}
+
 export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const { user, tasks, queues, loading, fetchTasks, viewingUserId, setViewingUserId } = useAppStore()
   const [selectedQueueFilter, setSelectedQueueFilter] = useState<string>('all')
@@ -62,6 +85,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [editProjectId, setEditProjectId] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editPlaybookId, setEditPlaybookId] = useState<string>('')
+  const [editDuration, setEditDuration] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   // Timer modal state
@@ -74,6 +98,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const bottomProjectRef = useRef<HTMLInputElement>(null)
   const bottomInstructionsRef = useRef<HTMLTextAreaElement>(null)
   const editTitleRef = useRef<HTMLInputElement>(null)
+  const editDurationRef = useRef<HTMLInputElement>(null)
   const editInstructionsRef = useRef<HTMLTextAreaElement>(null)
   const editPlaybookRef = useRef<HTMLSelectElement>(null)
   const editDoneRef = useRef<HTMLButtonElement>(null)
@@ -399,6 +424,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       setEditProjectId(task.project_id || '')
       setEditDescription(task.description || '')
       setEditPlaybookId(task.playbook_id || '')
+      setEditDuration(formatDuration(task.estimated_duration))
       setTimeout(() => editTitleRef.current?.focus(), 0)
     }
   }
@@ -409,7 +435,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   }
 
   // Internal save implementation - accepts optional overrides for values that may not be in state yet
-  const saveEditedTaskImpl = async (overrides?: { projectId?: string }) => {
+  const saveEditedTaskImpl = async (overrides?: { projectId?: string; duration?: string }) => {
     if (!editingTaskId || isSaving) return
 
     const originalTask = activeTasks.find(t => (t._id || t.id) === editingTaskId)
@@ -417,14 +443,17 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
     // Use override if provided, otherwise use state
     const projectIdToSave = overrides?.projectId !== undefined ? overrides.projectId : editProjectId
+    const durationToSave = overrides?.duration !== undefined ? overrides.duration : editDuration
+    const parsedDuration = parseDuration(durationToSave)
 
     // Only save if something changed
     const titleChanged = editTitle !== originalTask.title
     const projectChanged = projectIdToSave !== (originalTask.project_id || '')
     const descChanged = editDescription !== (originalTask.description || '')
     const playbookChanged = editPlaybookId !== (originalTask.playbook_id || '')
+    const durationChanged = parsedDuration !== (originalTask.estimated_duration || null)
 
-    if (!titleChanged && !projectChanged && !descChanged && !playbookChanged) {
+    if (!titleChanged && !projectChanged && !descChanged && !playbookChanged && !durationChanged) {
       return
     }
 
@@ -437,6 +466,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         project_id: projectIdToSave || undefined,
         description: editDescription.trim() || undefined,
         playbook_id: editPlaybookId || undefined,
+        estimated_duration: parsedDuration,
       })
       fetchTasks()
     } catch (err) {
@@ -456,6 +486,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     setEditProjectId('')
     setEditDescription('')
     setEditPlaybookId('')
+    setEditDuration('')
   }
 
   // Quick complete a task
@@ -474,6 +505,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         setEditProjectId('')
         setEditDescription('')
         setEditPlaybookId('')
+        setEditDuration('')
       }
     } catch (err) {
       console.error('Failed to complete task:', err)
@@ -793,6 +825,15 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         </p>
                       </div>
 
+                      {/* Duration column */}
+                      <div className="flex-shrink-0 w-10">
+                        {task.estimated_duration ? (
+                          <span className="text-[10px] text-gray-500 font-mono" title="Estimated duration">
+                            {formatDuration(task.estimated_duration)}
+                          </span>
+                        ) : null}
+                      </div>
+
                       {/* Project column */}
                       {taskProject && (
                         <div className="flex-shrink-0 w-24">
@@ -1025,12 +1066,40 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                           closeEditPanel()
                         } else if (e.key === 'Tab' && !e.shiftKey) {
                           e.preventDefault()
-                          editInstructionsRef.current?.focus()
+                          editDurationRef.current?.focus()
                         }
                       }}
                       disabled={isSaving}
                       className="w-full text-sm font-medium text-gray-900 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                       placeholder="Task title"
+                    />
+                  </div>
+
+                  {/* Estimated duration */}
+                  <div>
+                    <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1 block">
+                      Est. Duration (H:MM)
+                    </label>
+                    <input
+                      ref={editDurationRef}
+                      type="text"
+                      value={editDuration}
+                      onChange={(e) => setEditDuration(e.target.value)}
+                      onBlur={saveEditedTask}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          saveEditedTask()
+                        } else if (e.key === 'Escape') {
+                          closeEditPanel()
+                        } else if (e.key === 'Tab' && !e.shiftKey) {
+                          e.preventDefault()
+                          editInstructionsRef.current?.focus()
+                        }
+                      }}
+                      disabled={isSaving}
+                      placeholder="0:10"
+                      className="w-20 text-xs text-gray-700 font-mono bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                     />
                   </div>
 
@@ -1140,17 +1209,21 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     )}
 
     {/* Timer Modal */}
-    {editingTaskId && (
-      <StartTimerModal
-        isOpen={showTimerModal}
-        onClose={() => setShowTimerModal(false)}
-        context={{
-          type: 'task',
-          taskId: editingTaskId,
-          taskTitle: editTitle || 'Task',
-        }}
-      />
-    )}
+    {editingTaskId && (() => {
+      const editingTask = activeTasks.find(t => (t._id || t.id) === editingTaskId)
+      return (
+        <StartTimerModal
+          isOpen={showTimerModal}
+          onClose={() => setShowTimerModal(false)}
+          context={{
+            type: 'task',
+            taskId: editingTaskId,
+            taskTitle: editTitle || 'Task',
+          }}
+          defaultDuration={editingTask?.estimated_duration}
+        />
+      )
+    })()}
   </>
   )
 }

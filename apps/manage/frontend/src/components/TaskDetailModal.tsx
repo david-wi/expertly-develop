@@ -110,6 +110,29 @@ const formatRelativeTime = (dateStr: string) => {
 
 const COMMENT_TRUNCATE_LENGTH = 500
 
+// Format seconds to H:MM display (e.g., 600 -> "0:10" for 10 minutes)
+function formatDuration(seconds: number | undefined): string {
+  if (!seconds) return ''
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return `${hours}:${minutes.toString().padStart(2, '0')}`
+}
+
+// Parse H:MM string to seconds (e.g., "0:10" -> 600 for 10 minutes)
+function parseDuration(value: string): number | null {
+  if (!value.trim()) return null
+  const parts = value.split(':')
+  if (parts.length === 2) {
+    const hours = parseInt(parts[0], 10) || 0
+    const minutes = parseInt(parts[1], 10) || 0
+    return hours * 3600 + minutes * 60
+  }
+  // If just a number, treat as minutes
+  const mins = parseInt(value, 10)
+  if (!isNaN(mins)) return mins * 60
+  return null
+}
+
 function CommentContent({ content }: { content: string }) {
   const [expanded, setExpanded] = useState(false)
   const shouldTruncate = content.length > COMMENT_TRUNCATE_LENGTH
@@ -152,6 +175,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const [editedApproverType, setEditedApproverType] = useState<ApproverType | null>(null)
   const [editedApproverId, setEditedApproverId] = useState<string | null>(null)
   const [editedApproverQueueId, setEditedApproverQueueId] = useState<string | null>(null)
+  const [editedDuration, setEditedDuration] = useState('')
   const [hasChanges, setHasChanges] = useState(false)
 
   // Scheduling state
@@ -209,6 +233,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       setEditedApproverType(taskData.approver_type as ApproverType || null)
       setEditedApproverId(taskData.approver_id || null)
       setEditedApproverQueueId(taskData.approver_queue_id || null)
+      setEditedDuration(formatDuration(taskData.estimated_duration))
 
       // Initialize scheduling state
       if (taskData.scheduled_start) {
@@ -270,6 +295,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     const originalScheduledStart = task.scheduled_start ? new Date(task.scheduled_start).toISOString().slice(0, 19) : null
     const originalScheduledEnd = task.scheduled_end ? new Date(task.scheduled_end).toISOString().slice(0, 19) : null
 
+    const parsedDuration = parseDuration(editedDuration)
+    const durationChanged = parsedDuration !== (task.estimated_duration || null)
+
     const changed =
       editedTitle !== task.title ||
       editedDescription !== (task.description || '') ||
@@ -280,9 +308,10 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       editedApproverId !== (task.approver_id || null) ||
       newScheduledStart !== originalScheduledStart ||
       newScheduledEnd !== originalScheduledEnd ||
-      scheduleTimezone !== (task.schedule_timezone || '')
+      scheduleTimezone !== (task.schedule_timezone || '') ||
+      durationChanged
     setHasChanges(changed)
-  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone])
+  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone, editedDuration])
 
   // Hook for unsaved changes warning
   const { confirmClose } = useUnsavedChanges(hasChanges)
@@ -305,6 +334,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         scheduled_start: buildScheduledStart(),
         scheduled_end: buildScheduledEnd(),
         schedule_timezone: scheduleTimezone || null,
+        estimated_duration: parseDuration(editedDuration),
       }
       await api.updateTask(taskId, updateData)
       setHasChanges(false)
@@ -545,6 +575,17 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="w-20">
+                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Est. Time</label>
+                  <input
+                    type="text"
+                    value={editedDuration}
+                    onChange={(e) => setEditedDuration(e.target.value)}
+                    placeholder="0:10"
+                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    title="Estimated duration (H:MM)"
+                  />
                 </div>
               </div>
 
@@ -1074,6 +1115,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
           taskId: taskId,
           taskTitle: task?.title || 'Task',
         }}
+        defaultDuration={task?.estimated_duration}
       />
     </div>
   )

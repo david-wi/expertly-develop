@@ -14,6 +14,8 @@ interface StartTimerModalProps {
   }
   /** Default label if no context provided */
   defaultLabel?: string
+  /** Default duration in seconds (from task's estimated_duration) */
+  defaultDuration?: number
 }
 
 const PRESET_DURATIONS = [
@@ -30,10 +32,18 @@ export default function StartTimerModal({
   onClose,
   context,
   defaultLabel = 'Focus Session',
+  defaultDuration,
 }: StartTimerModalProps) {
   const { startTimer } = useTimerStore()
-  const [selectedDuration, setSelectedDuration] = useState(5 * 60) // 5 minutes default
-  const [customMinutes, setCustomMinutes] = useState('')
+  // Use task's estimated duration if provided, otherwise default to 5 minutes
+  const initialDuration = defaultDuration || 5 * 60
+  const [selectedDuration, setSelectedDuration] = useState(initialDuration)
+  const [customMinutes, setCustomMinutes] = useState(
+    // Pre-fill custom minutes if defaultDuration doesn't match a preset
+    defaultDuration && !PRESET_DURATIONS.some(p => p.seconds === defaultDuration)
+      ? String(Math.floor(defaultDuration / 60))
+      : ''
+  )
 
   const label = context?.taskTitle || defaultLabel
 

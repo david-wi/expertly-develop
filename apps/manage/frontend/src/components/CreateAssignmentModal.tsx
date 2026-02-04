@@ -7,10 +7,12 @@ import {
   Team,
   User,
   Playbook,
+  Project,
   CreateTaskRequest,
   CreateRecurringTaskRequest,
   RecurrenceType,
 } from '../services/api'
+import ProjectTypeahead, { ProjectOption } from './ProjectTypeahead'
 
 const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -46,6 +48,7 @@ interface FormState {
   user_id: string
   assignment_type: 'queue' | 'team' | 'user'
   priority: number
+  estimated_duration: string
   is_recurring: boolean
   recurrence_type: RecurrenceType
   interval: number
@@ -72,6 +75,7 @@ const initialFormState: FormState = {
   user_id: '',
   assignment_type: 'queue',
   priority: 5,
+  estimated_duration: '',
   is_recurring: false,
   recurrence_type: 'daily',
   interval: 1,
@@ -87,6 +91,21 @@ const initialFormState: FormState = {
   approver_queue_id: '',
 }
 
+// Parse H:MM string to seconds (e.g., "0:10" -> 600 for 10 minutes)
+function parseDuration(value: string): number | null {
+  if (!value.trim()) return null
+  const parts = value.split(':')
+  if (parts.length === 2) {
+    const hours = parseInt(parts[0], 10) || 0
+    const minutes = parseInt(parts[1], 10) || 0
+    return hours * 3600 + minutes * 60
+  }
+  // If just a number, treat as minutes
+  const mins = parseInt(value, 10)
+  if (!isNaN(mins)) return mins * 60
+  return null
+}
+
 export default function CreateAssignmentModal({
   isOpen,
   onClose,
@@ -98,6 +117,7 @@ export default function CreateAssignmentModal({
   const [teams, setTeams] = useState<Team[]>([])
   const [users, setUsers] = useState<User[]>([])
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+  const [projects, setProjects] = useState<Project[]>([])
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -111,6 +131,9 @@ export default function CreateAssignmentModal({
   // Advanced section toggle
   const [showAdvanced, setShowAdvanced] = useState(false)
 
+  // Project selector state
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectId || null)
+
   // Playbook typeahead state
   const [playbookSearch, setPlaybookSearch] = useState('')
   const [showPlaybookDropdown, setShowPlaybookDropdown] = useState(false)
@@ -118,11 +141,12 @@ export default function CreateAssignmentModal({
   const loadData = useCallback(async () => {
     setLoading(true)
     try {
-      const [queuesData, teamsData, usersData, playbooksData, userData] = await Promise.all([
+      const [queuesData, teamsData, usersData, playbooksData, projectsData, userData] = await Promise.all([
         api.getQueues(),
         api.getTeams(),
         api.getUsers(),
         api.getPlaybooks({ active_only: true }),
+        api.getProjects(),
         api.getCurrentUser(),
       ])
 
@@ -130,6 +154,7 @@ export default function CreateAssignmentModal({
       setTeams(teamsData)
       setUsers(usersData)
       setPlaybooks(playbooksData)
+      setProjects(projectsData)
       setCurrentUser(userData)
 
       // Set default queue to user's inbox if available
@@ -170,12 +195,13 @@ export default function CreateAssignmentModal({
   useEffect(() => {
     if (!isOpen) {
       setForm(initialFormState)
+      setSelectedProjectId(projectId || null)
       setShowScheduling(false)
       setShowAdvanced(false)
       setPlaybookSearch('')
       setShowPlaybookDropdown(false)
     }
-  }, [isOpen])
+  }, [isOpen, projectId])
 
   // Filtered playbooks for typeahead (exclude groups, sort alphabetically)
   const filteredPlaybooks = useMemo(() => {
@@ -202,6 +228,28 @@ export default function CreateAssignmentModal({
     const userId = currentUser.id || (currentUser as { _id?: string })?._id
     return queues.find((q) => q.scope_type === 'user' && q.scope_id === userId)
   }, [currentUser, queues])
+
+  // Transform projects for ProjectTypeahead
+  const projectOptions: ProjectOption[] = useMemo(() => {
+    return projects.map((p) => ({
+      id: p._id || p.id,
+      name: p.name,
+      parent_project_id: p.parent_project_id,
+    }))
+  }, [projects])
+
+  // Handle project creation from typeahead
+  const handleProjectCreated = useCallback((newProject: ProjectOption) => {
+    setProjects((prev) => [
+      ...prev,
+      {
+        id: newProject.id,
+        _id: newProject.id,
+        name: newProject.name,
+        parent_project_id: newProject.parent_project_id,
+      } as Project,
+    ])
+  }, [])
 
   // When playbook is selected, set defaults from playbook's default fields
   const handlePlaybookSelect = (playbook: Playbook | null) => {
@@ -263,9 +311,10 @@ export default function CreateAssignmentModal({
       ...initialFormState,
       queue_id: defaultQueueId,
     })
+    setSelectedProjectId(projectId || null)
     setPlaybookSearch('')
     setShowScheduling(false)
-  }, [currentUser, queues])
+  }, [currentUser, queues, projectId])
 
   const handleSubmit = async (e: React.FormEvent, addAnother = false) => {
     e.preventDefault()
@@ -289,12 +338,13 @@ export default function CreateAssignmentModal({
           queue_id: queueId,
           title: form.title.trim(),
           description: form.description.trim() || undefined,
-          project_id: projectId,
+          project_id: selectedProjectId || undefined,
           priority: form.priority,
           recurrence_type: form.recurrence_type,
           interval: form.interval,
           days_of_week: form.recurrence_type === 'weekly' ? form.days_of_week : undefined,
           day_of_month: form.recurrence_type === 'monthly' ? form.day_of_month : undefined,
+          estimated_duration: parseDuration(form.estimated_duration) ?? undefined,
         }
         await api.createRecurringTask(recurringData)
       } else {
@@ -302,7 +352,7 @@ export default function CreateAssignmentModal({
           queue_id: queueId,
           title: form.title.trim(),
           description: form.description.trim() || undefined,
-          project_id: projectId,
+          project_id: selectedProjectId || undefined,
           sop_id: form.playbook_id || undefined,
           playbook_id: form.playbook_id || undefined,
           priority: form.priority,
@@ -314,6 +364,7 @@ export default function CreateAssignmentModal({
           approver_id: form.approver_id || undefined,
           approver_queue_id: form.approver_queue_id || undefined,
           approval_required: !!form.approver_type,
+          estimated_duration: parseDuration(form.estimated_duration) ?? undefined,
         }
         await api.createTask(taskData)
       }
@@ -367,6 +418,17 @@ export default function CreateAssignmentModal({
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="w-24">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Est. Time</label>
+              <input
+                type="text"
+                value={form.estimated_duration}
+                onChange={(e) => setForm({ ...form, estimated_duration: e.target.value })}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 font-mono"
+                placeholder="0:10"
+                title="Estimated duration (H:MM)"
+              />
             </div>
           </div>
 
@@ -482,8 +544,22 @@ export default function CreateAssignmentModal({
             />
           </div>
 
+          {/* Project (optional) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Project (optional)
+            </label>
+            <ProjectTypeahead
+              projects={projectOptions}
+              selectedProjectId={selectedProjectId}
+              onChange={(projectId) => setSelectedProjectId(projectId)}
+              placeholder="Search projects..."
+              onProjectCreated={handleProjectCreated}
+            />
+          </div>
+
           {/* Advanced Section */}
-          <div className="border-t pt-3">
+          <div className="border-t pt-4">
             <button
               type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
@@ -514,92 +590,90 @@ export default function CreateAssignmentModal({
             </button>
 
             {showAdvanced && (
-              <div className="mt-4 space-y-4 pl-2">
+              <div className="mt-4 space-y-5 bg-gray-50 rounded-lg p-4">
                 {/* Approver Section */}
                 {!form.is_recurring && (
                   <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <label className="text-sm font-medium text-gray-700">Approver</label>
-                      <div className="flex gap-1">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              approver_type: '',
-                              approver_id: '',
-                              approver_queue_id: '',
-                            })
-                          }
-                          className={`px-2 py-1 text-xs rounded ${
-                            !form.approver_type
-                              ? 'bg-gray-200 text-gray-800'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          No Approval
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              approver_type: 'user',
-                              approver_id: '',
-                              approver_queue_id: '',
-                            })
-                          }
-                          className={`px-2 py-1 text-xs rounded ${
-                            form.approver_type === 'user'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          User
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              approver_type: 'team',
-                              approver_id: '',
-                              approver_queue_id: '',
-                            })
-                          }
-                          className={`px-2 py-1 text-xs rounded ${
-                            form.approver_type === 'team'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          Team
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              approver_type: 'anyone',
-                              approver_id: '',
-                              approver_queue_id: '',
-                            })
-                          }
-                          className={`px-2 py-1 text-xs rounded ${
-                            form.approver_type === 'anyone'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                          }`}
-                        >
-                          Anyone
-                        </button>
-                      </div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Approver</label>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            approver_type: '',
+                            approver_id: '',
+                            approver_queue_id: '',
+                          })
+                        }
+                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                          !form.approver_type
+                            ? 'bg-white border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        No Approval
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            approver_type: 'user',
+                            approver_id: '',
+                            approver_queue_id: '',
+                          })
+                        }
+                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                          form.approver_type === 'user'
+                            ? 'bg-white border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        User
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            approver_type: 'team',
+                            approver_id: '',
+                            approver_queue_id: '',
+                          })
+                        }
+                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                          form.approver_type === 'team'
+                            ? 'bg-white border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        Team
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            approver_type: 'anyone',
+                            approver_id: '',
+                            approver_queue_id: '',
+                          })
+                        }
+                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
+                          form.approver_type === 'anyone'
+                            ? 'bg-white border-blue-500 text-blue-700'
+                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
+                        }`}
+                      >
+                        Anyone
+                      </button>
                     </div>
                     {form.approver_type === 'user' && (
                       <select
                         value={form.approver_id}
                         onChange={(e) => setForm({ ...form, approver_id: e.target.value })}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
                       >
                         <option value="">Select approver...</option>
                         {users.map((user) => (
@@ -613,7 +687,7 @@ export default function CreateAssignmentModal({
                       <select
                         value={form.approver_id}
                         onChange={(e) => setForm({ ...form, approver_id: e.target.value })}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                        className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-white"
                       >
                         <option value="">Select approving team...</option>
                         {teams.map((team) => (
