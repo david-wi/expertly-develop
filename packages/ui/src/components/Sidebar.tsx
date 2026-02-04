@@ -300,8 +300,8 @@ export function Sidebar({
         </div>
       )}
 
-      {/* Navigation and Custom Content - scrollable area */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      {/* Scrollable content area - nav scrolls, bottom sections stick to bottom */}
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col">
         {/* Navigation */}
         {navigation.length > 0 && (
           <nav className="px-3 py-2">
@@ -341,75 +341,78 @@ export function Sidebar({
 
         {/* Custom Content (children) */}
         {children}
-      </div>
 
-      {/* Bottom sections wrapper - scrollable when viewport is very short */}
-      <div className="flex-shrink-0 flex flex-col min-h-0 max-h-[40vh] overflow-y-auto">
-        {/* Build Info (optional - displayed above theme switcher line) */}
-        {buildInfo && (
-          <div className="px-4 py-1">
-            {buildInfo}
-          </div>
-        )}
+        {/* Spacer to push bottom sections down when content is short */}
+        <div className="flex-1" />
 
-        {/* Theme Switcher */}
-        {showThemeSwitcher && (
-          <div className={`px-4 py-3 border-t ${sidebarBorderColor}`}>
-            <ThemeSwitcher />
-          </div>
-        )}
+        {/* Bottom sections - sticky to bottom of scroll area */}
+        <div className={`sticky bottom-0 ${sidebarBg}`}>
+          {/* Build Info (optional - displayed above theme switcher line) */}
+          {buildInfo && (
+            <div className="px-4 py-1">
+              {buildInfo}
+            </div>
+          )}
 
-        {/* Bottom Section (optional - for logout buttons, etc.) */}
-        {bottomSection && (
-          <div className={`border-t ${sidebarBorderColor}`}>
-            {bottomSection}
-          </div>
-        )}
+          {/* Theme Switcher */}
+          {showThemeSwitcher && (
+            <div className={`px-4 py-3 border-t ${sidebarBorderColor}`}>
+              <ThemeSwitcher />
+            </div>
+          )}
 
-        {/* User */}
-        {user && (
-          <div className={`p-4 border-t ${sidebarBorderColor} ${userBg} relative`}>
-          {userMenu ? (
-            <>
-              <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className={`w-full flex items-center gap-3 ${sidebarHoverBg} rounded-lg p-1 -m-1 transition-colors`}
-              >
-                <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
-                  <span className={`${avatarText} font-medium text-sm`}>
-                    {user.name?.charAt(0) || 'U'}
-                  </span>
+          {/* Bottom Section (optional - for logout buttons, etc.) */}
+          {bottomSection && (
+            <div className={`border-t ${sidebarBorderColor}`}>
+              {bottomSection}
+            </div>
+          )}
+
+          {/* User */}
+          {user && (
+            <div className={`p-4 border-t ${sidebarBorderColor} ${userBg} relative`}>
+              {userMenu ? (
+                <>
+                  <button
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className={`w-full flex items-center gap-3 ${sidebarHoverBg} rounded-lg p-1 -m-1 transition-colors`}
+                  >
+                    <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                      <span className={`${avatarText} font-medium text-sm`}>
+                        {user.name?.charAt(0) || 'U'}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className={`text-sm font-medium text-theme-sidebar-text-strong truncate`}>{user.name || 'Loading...'}</p>
+                      {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
+                      {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
+                    </div>
+                    <ChevronUp className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
+                  </button>
+                  <UserMenu
+                    config={userMenu}
+                    isOpen={showUserMenu}
+                    onClose={() => setShowUserMenu(false)}
+                    renderLink={renderLink}
+                  />
+                </>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
+                    <span className={`${avatarText} font-medium text-sm`}>
+                      {user.name?.charAt(0) || 'U'}
+                    </span>
+                  </div>
+                  <div className="min-w-0">
+                    <p className={`text-sm font-medium text-theme-sidebar-text-strong truncate`}>{user.name || 'Loading...'}</p>
+                    {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
+                    {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1 text-left">
-                  <p className={`text-sm font-medium text-theme-sidebar-text-strong truncate`}>{user.name || 'Loading...'}</p>
-                  {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
-                  {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
-                </div>
-                <ChevronUp className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
-              <UserMenu
-                config={userMenu}
-                isOpen={showUserMenu}
-                onClose={() => setShowUserMenu(false)}
-                renderLink={renderLink}
-              />
-            </>
-          ) : (
-            <div className="flex items-center gap-3">
-              <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center`}>
-                <span className={`${avatarText} font-medium text-sm`}>
-                  {user.name?.charAt(0) || 'U'}
-                </span>
-              </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-medium text-theme-sidebar-text-strong truncate`}>{user.name || 'Loading...'}</p>
-                {user.organization && <p className={`text-xs ${sidebarTextMuted} truncate`}>{user.organization}</p>}
-                {!user.organization && user.role && <p className={`text-xs ${sidebarTextMuted} capitalize`}>{user.role}</p>}
-              </div>
+              )}
             </div>
           )}
         </div>
-      )}
       </div>
     </div>
   )
