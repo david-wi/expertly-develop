@@ -548,3 +548,79 @@ export const EMAIL_CATEGORY_LABELS: Record<EmailCategory, string> = {
   claim_related: 'Claim',
   uncategorized: 'Uncategorized',
 }
+
+// Customs types
+export type CustomsEntryStatus =
+  | 'draft'
+  | 'submitted'
+  | 'under_review'
+  | 'additional_info_required'
+  | 'cleared'
+  | 'held'
+  | 'rejected'
+
+export type CustomsEntryType = 'import' | 'export' | 'in_transit'
+
+export interface CustomsLineItem {
+  description: string
+  quantity: number
+  unit_of_measure: string
+  unit_value_cents: number
+  total_value_cents: number
+  country_of_origin: string
+  hs_code?: string
+  hs_code_description?: string
+  weight_kg?: number
+  manufacturer?: string
+}
+
+export interface CustomsEntry {
+  id: string
+  entry_number: string
+  customs_reference?: string
+  broker_reference?: string
+  entry_type: CustomsEntryType
+  status: CustomsEntryStatus
+  shipment_id?: string
+  importer_of_record?: string
+  consignee_name?: string
+  exporter_name?: string
+  port_of_entry?: string
+  estimated_arrival?: string
+  actual_arrival?: string
+  clearance_date?: string
+  total_declared_value_cents: number
+  estimated_duty_cents: number
+  actual_duty_cents?: number
+  line_items: CustomsLineItem[]
+  notes?: string
+  hold_reason?: string
+  created_at?: string
+}
+
+export interface CommercialInvoice {
+  id: string
+  invoice_number: string
+  invoice_date: string
+  shipment_id?: string
+  customs_entry_id?: string
+  seller_name: string
+  seller_country: string
+  buyer_name: string
+  buyer_country: string
+  total_cents: number
+  currency: string
+  incoterms?: string
+  line_items: CustomsLineItem[]
+  created_at?: string
+}
+
+export const CUSTOMS_STATUS_LABELS: Record<CustomsEntryStatus, string> = {
+  draft: 'Draft',
+  submitted: 'Submitted',
+  under_review: 'Under Review',
+  additional_info_required: 'Info Required',
+  cleared: 'Cleared',
+  held: 'Held',
+  rejected: 'Rejected',
+}
