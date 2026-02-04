@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { usersApi } from '@/services/api'
 import {
   Lightbulb,
   Plus,
@@ -9,8 +10,15 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  Pencil,
+  Archive,
+  ArchiveRestore,
+  Heart,
+  MessageCircle,
+  Square,
+  CheckSquare,
 } from 'lucide-react'
-import { InlineVoiceTranscription } from '@expertly/ui'
+import { InlineVoiceTranscription, EXPERTLY_PRODUCTS } from '@expertly/ui'
 
 // Types
 interface Idea {
@@ -24,6 +32,45 @@ interface Idea {
   created_by_email: string | null
   created_at: string
   updated_at: string
+  vote_count?: number
+  user_voted?: boolean
+  comment_count?: number
+}
+
+// Predefined tags per product
+const PRODUCT_TAGS: Record<string, string[]> = {
+  admin: ['ui', 'api', 'security', 'monitoring', 'performance', 'themes'],
+  manage: ['tasks', 'projects', 'calendar', 'notifications', 'mobile', 'queue'],
+  define: ['requirements', 'artifacts', 'ai', 'collaboration', 'export', 'templates'],
+  develop: ['walkthroughs', 'recording', 'playback', 'projects', 'artifacts'],
+  identity: ['auth', 'users', 'organizations', 'teams', 'permissions', 'sso'],
+  salon: ['appointments', 'clients', 'services', 'staff', 'scheduling'],
+  today: ['tasks', 'workflows', 'calendar', 'notifications', 'integrations'],
+  vibecode: ['agents', 'sessions', 'tools', 'streaming', 'widgets'],
+  vibetest: ['testing', 'automation', 'reports', 'scenarios', 'ai'],
+  chem: ['formulas', 'calculations', 'visualization', 'data'],
+}
+
+// Helper to get product icon from EXPERTLY_PRODUCTS
+function getProductIcon(productCode: string) {
+  const product = EXPERTLY_PRODUCTS.find(p => p.code === productCode)
+  return product?.icon
+}
+
+// Helper to get product display name
+function getProductDisplayName(productCode: string): string {
+  const product = EXPERTLY_PRODUCTS.find(p => p.code === productCode)
+  if (product) {
+    return product.name.replace('Expertly ', '')
+  }
+  return productCode.charAt(0).toUpperCase() + productCode.slice(1)
+}
+
+// Priority order for sorting
+const PRIORITY_ORDER: Record<string, number> = {
+  high: 0,
+  medium: 1,
+  low: 2,
 }
 
 interface IdeaCreate {
@@ -54,12 +101,13 @@ const VALID_PRODUCTS = [
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const ideasApi = {
-  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean }): Promise<Idea[]> {
+  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string }): Promise<Idea[]> {
     const searchParams = new URLSearchParams()
     if (params?.product) searchParams.set('product', params.product)
     if (params?.status) searchParams.set('status', params.status)
     if (params?.priority) searchParams.set('priority', params.priority)
     if (params?.include_archived) searchParams.set('include_archived', 'true')
+    if (params?.user_email) searchParams.set('user_email', params.user_email)
     const query = searchParams.toString()
     const res = await fetch(`${API_BASE}/ideas${query ? `?${query}` : ''}`, {
       credentials: 'include',
@@ -96,6 +144,15 @@ const ideasApi = {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Failed to delete idea')
+  },
+
+  async toggleVote(id: string, userEmail: string): Promise<{ idea_id: string; vote_count: number; user_voted: boolean }> {
+    const res = await fetch(`${API_BASE}/ideas/${id}/vote?user_email=${encodeURIComponent(userEmail)}`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to toggle vote')
+    return res.json()
   },
 }
 
@@ -155,20 +212,44 @@ function IdeaCard({
   idea,
   onEdit,
   onUpdateStatus,
+  onVote,
+  isSelected,
+  onToggleSelect,
+  selectMode,
 }: {
   idea: Idea
   onEdit: () => void
   onUpdateStatus: (status: Idea['status']) => void
+  onVote?: () => void
+  isSelected?: boolean
+  onToggleSelect?: () => void
+  selectMode?: boolean
 }) {
   const [expanded, setExpanded] = useState(false)
+  const ProductIcon = getProductIcon(idea.product)
 
   return (
-    <div className="bg-theme-bg-surface rounded-xl border border-theme-border overflow-hidden">
+    <div className={`bg-theme-bg-surface rounded-xl border overflow-hidden ${isSelected ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-theme-border'}`}>
       <div
         className="p-4 cursor-pointer hover:bg-theme-bg-elevated transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
         <div className="flex items-start justify-between gap-4">
+          {selectMode && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onToggleSelect?.()
+              }}
+              className="mt-1 p-1 text-theme-text-secondary hover:text-primary-500 transition-colors"
+            >
+              {isSelected ? (
+                <CheckSquare className="w-5 h-5 text-primary-500" />
+              ) : (
+                <Square className="w-5 h-5" />
+              )}
+            </button>
+          )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap mb-2">
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeColor(idea.status)}`}>
@@ -177,14 +258,40 @@ function IdeaCard({
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getPriorityBadgeColor(idea.priority)}`}>
                 {idea.priority}
               </span>
-              <span className="text-xs px-2 py-0.5 bg-theme-bg-elevated rounded text-theme-text-secondary">
-                {idea.product}
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-theme-bg-elevated rounded text-theme-text-secondary">
+                {ProductIcon && <ProductIcon className="w-3 h-3" />}
+                {getProductDisplayName(idea.product)}
               </span>
             </div>
             <h3 className="text-lg font-semibold text-theme-text-primary mb-1">{idea.title}</h3>
             {idea.description && (
               <p className="text-sm text-theme-text-secondary line-clamp-2">{idea.description}</p>
             )}
+            {/* Vote and comment counts in collapsed view */}
+            <div className="flex items-center gap-4 mt-2">
+              {onVote && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onVote()
+                  }}
+                  className={`flex items-center gap-1 text-xs transition-colors ${
+                    idea.user_voted
+                      ? 'text-red-500 hover:text-red-600'
+                      : 'text-theme-text-muted hover:text-red-500'
+                  }`}
+                >
+                  <Heart className={`w-4 h-4 ${idea.user_voted ? 'fill-current' : ''}`} />
+                  <span>{idea.vote_count || 0}</span>
+                </button>
+              )}
+              {idea.comment_count !== undefined && (
+                <span className="flex items-center gap-1 text-xs text-theme-text-muted">
+                  <MessageCircle className="w-4 h-4" />
+                  <span>{idea.comment_count}</span>
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-theme-text-muted whitespace-nowrap">
@@ -251,15 +358,27 @@ function IdeaCard({
                   Mark Implemented
                 </button>
               )}
-              {idea.status !== 'archived' && (
+              {idea.status !== 'archived' ? (
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     onUpdateStatus('archived')
                   }}
-                  className="px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg text-sm transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 >
+                  <Archive className="w-4 h-4" />
                   Archive
+                </button>
+              ) : (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onUpdateStatus('new')
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-lg text-sm font-medium hover:bg-primary-200 dark:hover:bg-primary-900/70 transition-colors"
+                >
+                  <ArchiveRestore className="w-4 h-4" />
+                  Unarchive
                 </button>
               )}
             </div>
@@ -268,9 +387,11 @@ function IdeaCard({
                 e.stopPropagation()
                 onEdit()
               }}
-              className="px-3 py-1.5 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg text-sm transition-colors"
+              className="p-2 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg transition-colors"
+              aria-label="Edit idea"
+              title="Edit"
             >
-              Edit
+              <Pencil className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -298,6 +419,10 @@ function CreateIdeaModal({
     priority: idea?.priority || 'medium',
     tags: idea?.tags || [],
   })
+  const [tagInput, setTagInput] = useState('')
+
+  // Get suggested tags for selected product
+  const suggestedTags = PRODUCT_TAGS[form.product] || []
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -310,6 +435,25 @@ function CreateIdeaModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     onSave(form)
+  }
+
+  const addTag = (tag: string) => {
+    const trimmedTag = tag.trim().toLowerCase()
+    if (trimmedTag && !form.tags?.includes(trimmedTag)) {
+      setForm({ ...form, tags: [...(form.tags || []), trimmedTag] })
+    }
+    setTagInput('')
+  }
+
+  const removeTag = (tagToRemove: string) => {
+    setForm({ ...form, tags: form.tags?.filter(t => t !== tagToRemove) || [] })
+  }
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      addTag(tagInput)
+    }
   }
 
   return (
@@ -423,6 +567,63 @@ function CreateIdeaModal({
             </div>
           </div>
 
+          {/* Tags section */}
+          <div>
+            <label className="block text-sm font-medium text-theme-text-primary mb-1">
+              Tags
+            </label>
+            <div className="space-y-2">
+              {/* Current tags */}
+              {form.tags && form.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {form.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 text-xs px-2 py-1 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded"
+                    >
+                      {tag}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="hover:text-primary-900 dark:hover:text-primary-100"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Tag input */}
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={() => tagInput && addTag(tagInput)}
+                className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                placeholder="Type a tag and press Enter"
+              />
+              {/* Suggested tags */}
+              {suggestedTags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs text-theme-text-muted mr-1">Suggestions:</span>
+                  {suggestedTags
+                    .filter(tag => !form.tags?.includes(tag))
+                    .map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => addTag(tag)}
+                        className="text-xs px-2 py-0.5 bg-theme-bg-elevated text-theme-text-secondary hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-primary-900/50 dark:hover:text-primary-300 rounded transition-colors"
+                      >
+                        + {tag}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="pt-4 border-t border-theme-border flex justify-end gap-2">
             <button
               type="button"
@@ -453,19 +654,34 @@ export function IdeaBacklog() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
   const [includeArchived, setIncludeArchived] = useState(false)
+  const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null)
 
+  // Bulk selection state
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Current user email for voting
+  const { data: currentUser } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: () => usersApi.me(),
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
+  const userEmail = currentUser?.email
+
   // Fetch ideas
   const { data: ideas = [], isLoading, refetch } = useQuery({
-    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived],
+    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       include_archived: includeArchived,
+      user_email: userEmail || undefined,
     }),
+    enabled: !!userEmail, // Wait for user email before fetching
   })
 
   // Create mutation
@@ -487,10 +703,67 @@ export function IdeaBacklog() {
     },
   })
 
+  // Vote mutation with optimistic update
+  const voteMutation = useMutation({
+    mutationFn: (ideaId: string) => ideasApi.toggleVote(ideaId, userEmail!),
+    onMutate: async (ideaId) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['ideas'] })
+
+      // Snapshot previous value
+      const previousIdeas = queryClient.getQueryData(['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail])
+
+      // Optimistically update
+      queryClient.setQueryData(
+        ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
+        (old: Idea[] | undefined) => old?.map(idea => {
+          if (idea.id === ideaId) {
+            const newVoted = !idea.user_voted
+            return {
+              ...idea,
+              user_voted: newVoted,
+              vote_count: (idea.vote_count || 0) + (newVoted ? 1 : -1),
+            }
+          }
+          return idea
+        })
+      )
+
+      return { previousIdeas }
+    },
+    onError: (_err, _ideaId, context) => {
+      // Rollback on error
+      if (context?.previousIdeas) {
+        queryClient.setQueryData(
+          ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
+          context.previousIdeas
+        )
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['ideas'] })
+    },
+  })
+
   // Stats
   const newCount = ideas.filter((i) => i.status === 'new').length
   const exploringCount = ideas.filter((i) => i.status === 'in_progress').length
   const implementedCount = ideas.filter((i) => i.status === 'done').length
+
+  // Sort ideas by priority (high → medium → low) then by date within same priority
+  const sortedIdeas = useMemo(() => {
+    return [...ideas].sort((a, b) => {
+      if (sortBy === 'priority') {
+        const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
+        if (priorityDiff !== 0) return priorityDiff
+        // Same priority, sort by date (newest first)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      } else {
+        // Sort by date only (newest first)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      }
+    })
+  }, [ideas, sortBy])
 
   // Update URL when product filter changes
   const handleProductFilterChange = useCallback((product: string) => {
@@ -501,6 +774,63 @@ export function IdeaBacklog() {
     }
   }, [setSearchParams])
 
+  // Bulk selection handlers
+  const toggleSelectMode = useCallback(() => {
+    setSelectMode(!selectMode)
+    setSelectedIds(new Set())
+  }, [selectMode])
+
+  const toggleSelect = useCallback((id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }, [])
+
+  const selectAll = useCallback(() => {
+    setSelectedIds(new Set(sortedIdeas.map(i => i.id)))
+  }, [sortedIdeas])
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set())
+  }, [])
+
+  // Bulk update mutation
+  const bulkUpdateMutation = useMutation({
+    mutationFn: async ({ ids, updates }: { ids: string[]; updates: { status?: string; priority?: string; tags_to_add?: string[] } }) => {
+      const res = await fetch(`${API_BASE}/ideas/bulk`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, updates }),
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('Failed to bulk update ideas')
+      return res.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ideas'] })
+      setSelectedIds(new Set())
+    },
+  })
+
+  const handleBulkStatusChange = useCallback((status: string) => {
+    bulkUpdateMutation.mutate({ ids: Array.from(selectedIds), updates: { status } })
+  }, [selectedIds, bulkUpdateMutation])
+
+  const handleBulkPriorityChange = useCallback((priority: string) => {
+    bulkUpdateMutation.mutate({ ids: Array.from(selectedIds), updates: { priority } })
+  }, [selectedIds, bulkUpdateMutation])
+
+  // Dynamic header title based on product filter
+  const headerTitle = productFilter
+    ? `Idea Backlog - Expertly ${getProductDisplayName(productFilter)}`
+    : 'Idea Backlog'
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -508,7 +838,7 @@ export function IdeaBacklog() {
         <div className="flex items-center gap-3">
           <Lightbulb className="h-8 w-8 text-yellow-500" />
           <div>
-            <h1 className="text-2xl font-bold text-theme-text-primary">Idea Backlog</h1>
+            <h1 className="text-2xl font-bold text-theme-text-primary">{headerTitle}</h1>
             <p className="text-theme-text-secondary mt-1">
               Capture and nurture ideas across all Expertly products
             </p>
@@ -521,6 +851,17 @@ export function IdeaBacklog() {
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
+          </button>
+          <button
+            onClick={toggleSelectMode}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
+              selectMode
+                ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300'
+                : 'text-theme-text-secondary hover:bg-theme-bg-elevated'
+            }`}
+          >
+            {selectMode ? <CheckSquare className="w-4 h-4" /> : <Square className="w-4 h-4" />}
+            {selectMode ? 'Exit Select' : 'Select'}
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -569,6 +910,54 @@ export function IdeaBacklog() {
         </div>
       </div>
 
+      {/* Bulk Actions Toolbar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 bg-primary-50 dark:bg-primary-900/20 rounded-xl border border-primary-200 dark:border-primary-800 p-4">
+          <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
+            {selectedIds.size} selected
+          </span>
+          <div className="h-4 w-px bg-primary-200 dark:bg-primary-700" />
+          <button
+            onClick={selectAll}
+            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+          >
+            Select All
+          </button>
+          <button
+            onClick={clearSelection}
+            className="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+          >
+            Clear Selection
+          </button>
+          <div className="h-4 w-px bg-primary-200 dark:bg-primary-700" />
+          <div>
+            <select
+              onChange={(e) => e.target.value && handleBulkStatusChange(e.target.value)}
+              className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-primary-300 dark:border-primary-600 rounded-lg text-sm text-theme-text-primary"
+              defaultValue=""
+            >
+              <option value="" disabled>Change Status...</option>
+              <option value="new">New</option>
+              <option value="in_progress">Exploring</option>
+              <option value="done">Implemented</option>
+              <option value="archived">Archive</option>
+            </select>
+          </div>
+          <div>
+            <select
+              onChange={(e) => e.target.value && handleBulkPriorityChange(e.target.value)}
+              className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-primary-300 dark:border-primary-600 rounded-lg text-sm text-theme-text-primary"
+              defaultValue=""
+            >
+              <option value="" disabled>Change Priority...</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 bg-theme-bg-surface rounded-xl border border-theme-border p-4">
         <div>
@@ -616,7 +1005,19 @@ export function IdeaBacklog() {
           </select>
         </div>
 
-        <div className="flex items-end">
+        <div>
+          <label className="block text-xs text-theme-text-muted mb-1">Sort By</label>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'priority' | 'date')}
+            className="px-3 py-1.5 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary"
+          >
+            <option value="priority">Priority</option>
+            <option value="date">Date</option>
+          </select>
+        </div>
+
+        <div className="flex items-center">
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -635,22 +1036,22 @@ export function IdeaBacklog() {
               setStatusFilter('')
               setPriorityFilter('')
             }}
-            className="px-3 py-1.5 text-sm text-theme-text-secondary hover:text-theme-text-primary mt-4"
+            className="px-3 py-1.5 text-sm text-theme-text-secondary hover:text-theme-text-primary"
           >
             Clear filters
           </button>
         )}
       </div>
 
-      {/* Ideas list */}
-      <div className="space-y-4">
+      {/* Ideas list - responsive grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
         {isLoading ? (
-          <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
+          <div className="col-span-full bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
             Loading ideas...
           </div>
-        ) : ideas.length === 0 ? (
-          <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
+        ) : sortedIdeas.length === 0 ? (
+          <div className="col-span-full bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
             <Lightbulb className="w-8 h-8 mx-auto mb-2" />
             <p className="text-lg font-medium text-theme-text-primary mb-1">No ideas yet</p>
             <p className="text-sm">
@@ -660,7 +1061,7 @@ export function IdeaBacklog() {
             </p>
           </div>
         ) : (
-          ideas.map((idea) => (
+          sortedIdeas.map((idea) => (
             <IdeaCard
               key={idea.id}
               idea={idea}
@@ -671,6 +1072,10 @@ export function IdeaBacklog() {
                   data: { status },
                 })
               }
+              onVote={userEmail ? () => voteMutation.mutate(idea.id) : undefined}
+              selectMode={selectMode}
+              isSelected={selectedIds.has(idea.id)}
+              onToggleSelect={() => toggleSelect(idea.id)}
             />
           ))
         )}
