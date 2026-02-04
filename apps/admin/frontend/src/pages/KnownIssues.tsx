@@ -42,17 +42,18 @@ interface KnownIssueCreate {
 }
 
 // API functions
-const API_BASE = import.meta.env.VITE_API_URL || ''
+// VITE_API_URL already includes /api prefix (e.g., https://admin-api.ai.devintensive.com/api)
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const knownIssuesApi = {
   async list(): Promise<KnownIssue[]> {
-    const res = await fetch(`${API_BASE}/api/known-issues`)
+    const res = await fetch(`${API_BASE}/known-issues`)
     if (!res.ok) throw new Error('Failed to fetch known issues')
     return res.json()
   },
 
   async create(data: KnownIssueCreate): Promise<KnownIssue> {
-    const res = await fetch(`${API_BASE}/api/known-issues`, {
+    const res = await fetch(`${API_BASE}/known-issues`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -62,7 +63,7 @@ const knownIssuesApi = {
   },
 
   async update(id: string, data: Partial<KnownIssue>): Promise<KnownIssue> {
-    const res = await fetch(`${API_BASE}/api/known-issues/${id}`, {
+    const res = await fetch(`${API_BASE}/known-issues/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -72,7 +73,7 @@ const knownIssuesApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/api/known-issues/${id}`, {
+    const res = await fetch(`${API_BASE}/known-issues/${id}`, {
       method: 'DELETE',
     })
     if (!res.ok) throw new Error('Failed to delete issue')

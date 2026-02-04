@@ -50,7 +50,8 @@ const VALID_PRODUCTS = [
 ]
 
 // API functions
-const API_BASE = import.meta.env.VITE_API_URL || ''
+// VITE_API_URL already includes /api prefix (e.g., https://admin-api.ai.devintensive.com/api)
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const ideasApi = {
   async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean }): Promise<Idea[]> {
@@ -60,7 +61,7 @@ const ideasApi = {
     if (params?.priority) searchParams.set('priority', params.priority)
     if (params?.include_archived) searchParams.set('include_archived', 'true')
     const query = searchParams.toString()
-    const res = await fetch(`${API_BASE}/api/ideas${query ? `?${query}` : ''}`, {
+    const res = await fetch(`${API_BASE}/ideas${query ? `?${query}` : ''}`, {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Failed to fetch ideas')
@@ -68,7 +69,7 @@ const ideasApi = {
   },
 
   async create(data: IdeaCreate): Promise<Idea> {
-    const res = await fetch(`${API_BASE}/api/ideas`, {
+    const res = await fetch(`${API_BASE}/ideas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -79,7 +80,7 @@ const ideasApi = {
   },
 
   async update(id: string, data: Partial<Idea>): Promise<Idea> {
-    const res = await fetch(`${API_BASE}/api/ideas/${id}`, {
+    const res = await fetch(`${API_BASE}/ideas/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -90,7 +91,7 @@ const ideasApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const res = await fetch(`${API_BASE}/api/ideas/${id}`, {
+    const res = await fetch(`${API_BASE}/ideas/${id}`, {
       method: 'DELETE',
       credentials: 'include',
     })
