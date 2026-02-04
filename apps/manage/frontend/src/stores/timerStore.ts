@@ -12,6 +12,8 @@ export interface Timer {
   isPaused: boolean
   /** When the timer was last updated (for calculating elapsed time) */
   lastTick: number
+  /** When the timer was started (ISO string for time logging) */
+  startedAt: string
   /** Optional context - e.g., task ID for task timers */
   context?: {
     type: 'task' | 'generic'
@@ -26,10 +28,13 @@ export interface Timer {
   isComplete: boolean
   /** Whether the completion alert has been acknowledged */
   acknowledged: boolean
+  /** Whether time has been logged for this timer session */
+  timeLogged: boolean
 }
 
 interface TimerState {
   timers: Timer[]
+  isPoppedOut: boolean
 
   // Actions
   startTimer: (params: {
@@ -47,13 +52,16 @@ interface TimerState {
   completeTimer: (id: string) => void
   acknowledgeTimer: (id: string) => void
   stopTimer: (id: string) => void
+  markTimeLogged: (id: string) => void
   getActiveTimer: () => Timer | undefined
+  setPoppedOut: (isPoppedOut: boolean) => void
 }
 
 export const useTimerStore = create<TimerState>()(
   persist(
     (set, get) => ({
       timers: [],
+      isPoppedOut: false,
 
       startTimer: ({ id, label, duration, context }) => {
         set((state) => {
@@ -69,11 +77,13 @@ export const useTimerStore = create<TimerState>()(
                 remaining: duration,
                 isPaused: false,
                 lastTick: Date.now(),
+                startedAt: new Date().toISOString(),
                 context,
                 whatNext: '',
                 notes: '',
                 isComplete: false,
                 acknowledged: false,
+                timeLogged: false,
               },
             ],
           }
@@ -172,9 +182,21 @@ export const useTimerStore = create<TimerState>()(
         }))
       },
 
+      markTimeLogged: (id) => {
+        set((state) => ({
+          timers: state.timers.map((t) =>
+            t.id === id ? { ...t, timeLogged: true } : t
+          ),
+        }))
+      },
+
       getActiveTimer: () => {
         const state = get()
         return state.timers.find((t) => !t.acknowledged)
+      },
+
+      setPoppedOut: (isPoppedOut) => {
+        set({ isPoppedOut })
       },
     }),
     {

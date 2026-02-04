@@ -1,9 +1,21 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional, Any
+from uuid import uuid4
 from pydantic import BaseModel, Field
 
 from app.models.base import MongoModel, PyObjectId
+
+
+class TimeEntry(BaseModel):
+    """A time entry representing work logged on a task."""
+    id: str = Field(default_factory=lambda: str(uuid4()))
+    start_time: datetime
+    end_time: datetime
+    duration_seconds: int  # Computed from start/end for convenience
+    user_id: str  # Who logged this time
+    user_name: Optional[str] = None  # Cached user name for display
+    notes: Optional[str] = None  # Optional notes about what was done
 
 
 class TaskStatus(str, Enum):
@@ -106,6 +118,9 @@ class Task(MongoModel):
     # Estimated duration in seconds (e.g., 600 = 10 minutes)
     estimated_duration: Optional[int] = None
 
+    # Time tracking - logged time entries
+    time_entries: list[TimeEntry] = Field(default_factory=list)
+
 
 class TaskCreate(BaseModel):
     """Schema for creating a task."""
@@ -179,6 +194,13 @@ class TaskFail(BaseModel):
     """Schema for failing a task."""
     reason: str
     retry: bool = True
+
+
+class TimeEntryCreate(BaseModel):
+    """Schema for logging time to a task."""
+    start_time: datetime
+    end_time: datetime
+    notes: Optional[str] = None
 
 
 class RecurrenceType(str, Enum):
