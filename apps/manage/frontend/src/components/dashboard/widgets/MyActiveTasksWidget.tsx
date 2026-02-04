@@ -1102,20 +1102,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         placeholder="0:10"
                         className="w-16 text-xs text-gray-700 font-mono bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const currentSeconds = parseDuration(editDuration) || 0
-                          const newDuration = formatDuration(currentSeconds + 600)
-                          setEditDuration(newDuration)
-                          saveEditedTaskImpl({ duration: newDuration })
-                        }}
-                        disabled={isSaving}
-                        className="px-1.5 py-1 text-[10px] font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded transition-colors"
-                        title="Add 10 minutes"
-                      >
-                        +10m
-                      </button>
                     </div>
                   </div>
 

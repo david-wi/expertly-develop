@@ -72,3 +72,5 @@ Warns users before losing changes on modal close or page refresh.
 20260204 - Add timeboxed timer feature - Reusable timer system with floating widget, configurable duration, what-next reminders, audio/speech alerts
 20260204 - Expertly Manage > Project: Add URL field to project comments for pasting email/calendar links
 20260204 - Manage > My Active Tasks: Fix tag/project dropdown truncation - dropdown choices were cut off (e.g., 'Implementa...'). Changed dropdown to min-w-max and whitespace-nowrap instead of truncate.
+20260204 - Multiple Manage fixes: (1) Hide base64 avatar textbox, (2) Edit User modal footer stays visible, (3) Better error handling for user updates, (4) Avatar generation saves to persistent storage with proper URLs instead of base64
+20250204 - Manage > Dashboard > Task - Remove +10m button near Est. Duration (should be in TIMER popup instead)
