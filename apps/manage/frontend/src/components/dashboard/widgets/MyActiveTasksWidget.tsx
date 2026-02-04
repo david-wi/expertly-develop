@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Maximize2, Check, Plus } from 'lucide-react'
+import { Maximize2, Check, Plus, Timer } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
 import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
 import ProjectTypeahead from '../../../components/ProjectTypeahead'
+import StartTimerModal from '../../../components/StartTimerModal'
 
 interface Playbook {
   _id?: string
@@ -63,6 +64,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [editPlaybookId, setEditPlaybookId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  // Timer modal state
+  const [showTimerModal, setShowTimerModal] = useState(false)
   // Refs
   const topTitleRef = useRef<HTMLInputElement>(null)
   const topProjectRef = useRef<HTMLInputElement>(null)
@@ -1066,6 +1069,13 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
                     <button
+                      onClick={() => setShowTimerModal(true)}
+                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                      title="Start timer"
+                    >
+                      <Timer className="w-4 h-4" />
+                    </button>
+                    <button
                       onClick={() => setSelectedTaskId(editingTaskId)}
                       className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
                       title="Open full details"
@@ -1108,6 +1118,19 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         isOpen={!!selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
         onUpdate={() => fetchTasks()}
+      />
+    )}
+
+    {/* Timer Modal */}
+    {editingTaskId && (
+      <StartTimerModal
+        isOpen={showTimerModal}
+        onClose={() => setShowTimerModal(false)}
+        context={{
+          type: 'task',
+          taskId: editingTaskId,
+          taskTitle: editTitle || 'Task',
+        }}
       />
     )}
   </>
