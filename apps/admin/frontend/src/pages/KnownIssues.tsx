@@ -338,7 +338,7 @@ function CreateIssueModal({
                 placeholder="Brief description of the issue"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
                 size="md"
                 className="self-center"
@@ -360,7 +360,7 @@ function CreateIssueModal({
                 placeholder="Detailed description of the issue and how it manifests"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setForm({ ...form, description: form.description ? form.description + ' ' + text : text })}
                 size="md"
                 className="self-start mt-1"
@@ -446,7 +446,7 @@ function CreateIssueModal({
                 placeholder="Steps users can take to work around this issue"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setForm({ ...form, workaround: form.workaround ? form.workaround + ' ' + text : text })}
                 size="md"
                 className="self-start mt-1"

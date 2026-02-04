@@ -360,7 +360,7 @@ function CreateIdeaModal({
                 placeholder="e.g., AI-powered task suggestions"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
                 size="md"
                 className="self-center"
@@ -381,7 +381,7 @@ function CreateIdeaModal({
                 placeholder="Why is this idea valuable? What problem does it solve?"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setForm({ ...form, description: form.description ? form.description + ' ' + text : text })}
                 size="md"
                 className="self-start mt-1"

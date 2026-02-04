@@ -376,7 +376,7 @@ export function ArtifactUploadDialog({
                             className="text-sm flex-1"
                           />
                           <InlineVoiceTranscription
-                            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                             onTranscribe={(text) => updateFile(index, { name: fileItem.name ? fileItem.name + ' ' + text : text })}
                             size="sm"
                           />
@@ -390,7 +390,7 @@ export function ArtifactUploadDialog({
                             className="text-sm flex-1"
                           />
                           <InlineVoiceTranscription
-                            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                             onTranscribe={(text) => updateFile(index, { description: fileItem.description ? fileItem.description + ' ' + text : text })}
                             size="sm"
                           />

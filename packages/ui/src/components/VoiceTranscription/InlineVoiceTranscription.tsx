@@ -6,8 +6,8 @@ import { cn } from '../../utils/cn'
 import type { VoiceTranscriptionStatus, VoiceTranscriptionError, TranscriptMessage } from './types'
 
 export interface InlineVoiceTranscriptionProps {
-  /** WebSocket URL for Deepgram transcription */
-  wsUrl: string
+  /** Token URL for Deepgram transcription (REST endpoint that returns temporary token) */
+  tokenUrl: string
   /** Callback when transcription text should be added to the field */
   onTranscribe: (text: string) => void
   /** Callback for interim (non-final) transcripts */
@@ -23,7 +23,7 @@ export interface InlineVoiceTranscriptionProps {
 }
 
 export function InlineVoiceTranscription({
-  wsUrl,
+  tokenUrl,
   onTranscribe,
   onInterimTranscript,
   onError,
@@ -69,7 +69,7 @@ export function InlineVoiceTranscription({
     sendAudio,
     error: wsError,
   } = useDeepgramWebSocket({
-    url: wsUrl,
+    tokenUrl,
     onTranscript: handleTranscript,
     onError: (error) => {
       setStatus('error')

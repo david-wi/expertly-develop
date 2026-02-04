@@ -150,7 +150,7 @@ export default function Releases() {
                         className="flex-1"
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setNewRelease({ ...newRelease, version_name: newRelease.version_name ? newRelease.version_name + ' ' + text : text })}
                         size="md"
                       />
@@ -169,7 +169,7 @@ export default function Releases() {
                         className="flex-1"
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setNewRelease({ ...newRelease, description: newRelease.description ? newRelease.description + ' ' + text : text })}
                         size="md"
                         className="self-start mt-1"

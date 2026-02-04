@@ -171,7 +171,7 @@ export function ThemeDetail() {
                     className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => {
                       setName(name ? name + ' ' + text : text)
                       setHasChanges(true)
@@ -196,7 +196,7 @@ export function ThemeDetail() {
                     className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => {
                       setDescription(description ? description + ' ' + text : text)
                       setHasChanges(true)
@@ -219,7 +219,7 @@ export function ThemeDetail() {
                     className="flex-1 px-3 py-2 bg-theme-bg border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => setChangeSummary(changeSummary ? changeSummary + ' ' + text : text)}
                     size="md"
                     className="self-center"

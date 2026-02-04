@@ -166,7 +166,7 @@ export default function RequirementDetail() {
                   className="text-lg font-semibold flex-1"
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setForm({ ...form, title: form.title ? form.title + ' ' + text : text })}
                   size="md"
                 />
@@ -229,7 +229,7 @@ export default function RequirementDetail() {
                   className="flex-1"
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setForm({ ...form, what_this_does: form.what_this_does ? form.what_this_does + ' ' + text : text })}
                   size="md"
                   className="self-start mt-1"
@@ -251,7 +251,7 @@ export default function RequirementDetail() {
                   className="flex-1"
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setForm({ ...form, why_this_exists: form.why_this_exists ? form.why_this_exists + ' ' + text : text })}
                   size="md"
                   className="self-start mt-1"
@@ -273,7 +273,7 @@ export default function RequirementDetail() {
                   className="flex-1"
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setForm({ ...form, not_included: form.not_included ? form.not_included + ' ' + text : text })}
                   size="md"
                   className="self-start mt-1"
@@ -295,7 +295,7 @@ export default function RequirementDetail() {
                   className="flex-1"
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setForm({ ...form, acceptance_criteria: form.acceptance_criteria ? form.acceptance_criteria + ' ' + text : text })}
                   size="md"
                   className="self-start mt-1"

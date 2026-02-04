@@ -301,7 +301,7 @@ export default function ChatWidget({ widget, conversation, ws }: ChatWidgetProps
             className="flex-1 px-3 py-2 rounded-lg bg-white border border-violet-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-violet-400 disabled:opacity-50"
           />
           <InlineVoiceTranscription
-            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
             onTranscribe={(text) => setInput(input ? input + ' ' + text : text)}
             size="md"
             className="self-center"

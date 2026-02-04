@@ -117,7 +117,7 @@ export default function Products() {
                       className="flex-1"
                     />
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => {
                         const name = newProduct.name ? newProduct.name + ' ' + text : text
                         const suggested = suggestPrefix(name)
@@ -160,7 +160,7 @@ export default function Products() {
                       className="flex-1"
                     />
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => setNewProduct({ ...newProduct, description: newProduct.description ? newProduct.description + ' ' + text : text })}
                       size="md"
                       className="self-start mt-1"

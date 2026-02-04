@@ -1,11 +1,12 @@
-"""WebSocket proxy for Deepgram speech-to-text transcription."""
+"""Deepgram speech-to-text transcription endpoints."""
 
 import asyncio
 import json
 import logging
 from typing import Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import httpx
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException
 import websockets
 
 from app.config import get_settings
@@ -13,6 +14,37 @@ from app.config import get_settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+@router.get("/token")
+async def get_transcription_token():
+    """Get a temporary Deepgram token for direct browser-to-Deepgram WebSocket connection."""
+    settings = get_settings()
+    if not settings.deepgram_api_key:
+        raise HTTPException(status_code=503, detail="Transcription service not configured")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                "https://api.deepgram.com/v1/auth/grant",
+                headers={"Authorization": f"Token {settings.deepgram_api_key}", "Content-Type": "application/json"},
+                json={"time_to_live": 30},
+                timeout=10.0,
+            )
+            if response.status_code != 200:
+                logger.error(f"Deepgram token request failed: {response.status_code} {response.text}")
+                raise HTTPException(status_code=502, detail="Failed to obtain transcription token")
+            data = response.json()
+            return {
+                "token": data.get("access_token"),
+                "deepgram_url": (
+                    "wss://api.deepgram.com/v1/listen?"
+                    "model=nova-3&detect_language=true&punctuate=true&interim_results=true&endpointing=300&vad_events=true"
+                ),
+            }
+    except httpx.RequestError as e:
+        logger.error(f"Deepgram token request error: {e}")
+        raise HTTPException(status_code=502, detail="Failed to connect to transcription service")
+
 
 # Deepgram WebSocket URL with recommended settings
 # Note: Do NOT specify encoding/sample_rate - let Deepgram auto-detect from container format (WebM/Opus)

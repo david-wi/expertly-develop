@@ -119,7 +119,7 @@ export function StaffDetailModal({ staff, isOpen, onClose, mode }: Props) {
                       />
                     </div>
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => handleInputChange('first_name', formData.first_name ? formData.first_name + ' ' + text : text)}
                       size="md"
                       className="self-end mb-[2px]"
@@ -135,7 +135,7 @@ export function StaffDetailModal({ staff, isOpen, onClose, mode }: Props) {
                       />
                     </div>
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => handleInputChange('last_name', formData.last_name ? formData.last_name + ' ' + text : text)}
                       size="md"
                       className="self-end mb-[2px]"
@@ -152,7 +152,7 @@ export function StaffDetailModal({ staff, isOpen, onClose, mode }: Props) {
                     />
                   </div>
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => handleInputChange('display_name', formData.display_name ? formData.display_name + ' ' + text : text)}
                     size="md"
                     className="self-end mb-[2px]"

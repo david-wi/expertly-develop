@@ -570,7 +570,7 @@ export function BulkImportDialog({
                     className="resize-none flex-1"
                   />
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => setDescription(description ? description + ' ' + text : text)}
                     size="md"
                     className="self-start mt-1"

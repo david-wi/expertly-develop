@@ -336,7 +336,7 @@ export default function TeamsPage() {
                   autoFocus
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
                   size="md"
                   className="self-center"
@@ -354,7 +354,7 @@ export default function TeamsPage() {
                   placeholder="What does this team do?"
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
                   size="md"
                   className="self-start mt-1"
@@ -400,7 +400,7 @@ export default function TeamsPage() {
                   required
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
                   size="md"
                   className="self-center"
@@ -417,7 +417,7 @@ export default function TeamsPage() {
                   rows={3}
                 />
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
                   size="md"
                   className="self-start mt-1"

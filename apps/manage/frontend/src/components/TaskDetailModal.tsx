@@ -511,7 +511,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       className="flex-1 px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                     />
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => setEditedTitle(editedTitle ? editedTitle + ' ' + text : text)}
                       size="sm"
                     />
@@ -545,7 +545,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     placeholder="Add a description..."
                   />
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => setEditedDescription(editedDescription ? editedDescription + ' ' + text : text)}
                     size="sm"
                     className="self-start mt-1"

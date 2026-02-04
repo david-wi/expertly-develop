@@ -199,7 +199,7 @@ export function ArtifactDetailDialog({
                       className="flex-1"
                     />
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => setEditForm({ ...editForm, name: editForm.name ? editForm.name + ' ' + text : text })}
                       size="sm"
                     />
@@ -226,7 +226,7 @@ export function ArtifactDetailDialog({
                       className="flex-1"
                     />
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) => setEditForm({ ...editForm, description: editForm.description ? editForm.description + ' ' + text : text })}
                       size="sm"
                       className="self-start mt-1"
@@ -303,7 +303,7 @@ export function ArtifactDetailDialog({
                         className="flex-1"
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setChangeSummary(changeSummary ? changeSummary + ' ' + text : text)}
                         size="sm"
                       />

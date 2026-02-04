@@ -400,7 +400,7 @@ export default function EnvironmentSetup() {
                 className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setFormData({ ...formData, notes: formData.notes ? formData.notes + ' ' + text : text })}
                 size="md"
                 className="self-start mt-1"

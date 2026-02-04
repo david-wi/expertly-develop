@@ -170,7 +170,7 @@ function CreateClientModal({
               />
             </div>
             <InlineVoiceTranscription
-              wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+              tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
               onTranscribe={(text) => setFormData({ ...formData, first_name: formData.first_name ? formData.first_name + ' ' + text : text })}
               size="md"
               className="self-end mb-[2px]"
@@ -188,7 +188,7 @@ function CreateClientModal({
               />
             </div>
             <InlineVoiceTranscription
-              wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+              tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
               onTranscribe={(text) => setFormData({ ...formData, last_name: formData.last_name ? formData.last_name + ' ' + text : text })}
               size="md"
               className="self-end mb-[2px]"

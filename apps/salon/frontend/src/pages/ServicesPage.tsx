@@ -174,7 +174,7 @@ function ServiceFormModal({
             />
           </div>
           <InlineVoiceTranscription
-            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
             onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
             size="md"
             className="self-end mb-[2px]"
@@ -192,7 +192,7 @@ function ServiceFormModal({
             />
           </div>
           <InlineVoiceTranscription
-            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
             onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
             size="md"
             className="self-end mb-[2px]"
