@@ -45,7 +45,7 @@ async def text_to_speech(request: TTSRequest) -> Response:
             response = await client.post(
                 "https://api.deepgram.com/v1/speak",
                 params={
-                    "model": "aura-odysseus-en",
+                    "model": "aura-2-odysseus-en",
                     "encoding": "mp3",
                 },
                 headers={
