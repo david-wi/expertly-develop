@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Pause, X, Clock, Plus, Check, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react'
+import { Play, Pause, X, Clock, Plus, Check, ChevronDown, ChevronUp, GripHorizontal, MessageSquarePlus } from 'lucide-react'
 import {
   useTimerStore,
   formatTime,
@@ -34,6 +34,7 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   const [isExpanded, setIsExpanded] = useState(true)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
   const hasPlayedAlertRef = useRef<Set<string>>(new Set())
 
   // Draggable state
@@ -66,8 +67,8 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     })
   }, [timers])
 
-  // Save notes as a task comment if there are notes and a task context
-  const saveNotesAsComment = async (timer: Timer): Promise<void> => {
+  // Explicitly save notes as a task comment
+  const handleAddNotesToTask = async (timer: Timer): Promise<void> => {
     if (!timer.context?.taskId || !timer.notes || isRichTextEmpty(timer.notes)) {
       return
     }
@@ -77,6 +78,11 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
       await api.createTaskComment(timer.context.taskId, {
         content: timer.notes,
       })
+      // Clear notes after saving
+      setNotes(timer.id, '')
+      // Show feedback briefly
+      setNotesSaved(true)
+      setTimeout(() => setNotesSaved(false), 2000)
     } catch (err) {
       console.error('Failed to save timer notes as comment:', err)
     } finally {
@@ -90,8 +96,6 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
 
     setCompletingTaskId(timer.context.taskId)
     try {
-      // Save notes as a comment first
-      await saveNotesAsComment(timer)
       await api.quickCompleteTask(timer.context.taskId)
       fetchTasks()
       stopTimer(timer.id)
@@ -103,16 +107,11 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   }
 
   // Handle dismissing the timer
-  const handleDismiss = async (timer: Timer) => {
-    // Save notes as a comment before dismissing
-    await saveNotesAsComment(timer)
-
+  const handleDismiss = (timer: Timer) => {
     if (timer.isComplete) {
       acknowledgeTimer(timer.id)
-      stopTimer(timer.id)
-    } else {
-      stopTimer(timer.id)
     }
+    stopTimer(timer.id)
   }
 
   // Handle navigating to the task
@@ -325,10 +324,26 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
             {/* Session notes - only shown for task timers */}
             {activeTimer.context?.type === 'task' && (
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">
-                  Session Notes
-                  <span className="font-normal text-gray-400 ml-1">(saved to task)</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-medium text-gray-500">
+                    Session Notes
+                  </label>
+                  {notesSaved ? (
+                    <span className="text-xs text-green-600 flex items-center gap-1">
+                      <Check className="w-3 h-3" />
+                      Added to task
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleAddNotesToTask(activeTimer)}
+                      disabled={savingNotes || !activeTimer.notes || isRichTextEmpty(activeTimer.notes)}
+                      className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <MessageSquarePlus className="w-3 h-3" />
+                      {savingNotes ? 'Saving...' : 'Add to Task'}
+                    </button>
+                  )}
+                </div>
                 <RichTextEditor
                   value={activeTimer.notes || ''}
                   onChange={(notes) => setNotes(activeTimer.id, notes)}
