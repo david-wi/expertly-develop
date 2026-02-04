@@ -624,3 +624,114 @@ export const CUSTOMS_STATUS_LABELS: Record<CustomsEntryStatus, string> = {
   held: 'Held',
   rejected: 'Rejected',
 }
+
+// Load Board types
+export type LoadBoardProvider = 'dat' | 'truckstop' | 'loadlink' | 'direct_freight'
+export type PostingStatus = 'draft' | 'posted' | 'booked' | 'expired' | 'cancelled'
+
+export interface LoadBoardCredentials {
+  id: string
+  provider: LoadBoardProvider
+  username: string
+  is_active: boolean
+  last_connected_at?: string
+  connection_error?: string
+  company_name?: string
+  mc_number?: string
+  contact_name?: string
+}
+
+export interface LoadBoardPosting {
+  id: string
+  posting_number: string
+  shipment_id: string
+  status: PostingStatus
+  providers: LoadBoardProvider[]
+  provider_post_ids: Record<string, string>
+  origin_city: string
+  origin_state: string
+  destination_city: string
+  destination_state: string
+  equipment_type: string
+  weight_lbs?: number
+  pickup_date_start?: string
+  pickup_date_end?: string
+  delivery_date?: string
+  posted_rate?: number
+  rate_per_mile?: number
+  rate_type: string
+  posted_at?: string
+  expires_at?: string
+  view_count: number
+  call_count: number
+  bid_count: number
+  created_at: string
+}
+
+export interface CarrierSearchResult {
+  provider: LoadBoardProvider
+  provider_carrier_id?: string
+  carrier_name: string
+  mc_number?: string
+  dot_number?: string
+  contact_name?: string
+  contact_phone?: string
+  contact_email?: string
+  city?: string
+  state?: string
+  equipment_types: string[]
+  rating?: number
+  total_loads?: number
+  on_time_percentage?: number
+  days_to_pay?: number
+  truck_count?: number
+  deadhead_miles?: number
+}
+
+export interface CarrierSearch {
+  id: string
+  result_count: number
+  results: CarrierSearchResult[]
+  searched_at: string
+}
+
+export interface RateIndex {
+  provider: LoadBoardProvider
+  origin: string
+  destination: string
+  equipment_type: string
+  rate_per_mile_low?: number
+  rate_per_mile_avg?: number
+  rate_per_mile_high?: number
+  flat_rate_low?: number
+  flat_rate_avg?: number
+  flat_rate_high?: number
+  load_count?: number
+  truck_count?: number
+  date_range: string
+  fetched_at: string
+}
+
+export interface LoadBoardStats {
+  draft: number
+  posted: number
+  booked: number
+  expired: number
+  cancelled: number
+  by_provider: Record<string, number>
+}
+
+export const LOADBOARD_PROVIDER_LABELS: Record<LoadBoardProvider, string> = {
+  dat: 'DAT Power',
+  truckstop: 'Truckstop.com',
+  loadlink: 'Loadlink',
+  direct_freight: 'Direct Freight',
+}
+
+export const POSTING_STATUS_LABELS: Record<PostingStatus, string> = {
+  draft: 'Draft',
+  posted: 'Posted',
+  booked: 'Booked',
+  expired: 'Expired',
+  cancelled: 'Cancelled',
+}

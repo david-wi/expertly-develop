@@ -390,4 +390,137 @@ export const api = {
 
   generateCommercialInvoiceFromShipment: (shipmentId: string) =>
     request<import('../types').CommercialInvoice>(`/api/v1/customs/invoices/from-shipment/${shipmentId}`, { method: 'POST' }),
+
+  // Load Boards
+  getLoadBoardCredentials: () =>
+    request<import('../types').LoadBoardCredentials[]>('/api/v1/loadboards/credentials'),
+
+  saveLoadBoardCredentials: (data: {
+    provider: import('../types').LoadBoardProvider
+    username: string
+    password?: string
+    api_key?: string
+    client_id?: string
+    client_secret?: string
+    company_name?: string
+    mc_number?: string
+    contact_name?: string
+    contact_phone?: string
+    contact_email?: string
+  }) =>
+    request<import('../types').LoadBoardCredentials>('/api/v1/loadboards/credentials', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  testLoadBoardConnection: (provider: import('../types').LoadBoardProvider) =>
+    request<{ success: boolean; error?: string; message?: string }>(
+      `/api/v1/loadboards/credentials/${provider}/test`,
+      { method: 'POST' }
+    ),
+
+  deleteLoadBoardCredentials: (provider: import('../types').LoadBoardProvider) =>
+    request<{ message: string }>(`/api/v1/loadboards/credentials/${provider}`, { method: 'DELETE' }),
+
+  getLoadBoardPostings: (params?: { status?: import('../types').PostingStatus; shipment_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    const query = searchParams.toString()
+    return request<import('../types').LoadBoardPosting[]>(`/api/v1/loadboards/postings${query ? `?${query}` : ''}`)
+  },
+
+  getLoadBoardPosting: (id: string) =>
+    request<import('../types').LoadBoardPosting>(`/api/v1/loadboards/postings/${id}`),
+
+  createLoadBoardPosting: (data: {
+    shipment_id: string
+    providers: import('../types').LoadBoardProvider[]
+    origin_city?: string
+    origin_state?: string
+    destination_city?: string
+    destination_state?: string
+    equipment_type?: string
+    weight_lbs?: number
+    pickup_date_start?: string
+    posted_rate?: number
+    rate_per_mile?: number
+    rate_type?: string
+    special_instructions?: string
+    notes?: string
+  }) =>
+    request<import('../types').LoadBoardPosting>('/api/v1/loadboards/postings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateLoadBoardPosting: (id: string, data: {
+    posted_rate?: number
+    rate_per_mile?: number
+    pickup_date_start?: string
+    special_instructions?: string
+    notes?: string
+  }) =>
+    request<import('../types').LoadBoardPosting>(`/api/v1/loadboards/postings/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  cancelLoadBoardPosting: (id: string) =>
+    request<{ message: string }>(`/api/v1/loadboards/postings/${id}/cancel`, { method: 'POST' }),
+
+  getLoadBoardPostingStats: () =>
+    request<import('../types').LoadBoardStats>('/api/v1/loadboards/postings/stats/summary'),
+
+  searchLoadBoardCarriers: (data: {
+    origin_city?: string
+    origin_state?: string
+    origin_radius_miles?: number
+    destination_city?: string
+    destination_state?: string
+    equipment_type?: string
+    pickup_date?: string
+    providers?: import('../types').LoadBoardProvider[]
+    shipment_id?: string
+  }) =>
+    request<import('../types').CarrierSearch>('/api/v1/loadboards/search/carriers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getMarketRates: (params: {
+    origin_city: string
+    origin_state: string
+    destination_city: string
+    destination_state: string
+    equipment_type?: string
+  }) => {
+    const searchParams = new URLSearchParams()
+    searchParams.set('origin_city', params.origin_city)
+    searchParams.set('origin_state', params.origin_state)
+    searchParams.set('destination_city', params.destination_city)
+    searchParams.set('destination_state', params.destination_state)
+    if (params.equipment_type) searchParams.set('equipment_type', params.equipment_type)
+    return request<import('../types').RateIndex[]>(`/api/v1/loadboards/rates?${searchParams}`)
+  },
+
+  getRateHistory: (params: {
+    origin_city: string
+    origin_state: string
+    destination_city: string
+    destination_state: string
+    equipment_type?: string
+    days?: number
+  }) => {
+    const searchParams = new URLSearchParams()
+    searchParams.set('origin_city', params.origin_city)
+    searchParams.set('origin_state', params.origin_state)
+    searchParams.set('destination_city', params.destination_city)
+    searchParams.set('destination_state', params.destination_state)
+    if (params.equipment_type) searchParams.set('equipment_type', params.equipment_type)
+    if (params.days) searchParams.set('days', String(params.days))
+    return request<{ provider: string; date: string; rate_per_mile_avg: number; flat_rate_avg: number }[]>(
+      `/api/v1/loadboards/rates/history?${searchParams}`
+    )
+  },
 }
