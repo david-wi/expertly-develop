@@ -144,7 +144,7 @@ export default function ShipmentDetail() {
           {shipment.status === 'booked' && (
             <button
               onClick={() => navigate(`/dispatch?shipment=${id}`)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             >
               Assign Carrier
             </button>
@@ -152,7 +152,7 @@ export default function ShipmentDetail() {
           {shipment.status === 'pending_pickup' && (
             <button
               onClick={() => handleTransition('in_transit')}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             >
               Mark Picked Up
             </button>
@@ -168,7 +168,7 @@ export default function ShipmentDetail() {
           {shipment.status === 'delivered' && (
             <button
               onClick={handleCreateInvoice}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
             >
               Create Invoice
             </button>
@@ -189,7 +189,7 @@ export default function ShipmentDetail() {
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`py-3 border-b-2 text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'border-indigo-600 text-indigo-600'
+                  ? 'border-emerald-600 text-emerald-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
@@ -335,7 +335,7 @@ export default function ShipmentDetail() {
             <h2 className="text-lg font-semibold">Tracking History</h2>
             <button
               onClick={() => setShowAddTracking(true)}
-              className="flex items-center gap-1 text-sm text-indigo-600 hover:text-indigo-700"
+              className="flex items-center gap-1 text-sm text-emerald-600 hover:text-emerald-700"
             >
               <Plus className="h-4 w-4" />
               Add Event
@@ -379,7 +379,7 @@ export default function ShipmentDetail() {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                 >
                   Add Event
                 </button>
