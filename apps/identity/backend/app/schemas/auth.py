@@ -132,5 +132,21 @@ class PasswordValidationError(BaseModel):
     errors: List[str]
 
 
+# =====================
+# Organization Switching
+# =====================
+
+class SwitchOrganizationRequest(BaseModel):
+    """Switch to a different organization."""
+    organization_id: UUID
+
+
+class SwitchOrganizationResponse(BaseModel):
+    """Response after switching organizations."""
+    message: str
+    user: AuthUserResponse
+
+
 # Update forward references
 LoginResponse.model_rebuild()
+SwitchOrganizationResponse.model_rebuild()

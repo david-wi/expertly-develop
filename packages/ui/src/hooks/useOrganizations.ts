@@ -76,16 +76,27 @@ export function useOrganizations(options: UseOrganizationsOptions = {}): UseOrga
   const [loading, setLoading] = useState(!skip)
   const [error, setError] = useState<Error | null>(null)
 
-  // Fetch organizations from Identity API
+  // Fetch organizations from Identity API and sync session org with localStorage selection
   useEffect(() => {
     if (skip) {
       setLoading(false)
       return
     }
 
-    const fetchOrgs = async () => {
+    const fetchOrgsAndSync = async () => {
       try {
-        // Fetch only organizations the user has access to
+        // Fetch current user to get session's organization_id
+        const meResponse = await fetch(`${identityApiUrl}/api/v1/auth/me`, {
+          credentials: 'include',
+        })
+
+        let sessionOrgId: string | null = null
+        if (meResponse.ok) {
+          const meData = await meResponse.json()
+          sessionOrgId = meData.organization_id
+        }
+
+        // Fetch organizations the user has access to
         const response = await fetch(`${identityApiUrl}/api/v1/auth/me/organizations`, {
           credentials: 'include', // Send session cookie
         })
@@ -105,14 +116,53 @@ export function useOrganizations(options: UseOrganizationsOptions = {}): UseOrga
 
         setOrganizations(orgs)
 
+        // Determine which org should be selected
+        let targetOrgId = selectedOrgId
+
         // If no org selected, select default or first one
-        if (orgs.length > 0 && !selectedOrgId) {
+        if (orgs.length > 0 && !targetOrgId) {
           const defaultOrg = orgs.find(o => o.is_default) || orgs[0]
-          setSelectedOrgId(defaultOrg.id)
+          targetOrgId = defaultOrg.id
+          setSelectedOrgId(targetOrgId)
           try {
-            localStorage.setItem(storageKey, defaultOrg.id)
+            localStorage.setItem(storageKey, targetOrgId)
           } catch {
             // Ignore storage errors
+          }
+        }
+
+        // If localStorage has a different org than session, sync the session
+        if (targetOrgId && sessionOrgId && targetOrgId !== sessionOrgId) {
+          // Verify the target org is in the list of accessible orgs
+          const targetOrgValid = orgs.some(o => o.id === targetOrgId)
+          if (targetOrgValid) {
+            // Sync session to match localStorage selection (no reload needed, this is initial load)
+            try {
+              await fetch(`${identityApiUrl}/api/v1/auth/switch-organization`, {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ organization_id: targetOrgId }),
+              })
+            } catch {
+              // If sync fails, clear localStorage and use session's org
+              setSelectedOrgId(sessionOrgId)
+              try {
+                localStorage.setItem(storageKey, sessionOrgId)
+              } catch {
+                // Ignore storage errors
+              }
+            }
+          } else {
+            // Invalid localStorage selection, use session's org
+            setSelectedOrgId(sessionOrgId)
+            try {
+              localStorage.setItem(storageKey, sessionOrgId)
+            } catch {
+              // Ignore storage errors
+            }
           }
         }
       } catch (err) {
@@ -123,10 +173,31 @@ export function useOrganizations(options: UseOrganizationsOptions = {}): UseOrga
       }
     }
 
-    fetchOrgs()
+    fetchOrgsAndSync()
   }, [identityApiUrl, skip, storageKey, selectedOrgId])
 
-  const handleOrgSwitch = useCallback((orgId: string) => {
+  const handleOrgSwitch = useCallback(async (orgId: string) => {
+    try {
+      // Call Identity API to switch organization context in session
+      const response = await fetch(`${identityApiUrl}/api/v1/auth/switch-organization`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ organization_id: orgId }),
+      })
+
+      if (!response.ok) {
+        console.error('Failed to switch organization:', response.status)
+        // Fall through to localStorage update and reload anyway
+      }
+    } catch (err) {
+      console.error('Failed to switch organization:', err)
+      // Fall through to localStorage update and reload anyway
+    }
+
+    // Update localStorage for UI state
     try {
       localStorage.setItem(storageKey, orgId)
     } catch {
@@ -134,7 +205,7 @@ export function useOrganizations(options: UseOrganizationsOptions = {}): UseOrga
     }
     // Reload to refresh data with new org context
     window.location.reload()
-  }, [storageKey])
+  }, [storageKey, identityApiUrl])
 
   const currentOrg = useMemo(
     () => organizations.find(o => o.id === selectedOrgId),
