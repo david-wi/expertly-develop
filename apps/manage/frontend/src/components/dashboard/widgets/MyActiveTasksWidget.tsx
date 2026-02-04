@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Maximize2 } from 'lucide-react'
+import { Maximize2, Check } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -55,6 +55,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [editDescription, setEditDescription] = useState('')
   const [editPlaybookId, setEditPlaybookId] = useState<string>('')
   const [isSaving, setIsSaving] = useState(false)
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   // Refs
   const topTitleRef = useRef<HTMLInputElement>(null)
   const topProjectRef = useRef<HTMLInputElement>(null)
@@ -445,6 +446,30 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     setEditPlaybookId('')
   }
 
+  // Quick complete a task
+  const handleQuickComplete = async (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation() // Don't trigger task selection
+    if (completingTaskId) return
+
+    setCompletingTaskId(taskId)
+    try {
+      await api.quickCompleteTask(taskId)
+      fetchTasks()
+      // Close edit panel if we completed the task being edited
+      if (editingTaskId === taskId) {
+        setEditingTaskId(null)
+        setEditTitle('')
+        setEditProjectId('')
+        setEditDescription('')
+        setEditPlaybookId('')
+      }
+    } catch (err) {
+      console.error('Failed to complete task:', err)
+    } finally {
+      setCompletingTaskId(null)
+    }
+  }
+
   return (
   <>
     <WidgetWrapper widgetId={widgetId} title={widgetTitle} headerAction={headerAction}>
@@ -633,6 +658,20 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                           <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
                         </svg>
                       </div>
+
+                      {/* Complete checkmark */}
+                      <button
+                        onClick={(e) => handleQuickComplete(e, taskId)}
+                        disabled={completingTaskId === taskId}
+                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
+                          completingTaskId === taskId
+                            ? 'text-gray-300 cursor-wait'
+                            : 'text-gray-300 hover:text-green-500 hover:bg-green-50'
+                        }`}
+                        title="Mark as complete"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
 
                       {/* Task content */}
                       <div className="flex-1 min-w-0">

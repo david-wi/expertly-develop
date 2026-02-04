@@ -224,6 +224,10 @@ export const api = {
     request<Task>(`/api/v1/tasks/${id}/resume-work`, {
       method: 'POST',
     }),
+  quickCompleteTask: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/quick-complete`, {
+      method: 'POST',
+    }),
 
   // Task Attachments
   getTaskAttachments: (taskId: string, params?: { step_id?: string; task_level_only?: boolean }) => {
