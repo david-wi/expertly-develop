@@ -110,24 +110,82 @@ export default function ProjectTypeahead({
     return result
   }
 
+  // Check if search term matches at the start of any word in the name
+  const matchesWordStart = (name: string, searchTerm: string): boolean => {
+    const nameLower = name.toLowerCase()
+    const searchLower = searchTerm.toLowerCase()
+    // Match if search appears at start of string or after a non-word character (space, dash, etc.)
+    const regex = new RegExp(`(^|[^a-z0-9])${searchLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'i')
+    return regex.test(nameLower)
+  }
+
   // Filter and sort projects - alphabetically within each group (siblings at same level)
   const filteredProjects = useMemo(() => {
-    const filtered = projects.filter((p) => {
-      if (excludeSet.has(p.id)) return false
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false
-      return true
-    })
+    if (!search) {
+      // No search - show all non-excluded
+      const filtered = projects.filter((p) => !excludeSet.has(p.id))
+      return buildSortedTree(filtered, null)
+    }
 
+    // Find all projects that match the search (word-start matching)
+    const matchingIds = new Set<string>()
+    for (const p of projects) {
+      if (excludeSet.has(p.id)) continue
+      if (matchesWordStart(p.name, search)) {
+        matchingIds.add(p.id)
+      }
+    }
+
+    // Add all ancestors of matching projects to maintain hierarchy
+    const projectMap = new Map(projects.map((p) => [p.id, p]))
+    const includedIds = new Set(matchingIds)
+
+    for (const id of matchingIds) {
+      let current = projectMap.get(id)
+      while (current?.parent_project_id) {
+        if (!excludeSet.has(current.parent_project_id)) {
+          includedIds.add(current.parent_project_id)
+        }
+        current = projectMap.get(current.parent_project_id)
+      }
+    }
+
+    const filtered = projects.filter((p) => includedIds.has(p.id))
     return buildSortedTree(filtered, null)
   }, [projects, excludeSet, search])
 
   // Filtered list for parent typeahead in create form
   const filteredParentProjects = useMemo(() => {
-    const filtered = projects.filter((p) => {
-      if (excludeSet.has(p.id)) return false
-      if (parentSearch && !p.name.toLowerCase().includes(parentSearch.toLowerCase())) return false
-      return true
-    })
+    if (!parentSearch) {
+      // No search - show all non-excluded
+      const filtered = projects.filter((p) => !excludeSet.has(p.id))
+      return buildSortedTree(filtered, null)
+    }
+
+    // Find all projects that match the search (word-start matching)
+    const matchingIds = new Set<string>()
+    for (const p of projects) {
+      if (excludeSet.has(p.id)) continue
+      if (matchesWordStart(p.name, parentSearch)) {
+        matchingIds.add(p.id)
+      }
+    }
+
+    // Add all ancestors of matching projects to maintain hierarchy
+    const projectMap = new Map(projects.map((p) => [p.id, p]))
+    const includedIds = new Set(matchingIds)
+
+    for (const id of matchingIds) {
+      let current = projectMap.get(id)
+      while (current?.parent_project_id) {
+        if (!excludeSet.has(current.parent_project_id)) {
+          includedIds.add(current.parent_project_id)
+        }
+        current = projectMap.get(current.parent_project_id)
+      }
+    }
+
+    const filtered = projects.filter((p) => includedIds.has(p.id))
     return buildSortedTree(filtered, null)
   }, [projects, excludeSet, parentSearch])
 
