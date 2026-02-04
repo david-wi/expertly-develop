@@ -6,7 +6,7 @@ from pypdf import PdfReader
 from io import BytesIO
 
 from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, ContextUrl
-from app.services.artifact_conversion_service import reflow_pdf_text
+from artifacts import reflow_pdf_text
 from app.utils.ai_config import get_ai_client
 
 
