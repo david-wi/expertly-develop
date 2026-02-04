@@ -73,11 +73,15 @@ export default function ProjectTypeahead({
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newProjectName, setNewProjectName] = useState('')
   const [newProjectParentId, setNewProjectParentId] = useState<string | null>(null)
+  const [parentSearch, setParentSearch] = useState('')
+  const [showParentDropdown, setShowParentDropdown] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const newProjectNameRef = useRef<HTMLInputElement>(null)
+  const parentInputRef = useRef<HTMLInputElement>(null)
+  const parentDropdownRef = useRef<HTMLDivElement>(null)
 
   // Build exclude set including descendants
   const excludeSet = useMemo(() => {
@@ -92,6 +96,20 @@ export default function ProjectTypeahead({
   // Build depth map for hierarchy display
   const depthMap = useMemo(() => buildDepthMap(projects), [projects])
 
+  // Build hierarchically sorted projects (parent → children → grandchildren, alphabetical at each level)
+  const buildSortedTree = (projectList: ProjectOption[], parentId: string | null): ProjectOption[] => {
+    const children = projectList
+      .filter((p) => (p.parent_project_id || null) === parentId)
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    const result: ProjectOption[] = []
+    for (const child of children) {
+      result.push(child)
+      result.push(...buildSortedTree(projectList, child.id))
+    }
+    return result
+  }
+
   // Filter and sort projects - alphabetically within each group (siblings at same level)
   const filteredProjects = useMemo(() => {
     const filtered = projects.filter((p) => {
@@ -100,22 +118,24 @@ export default function ProjectTypeahead({
       return true
     })
 
-    // Build tree and flatten with alphabetical sorting at each level
-    const buildSortedTree = (parentId: string | null): ProjectOption[] => {
-      const children = filtered
-        .filter((p) => (p.parent_project_id || null) === parentId)
-        .sort((a, b) => a.name.localeCompare(b.name))
-
-      const result: ProjectOption[] = []
-      for (const child of children) {
-        result.push(child)
-        result.push(...buildSortedTree(child.id))
-      }
-      return result
-    }
-
-    return buildSortedTree(null)
+    return buildSortedTree(filtered, null)
   }, [projects, excludeSet, search])
+
+  // Filtered list for parent typeahead in create form
+  const filteredParentProjects = useMemo(() => {
+    const filtered = projects.filter((p) => {
+      if (excludeSet.has(p.id)) return false
+      if (parentSearch && !p.name.toLowerCase().includes(parentSearch.toLowerCase())) return false
+      return true
+    })
+    return buildSortedTree(filtered, null)
+  }, [projects, excludeSet, parentSearch])
+
+  // Get selected parent project for create form
+  const selectedParentProject = useMemo(() => {
+    if (!newProjectParentId) return null
+    return projects.find((p) => p.id === newProjectParentId) || null
+  }, [projects, newProjectParentId])
 
   // Get selected project
   const selectedProject = useMemo(() => {
@@ -133,6 +153,15 @@ export default function ProjectTypeahead({
         !inputRef.current.contains(e.target as Node)
       ) {
         setShowDropdown(false)
+      }
+      // Also handle parent dropdown in create form
+      if (
+        parentDropdownRef.current &&
+        !parentDropdownRef.current.contains(e.target as Node) &&
+        parentInputRef.current &&
+        !parentInputRef.current.contains(e.target as Node)
+      ) {
+        setShowParentDropdown(false)
       }
     }
 
@@ -169,6 +198,8 @@ export default function ProjectTypeahead({
       // Reset form
       setNewProjectName('')
       setNewProjectParentId(null)
+      setParentSearch('')
+      setShowParentDropdown(false)
       setShowCreateForm(false)
       setShowDropdown(false)
     } catch (err) {
@@ -183,6 +214,8 @@ export default function ProjectTypeahead({
     setShowCreateForm(true)
     setNewProjectName('')
     setNewProjectParentId(null)
+    setParentSearch('')
+    setShowParentDropdown(false)
     setCreateError(null)
     setTimeout(() => newProjectNameRef.current?.focus(), 0)
   }
@@ -264,30 +297,82 @@ export default function ProjectTypeahead({
                     />
                   </div>
 
-                  {/* Parent project selector */}
-                  <div>
+                  {/* Parent project typeahead */}
+                  <div className="relative">
                     <label className="text-[10px] text-theme-text-secondary mb-1 block">Parent project (optional)</label>
-                    <select
-                      value={newProjectParentId || ''}
-                      onChange={(e) => setNewProjectParentId(e.target.value || null)}
-                      disabled={isCreating}
-                      className="w-full px-2 py-1.5 text-xs border border-theme-border rounded bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-1 focus:ring-primary-500"
-                    >
-                      <option value="">None (top-level)</option>
-                      {projects
-                        .filter((p) => !excludeSet.has(p.id))
-                        .sort((a, b) => {
-                          const depthA = depthMap.get(a.id) || 0
-                          const depthB = depthMap.get(b.id) || 0
-                          if (depthA !== depthB) return depthA - depthB
-                          return a.name.localeCompare(b.name)
-                        })
-                        .map((project) => (
-                          <option key={project.id} value={project.id}>
-                            {'─'.repeat(depthMap.get(project.id) || 0)} {project.name}
-                          </option>
-                        ))}
-                    </select>
+                    {selectedParentProject ? (
+                      <div className="flex items-center justify-between px-2 py-1.5 text-xs border border-theme-border rounded bg-theme-bg-surface">
+                        <span className="text-theme-text-primary">{selectedParentProject.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewProjectParentId(null)
+                            setParentSearch('')
+                          }}
+                          disabled={isCreating}
+                          className="text-theme-text-secondary hover:text-theme-text-primary ml-1"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <input
+                          ref={parentInputRef}
+                          type="text"
+                          value={parentSearch}
+                          onChange={(e) => {
+                            setParentSearch(e.target.value)
+                            setShowParentDropdown(true)
+                          }}
+                          onFocus={() => setShowParentDropdown(true)}
+                          placeholder="Search parent projects..."
+                          disabled={isCreating}
+                          className="w-full px-2 py-1.5 text-xs border border-theme-border rounded bg-theme-bg-surface text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        />
+                        {showParentDropdown && (
+                          <div
+                            ref={parentDropdownRef}
+                            className="absolute z-20 w-full mt-1 bg-theme-bg-surface border border-theme-border rounded shadow-lg max-h-40 overflow-auto"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setNewProjectParentId(null)
+                                setParentSearch('')
+                                setShowParentDropdown(false)
+                              }}
+                              className="w-full text-left px-2 py-1.5 text-xs hover:bg-theme-bg-elevated text-theme-text-primary"
+                            >
+                              None (top-level)
+                            </button>
+                            {filteredParentProjects.map((project) => (
+                              <button
+                                key={project.id}
+                                type="button"
+                                onClick={() => {
+                                  setNewProjectParentId(project.id)
+                                  setParentSearch('')
+                                  setShowParentDropdown(false)
+                                }}
+                                className="w-full text-left px-2 py-1.5 text-xs hover:bg-theme-bg-elevated"
+                                style={{ paddingLeft: `${(depthMap.get(project.id) || 0) * 8 + 8}px` }}
+                              >
+                                <span className="text-theme-text-secondary mr-1">
+                                  {'─'.repeat(depthMap.get(project.id) || 0)}
+                                </span>
+                                <span className="text-theme-text-primary">{project.name}</span>
+                              </button>
+                            ))}
+                            {filteredParentProjects.length === 0 && parentSearch && (
+                              <div className="px-2 py-1.5 text-xs text-theme-text-secondary">
+                                No projects found
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   {createError && (
