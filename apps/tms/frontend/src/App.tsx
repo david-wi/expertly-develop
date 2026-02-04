@@ -11,6 +11,7 @@ import Carriers from './pages/Carriers'
 import Invoices from './pages/Invoices'
 import Settings from './pages/Settings'
 import LandingPage from './pages/LandingPage'
+import ProductComparison from './pages/ProductComparison'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -18,6 +19,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
+        <Route path="/compare" element={<ProductComparison />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="inbox" element={<Inbox />} />
