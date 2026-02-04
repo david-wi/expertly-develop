@@ -17,6 +17,8 @@ import {
   MessageCircle,
   Square,
   CheckSquare,
+  Trash2,
+  Send,
 } from 'lucide-react'
 import { InlineVoiceTranscription, EXPERTLY_PRODUCTS } from '@expertly/ui'
 
@@ -35,6 +37,15 @@ interface Idea {
   vote_count?: number
   user_voted?: boolean
   comment_count?: number
+}
+
+interface IdeaComment {
+  id: string
+  idea_id: string
+  author_email: string
+  content: string
+  created_at: string
+  updated_at: string
 }
 
 // Predefined tags per product
@@ -154,6 +165,33 @@ const ideasApi = {
     if (!res.ok) throw new Error('Failed to toggle vote')
     return res.json()
   },
+
+  async getComments(ideaId: string): Promise<IdeaComment[]> {
+    const res = await fetch(`${API_BASE}/ideas/${ideaId}/comments`, {
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to fetch comments')
+    return res.json()
+  },
+
+  async addComment(ideaId: string, content: string, authorEmail: string): Promise<IdeaComment> {
+    const res = await fetch(`${API_BASE}/ideas/${ideaId}/comments?author_email=${encodeURIComponent(authorEmail)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content }),
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to add comment')
+    return res.json()
+  },
+
+  async deleteComment(ideaId: string, commentId: string): Promise<void> {
+    const res = await fetch(`${API_BASE}/ideas/${ideaId}/comments/${commentId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to delete comment')
+  },
 }
 
 function formatDate(dateString: string): string {
@@ -216,6 +254,8 @@ function IdeaCard({
   isSelected,
   onToggleSelect,
   selectMode,
+  userEmail,
+  onCommentCountChange,
 }: {
   idea: Idea
   onEdit: () => void
@@ -224,9 +264,66 @@ function IdeaCard({
   isSelected?: boolean
   onToggleSelect?: () => void
   selectMode?: boolean
+  userEmail?: string
+  onCommentCountChange?: () => void
 }) {
   const [expanded, setExpanded] = useState(false)
+  const [showComments, setShowComments] = useState(false)
+  const [comments, setComments] = useState<IdeaComment[]>([])
+  const [loadingComments, setLoadingComments] = useState(false)
+  const [newComment, setNewComment] = useState('')
+  const [submittingComment, setSubmittingComment] = useState(false)
   const ProductIcon = getProductIcon(idea.product)
+
+  const loadComments = useCallback(async () => {
+    if (loadingComments) return
+    setLoadingComments(true)
+    try {
+      const data = await ideasApi.getComments(idea.id)
+      setComments(data)
+    } catch (error) {
+      console.error('Failed to load comments:', error)
+    } finally {
+      setLoadingComments(false)
+    }
+  }, [idea.id, loadingComments])
+
+  const handleSubmitComment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newComment.trim() || !userEmail || submittingComment) return
+    setSubmittingComment(true)
+    try {
+      const comment = await ideasApi.addComment(idea.id, newComment.trim(), userEmail)
+      setComments([...comments, comment])
+      setNewComment('')
+      onCommentCountChange?.()
+    } catch (error) {
+      console.error('Failed to add comment:', error)
+    } finally {
+      setSubmittingComment(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      await ideasApi.deleteComment(idea.id, commentId)
+      setComments(comments.filter(c => c.id !== commentId))
+      onCommentCountChange?.()
+    } catch (error) {
+      console.error('Failed to delete comment:', error)
+    }
+  }
+
+  const handleToggleComments = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!showComments) {
+      loadComments()
+    }
+    setShowComments(!showComments)
+    if (!expanded) {
+      setExpanded(true)
+    }
+  }
 
   return (
     <div className={`bg-theme-bg-surface rounded-xl border overflow-hidden ${isSelected ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-theme-border'}`}>
@@ -306,10 +403,17 @@ function IdeaCard({
                 </button>
               )}
               {idea.comment_count !== undefined && (
-                <span className="flex items-center gap-1 text-xs text-theme-text-muted">
-                  <MessageCircle className="w-3.5 h-3.5" />
+                <button
+                  onClick={handleToggleComments}
+                  className={`flex items-center gap-1 text-xs transition-colors ${
+                    showComments
+                      ? 'text-primary-500 hover:text-primary-600'
+                      : 'text-theme-text-muted hover:text-primary-500'
+                  }`}
+                >
+                  <MessageCircle className={`w-3.5 h-3.5 ${showComments ? 'fill-current' : ''}`} />
                   <span>{idea.comment_count}</span>
-                </span>
+                </button>
               )}
             </div>
           </div>
@@ -391,6 +495,79 @@ function IdeaCard({
               </button>
             )}
           </div>
+
+          {/* Comments Section */}
+          {showComments && (
+            <div className="border-t border-theme-border pt-4">
+              <h4 className="text-sm font-medium text-theme-text-primary mb-3 flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Comments ({comments.length})
+              </h4>
+
+              {loadingComments ? (
+                <div className="text-sm text-theme-text-muted flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  Loading comments...
+                </div>
+              ) : (
+                <>
+                  {comments.length === 0 ? (
+                    <p className="text-sm text-theme-text-muted mb-3">No comments yet. Be the first to comment!</p>
+                  ) : (
+                    <div className="space-y-3 mb-4">
+                      {comments.map((comment) => (
+                        <div key={comment.id} className="bg-theme-bg-elevated rounded-lg p-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-medium text-theme-text-primary">
+                                  {comment.author_email}
+                                </span>
+                                <span className="text-xs text-theme-text-muted">
+                                  {formatDate(comment.created_at)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-theme-text-secondary whitespace-pre-wrap">{comment.content}</p>
+                            </div>
+                            {userEmail === comment.author_email && (
+                              <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="p-1 text-theme-text-muted hover:text-red-500 rounded transition-colors"
+                                title="Delete comment"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {userEmail && (
+                    <form onSubmit={handleSubmitComment} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary placeholder-theme-text-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newComment.trim() || submittingComment}
+                        className="px-3 py-2 bg-primary-500 text-white rounded-lg text-sm hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </form>
+                  )}
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1075,6 +1252,8 @@ export function IdeaBacklog() {
               selectMode={selectMode}
               isSelected={selectedIds.has(idea.id)}
               onToggleSelect={() => toggleSelect(idea.id)}
+              userEmail={userEmail}
+              onCommentCountChange={() => refetch()}
             />
           ))
         )}
