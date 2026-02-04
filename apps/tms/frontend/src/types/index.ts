@@ -112,6 +112,8 @@ export interface Quote {
   id: string
   quote_number: string
   customer_id: string
+  customer_name?: string
+  customer_email?: string
   status: QuoteStatus
   origin_city: string
   origin_state: string
