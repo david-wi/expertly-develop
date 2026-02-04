@@ -706,10 +706,10 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                                 setTimeout(() => topNewProjectRef.current?.focus(), 0)
                               }}
                               disabled={isCreatingTop}
-                              className="p-0.5 text-gray-400 hover:text-primary-600 transition-colors"
+                              className="p-1 text-gray-500 hover:text-primary-600 hover:bg-primary-50 border border-gray-200 rounded transition-colors"
                               title="Create new project"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </>
                         )}
@@ -923,10 +923,10 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                                 setTimeout(() => bottomNewProjectRef.current?.focus(), 0)
                               }}
                               disabled={isCreatingBottom}
-                              className="p-0.5 text-gray-400 hover:text-primary-600 transition-colors"
+                              className="p-1 text-gray-500 hover:text-primary-600 hover:bg-primary-50 border border-gray-200 rounded transition-colors"
                               title="Create new project"
                             >
-                              <Plus className="w-3.5 h-3.5" />
+                              <Plus className="w-3 h-3" />
                             </button>
                           </>
                         )}
