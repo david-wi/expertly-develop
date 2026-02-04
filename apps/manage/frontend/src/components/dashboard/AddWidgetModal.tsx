@@ -4,6 +4,13 @@ import { widgetList } from './widgets/registry'
 import { useDashboardStore } from '../../stores/dashboardStore'
 import { useAppStore } from '../../stores/appStore'
 import { WidgetDefinition, WidgetConfig } from './widgets/types'
+import { api, Project } from '../../services/api'
+
+interface Playbook {
+  _id?: string
+  id: string
+  name: string
+}
 
 interface AddWidgetModalProps {
   isOpen: boolean
@@ -17,14 +24,32 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
   const [selectedWidget, setSelectedWidget] = useState<WidgetDefinition | null>(null)
   const [config, setConfig] = useState<WidgetConfig>({})
 
+  // For active-tasks configuration
+  const [filterType, setFilterType] = useState<'project' | 'playbook'>('project')
+  const [projects, setProjects] = useState<Project[]>([])
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([])
+  const [selectedPlaybookId, setSelectedPlaybookId] = useState<string>('')
+
   // Reset state when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
       setStep('select')
       setSelectedWidget(null)
       setConfig({})
+      setFilterType('project')
+      setSelectedProjectIds([])
+      setSelectedPlaybookId('')
     }
   }, [isOpen])
+
+  // Fetch projects and playbooks when needed for active-tasks config
+  useEffect(() => {
+    if (isOpen && selectedWidget?.requiresConfig === 'active-tasks') {
+      api.getProjects({ status: 'active' }).then(setProjects).catch(console.error)
+      api.getPlaybooks({ active_only: true }).then(setPlaybooks).catch(console.error)
+    }
+  }, [isOpen, selectedWidget])
 
   // Handle escape key
   useEffect(() => {
@@ -63,6 +88,9 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
     setStep('select')
     setSelectedWidget(null)
     setConfig({})
+    setFilterType('project')
+    setSelectedProjectIds([])
+    setSelectedPlaybookId('')
   }
 
   const isWidgetDisabled = (widget: WidgetDefinition): boolean => {
@@ -114,6 +142,63 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
     </div>
   )
 
+  // Helper to build display name for projects
+  const getProjectDisplayName = (project: Project): string => {
+    if (!project.parent_project_id) return project.name
+    const parent = projects.find(p => (p._id || p.id) === project.parent_project_id)
+    if (parent) {
+      return `${getProjectDisplayName(parent)} > ${project.name}`
+    }
+    return project.name
+  }
+
+  // Get preview title for active-tasks widget
+  const getActiveTasksPreviewTitle = (): string => {
+    if (filterType === 'playbook' && selectedPlaybookId) {
+      const playbook = playbooks.find(p => (p._id || p.id) === selectedPlaybookId)
+      return playbook ? `${playbook.name} Tasks` : 'Playbook Tasks'
+    }
+    if (filterType === 'project' && selectedProjectIds.length > 0) {
+      if (selectedProjectIds.length === 1) {
+        const project = projects.find(p => (p._id || p.id) === selectedProjectIds[0])
+        return project ? `${project.name} Tasks` : 'Project Tasks'
+      }
+      return `${selectedProjectIds.length} Projects Tasks`
+    }
+    return 'Active Tasks'
+  }
+
+  // Handle adding active-tasks widget with config
+  const handleAddActiveTasksWidget = () => {
+    const widgetConfig: WidgetConfig = {}
+    if (filterType === 'project' && selectedProjectIds.length > 0) {
+      widgetConfig.projectIds = selectedProjectIds
+    } else if (filterType === 'playbook' && selectedPlaybookId) {
+      widgetConfig.playbookId = selectedPlaybookId
+    }
+    if (selectedWidget) {
+      addWidget(selectedWidget.id, widgetConfig)
+      onClose()
+    }
+  }
+
+  // Check if active-tasks config is valid
+  const isActiveTasksConfigValid = (): boolean => {
+    if (filterType === 'project') {
+      return selectedProjectIds.length > 0
+    }
+    return !!selectedPlaybookId
+  }
+
+  // Toggle project selection
+  const toggleProjectSelection = (projectId: string) => {
+    setSelectedProjectIds(prev =>
+      prev.includes(projectId)
+        ? prev.filter(id => id !== projectId)
+        : [...prev, projectId]
+    )
+  }
+
   const renderConfigureStep = () => {
     if (!selectedWidget) return null
 
@@ -148,6 +233,133 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
               <button
                 onClick={handleAddConfiguredWidget}
                 disabled={!config.queueId}
+                className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Add Widget
+              </button>
+            </div>
+          </div>
+        )}
+
+        {selectedWidget.requiresConfig === 'active-tasks' && (
+          <div className="space-y-4">
+            {/* Filter type selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Filter By
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="filterType"
+                    value="project"
+                    checked={filterType === 'project'}
+                    onChange={() => {
+                      setFilterType('project')
+                      setSelectedPlaybookId('')
+                    }}
+                    className="text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">By Project</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="filterType"
+                    value="playbook"
+                    checked={filterType === 'playbook'}
+                    onChange={() => {
+                      setFilterType('playbook')
+                      setSelectedProjectIds([])
+                    }}
+                    className="text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-gray-700">By Playbook</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Project multi-select */}
+            {filterType === 'project' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Project(s)
+                </label>
+                <div className="max-h-48 overflow-auto border border-gray-300 rounded-md">
+                  {projects.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">No active projects</div>
+                  ) : (
+                    projects.map((project) => {
+                      const projectId = project._id || project.id
+                      const isSelected = selectedProjectIds.includes(projectId)
+                      return (
+                        <div
+                          key={projectId}
+                          onClick={() => toggleProjectSelection(projectId)}
+                          className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                            isSelected ? 'bg-primary-50' : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {}}
+                            className="text-primary-600 focus:ring-primary-500 rounded"
+                          />
+                          <span className="text-sm text-gray-700 truncate">
+                            {getProjectDisplayName(project)}
+                          </span>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+                {selectedProjectIds.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {selectedProjectIds.length} project{selectedProjectIds.length !== 1 ? 's' : ''} selected
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Playbook single-select */}
+            {filterType === 'playbook' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Playbook
+                </label>
+                <select
+                  value={selectedPlaybookId}
+                  onChange={(e) => setSelectedPlaybookId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">Choose a playbook...</option>
+                  {playbooks.map((playbook) => (
+                    <option key={playbook._id || playbook.id} value={playbook._id || playbook.id}>
+                      {playbook.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Widget title preview */}
+            <div className="p-3 bg-gray-50 rounded-md border border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">Widget Title Preview</p>
+              <p className="text-sm font-medium text-gray-900">{getActiveTasksPreviewTitle()}</p>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+              <button
+                onClick={handleBack}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                Back
+              </button>
+              <button
+                onClick={handleAddActiveTasksWidget}
+                disabled={!isActiveTasksConfigValid()}
                 className="px-4 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Add Widget
