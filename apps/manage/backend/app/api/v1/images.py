@@ -1,4 +1,8 @@
 import logging
+import base64
+import os
+import uuid
+import aiofiles
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from openai import OpenAI
@@ -11,6 +15,28 @@ from app.utils.ai_config import get_use_case_config
 router = APIRouter()
 settings = get_settings()
 logger = logging.getLogger(__name__)
+
+# Base directory for avatar storage
+AVATARS_BASE_DIR = "/opt/expertly-develop/uploads/manage/avatars"
+
+
+async def save_avatar_to_storage(b64_data: str, prefix: str = "avatar") -> str:
+    """Save base64 image data to persistent storage and return the full URL."""
+    # Ensure directory exists
+    os.makedirs(AVATARS_BASE_DIR, exist_ok=True)
+
+    # Generate unique filename
+    filename = f"{prefix}_{uuid.uuid4().hex}.png"
+    filepath = os.path.join(AVATARS_BASE_DIR, filename)
+
+    # Decode and save the image
+    image_data = base64.b64decode(b64_data)
+    async with aiofiles.open(filepath, 'wb') as f:
+        await f.write(image_data)
+
+    # Return the absolute URL so it works from all apps
+    # Use the Manage backend URL since that's where avatars are stored
+    return f"https://manage.ai.devintensive.com/api/v1/images/avatars/{filename}"
 
 
 class GenerateAvatarRequest(BaseModel):
@@ -28,8 +54,29 @@ class GenerateProjectAvatarRequest(BaseModel):
 
 
 class GenerateAvatarResponse(BaseModel):
-    """Response containing the generated avatar as a data URL."""
+    """Response containing the generated avatar URL."""
     url: str
+
+
+@router.get("/avatars/{filename}")
+async def serve_avatar(filename: str):
+    """Serve an avatar image from storage."""
+    from fastapi.responses import FileResponse
+
+    # Validate filename to prevent path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    filepath = os.path.join(AVATARS_BASE_DIR, filename)
+
+    if not os.path.exists(filepath):
+        raise HTTPException(status_code=404, detail="Avatar not found")
+
+    return FileResponse(
+        filepath,
+        media_type="image/png",
+        headers={"Cache-Control": "public, max-age=31536000"}  # Cache for 1 year
+    )
 
 
 def get_openai_client() -> OpenAI:
@@ -52,7 +99,7 @@ async def generate_avatar(
     For bots: Creates a fun, modern flat vector illustration based on responsibilities.
     For humans: Creates a stylized portrait based on appearance description.
 
-    Returns the image as a base64 data URL stored directly in the database.
+    Returns a permanent URL to the stored avatar image.
     """
     client = get_openai_client()
 
@@ -77,7 +124,7 @@ NOT a photograph - stylized vector art illustration with a recognizable face."""
         use_case_config = get_use_case_config("image_generation")
         logger.debug(f"Using model {use_case_config.model_id} for image generation")
 
-        # Request base64 directly from OpenAI to avoid temporary URL expiration
+        # Request base64 directly from OpenAI
         response = client.images.generate(
             model=use_case_config.model_id,
             prompt=prompt,
@@ -87,11 +134,12 @@ NOT a photograph - stylized vector art illustration with a recognizable face."""
             response_format="b64_json",
         )
 
-        # Convert to data URL for direct use in img src
+        # Save to persistent storage and get URL
         b64_data = response.data[0].b64_json
-        data_url = f"data:image/png;base64,{b64_data}"
+        prefix = "bot" if request.user_type == 'virtual' else "user"
+        avatar_url = await save_avatar_to_storage(b64_data, prefix)
 
-        return GenerateAvatarResponse(url=data_url)
+        return GenerateAvatarResponse(url=avatar_url)
 
     except Exception as e:
         logger.exception("Failed to generate avatar")
@@ -112,7 +160,7 @@ async def generate_project_avatar(
     If a custom_prompt is provided, it will be used to guide the generation.
     Otherwise, the project name and description are used to create an appropriate visual.
 
-    Returns the image as a base64 data URL stored directly in the database.
+    Returns a permanent URL to the stored avatar image.
     """
     client = get_openai_client()
 
@@ -143,7 +191,7 @@ Square format, solid black background, white icon only."""
         use_case_config = get_use_case_config("image_generation")
         logger.debug(f"Using model {use_case_config.model_id} for project avatar generation")
 
-        # Request base64 directly from OpenAI to avoid temporary URL expiration
+        # Request base64 directly from OpenAI
         response = client.images.generate(
             model=use_case_config.model_id,
             prompt=prompt,
@@ -153,11 +201,11 @@ Square format, solid black background, white icon only."""
             response_format="b64_json",
         )
 
-        # Convert to data URL for direct use in img src
+        # Save to persistent storage and get URL
         b64_data = response.data[0].b64_json
-        data_url = f"data:image/png;base64,{b64_data}"
+        avatar_url = await save_avatar_to_storage(b64_data, "project")
 
-        return GenerateAvatarResponse(url=data_url)
+        return GenerateAvatarResponse(url=avatar_url)
 
     except Exception as e:
         logger.exception("Failed to generate project avatar")

@@ -289,15 +289,29 @@ async def update_user(
     if "role" in update_data and not is_admin:
         raise HTTPException(status_code=403, detail="Only admins can change roles")
 
-    # Convert bot_config to dict if present
+    # Check if avatar_url is a base64 data URL (these are too large to store in DB)
+    # New avatars generated via /api/v1/images/generate-avatar return proper URLs
+    if "avatar_url" in update_data and update_data["avatar_url"]:
+        avatar_url = update_data["avatar_url"]
+        if avatar_url.startswith("data:"):
+            # Legacy base64 avatars - skip saving to prevent request size issues
+            # The avatar generation endpoint now returns proper URLs instead
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Skipping base64 avatar for user {user_id} - use /api/v1/images/generate-avatar for persistent avatars"
+            )
+            del update_data["avatar_url"]
+
+    # Convert bot_config to dict if present (ensure it's serializable)
     if "bot_config" in update_data and update_data["bot_config"]:
-        update_data["bot_config"] = update_data["bot_config"]
+        if hasattr(update_data["bot_config"], "model_dump"):
+            update_data["bot_config"] = update_data["bot_config"].model_dump()
 
     client = get_identity_client()
 
     try:
         import httpx
-        async with httpx.AsyncClient() as http_client:
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
             response = await http_client.patch(
                 f"{client.base_url}/api/v1/users/{user_id}",
                 json=update_data,
@@ -309,6 +323,12 @@ async def update_user(
             )
             if response.status_code == 404:
                 raise HTTPException(status_code=404, detail="User not found")
+            if response.status_code == 400:
+                error_detail = response.json().get("detail", "Bad request")
+                raise HTTPException(status_code=400, detail=error_detail)
+            if response.status_code == 422:
+                error_detail = response.json().get("detail", "Validation error")
+                raise HTTPException(status_code=422, detail=error_detail)
             response.raise_for_status()
             result = response.json()
 
