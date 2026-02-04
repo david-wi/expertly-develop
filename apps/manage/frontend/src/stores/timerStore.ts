@@ -202,6 +202,23 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
+// Track current audio element for cancellation
+let currentAudio: HTMLAudioElement | null = null
+
+// Helper to stop any currently playing speech
+export function stopSpeech(): void {
+  // Stop Deepgram TTS audio if playing
+  if (currentAudio) {
+    currentAudio.pause()
+    currentAudio.currentTime = 0
+    currentAudio = null
+  }
+  // Cancel Web Speech API if speaking
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
+}
+
 // Helper to speak text using Deepgram TTS API (Odysseus voice)
 // Falls back to Web Speech API if Deepgram is unavailable
 export async function speakText(text: string): Promise<void> {
@@ -218,9 +235,16 @@ export async function speakText(text: string): Promise<void> {
       const audioBlob = await response.blob()
       const audioUrl = URL.createObjectURL(audioBlob)
       const audio = new Audio(audioUrl)
+      currentAudio = audio
 
-      audio.onended = () => URL.revokeObjectURL(audioUrl)
-      audio.onerror = () => URL.revokeObjectURL(audioUrl)
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl)
+        if (currentAudio === audio) currentAudio = null
+      }
+      audio.onerror = () => {
+        URL.revokeObjectURL(audioUrl)
+        if (currentAudio === audio) currentAudio = null
+      }
 
       await audio.play()
       return

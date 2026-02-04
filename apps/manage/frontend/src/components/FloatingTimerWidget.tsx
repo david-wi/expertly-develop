@@ -6,6 +6,7 @@ import {
   formatTime,
   playTimerSound,
   speakText,
+  stopSpeech,
   Timer,
 } from '../stores/timerStore'
 import { api } from '../services/api'
@@ -94,6 +95,7 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   const handleCompleteTask = async (timer: Timer) => {
     if (!timer.context?.taskId) return
 
+    stopSpeech() // Stop any ongoing speech when completing
     setCompletingTaskId(timer.context.taskId)
     try {
       await api.quickCompleteTask(timer.context.taskId)
@@ -108,6 +110,7 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
 
   // Handle dismissing the timer
   const handleDismiss = (timer: Timer) => {
+    stopSpeech() // Stop any ongoing speech when dismissing
     if (timer.isComplete) {
       acknowledgeTimer(timer.id)
     }
@@ -285,21 +288,21 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
                 {activeTimer.isComplete ? 'Extend:' : 'Add time:'}
               </span>
               <button
-                onClick={() => addTime(activeTimer.id, 5 * 60)}
+                onClick={() => { stopSpeech(); addTime(activeTimer.id, 5 * 60) }}
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
               >
                 <Plus className="w-3 h-3" />
                 5m
               </button>
               <button
-                onClick={() => addTime(activeTimer.id, 20 * 60)}
+                onClick={() => { stopSpeech(); addTime(activeTimer.id, 20 * 60) }}
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
               >
                 <Plus className="w-3 h-3" />
                 20m
               </button>
               <button
-                onClick={() => addTime(activeTimer.id, 60 * 60)}
+                onClick={() => { stopSpeech(); addTime(activeTimer.id, 60 * 60) }}
                 className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
               >
                 <Plus className="w-3 h-3" />
