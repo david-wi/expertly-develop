@@ -1144,6 +1144,23 @@ export interface ProjectComment {
   created_at: string
 }
 
+export interface ProjectContact {
+  id: string
+  name: string
+  role?: string
+  emails: string[]
+  phones: string[]
+  notes?: string
+}
+
+export interface ProjectCompany {
+  id: string
+  name: string
+  domains: string[]
+  relationship?: string
+  notes?: string
+}
+
 export interface Project {
   _id?: string
   id: string
@@ -1160,6 +1177,8 @@ export interface Project {
   ai_suggestions?: string
   comments?: ProjectComment[]
   identification_rules?: string
+  contacts?: ProjectContact[]
+  companies?: ProjectCompany[]
   avatar_url?: string
   avatar_prompt?: string
   created_at: string
@@ -1176,6 +1195,8 @@ export interface CreateProjectRequest {
   custom_fields?: ProjectCustomField[]
   next_steps?: string
   identification_rules?: string
+  contacts?: ProjectContact[]
+  companies?: ProjectCompany[]
   avatar_url?: string
   avatar_prompt?: string
 }
@@ -1193,6 +1214,8 @@ export interface UpdateProjectRequest {
   ai_suggestions?: string
   comments?: ProjectComment[]
   identification_rules?: string
+  contacts?: ProjectContact[]
+  companies?: ProjectCompany[]
   avatar_url?: string
   avatar_prompt?: string
 }
