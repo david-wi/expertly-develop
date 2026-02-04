@@ -6,9 +6,10 @@ interface WidgetWrapperProps {
   title: string
   children: React.ReactNode
   headerAction?: React.ReactNode
+  titleUnderline?: boolean
 }
 
-export function WidgetWrapper({ widgetId, title, children, headerAction }: WidgetWrapperProps) {
+export function WidgetWrapper({ widgetId, title, children, headerAction, titleUnderline }: WidgetWrapperProps) {
   const { editMode, removeWidget } = useDashboardStore()
 
   return (
@@ -20,7 +21,10 @@ export function WidgetWrapper({ widgetId, title, children, headerAction }: Widge
               <GripVertical className="w-5 h-5" />
             </div>
           )}
-          <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+          <div className="flex flex-col">
+            <h3 className="text-lg font-medium text-gray-900">{title}</h3>
+            {titleUnderline && <div className="w-16 h-0.5 bg-blue-400 mt-1 rounded-full" />}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {headerAction}

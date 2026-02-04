@@ -29,25 +29,25 @@ const DEFAULT_WIDGETS: WidgetInstance[] = [
     id: 'stats-overview',
     type: 'stats-overview',
     config: {},
-    layout: { x: 0, y: 3, w: 12, h: 2 },
+    layout: { x: 0, y: 3, w: 12, h: 3 },
   },
   {
     id: 'my-active-tasks',
     type: 'my-active-tasks',
     config: {},
-    layout: { x: 0, y: 5, w: 8, h: 5 },
+    layout: { x: 0, y: 6, w: 8, h: 5 },
   },
   {
     id: 'my-queues',
     type: 'my-queues',
     config: {},
-    layout: { x: 8, y: 5, w: 4, h: 5 },
+    layout: { x: 8, y: 6, w: 4, h: 5 },
   },
   {
     id: 'monitors-summary',
     type: 'monitors-summary',
     config: {},
-    layout: { x: 0, y: 10, w: 12, h: 3 },
+    layout: { x: 0, y: 11, w: 12, h: 3 },
   },
 ]
 

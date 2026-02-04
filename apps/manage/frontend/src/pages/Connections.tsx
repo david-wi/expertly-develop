@@ -21,6 +21,10 @@ export default function Connections() {
   // Toast/notification state
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
+  // Setup step progress state
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set())
+  const [currentStep, setCurrentStep] = useState(0)
+
   useEffect(() => {
     // Handle OAuth callback results
     const success = searchParams.get('success')
@@ -458,6 +462,8 @@ export default function Connections() {
         onClose={() => {
           setShowSetupModal(false)
           setSelectedProvider(null)
+          setCompletedSteps(new Set())
+          setCurrentStep(0)
         }}
         title={`Setup ${selectedProvider?.name} Connection`}
       >
@@ -477,12 +483,86 @@ export default function Connections() {
           </div>
 
           <div>
-            <h4 className="font-medium text-gray-900 mb-2">Setup Steps:</h4>
-            <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-              {selectedProvider?.setup?.steps.map((step, index) => (
-                <li key={index} className="pl-1">{step}</li>
-              ))}
-            </ol>
+            <h4 className="font-medium text-gray-900 mb-3">Setup Steps:</h4>
+            <div className="space-y-2">
+              {selectedProvider?.setup?.steps.map((step, index) => {
+                const isCompleted = completedSteps.has(index)
+                const isCurrent = currentStep === index
+
+                return (
+                  <div
+                    key={index}
+                    className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                      isCompleted
+                        ? 'bg-green-50 border-green-200'
+                        : isCurrent
+                          ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200'
+                          : 'bg-gray-50 border-gray-200 opacity-60'
+                    }`}
+                    onClick={() => {
+                      if (isCompleted) {
+                        // Toggle off completed
+                        const newCompleted = new Set(completedSteps)
+                        newCompleted.delete(index)
+                        setCompletedSteps(newCompleted)
+                        setCurrentStep(index)
+                      } else {
+                        // Mark as completed and move to next
+                        const newCompleted = new Set(completedSteps)
+                        newCompleted.add(index)
+                        setCompletedSteps(newCompleted)
+                        // Move to next incomplete step
+                        const nextStep = selectedProvider?.setup?.steps.findIndex(
+                          (_, i) => i > index && !newCompleted.has(i)
+                        )
+                        setCurrentStep(nextStep !== undefined && nextStep >= 0 ? nextStep : index + 1)
+                      }
+                    }}
+                  >
+                    {/* Step indicator */}
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                      isCompleted
+                        ? 'bg-green-500 text-white'
+                        : isCurrent
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-300 text-gray-600'
+                    }`}>
+                      {isCompleted ? (
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    {/* Step text with auto-linked URLs */}
+                    <div className={`flex-1 text-sm ${isCompleted ? 'text-green-800' : isCurrent ? 'text-blue-800' : 'text-gray-600'}`}>
+                      {step.split(/(https?:\/\/[^\s]+)/g).map((part, i) =>
+                        part.match(/^https?:\/\//) ? (
+                          <a
+                            key={i}
+                            href={part}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {part}
+                          </a>
+                        ) : (
+                          <span key={i}>{part}</span>
+                        )
+                      )}
+                    </div>
+                    {/* Current indicator */}
+                    {isCurrent && !isCompleted && (
+                      <span className="text-xs text-blue-600 font-medium">Current</span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-gray-500 mt-2">Click each step to mark it complete</p>
           </div>
 
           {selectedProvider?.setup?.console_url && (
@@ -519,6 +599,8 @@ export default function Connections() {
             onClick={() => {
               setShowSetupModal(false)
               setSelectedProvider(null)
+              setCompletedSteps(new Set())
+              setCurrentStep(0)
             }}
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
