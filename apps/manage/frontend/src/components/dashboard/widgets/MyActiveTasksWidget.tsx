@@ -960,6 +960,15 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             return (
               <div className="w-1/2 p-3 overflow-auto bg-gray-50/50 border-l border-gray-200">
                 <div className="space-y-3">
+                  {/* Start Timer button - prominent at top */}
+                  <button
+                    onClick={() => setShowTimerModal(true)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+                  >
+                    <Timer className="w-4 h-4" />
+                    Start Focused Work
+                  </button>
+
                   {/* Editable title */}
                   <div>
                     <input
