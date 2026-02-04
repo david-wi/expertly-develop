@@ -83,7 +83,10 @@ export default function LandingPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
               <ExpertlyLogo className="w-8 h-8" />
-              <span className="text-xl font-bold text-gray-900">Expertly TMS</span>
+              <div className="flex flex-col">
+                <span className="text-xl font-bold text-gray-900 leading-tight">Expertly TMS</span>
+                <span className="text-xs text-emerald-600 font-medium -mt-0.5">The Native-AI TMS</span>
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <Link to="/compare" className="text-gray-600 hover:text-gray-900 font-medium">
@@ -446,7 +449,10 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <div className="flex items-center gap-2">
               <ExpertlyLogo className="w-8 h-8" />
-              <span className="text-lg font-bold text-white">Expertly TMS</span>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold text-white leading-tight">Expertly TMS</span>
+                <span className="text-xs text-emerald-400 font-medium -mt-0.5">The Native-AI TMS</span>
+              </div>
             </div>
             <p className="text-gray-400 text-sm">
               Part of the Expertly suite of products.
