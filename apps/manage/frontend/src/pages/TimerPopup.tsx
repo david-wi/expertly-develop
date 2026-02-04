@@ -272,6 +272,13 @@ export default function TimerPopup() {
               5m
             </button>
             <button
+              onClick={() => { stopSpeech(); addTime(activeTimer.id, 10 * 60) }}
+              className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              10m
+            </button>
+            <button
               onClick={() => { stopSpeech(); addTime(activeTimer.id, 20 * 60) }}
               className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
             >

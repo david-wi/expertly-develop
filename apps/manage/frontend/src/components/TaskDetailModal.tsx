@@ -593,17 +593,6 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       className="w-16 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
                       title="Estimated duration (H:MM)"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const currentSeconds = parseDuration(editedDuration) || 0
-                        setEditedDuration(formatDuration(currentSeconds + 600))
-                      }}
-                      className="px-1.5 py-1.5 text-xs font-medium text-theme-text-secondary bg-theme-bg-elevated hover:bg-theme-bg-hover rounded-lg transition-colors"
-                      title="Add 10 minutes"
-                    >
-                      +10m
-                    </button>
                   </div>
                 </div>
                 {/* Total logged time - read-only display */}
