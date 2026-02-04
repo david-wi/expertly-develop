@@ -35,6 +35,8 @@ def serialize_playbook(playbook: dict) -> dict:
     # Instance tracking fields
     result["instance_count"] = playbook.get("instance_count", 0)
     result["last_instance_created_at"] = playbook.get("last_instance_created_at")
+    # Expertise references
+    result["expertise_ids"] = playbook.get("expertise_ids", [])
     return result
 
 

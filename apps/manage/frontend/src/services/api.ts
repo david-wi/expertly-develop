@@ -610,6 +610,72 @@ export const api = {
       checked_out_at?: string
       started_at?: string
     }>>(`/api/v1/bots/${id}/tasks`),
+
+  // Expertise
+  getExpertise: (params?: { active_only?: boolean; content_type?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.active_only !== undefined) searchParams.set('active_only', String(params.active_only))
+    if (params?.content_type) searchParams.set('content_type', params.content_type)
+    const query = searchParams.toString()
+    return request<Expertise[]>(`/api/v1/expertise${query ? `?${query}` : ''}`)
+  },
+  getExpertiseItem: (id: string) => request<Expertise>(`/api/v1/expertise/${id}`),
+  createExpertise: (data: CreateExpertiseRequest) =>
+    request<Expertise>('/api/v1/expertise', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  uploadExpertise: async (file: File, title: string, description?: string) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('title', title)
+    if (description) formData.append('description', description)
+
+    const response = await fetch(`${API_BASE}/api/v1/expertise/upload`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        const returnUrl = encodeURIComponent(window.location.href)
+        window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`
+        throw new Error('Redirecting to login...')
+      }
+      const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+
+    return response.json() as Promise<Expertise>
+  },
+  updateExpertise: (id: string, data: UpdateExpertiseRequest) =>
+    request<Expertise>(`/api/v1/expertise/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteExpertise: (id: string) =>
+    request<void>(`/api/v1/expertise/${id}`, {
+      method: 'DELETE',
+    }),
+  refreshExpertiseUrl: (id: string) =>
+    request<Expertise>(`/api/v1/expertise/${id}/refresh-url`, {
+      method: 'POST',
+    }),
+  reExtractExpertiseFile: (id: string) =>
+    request<Expertise>(`/api/v1/expertise/${id}/re-extract`, {
+      method: 'POST',
+    }),
+  getExpertiseHistory: (id: string) =>
+    request<ExpertiseHistoryEntry[]>(`/api/v1/expertise/${id}/history`),
+  duplicateExpertise: (id: string, newTitle?: string) => {
+    const query = newTitle ? `?new_title=${encodeURIComponent(newTitle)}` : ''
+    return request<Expertise>(`/api/v1/expertise/${id}/duplicate${query}`, {
+      method: 'POST',
+    })
+  },
+  getExpertiseDownloadUrl: (id: string) =>
+    `${API_BASE}/api/v1/expertise/${id}/download`,
 }
 
 // Types
@@ -964,6 +1030,8 @@ export interface Playbook {
   default_approver_type?: 'user' | 'team' | 'anyone'
   default_approver_id?: string
   default_approver_queue_id?: string
+  // Expertise references
+  expertise_ids: string[]
 }
 
 export interface CreatePlaybookRequest {
@@ -980,6 +1048,8 @@ export interface CreatePlaybookRequest {
   default_approver_type?: 'user' | 'team' | 'anyone'
   default_approver_id?: string
   default_approver_queue_id?: string
+  // Expertise references
+  expertise_ids?: string[]
 }
 
 export interface UpdatePlaybookRequest {
@@ -996,6 +1066,8 @@ export interface UpdatePlaybookRequest {
   default_approver_type?: 'user' | 'team' | 'anyone'
   default_approver_id?: string
   default_approver_queue_id?: string
+  // Expertise references
+  expertise_ids?: string[]
 }
 
 export interface PlaybookReorderItem {
@@ -1539,4 +1611,64 @@ export interface UpdateDocumentRequest {
   task_id?: string
   external_url?: string
   external_title?: string
+}
+
+// Expertise types
+export type ExpertiseContentType = 'markdown' | 'file' | 'url'
+
+export interface ExpertiseHistoryEntry {
+  version: number
+  title: string
+  description?: string
+  content_type: ExpertiseContentType
+  markdown_content?: string
+  extracted_markdown?: string
+  url?: string
+  url_content_markdown?: string
+  changed_at: string
+  changed_by?: string
+}
+
+export interface Expertise {
+  id: string
+  organization_id: string
+  title: string
+  description?: string
+  content_type: ExpertiseContentType
+  // MARKDOWN type
+  markdown_content?: string
+  // FILE type
+  filename?: string
+  original_filename?: string
+  mime_type?: string
+  size_bytes?: number
+  extracted_markdown?: string
+  // URL type
+  url?: string
+  url_retrieved_at?: string
+  url_content_markdown?: string
+  // Versioning
+  version: number
+  // Status
+  is_active: boolean
+  // Timestamps
+  created_at: string
+  updated_at: string
+  created_by?: string
+}
+
+export interface CreateExpertiseRequest {
+  title: string
+  description?: string
+  content_type: ExpertiseContentType
+  markdown_content?: string
+  url?: string
+}
+
+export interface UpdateExpertiseRequest {
+  title?: string
+  description?: string
+  markdown_content?: string
+  url?: string
+  is_active?: boolean
 }
