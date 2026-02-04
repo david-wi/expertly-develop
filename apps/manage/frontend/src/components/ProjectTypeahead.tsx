@@ -335,17 +335,20 @@ export default function ProjectTypeahead({
                             ref={parentDropdownRef}
                             className="absolute z-20 w-full mt-1 bg-theme-bg-surface border border-theme-border rounded shadow-lg max-h-40 overflow-auto"
                           >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewProjectParentId(null)
-                                setParentSearch('')
-                                setShowParentDropdown(false)
-                              }}
-                              className="w-full text-left px-2 py-1.5 text-xs hover:bg-theme-bg-elevated text-theme-text-primary"
-                            >
-                              None (top-level)
-                            </button>
+                            {/* None option - only show at top when not searching */}
+                            {!parentSearch && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewProjectParentId(null)
+                                  setParentSearch('')
+                                  setShowParentDropdown(false)
+                                }}
+                                className="w-full text-left px-2 py-1.5 text-xs hover:bg-theme-bg-elevated text-theme-text-primary"
+                              >
+                                None (top-level)
+                              </button>
+                            )}
                             {filteredParentProjects.map((project) => (
                               <button
                                 key={project.id}
@@ -368,6 +371,20 @@ export default function ProjectTypeahead({
                               <div className="px-2 py-1.5 text-xs text-theme-text-secondary">
                                 No projects found
                               </div>
+                            )}
+                            {/* None option - show at bottom when searching */}
+                            {parentSearch && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewProjectParentId(null)
+                                  setParentSearch('')
+                                  setShowParentDropdown(false)
+                                }}
+                                className="w-full text-left px-2 py-1.5 text-xs hover:bg-theme-bg-elevated text-theme-text-secondary border-t border-theme-border"
+                              >
+                                None (top-level)
+                              </button>
                             )}
                           </div>
                         )}
@@ -401,14 +418,16 @@ export default function ProjectTypeahead({
                 </div>
               ) : (
                 <>
-                  {/* None option */}
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(null)}
-                    className="w-full text-left px-3 py-2 hover:bg-theme-bg-elevated text-theme-text-primary"
-                  >
-                    None (top-level)
-                  </button>
+                  {/* None option - only show at top when not searching */}
+                  {!search && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(null)}
+                      className="w-full text-left px-3 py-2 hover:bg-theme-bg-elevated text-theme-text-primary"
+                    >
+                      None (top-level)
+                    </button>
+                  )}
 
                   {filteredProjects.length > 0 ? (
                     filteredProjects.map((project) => (
@@ -429,6 +448,17 @@ export default function ProjectTypeahead({
                     <div className="px-3 py-2 text-theme-text-secondary text-sm">
                       No projects found
                     </div>
+                  )}
+
+                  {/* None option - show at bottom when searching */}
+                  {search && (
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(null)}
+                      className="w-full text-left px-3 py-2 hover:bg-theme-bg-elevated text-theme-text-secondary border-t border-theme-border"
+                    >
+                      None (top-level)
+                    </button>
                   )}
 
                   {/* Add Project option */}

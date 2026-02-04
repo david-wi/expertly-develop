@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { X, ArrowLeft, Plus } from 'lucide-react'
 import { widgetList } from './widgets/registry'
 import { useDashboardStore } from '../../stores/dashboardStore'
@@ -182,6 +182,49 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
       return `${getProjectDisplayName(parent)} > ${project.name}`
     }
     return project.name
+  }
+
+  // Build depth map for project indentation
+  const getProjectDepth = (projectId: string, visited = new Set<string>()): number => {
+    if (visited.has(projectId)) return 0 // Prevent cycles
+    visited.add(projectId)
+    const project = projects.find(p => (p._id || p.id) === projectId)
+    if (!project || !project.parent_project_id) return 0
+    return 1 + getProjectDepth(project.parent_project_id, visited)
+  }
+
+  // Build hierarchically sorted projects (parent -> children, alphabetical at each level)
+  const sortedProjects = useMemo(() => {
+    const buildTree = (parentId: string | null): Project[] => {
+      const children = projects
+        .filter(p => (p.parent_project_id || null) === parentId)
+        .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+
+      const result: Project[] = []
+      for (const child of children) {
+        result.push(child)
+        result.push(...buildTree(child._id || child.id))
+      }
+      return result
+    }
+    return buildTree(null)
+  }, [projects])
+
+  // Get user-friendly configure step title based on widget type
+  const getConfigureTitle = (): string => {
+    if (!selectedWidget) return 'Configure Widget'
+    switch (selectedWidget.requiresConfig) {
+      case 'active-tasks':
+        return 'Which Tasks to Show?'
+      case 'project':
+        return 'Select a Project'
+      case 'queue':
+        return 'Select a Queue'
+      case 'notes':
+        return 'Select Notes'
+      default:
+        return `Configure ${selectedWidget.name}`
+    }
   }
 
   // Get preview title for active-tasks widget
@@ -372,28 +415,35 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
                   Select Project(s)
                 </label>
                 <div className="max-h-48 overflow-auto border border-gray-300 rounded-md">
-                  {projects.length === 0 ? (
+                  {sortedProjects.length === 0 ? (
                     <div className="p-3 text-sm text-gray-500">No active projects</div>
                   ) : (
-                    projects.map((project) => {
+                    sortedProjects.map((project) => {
                       const projectId = project._id || project.id
                       const isSelected = selectedProjectIds.includes(projectId)
+                      const depth = getProjectDepth(projectId)
                       return (
                         <div
                           key={projectId}
                           onClick={() => toggleProjectSelection(projectId)}
-                          className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
+                          className={`flex items-center gap-2 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
                             isSelected ? 'bg-primary-50' : ''
                           }`}
+                          style={{ paddingLeft: `${depth * 16 + 12}px`, paddingRight: '12px' }}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => {}}
-                            className="text-primary-600 focus:ring-primary-500 rounded"
+                            className="text-primary-600 focus:ring-primary-500 rounded flex-shrink-0"
                           />
+                          {depth > 0 && (
+                            <span className="text-gray-400 text-sm flex-shrink-0">
+                              {'─'.repeat(depth)}
+                            </span>
+                          )}
                           <span className="text-sm text-gray-700 truncate">
-                            {getProjectDisplayName(project)}
+                            {project.name}
                           </span>
                         </div>
                       )
@@ -631,7 +681,7 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
                 </button>
               )}
               <h3 className="text-lg font-semibold text-gray-900">
-                {step === 'select' ? 'Add Widget' : `Configure ${selectedWidget?.name}`}
+                {step === 'select' ? 'Add Widget' : getConfigureTitle()}
               </h3>
             </div>
             <button
