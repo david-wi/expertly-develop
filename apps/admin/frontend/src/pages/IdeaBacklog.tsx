@@ -231,27 +231,27 @@ function IdeaCard({
   return (
     <div className={`bg-theme-bg-surface rounded-xl border overflow-hidden ${isSelected ? 'border-primary-500 ring-2 ring-primary-500/20' : 'border-theme-border'}`}>
       <div
-        className="p-4 cursor-pointer hover:bg-theme-bg-elevated transition-colors"
+        className="px-4 py-2.5 cursor-pointer hover:bg-theme-bg-elevated transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-3">
           {selectMode && (
             <button
               onClick={(e) => {
                 e.stopPropagation()
                 onToggleSelect?.()
               }}
-              className="mt-1 p-1 text-theme-text-secondary hover:text-primary-500 transition-colors"
+              className="mt-0.5 p-1 text-theme-text-secondary hover:text-primary-500 transition-colors"
             >
               {isSelected ? (
-                <CheckSquare className="w-5 h-5 text-primary-500" />
+                <CheckSquare className="w-4 h-4 text-primary-500" />
               ) : (
-                <Square className="w-5 h-5" />
+                <Square className="w-4 h-4" />
               )}
             </button>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
+            <div className="flex items-center gap-1.5 flex-wrap mb-1">
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeColor(idea.status)}`}>
                 {formatStatus(idea.status)}
               </span>
@@ -263,12 +263,32 @@ function IdeaCard({
                 {getProductDisplayName(idea.product)}
               </span>
             </div>
-            <h3 className="text-lg font-semibold text-theme-text-primary mb-1">{idea.title}</h3>
-            {idea.description && !expanded && (
-              <p className="text-sm text-theme-text-secondary line-clamp-2">{idea.description}</p>
-            )}
-            {/* Vote and comment counts in collapsed view */}
-            <div className="flex items-center gap-4 mt-2">
+            <h3 className="text-base font-semibold text-theme-text-primary">{idea.title}</h3>
+          </div>
+          <div className="flex flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-theme-text-muted whitespace-nowrap">
+                {formatDate(idea.created_at)}
+              </span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onEdit()
+                }}
+                className="p-1 text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-elevated rounded transition-colors"
+                aria-label="Edit idea"
+                title="Edit"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              {expanded ? (
+                <ChevronUp className="w-4 h-4 text-theme-text-muted" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-theme-text-muted" />
+              )}
+            </div>
+            {/* Vote and comment counts */}
+            <div className="flex items-center gap-3">
               {onVote && (
                 <button
                   onClick={(e) => {
@@ -281,38 +301,17 @@ function IdeaCard({
                       : 'text-theme-text-muted hover:text-red-500'
                   }`}
                 >
-                  <Heart className={`w-4 h-4 ${idea.user_voted ? 'fill-current' : ''}`} />
+                  <Heart className={`w-3.5 h-3.5 ${idea.user_voted ? 'fill-current' : ''}`} />
                   <span>{idea.vote_count || 0}</span>
                 </button>
               )}
               {idea.comment_count !== undefined && (
                 <span className="flex items-center gap-1 text-xs text-theme-text-muted">
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-3.5 h-3.5" />
                   <span>{idea.comment_count}</span>
                 </span>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-theme-text-muted whitespace-nowrap">
-              {formatDate(idea.created_at)}
-            </span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-              className="p-1.5 text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-elevated rounded-lg transition-colors"
-              aria-label="Edit idea"
-              title="Edit"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
-            {expanded ? (
-              <ChevronUp className="w-5 h-5 text-theme-text-muted" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-theme-text-muted" />
-            )}
           </div>
         </div>
       </div>
