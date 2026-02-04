@@ -61,6 +61,10 @@ from app.models.step_response import (
     TaskStepResponse, TaskStepResponseCreate, TaskStepResponseUpdate,
     TaskStepResponseComplete, TaskStepResponseResponse, StepStatus
 )
+from app.models.expertise import (
+    Expertise, ExpertiseCreate, ExpertiseUpdate, ExpertiseResponse,
+    ExpertiseHistoryEntry, ExpertiseContentType
+)
 
 __all__ = [
     "PyObjectId",
@@ -170,4 +174,10 @@ __all__ = [
     "TaskStepResponseComplete",
     "TaskStepResponseResponse",
     "StepStatus",
+    "Expertise",
+    "ExpertiseCreate",
+    "ExpertiseUpdate",
+    "ExpertiseResponse",
+    "ExpertiseHistoryEntry",
+    "ExpertiseContentType",
 ]

@@ -131,6 +131,9 @@ class Playbook(BaseModel):
     default_approver_id: Optional[str] = None  # User or Team ID
     default_approver_queue_id: Optional[str] = None  # Queue for approval tasks
 
+    # Expertise - references to expertise items that provide context for this playbook
+    expertise_ids: list[str] = Field(default_factory=list)  # List of Expertise ObjectId strings
+
     # Timestamps
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)
@@ -157,6 +160,8 @@ class PlaybookCreate(BaseModel):
     default_approver_type: Optional[str] = None
     default_approver_id: Optional[str] = None
     default_approver_queue_id: Optional[str] = None
+    # Expertise references
+    expertise_ids: list[str] = Field(default_factory=list)
 
 
 class PlaybookUpdate(BaseModel):
@@ -174,6 +179,8 @@ class PlaybookUpdate(BaseModel):
     default_approver_type: Optional[str] = None
     default_approver_id: Optional[str] = None
     default_approver_queue_id: Optional[str] = None
+    # Expertise references
+    expertise_ids: Optional[list[str]] = None
 
 
 class PlaybookReorderItem(BaseModel):

@@ -17,6 +17,7 @@ import LandingPage from './pages/LandingPage'
 import Monitors from './pages/Monitors'
 import Bots from './pages/Bots'
 import Notifications from './pages/Notifications'
+import Expertise from './pages/Expertise'
 import Layout from './components/Layout'
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
           <Route path="projects" element={<Projects />} />
           <Route path="projects/:id" element={<ProjectDetail />} />
           <Route path="playbooks" element={<Playbooks />} />
+          <Route path="expertise" element={<Expertise />} />
           <Route path="users" element={<Users />} />
           <Route path="teams" element={<Teams />} />
           <Route path="recurring" element={<RecurringTasks />} />
