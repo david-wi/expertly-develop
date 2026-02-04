@@ -1,6 +1,6 @@
-from sqlalchemy import String, Text, Integer, ForeignKey
+from sqlalchemy import String, Text, Integer, ForeignKey, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional, List, TYPE_CHECKING
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from app.database import Base
 
 if TYPE_CHECKING:
@@ -12,6 +12,10 @@ class Artifact(Base):
     __tablename__ = "artifacts"
 
     id: Mapped[str] = mapped_column(String, primary_key=True)
+    # Flexible context for association (e.g., {"product_id": "uuid"})
+    # Apps can use different keys: product_id, walkthrough_id, task_id, etc.
+    context: Mapped[Dict[str, Any]] = mapped_column(JSON, nullable=False, default=dict)
+    # Keep product_id for backward compatibility with existing Define data
     product_id: Mapped[str] = mapped_column(
         String, ForeignKey("products.id", ondelete="CASCADE"), nullable=False
     )

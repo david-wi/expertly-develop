@@ -1,19 +1,24 @@
+"""Pydantic schemas for artifacts API."""
+
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
 
 class ArtifactCreate(BaseModel):
+    """Schema for creating a file artifact (used with multipart form)."""
     name: str
     description: Optional[str] = None
 
 
 class ArtifactLinkCreate(BaseModel):
+    """Schema for creating a link artifact."""
     name: str
     url: str
     description: Optional[str] = None
 
 
 class ArtifactUpdate(BaseModel):
+    """Schema for updating an artifact."""
     name: Optional[str] = None
     description: Optional[str] = None
     status: Optional[str] = None
@@ -21,6 +26,7 @@ class ArtifactUpdate(BaseModel):
 
 
 class ArtifactVersionResponse(BaseModel):
+    """Response schema for artifact version."""
     id: str
     artifact_id: str
     version_number: int
@@ -39,9 +45,11 @@ class ArtifactVersionResponse(BaseModel):
 
 
 class ArtifactResponse(BaseModel):
+    """Response schema for artifact."""
     id: str
-    product_id: str
-    context: Dict[str, Any] = {}  # Flexible association context
+    context: Dict[str, Any] = {}
+    # Include product_id for backward compatibility
+    product_id: Optional[str] = None
     name: str
     description: Optional[str] = None
     artifact_type: str = "file"
@@ -59,4 +67,5 @@ class ArtifactResponse(BaseModel):
 
 
 class ArtifactWithVersions(ArtifactResponse):
+    """Response schema for artifact with all versions."""
     versions: List[ArtifactVersionResponse] = []

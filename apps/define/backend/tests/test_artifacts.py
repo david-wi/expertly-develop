@@ -47,6 +47,8 @@ class TestArtifactsAPI:
         assert artifact["current_version"] == 1
         assert artifact["status"] == "active"
         assert "id" in artifact
+        # Verify context is populated for shared package compatibility
+        assert artifact["context"] == {"product_id": product_id}
 
     @patch("app.api.deps.get_current_user")
     def test_list_artifacts_empty(self, mock_get_user, client):
