@@ -101,7 +101,7 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
   'dashboard-notes': {
     id: 'dashboard-notes',
     name: 'Notes',
-    description: 'Personal markdown notes with tabs and version history',
+    description: 'Personal notes with tabs and version history',
     icon: FileText,
     defaultSize: { w: 4, h: 5 },
     minSize: { w: 3, h: 3 },
