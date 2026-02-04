@@ -119,6 +119,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  // Async avatar generation
+  generateAvatarAsync: (data: { user_type: string; description: string; name?: string }) =>
+    request<AvatarJobResponse>('/api/v1/images/generate-avatar-async', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  generateProjectAvatarAsync: (data: { project_name: string; project_description?: string; custom_prompt?: string }) =>
+    request<AvatarJobResponse>('/api/v1/images/generate-project-avatar-async', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getAvatarJobStatus: (jobId: string) =>
+    request<AvatarJobStatus>(`/api/v1/images/avatar-job/${jobId}`),
 
   // Organizations
   getOrganizations: () => request<Organization[]>('/api/v1/organizations'),
@@ -722,6 +735,22 @@ export const api = {
 }
 
 // Types
+export interface AvatarJobResponse {
+  job_id: string
+  status: 'pending' | 'generating' | 'completed' | 'failed'
+  url?: string
+  error?: string
+}
+
+export interface AvatarJobStatus {
+  job_id: string
+  status: 'pending' | 'generating' | 'completed' | 'failed'
+  url?: string
+  error?: string
+  created_at: string
+  completed_at?: string
+}
+
 export interface Organization {
   id: string
   name: string

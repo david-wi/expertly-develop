@@ -2,8 +2,11 @@ import logging
 import base64
 import os
 import uuid
+import asyncio
+from datetime import datetime, timezone
+from typing import Optional
 import aiofiles
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
 from openai import OpenAI
 
@@ -18,6 +21,10 @@ logger = logging.getLogger(__name__)
 
 # Base directory for avatar storage
 AVATARS_BASE_DIR = "/opt/expertly-develop/uploads/manage/avatars"
+
+# In-memory job store for async avatar generation
+# In production, consider using Redis for persistence across restarts
+avatar_jobs: dict[str, dict] = {}
 
 
 async def save_avatar_to_storage(b64_data: str, prefix: str = "avatar") -> str:
@@ -58,6 +65,69 @@ class GenerateAvatarResponse(BaseModel):
     url: str
 
 
+class AsyncAvatarResponse(BaseModel):
+    """Response for async avatar generation."""
+    job_id: str
+    status: str  # "pending", "generating", "completed", "failed"
+    url: Optional[str] = None
+    error: Optional[str] = None
+
+
+class AvatarJobStatus(BaseModel):
+    """Status of an avatar generation job."""
+    job_id: str
+    status: str
+    url: Optional[str] = None
+    error: Optional[str] = None
+    created_at: str
+    completed_at: Optional[str] = None
+
+
+def _generate_avatar_sync(
+    prompt: str,
+    prefix: str,
+    job_id: str,
+):
+    """Synchronously generate avatar (runs in background thread)."""
+    try:
+        avatar_jobs[job_id]["status"] = "generating"
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        use_case_config = get_use_case_config("image_generation")
+
+        response = client.images.generate(
+            model=use_case_config.model_id,
+            prompt=prompt,
+            size="1024x1024",
+            quality="standard",
+            n=1,
+            response_format="b64_json",
+        )
+
+        b64_data = response.data[0].b64_json
+
+        # Save to storage (synchronous version)
+        os.makedirs(AVATARS_BASE_DIR, exist_ok=True)
+        filename = f"{prefix}_{uuid.uuid4().hex}.png"
+        filepath = os.path.join(AVATARS_BASE_DIR, filename)
+        image_data = base64.b64decode(b64_data)
+        with open(filepath, 'wb') as f:
+            f.write(image_data)
+
+        avatar_url = f"https://manage.ai.devintensive.com/api/v1/images/avatars/{filename}"
+
+        avatar_jobs[job_id]["status"] = "completed"
+        avatar_jobs[job_id]["url"] = avatar_url
+        avatar_jobs[job_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
+        logger.info(f"Avatar job {job_id} completed: {avatar_url}")
+
+    except Exception as e:
+        logger.exception(f"Avatar job {job_id} failed")
+        avatar_jobs[job_id]["status"] = "failed"
+        avatar_jobs[job_id]["error"] = str(e)
+        avatar_jobs[job_id]["completed_at"] = datetime.now(timezone.utc).isoformat()
+
+
 @router.get("/avatars/{filename}")
 async def serve_avatar(filename: str):
     """Serve an avatar image from storage."""
@@ -76,6 +146,135 @@ async def serve_avatar(filename: str):
         filepath,
         media_type="image/png",
         headers={"Cache-Control": "public, max-age=31536000"}  # Cache for 1 year
+    )
+
+
+@router.post("/generate-avatar-async", response_model=AsyncAvatarResponse)
+async def generate_avatar_async(
+    request: GenerateAvatarRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+) -> AsyncAvatarResponse:
+    """Start async avatar generation using DALL-E.
+
+    Returns immediately with a job_id. Poll /avatar-job/{job_id} for status.
+    """
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OpenAI API key not configured"
+        )
+
+    # Build prompt
+    if request.user_type == 'virtual':
+        prompt = f"""Modern flat vector illustration, explainer-style, friendly mascot character for a bot/AI assistant.
+The bot's purpose: {request.description}
+Style: Clean lines, vibrant colors, minimal shading, professional but approachable.
+The character should visually represent their role/function in a creative way.
+Square format, simple background, suitable as a profile avatar."""
+    else:
+        prompt = f"""Modern flat vector illustration portrait of a person, explainer-style.
+Appearance: {request.description}
+The person must have clearly visible facial features: eyes, nose, and mouth.
+Style: Clean lines, vibrant colors, minimal shading, professional but friendly.
+Head and shoulders view, simple colored background, suitable as a profile avatar.
+NOT a photograph - stylized vector art illustration with a recognizable face."""
+
+    # Create job
+    job_id = uuid.uuid4().hex
+    prefix = "bot" if request.user_type == 'virtual' else "user"
+    avatar_jobs[job_id] = {
+        "status": "pending",
+        "url": None,
+        "error": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": None,
+    }
+
+    # Start background generation
+    import concurrent.futures
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    executor.submit(_generate_avatar_sync, prompt, prefix, job_id)
+
+    logger.info(f"Started async avatar generation job {job_id}")
+
+    return AsyncAvatarResponse(job_id=job_id, status="pending")
+
+
+@router.post("/generate-project-avatar-async", response_model=AsyncAvatarResponse)
+async def generate_project_avatar_async(
+    request: GenerateProjectAvatarRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+) -> AsyncAvatarResponse:
+    """Start async project avatar generation using DALL-E.
+
+    Returns immediately with a job_id. Poll /avatar-job/{job_id} for status.
+    """
+    if not settings.openai_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="OpenAI API key not configured"
+        )
+
+    # Build prompt
+    if request.custom_prompt:
+        prompt = f"""Simple, minimalist white icon or logo design on a solid black background.
+User's description: {request.custom_prompt}
+Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000).
+IMPORTANT: The icon must be LARGE, filling approximately 85-90% of the image area. Leave only a small 5-8% margin/buffer around the edges.
+Keep the design simple - it needs to be recognizable at small sizes.
+Do NOT include any border, frame, decorative outline, or box around the icon.
+Square format, solid black background, white icon only."""
+    else:
+        description_text = f"Description: {request.project_description}" if request.project_description else ""
+        prompt = f"""Simple, minimalist white icon or logo design on a solid black background.
+Project name: "{request.project_name}"
+{description_text}
+Create a simple icon or symbol that represents this project's theme or purpose.
+Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000).
+IMPORTANT: The icon must be LARGE, filling approximately 85-90% of the image area. Leave only a small 5-8% margin/buffer around the edges.
+Keep the design simple - it needs to be recognizable at small sizes.
+Do NOT include any border, frame, decorative outline, or box around the icon.
+Square format, solid black background, white icon only."""
+
+    # Create job
+    job_id = uuid.uuid4().hex
+    avatar_jobs[job_id] = {
+        "status": "pending",
+        "url": None,
+        "error": None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "completed_at": None,
+    }
+
+    # Start background generation
+    import concurrent.futures
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    executor.submit(_generate_avatar_sync, prompt, "project", job_id)
+
+    logger.info(f"Started async project avatar generation job {job_id}")
+
+    return AsyncAvatarResponse(job_id=job_id, status="pending")
+
+
+@router.get("/avatar-job/{job_id}", response_model=AvatarJobStatus)
+async def get_avatar_job_status(
+    job_id: str,
+    current_user: User = Depends(get_current_user)
+) -> AvatarJobStatus:
+    """Get the status of an avatar generation job."""
+    if job_id not in avatar_jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    job = avatar_jobs[job_id]
+    return AvatarJobStatus(
+        job_id=job_id,
+        status=job["status"],
+        url=job.get("url"),
+        error=job.get("error"),
+        created_at=job["created_at"],
+        completed_at=job.get("completed_at"),
     )
 
 
