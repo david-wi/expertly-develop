@@ -86,6 +86,9 @@ export default function LandingPage() {
               <span className="text-xl font-bold text-gray-900">Expertly TMS</span>
             </div>
             <div className="flex items-center gap-4">
+              <Link to="/compare" className="text-gray-600 hover:text-gray-900 font-medium">
+                Compare
+              </Link>
               <Link to="/" className="text-gray-600 hover:text-gray-900 font-medium">
                 Sign In
               </Link>
