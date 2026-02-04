@@ -108,7 +108,7 @@ export const useAppStore = create<AppState>((set, _get) => ({
       switch (type) {
         case 'task.created':
           // Add if not already present
-          if (!tasks.find((t) => t.id === task.id)) {
+          if (!tasks.find((t) => t.id === task.id || t._id === task._id)) {
             tasks = [task, ...tasks]
           }
           break
@@ -118,7 +118,12 @@ export const useAppStore = create<AppState>((set, _get) => ({
         case 'task.completed':
         case 'task.failed':
           // Update existing task
-          tasks = tasks.map((t) => (t.id === task.id ? task : t))
+          tasks = tasks.map((t) => (t.id === task.id || t._id === task._id ? task : t))
+          break
+
+        case 'task.deleted':
+          // Remove deleted task from list
+          tasks = tasks.filter((t) => t.id !== task.id && t._id !== task._id)
           break
       }
 

@@ -12,6 +12,7 @@ from app.models import (
     User
 )
 from app.api.deps import get_current_user
+from app.api.v1.websocket import emit_event
 
 router = APIRouter()
 
@@ -177,7 +178,12 @@ async def create_task(
 
     await db.tasks.insert_one(task.model_dump_mongo())
 
-    return serialize_task(task.model_dump_mongo())
+    serialized = serialize_task(task.model_dump_mongo())
+
+    # Emit WebSocket event for real-time updates
+    await emit_event(str(current_user.organization_id), "task.created", serialized)
+
+    return serialized
 
 
 @router.patch("/{task_id}")
@@ -212,7 +218,12 @@ async def update_task(
     if not result:
         raise HTTPException(status_code=404, detail="Task not found")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+
+    # Emit WebSocket event for real-time updates
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+
+    return serialized
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -233,6 +244,9 @@ async def delete_task(
 
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Task not found")
+
+    # Emit WebSocket event for real-time updates
+    await emit_event(str(current_user.organization_id), "task.deleted", {"id": task_id, "_id": task_id})
 
 
 # Task state transitions
@@ -404,7 +418,12 @@ async def complete_task(
             raise HTTPException(status_code=400, detail=f"Task is {task['status']}, not in_progress")
         raise HTTPException(status_code=403, detail="Task is assigned to another user")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+
+    # Emit WebSocket event for real-time updates
+    await emit_event(str(current_user.organization_id), "task.completed", serialized)
+
+    return serialized
 
 
 @router.post("/{task_id}/fail")
