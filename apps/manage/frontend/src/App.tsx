@@ -18,6 +18,7 @@ import Monitors from './pages/Monitors'
 import Bots from './pages/Bots'
 import Notifications from './pages/Notifications'
 import Expertise from './pages/Expertise'
+import TimerPopup from './pages/TimerPopup'
 import Layout from './components/Layout'
 import FloatingTimerWidget from './components/FloatingTimerWidget'
 
@@ -26,6 +27,7 @@ function App() {
     <BrowserRouter>
       <FloatingTimerWidget />
       <Routes>
+        <Route path="/timer-popup" element={<TimerPopup />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
