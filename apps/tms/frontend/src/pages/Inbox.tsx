@@ -93,7 +93,7 @@ export default function Inbox() {
             onClick={() => setFilter(f.value)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               filter === f.value
-                ? 'bg-indigo-100 text-indigo-700'
+                ? 'bg-emerald-100 text-emerald-700'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
