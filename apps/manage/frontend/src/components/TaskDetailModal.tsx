@@ -23,6 +23,7 @@ import {
   Eye,
   RotateCcw,
   Check,
+  Timer,
 } from 'lucide-react'
 import { InlineVoiceTranscription } from '@expertly/ui'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase } from '../services/api'
@@ -31,6 +32,7 @@ import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
 import PlaybookStepExecutor from './PlaybookStepExecutor'
 import PlaybookSelector from './PlaybookSelector'
+import StartTimerModal from './StartTimerModal'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface TaskDetailModalProps {
@@ -173,6 +175,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
 
   // Phase transition state
   const [transitioning, setTransitioning] = useState(false)
+
+  // Timer modal state
+  const [showTimerModal, setShowTimerModal] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!taskId) return
@@ -452,12 +457,22 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
             )}
             <h2 className="text-base font-semibold text-theme-text-primary">Assignment Details</h2>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors"
-          >
-            <X className="w-5 h-5 text-theme-text-secondary" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Timer button */}
+            <button
+              onClick={() => setShowTimerModal(true)}
+              className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors group"
+              title="Start timeboxed work session"
+            >
+              <Timer className="w-5 h-5 text-theme-text-secondary group-hover:text-primary-600" />
+            </button>
+            <button
+              onClick={handleClose}
+              className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors"
+            >
+              <X className="w-5 h-5 text-theme-text-secondary" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
@@ -1049,6 +1064,17 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
           </div>
         </div>
       </div>
+
+      {/* Timer Modal */}
+      <StartTimerModal
+        isOpen={showTimerModal}
+        onClose={() => setShowTimerModal(false)}
+        context={{
+          type: 'task',
+          taskId: taskId,
+          taskTitle: task?.title || 'Task',
+        }}
+      />
     </div>
   )
 }

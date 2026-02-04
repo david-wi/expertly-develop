@@ -19,10 +19,12 @@ import Bots from './pages/Bots'
 import Notifications from './pages/Notifications'
 import Expertise from './pages/Expertise'
 import Layout from './components/Layout'
+import FloatingTimerWidget from './components/FloatingTimerWidget'
 
 function App() {
   return (
     <BrowserRouter>
+      <FloatingTimerWidget />
       <Routes>
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/" element={<Layout />}>
