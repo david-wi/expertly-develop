@@ -260,4 +260,77 @@ export const api = {
 
   getDocumentDownloadUrl: (id: string) =>
     `${API_BASE}/api/v1/documents/${id}/download`,
+
+  // Emails
+  getEmails: (params?: {
+    direction?: string
+    category?: string
+    shipment_id?: string
+    quote_id?: string
+    customer_id?: string
+    carrier_id?: string
+    is_read?: boolean
+    is_starred?: boolean
+    is_archived?: boolean
+    needs_review?: boolean
+    search?: string
+    limit?: number
+    offset?: number
+  }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.direction) searchParams.set('direction', params.direction)
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    if (params?.quote_id) searchParams.set('quote_id', params.quote_id)
+    if (params?.customer_id) searchParams.set('customer_id', params.customer_id)
+    if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
+    if (params?.is_read !== undefined) searchParams.set('is_read', String(params.is_read))
+    if (params?.is_starred !== undefined) searchParams.set('is_starred', String(params.is_starred))
+    if (params?.is_archived !== undefined) searchParams.set('is_archived', String(params.is_archived))
+    if (params?.needs_review !== undefined) searchParams.set('needs_review', String(params.needs_review))
+    if (params?.search) searchParams.set('search', params.search)
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    if (params?.offset) searchParams.set('offset', String(params.offset))
+    const query = searchParams.toString()
+    return request<import('../types').EmailMessage[]>(`/api/v1/emails${query ? `?${query}` : ''}`)
+  },
+
+  getEmailInbox: (params?: { category?: string; is_read?: boolean; limit?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.category) searchParams.set('category', params.category)
+    if (params?.is_read !== undefined) searchParams.set('is_read', String(params.is_read))
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    const query = searchParams.toString()
+    return request<import('../types').EmailMessage[]>(`/api/v1/emails/inbox${query ? `?${query}` : ''}`)
+  },
+
+  getEmailsNeedingReview: (limit: number = 50) =>
+    request<import('../types').EmailMessage[]>(`/api/v1/emails/needs-review?limit=${limit}`),
+
+  getEmailsByShipment: (shipmentId: string) =>
+    request<import('../types').EmailMessage[]>(`/api/v1/emails/by-shipment/${shipmentId}`),
+
+  getEmailStats: () =>
+    request<import('../types').EmailStats>('/api/v1/emails/stats'),
+
+  getEmail: (id: string) =>
+    request<import('../types').EmailMessage>(`/api/v1/emails/${id}`),
+
+  markEmailRead: (id: string) =>
+    request<{ status: string }>(`/api/v1/emails/${id}/mark-read`, { method: 'POST' }),
+
+  markEmailUnread: (id: string) =>
+    request<{ status: string }>(`/api/v1/emails/${id}/mark-unread`, { method: 'POST' }),
+
+  starEmail: (id: string) =>
+    request<{ status: string; is_starred: boolean }>(`/api/v1/emails/${id}/star`, { method: 'POST' }),
+
+  archiveEmail: (id: string) =>
+    request<{ status: string }>(`/api/v1/emails/${id}/archive`, { method: 'POST' }),
+
+  linkEmailToShipment: (id: string, shipmentId: string) =>
+    request<import('../types').EmailMessage>(`/api/v1/emails/${id}/link-shipment?shipment_id=${shipmentId}`, { method: 'POST' }),
+
+  reclassifyEmail: (id: string) =>
+    request<{ status: string }>(`/api/v1/emails/${id}/reclassify`, { method: 'POST' }),
 }

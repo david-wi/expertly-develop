@@ -472,3 +472,79 @@ export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
   customs_entry: 'Customs Entry',
   other: 'Other',
 }
+
+// Email types
+export type EmailDirection = 'inbound' | 'outbound'
+
+export type EmailCategory =
+  | 'quote_request'
+  | 'quote_response'
+  | 'shipment_update'
+  | 'carrier_communication'
+  | 'customer_communication'
+  | 'invoice_related'
+  | 'document_attached'
+  | 'booking_confirmation'
+  | 'tracking_update'
+  | 'claim_related'
+  | 'uncategorized'
+
+export interface EmailAttachment {
+  filename: string
+  mime_type: string
+  size_bytes: number
+  document_id?: string
+}
+
+export interface EmailMessage {
+  id: string
+  message_id: string
+  thread_id?: string
+  direction: EmailDirection
+  is_read: boolean
+  is_starred: boolean
+  is_archived: boolean
+  from_email: string
+  from_name?: string
+  to_emails: string[]
+  cc_emails: string[]
+  subject: string
+  body_text?: string
+  body_html?: string
+  has_attachments: boolean
+  attachments: EmailAttachment[]
+  category: EmailCategory
+  classification_confidence?: number
+  ai_summary?: string
+  extracted_action_items?: string[]
+  shipment_id?: string
+  quote_id?: string
+  customer_id?: string
+  carrier_id?: string
+  auto_matched: boolean
+  match_confidence?: number
+  needs_review: boolean
+  received_at?: string
+  sent_at?: string
+  created_at?: string
+}
+
+export interface EmailStats {
+  unread_count: number
+  needs_review_count: number
+  by_category: Record<string, number>
+}
+
+export const EMAIL_CATEGORY_LABELS: Record<EmailCategory, string> = {
+  quote_request: 'Quote Request',
+  quote_response: 'Quote Response',
+  shipment_update: 'Shipment Update',
+  carrier_communication: 'Carrier',
+  customer_communication: 'Customer',
+  invoice_related: 'Invoice',
+  document_attached: 'Document',
+  booking_confirmation: 'Booking',
+  tracking_update: 'Tracking',
+  claim_related: 'Claim',
+  uncategorized: 'Uncategorized',
+}
