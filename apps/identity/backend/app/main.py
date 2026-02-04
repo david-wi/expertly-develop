@@ -1,11 +1,9 @@
 """Expertly Identity - User and Team Management Service."""
 
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
 from app.database import init_db
@@ -62,15 +60,6 @@ app.include_router(images.router, prefix="/api/v1/images", tags=["Images"])
 app.include_router(admin.router, prefix="/api/v1/admin", tags=["Admin"])
 app.include_router(memberships.router, prefix="/api/v1/memberships", tags=["Memberships"])
 app.include_router(transcription.router, prefix="/ws", tags=["Transcription"])
-
-# Static file serving for uploaded avatars
-uploads_path = Path(settings.uploads_dir)
-try:
-    uploads_path.mkdir(parents=True, exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
-except OSError:
-    # Directory cannot be created (e.g., in testing environment)
-    pass
 
 
 @app.get("/health")
