@@ -36,6 +36,19 @@ export const api = {
   // Health
   getHealth: () => request<{ status: string; database: string }>('/health'),
 
+  // Current User (from identity API)
+  getCurrentUser: async () => {
+    try {
+      const response = await fetch('https://identity-api.ai.devintensive.com/api/v1/me', {
+        credentials: 'include',
+      })
+      if (!response.ok) return null
+      return response.json()
+    } catch {
+      return null
+    }
+  },
+
   // Customers
   getCustomers: (params?: { status?: string; search?: string }) => {
     const searchParams = new URLSearchParams()

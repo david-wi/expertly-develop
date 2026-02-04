@@ -8,6 +8,10 @@ import {
   Package,
   TruckIcon,
   Clock,
+  DollarSign,
+  FileText,
+  Send,
+  ArrowUpRight,
 } from 'lucide-react'
 
 export default function Dashboard() {
@@ -23,7 +27,7 @@ export default function Dashboard() {
       name: 'Open Work Items',
       value: workItems.filter(w => w.status === 'open' || w.status === 'in_progress').length,
       icon: Inbox,
-      color: 'bg-blue-500',
+      color: 'bg-emerald-500',
       href: '/inbox',
     },
     {
@@ -37,7 +41,7 @@ export default function Dashboard() {
       name: "Today's Pickups",
       value: dashboardStats?.todays_pickups || 0,
       icon: Package,
-      color: 'bg-green-500',
+      color: 'bg-blue-500',
       href: '/shipments',
     },
     {
@@ -67,93 +71,129 @@ export default function Dashboard() {
           <Link
             key={stat.name}
             to={stat.href}
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow"
+            className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-all hover:border-gray-300 group"
           >
-            <div className="flex items-center gap-4">
-              <div className={`${stat.color} p-3 rounded-lg`}>
+            <div className="flex items-center justify-between">
+              <div className={`${stat.color} p-3 rounded-xl`}>
                 <stat.icon className="h-6 w-6 text-white" />
               </div>
-              <div>
-                <p className="text-sm font-medium text-gray-500">{stat.name}</p>
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-              </div>
+              <ArrowUpRight className="h-5 w-5 text-gray-300 group-hover:text-gray-400 transition-colors" />
+            </div>
+            <div className="mt-4">
+              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-sm font-medium text-gray-500 mt-1">{stat.name}</p>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* Urgent Items */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Urgent Items</h2>
-        </div>
-        {loading.workItems ? (
-          <div className="p-6 text-center text-gray-500">Loading...</div>
-        ) : urgentItems.length === 0 ? (
-          <div className="p-6 text-center text-gray-500">No urgent items</div>
-        ) : (
-          <ul className="divide-y divide-gray-200">
-            {urgentItems.map((item) => (
-              <li key={item.id} className="px-6 py-4 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {item.is_overdue && (
-                      <Clock className="h-5 w-5 text-red-500" />
-                    )}
-                    <div>
-                      <p className="font-medium text-gray-900">{item.title}</p>
-                      <p className="text-sm text-gray-500 capitalize">
-                        {item.work_type.replace(/_/g, ' ')}
-                      </p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Urgent Items - Takes 2 columns */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Urgent Items</h2>
+            <Link to="/inbox" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+              View all →
+            </Link>
+          </div>
+          {loading.workItems ? (
+            <div className="p-6 text-center text-gray-500">Loading...</div>
+          ) : urgentItems.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 mx-auto bg-emerald-50 rounded-full flex items-center justify-center mb-4">
+                <Inbox className="h-8 w-8 text-emerald-500" />
+              </div>
+              <p className="text-gray-500">No urgent items</p>
+              <p className="text-sm text-gray-400 mt-1">You're all caught up!</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {urgentItems.map((item) => (
+                <li key={item.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {item.is_overdue && (
+                        <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                          <Clock className="h-4 w-4 text-red-600" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-gray-900">{item.title}</p>
+                        <p className="text-sm text-gray-500 capitalize">
+                          {item.work_type.replace(/_/g, ' ')}
+                        </p>
+                      </div>
                     </div>
+                    <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                      item.is_overdue
+                        ? 'bg-red-100 text-red-700'
+                        : item.priority >= 70
+                        ? 'bg-orange-100 text-orange-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {item.is_overdue ? 'Overdue' : `Priority ${item.priority}`}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    item.is_overdue
-                      ? 'bg-red-100 text-red-700'
-                      : item.priority >= 70
-                      ? 'bg-orange-100 text-orange-700'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}>
-                    {item.is_overdue ? 'Overdue' : `Priority ${item.priority}`}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
-          <Link to="/inbox" className="text-sm text-indigo-600 hover:text-indigo-700 font-medium">
-            View all work items →
-          </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Link
-          to="/quote-requests"
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow text-center"
-        >
-          <Truck className="h-8 w-8 mx-auto mb-2 text-indigo-600" />
-          <h3 className="font-semibold text-gray-900">New Quote Request</h3>
-          <p className="text-sm text-gray-500">Enter a rate request</p>
-        </Link>
-        <Link
-          to="/dispatch"
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow text-center"
-        >
-          <Package className="h-8 w-8 mx-auto mb-2 text-indigo-600" />
-          <h3 className="font-semibold text-gray-900">Dispatch Board</h3>
-          <p className="text-sm text-gray-500">View loads needing carriers</p>
-        </Link>
-        <Link
-          to="/invoices"
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow text-center"
-        >
-          <Inbox className="h-8 w-8 mx-auto mb-2 text-indigo-600" />
-          <h3 className="font-semibold text-gray-900">Billing Queue</h3>
-          <p className="text-sm text-gray-500">Generate invoices</p>
-        </Link>
+        {/* Quick Actions - Takes 1 column */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+          <div className="space-y-3">
+            <Link
+              to="/quote-requests"
+              className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-200 transition-all group"
+            >
+              <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-200 transition-colors">
+                <FileText className="h-6 w-6 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">New Quote Request</h3>
+                <p className="text-sm text-gray-500">Paste email to extract</p>
+              </div>
+            </Link>
+            <Link
+              to="/dispatch"
+              className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-200 transition-all group"
+            >
+              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                <Send className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Dispatch Board</h3>
+                <p className="text-sm text-gray-500">Assign carriers to loads</p>
+              </div>
+            </Link>
+            <Link
+              to="/shipments"
+              className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-200 transition-all group"
+            >
+              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+                <Truck className="h-6 w-6 text-purple-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Track Shipments</h3>
+                <p className="text-sm text-gray-500">View active loads</p>
+              </div>
+            </Link>
+            <Link
+              to="/invoices"
+              className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-emerald-200 transition-all group"
+            >
+              <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-amber-200 transition-colors">
+                <DollarSign className="h-6 w-6 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Billing Queue</h3>
+                <p className="text-sm text-gray-500">Generate invoices</p>
+              </div>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   )
