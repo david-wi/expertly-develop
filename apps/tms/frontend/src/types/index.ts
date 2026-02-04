@@ -343,6 +343,48 @@ export interface MarginDashboard {
   low_margin_shipments: LowMarginShipment[]
 }
 
+// Carrier Performance Analytics
+export interface CarrierPerformanceSummary {
+  total_carriers: number
+  active_carriers: number
+  avg_on_time_rate: number
+  avg_tender_acceptance: number
+  top_performer_id?: string
+  top_performer_name?: string
+}
+
+export interface CarrierPerformanceDetail {
+  carrier_id: string
+  carrier_name: string
+  mc_number?: string
+  shipment_count: number
+  on_time_delivery_count: number
+  on_time_rate: number
+  late_delivery_count: number
+  tender_accepted_count: number
+  tender_declined_count: number
+  tender_acceptance_rate: number
+  avg_cost_per_mile: number
+  total_miles: number
+  total_cost: number
+  exception_count: number
+  performance_score: number
+  trend: 'improving' | 'stable' | 'declining'
+}
+
+export interface CarrierPerformanceTrend {
+  date: string
+  on_time_rate: number
+  shipment_count: number
+  avg_cost_per_mile: number
+}
+
+export interface CarrierPerformance {
+  summary: CarrierPerformanceSummary
+  carriers: CarrierPerformanceDetail[]
+  trends: CarrierPerformanceTrend[]
+}
+
 // Tracking Event types
 export type TrackingEventType = 'created' | 'dispatched' | 'picked_up' | 'in_transit' | 'check_call' | 'location_update' | 'delay' | 'exception' | 'delivered'
 
