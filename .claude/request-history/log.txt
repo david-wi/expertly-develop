@@ -70,3 +70,4 @@ Warns users before losing changes on modal close or page refresh.
 20260204 - Fix ProjectTypeahead to show 'None (top-level)' at bottom when searching, make project multi-select hierarchical in AddWidgetModal, improve configure step titles
 20260204 - Add task completion to project timeline - When a task is completed and belongs to a project, add timeline entry with link to task
 20260204 - Add timeboxed timer feature - Reusable timer system with floating widget, configurable duration, what-next reminders, audio/speech alerts
+20260204 - Expertly Manage > Project: Add URL field to project comments for pasting email/calendar links
