@@ -1,10 +1,6 @@
 """Image generation API endpoints."""
 
 import logging
-import uuid
-from pathlib import Path
-
-import httpx
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from openai import OpenAI
@@ -26,7 +22,7 @@ class GenerateAvatarRequest(BaseModel):
 
 
 class GenerateAvatarResponse(BaseModel):
-    """Response containing the generated avatar URL."""
+    """Response containing the generated avatar as a data URL."""
 
     url: str
 
@@ -41,28 +37,14 @@ def get_openai_client() -> OpenAI:
     return OpenAI(api_key=settings.openai_api_key)
 
 
-async def download_and_save_image(image_url: str) -> str:
-    """Download image from URL and save locally, returning the local URL."""
-    uploads_dir = Path(settings.uploads_dir)
-    uploads_dir.mkdir(parents=True, exist_ok=True)
-
-    filename = f"{uuid.uuid4()}.png"
-    filepath = uploads_dir / filename
-
-    async with httpx.AsyncClient() as client:
-        response = await client.get(image_url)
-        response.raise_for_status()
-        filepath.write_bytes(response.content)
-
-    return f"{settings.uploads_base_url}/{filename}"
-
-
 @router.post("/generate-avatar", response_model=GenerateAvatarResponse)
 async def generate_avatar(request: GenerateAvatarRequest) -> GenerateAvatarResponse:
     """Generate an avatar image using DALL-E.
 
     For bots: Creates a fun, modern flat vector illustration based on responsibilities.
     For humans: Creates a stylized portrait based on appearance description.
+
+    Returns the image as a base64 data URL stored directly in the database.
     """
     client = get_openai_client()
 
@@ -87,24 +69,24 @@ NOT a photograph - stylized vector art illustration with a recognizable face."""
         use_case_config = get_use_case_config("image_generation")
         logger.debug(f"Using model {use_case_config.model_id} for image generation")
 
+        # Request base64 directly from OpenAI to avoid temporary URL expiration
         response = client.images.generate(
             model=use_case_config.model_id,
             prompt=prompt,
             size="512x512",
             quality="standard",
             n=1,
+            response_format="b64_json",
         )
 
-        openai_url = response.data[0].url
-        local_url = await download_and_save_image(openai_url)
-        return GenerateAvatarResponse(url=local_url)
+        # Convert to data URL for direct use in img src
+        b64_data = response.data[0].b64_json
+        data_url = f"data:image/png;base64,{b64_data}"
 
-    except httpx.HTTPError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to download generated image: {str(e)}",
-        )
+        return GenerateAvatarResponse(url=data_url)
+
     except Exception as e:
+        logger.exception("Failed to generate avatar")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate image: {str(e)}",
