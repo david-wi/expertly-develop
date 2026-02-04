@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Anthropic (for AI-assisted features)
     anthropic_api_key: str = ""
 
+    # Deepgram (for text-to-speech)
+    deepgram_api_key: str = ""
+
     # OAuth - Google
     google_client_id: str = ""
     google_client_secret: str = ""

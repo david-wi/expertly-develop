@@ -202,71 +202,74 @@ export function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-// Helper to speak text using Web Speech API with a natural voice
-export function speakText(text: string): void {
+// Helper to speak text using Deepgram TTS API (Odysseus voice)
+// Falls back to Web Speech API if Deepgram is unavailable
+export async function speakText(text: string): Promise<void> {
+  try {
+    // Try Deepgram TTS API first (natural Odysseus voice)
+    const response = await fetch('/api/v1/tts/speak', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ text }),
+    })
+
+    if (response.ok) {
+      const audioBlob = await response.blob()
+      const audioUrl = URL.createObjectURL(audioBlob)
+      const audio = new Audio(audioUrl)
+
+      audio.onended = () => URL.revokeObjectURL(audioUrl)
+      audio.onerror = () => URL.revokeObjectURL(audioUrl)
+
+      await audio.play()
+      return
+    }
+  } catch (err) {
+    console.warn('Deepgram TTS unavailable, falling back to Web Speech API:', err)
+  }
+
+  // Fallback to Web Speech API
   if (!('speechSynthesis' in window)) return
 
-  // Cancel any pending speech
   window.speechSynthesis.cancel()
 
   const speak = () => {
     const utterance = new SpeechSynthesisUtterance(text)
-
-    // Get available voices and find a natural-sounding one
     const voices = window.speechSynthesis.getVoices()
 
-    // Priority list of natural-sounding voices (in order of preference)
+    // Priority list of natural-sounding voices
     const preferredVoices = [
-      'Samantha',           // macOS - very natural
-      'Karen',              // macOS Australian - natural
-      'Daniel',             // macOS British - natural
-      'Moira',              // macOS Irish - natural
-      'Tessa',              // macOS South African - natural
-      'Google US English',  // Chrome - good quality
-      'Google UK English Female',
-      'Microsoft Zira',     // Windows - decent
-      'Microsoft David',    // Windows - decent
+      'Samantha', 'Karen', 'Daniel', 'Moira', 'Tessa',
+      'Google US English', 'Google UK English Female',
+      'Microsoft Zira', 'Microsoft David',
     ]
 
-    // Find the best available voice
     let selectedVoice: SpeechSynthesisVoice | null = null
     for (const name of preferredVoices) {
-      const voice = voices.find(v => v.name.includes(name))
+      const voice = voices.find((v) => v.name.includes(name))
       if (voice) {
         selectedVoice = voice
         break
       }
     }
 
-    // Fallback: find any English voice that's not the default robotic one
     if (!selectedVoice) {
-      selectedVoice = voices.find(v =>
-        v.lang.startsWith('en') &&
-        !v.name.toLowerCase().includes('default') &&
-        (v.localService || v.name.includes('Google'))
+      selectedVoice = voices.find((v) =>
+        v.lang.startsWith('en') && !v.name.toLowerCase().includes('default')
       ) || null
     }
 
-    if (selectedVoice) {
-      utterance.voice = selectedVoice
-    }
-
-    utterance.rate = 0.95  // Slightly slower for clarity
-    utterance.pitch = 1.0
-    utterance.volume = 1.0
-
+    if (selectedVoice) utterance.voice = selectedVoice
+    utterance.rate = 0.95
     window.speechSynthesis.speak(utterance)
   }
 
-  // Voices may not be loaded yet, so we need to handle both cases
   const voices = window.speechSynthesis.getVoices()
   if (voices.length > 0) {
     speak()
   } else {
-    // Wait for voices to load
-    window.speechSynthesis.onvoiceschanged = () => {
-      speak()
-    }
+    window.speechSynthesis.onvoiceschanged = () => speak()
   }
 }
 
