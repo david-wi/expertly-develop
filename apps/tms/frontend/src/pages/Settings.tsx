@@ -1,8 +1,28 @@
 import { useState } from 'react'
-import { User, Bell, Building2, Save, Truck, DollarSign, FileText, Percent } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+  User,
+  Bell,
+  Building2,
+  Save,
+  Truck,
+  DollarSign,
+  FileText,
+  Percent,
+  Link2,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  ExternalLink,
+  AlertCircle,
+} from 'lucide-react'
+import { api } from '../services/api'
+import { SYNC_STATUS_LABELS } from '../types'
+
+type TabType = 'profile' | 'notifications' | 'company' | 'defaults' | 'integrations'
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'notifications' | 'company' | 'defaults'>('profile')
+  const [activeTab, setActiveTab] = useState<TabType>('profile')
   const [saved, setSaved] = useState(false)
 
   const [profile, setProfile] = useState({
@@ -65,6 +85,7 @@ export default function Settings() {
             { id: 'notifications', label: 'Notifications', icon: Bell },
             { id: 'company', label: 'Company Info', icon: Building2 },
             { id: 'defaults', label: 'Defaults', icon: Truck },
+            { id: 'integrations', label: 'Integrations', icon: Link2 },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -455,15 +476,281 @@ export default function Settings() {
             </div>
           )}
 
+          {activeTab === 'integrations' && <IntegrationsTab />}
+
           {/* Save Button */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
+          {activeTab !== 'integrations' && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <button
+                onClick={handleSave}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              >
+                <Save className="h-4 w-4" />
+                {saved ? 'Saved!' : 'Save Changes'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Integrations Tab Component
+function IntegrationsTab() {
+  const queryClient = useQueryClient()
+
+  const { data: connection, isLoading: loadingConnection } = useQuery({
+    queryKey: ['accounting-connection'],
+    queryFn: () => api.getAccountingConnection(),
+  })
+
+  const { data: syncJobs } = useQuery({
+    queryKey: ['sync-jobs'],
+    queryFn: () => api.getSyncJobs({ limit: 5 }),
+    enabled: connection?.is_connected,
+  })
+
+  const connectMutation = useMutation({
+    mutationFn: () => api.getQuickBooksAuthUrl(),
+    onSuccess: (data) => {
+      // Redirect to QuickBooks OAuth
+      window.location.href = data.url
+    },
+  })
+
+  const disconnectMutation = useMutation({
+    mutationFn: () => api.disconnectQuickBooks(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting-connection'] })
+    },
+  })
+
+  const syncMutation = useMutation({
+    mutationFn: (fullSync: boolean) => api.triggerAccountingSync({ full_sync: fullSync }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sync-jobs'] })
+    },
+  })
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (data: Parameters<typeof api.updateAccountingSettings>[0]) =>
+      api.updateAccountingSettings(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['accounting-connection'] })
+    },
+  })
+
+  if (loadingConnection) {
+    return <div className="text-center py-12 text-gray-500">Loading...</div>
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Integrations</h2>
+      <p className="text-sm text-gray-500">
+        Connect your accounting software to automatically sync customers, invoices, and payments.
+      </p>
+
+      {/* QuickBooks Card */}
+      <div className="border border-gray-200 rounded-lg p-6">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <span className="text-green-600 font-bold text-lg">QB</span>
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">QuickBooks Online</h3>
+              <p className="text-sm text-gray-500">Sync customers, invoices, and payments</p>
+            </div>
+          </div>
+
+          {connection?.is_connected ? (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Connected
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+              <XCircle className="w-3.5 h-3.5" />
+              Not Connected
+            </span>
+          )}
+        </div>
+
+        {connection?.is_connected ? (
+          <div className="mt-6 space-y-6">
+            {/* Connection Info */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Company:</span>
+                  <span className="ml-2 font-medium">{connection.company_name || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Last Sync:</span>
+                  <span className="ml-2 font-medium">
+                    {connection.last_sync_at
+                      ? new Date(connection.last_sync_at).toLocaleString()
+                      : 'Never'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Sync Settings */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Sync Settings</h4>
+              <div className="space-y-3">
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={connection.auto_sync_enabled}
+                    onChange={(e) =>
+                      updateSettingsMutation.mutate({ auto_sync_enabled: e.target.checked })
+                    }
+                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700">Enable automatic sync</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={connection.sync_customers}
+                    onChange={(e) =>
+                      updateSettingsMutation.mutate({ sync_customers: e.target.checked })
+                    }
+                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700">Sync customers</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={connection.sync_invoices}
+                    onChange={(e) =>
+                      updateSettingsMutation.mutate({ sync_invoices: e.target.checked })
+                    }
+                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700">Sync invoices</span>
+                </label>
+                <label className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={connection.sync_vendors}
+                    onChange={(e) =>
+                      updateSettingsMutation.mutate({ sync_vendors: e.target.checked })
+                    }
+                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700">Sync carriers as vendors</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Sync Actions */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => syncMutation.mutate(false)}
+                disabled={syncMutation.isPending}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+              >
+                {syncMutation.isPending ? (
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                Sync Now
+              </button>
+              <button
+                onClick={() => syncMutation.mutate(true)}
+                disabled={syncMutation.isPending}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Full Sync
+              </button>
+              <button
+                onClick={() => disconnectMutation.mutate()}
+                disabled={disconnectMutation.isPending}
+                className="ml-auto text-sm text-red-600 hover:text-red-700"
+              >
+                Disconnect
+              </button>
+            </div>
+
+            {/* Recent Sync Jobs */}
+            {syncJobs && syncJobs.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Recent Syncs</h4>
+                <div className="space-y-2">
+                  {syncJobs.map((job) => (
+                    <div
+                      key={job.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        {job.status === 'completed' && (
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                        )}
+                        {job.status === 'failed' && (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                        {job.status === 'in_progress' && (
+                          <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+                        )}
+                        {job.status === 'partial' && (
+                          <AlertCircle className="w-4 h-4 text-yellow-500" />
+                        )}
+                        <span className="text-gray-700">
+                          {SYNC_STATUS_LABELS[job.status as keyof typeof SYNC_STATUS_LABELS]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-4 text-gray-500">
+                        <span>
+                          {job.synced_count} synced
+                          {job.failed_count > 0 && `, ${job.failed_count} failed`}
+                        </span>
+                        <span>
+                          {new Date(job.created_at).toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="mt-6">
             <button
-              onClick={handleSave}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+              onClick={() => connectMutation.mutate()}
+              disabled={connectMutation.isPending}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
             >
-              <Save className="h-4 w-4" />
-              {saved ? 'Saved!' : 'Save Changes'}
+              {connectMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <ExternalLink className="w-4 h-4" />
+              )}
+              Connect to QuickBooks
             </button>
+            <p className="mt-2 text-xs text-gray-500">
+              You'll be redirected to QuickBooks to authorize the connection.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Future Integrations */}
+      <div className="border border-gray-200 rounded-lg p-6 opacity-60">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
+            <span className="text-gray-400 font-bold">X</span>
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900">Xero</h3>
+            <p className="text-sm text-gray-500">Coming soon</p>
           </div>
         </div>
       </div>

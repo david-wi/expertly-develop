@@ -523,4 +523,71 @@ export const api = {
       `/api/v1/loadboards/rates/history?${searchParams}`
     )
   },
+
+  // Accounting / QuickBooks
+  getAccountingConnection: () =>
+    request<import('../types').AccountingConnection>('/api/v1/accounting/connection'),
+
+  getQuickBooksAuthUrl: () =>
+    request<{ url: string; state: string }>('/api/v1/accounting/connect/quickbooks'),
+
+  disconnectQuickBooks: () =>
+    request<{ status: string }>('/api/v1/accounting/disconnect', { method: 'POST' }),
+
+  updateAccountingSettings: (data: {
+    auto_sync_enabled?: boolean
+    sync_interval_minutes?: number
+    sync_customers?: boolean
+    sync_invoices?: boolean
+    sync_payments?: boolean
+    sync_vendors?: boolean
+    sync_bills?: boolean
+    revenue_account_id?: string
+    revenue_account_name?: string
+    expense_account_id?: string
+    expense_account_name?: string
+  }) =>
+    request<import('../types').AccountingConnection>('/api/v1/accounting/connection', {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  triggerAccountingSync: (data: { full_sync?: boolean; entity_types?: string[] }) =>
+    request<import('../types').SyncJob>('/api/v1/accounting/sync', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  syncSingleEntity: (data: { entity_type: string; entity_id: string }) =>
+    request<import('../types').SyncLogEntry>('/api/v1/accounting/sync/entity', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getSyncJobs: (params?: { status?: import('../types').SyncStatus; limit?: number }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.limit) searchParams.set('limit', String(params.limit))
+    const query = searchParams.toString()
+    return request<import('../types').SyncJob[]>(`/api/v1/accounting/sync/jobs${query ? `?${query}` : ''}`)
+  },
+
+  getSyncJob: (id: string) =>
+    request<import('../types').SyncJob>(`/api/v1/accounting/sync/jobs/${id}`),
+
+  getSyncJobLogs: (id: string) =>
+    request<import('../types').SyncLogEntry[]>(`/api/v1/accounting/sync/jobs/${id}/logs`),
+
+  getAccountingMappings: (params?: { entity_type?: import('../types').AccountingEntityType }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.entity_type) searchParams.set('entity_type', params.entity_type)
+    const query = searchParams.toString()
+    return request<import('../types').AccountingMapping[]>(`/api/v1/accounting/mappings${query ? `?${query}` : ''}`)
+  },
+
+  deleteAccountingMapping: (id: string) =>
+    request<{ status: string }>(`/api/v1/accounting/mappings/${id}`, { method: 'DELETE' }),
+
+  getAccountingStats: () =>
+    request<import('../types').AccountingStats>('/api/v1/accounting/stats'),
 }
