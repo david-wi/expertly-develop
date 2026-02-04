@@ -59,7 +59,7 @@ export function Modal({
     <>
       {/* Backdrop - separate fixed element to ensure full viewport coverage */}
       <div
-        className="fixed inset-0 z-50 bg-black/50 transition-opacity"
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={onClose}
         aria-hidden="true"
       />
