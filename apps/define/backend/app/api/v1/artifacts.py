@@ -201,6 +201,7 @@ async def upload_artifact(
     # Create artifact record
     artifact = Artifact(
         id=artifact_id,
+        context={"product_id": product_id},  # Flexible context for shared package compatibility
         product_id=product_id,
         name=name,
         description=description,
@@ -276,6 +277,7 @@ async def create_link_artifact(
         # Create artifact record (no file, no versions needed)
         artifact = Artifact(
             id=artifact_id,
+            context={"product_id": product_id},  # Flexible context for shared package compatibility
             product_id=product_id,
             name=data.name,
             description=data.description,
