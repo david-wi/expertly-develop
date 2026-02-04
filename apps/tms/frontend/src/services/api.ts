@@ -333,4 +333,61 @@ export const api = {
 
   reclassifyEmail: (id: string) =>
     request<{ status: string }>(`/api/v1/emails/${id}/reclassify`, { method: 'POST' }),
+
+  // Customs
+  getCustomsEntries: (params?: { status?: string; shipment_id?: string; entry_type?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    if (params?.entry_type) searchParams.set('entry_type', params.entry_type)
+    const query = searchParams.toString()
+    return request<import('../types').CustomsEntry[]>(`/api/v1/customs${query ? `?${query}` : ''}`)
+  },
+
+  getCustomsEntry: (id: string) =>
+    request<import('../types').CustomsEntry>(`/api/v1/customs/${id}`),
+
+  createCustomsEntry: (data: {
+    shipment_id?: string
+    entry_type?: string
+    importer_of_record?: string
+    consignee_name?: string
+    exporter_name?: string
+    port_of_entry?: string
+    line_items?: import('../types').CustomsLineItem[]
+  }) => request<import('../types').CustomsEntry>('/api/v1/customs', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateCustomsEntry: (id: string, data: Partial<import('../types').CustomsEntry>) =>
+    request<import('../types').CustomsEntry>(`/api/v1/customs/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  submitCustomsEntry: (id: string) =>
+    request<import('../types').CustomsEntry>(`/api/v1/customs/${id}/submit`, { method: 'POST' }),
+
+  clearCustomsEntry: (id: string) =>
+    request<import('../types').CustomsEntry>(`/api/v1/customs/${id}/clear`, { method: 'POST' }),
+
+  getCommercialInvoices: (params?: { shipment_id?: string; customs_entry_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    if (params?.customs_entry_id) searchParams.set('customs_entry_id', params.customs_entry_id)
+    const query = searchParams.toString()
+    return request<import('../types').CommercialInvoice[]>(`/api/v1/customs/invoices${query ? `?${query}` : ''}`)
+  },
+
+  createCommercialInvoice: (data: {
+    shipment_id?: string
+    seller_name: string
+    seller_country: string
+    buyer_name: string
+    buyer_country: string
+    country_of_origin: string
+    country_of_destination: string
+    line_items: import('../types').CustomsLineItem[]
+    freight_cents?: number
+    insurance_cents?: number
+    incoterms?: string
+  }) => request<import('../types').CommercialInvoice>('/api/v1/customs/invoices', { method: 'POST', body: JSON.stringify(data) }),
+
+  generateCommercialInvoiceFromShipment: (shipmentId: string) =>
+    request<import('../types').CommercialInvoice>(`/api/v1/customs/invoices/from-shipment/${shipmentId}`, { method: 'POST' }),
 }

@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import customers, carriers, facilities, quote_requests, quotes, shipments, tenders, tracking, documents, invoices, work_items, ai, analytics, emails
+from . import customers, carriers, facilities, quote_requests, quotes, shipments, tenders, tracking, documents, invoices, work_items, ai, analytics, emails, customs
 
 router = APIRouter()
 
@@ -18,3 +18,4 @@ router.include_router(work_items.router, prefix="/work-items", tags=["work-items
 router.include_router(ai.router, prefix="/ai", tags=["ai"])
 router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 router.include_router(emails.router, prefix="/emails", tags=["emails"])
+router.include_router(customs.router, prefix="/customs", tags=["customs"])
