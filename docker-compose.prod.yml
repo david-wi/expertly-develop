@@ -263,6 +263,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - ADMIN_API_URL=https://admin-api.ai.devintensive.com
+    volumes:
+      - manage-uploads:/app/uploads
     networks:
       - traefik
       - default
@@ -564,3 +566,6 @@ volumes:
   identity_uploads:
     external: true
     name: shared_identity_uploads
+  manage-uploads:
+    external: true
+    name: shared_manage_uploads
