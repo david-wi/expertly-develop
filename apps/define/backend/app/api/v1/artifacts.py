@@ -33,9 +33,21 @@ from app.schemas.artifact import (
     ArtifactVersionResponse,
 )
 from app.config import get_settings
-from app.services.artifact_conversion_service import ArtifactConversionService
+from app.utils.ai_config import get_ai_client
+from artifacts import ArtifactConversionService
 
 logger = logging.getLogger(__name__)
+
+
+async def ai_complete(
+    use_case: str,
+    system_prompt: str,
+    user_content: str,
+    images: Optional[list] = None,
+) -> str:
+    """AI completion function for the shared ArtifactConversionService."""
+    client = get_ai_client()
+    return await client.complete(use_case, system_prompt, user_content, images)
 
 router = APIRouter()
 settings = get_settings()
@@ -111,8 +123,8 @@ async def _async_process_conversion(
             await db.commit()
             logger.info(f"Conversion status set to 'processing' for version {version_id}")
 
-            # Convert to markdown
-            service = ArtifactConversionService()
+            # Convert to markdown using shared service with AI function injection
+            service = ArtifactConversionService(ai_complete=ai_complete)
             markdown, success = await service.convert_to_markdown(file_content, filename, mime_type)
 
             # Save markdown to file

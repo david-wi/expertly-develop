@@ -361,7 +361,8 @@ class TestArtifactConversionService:
     @pytest.mark.asyncio
     async def test_convert_text_file(self):
         """Test converting a plain text file."""
-        from app.services.artifact_conversion_service import ArtifactConversionService
+        # Use shared artifacts package
+        from artifacts import ArtifactConversionService
 
         service = ArtifactConversionService()
         content = b"Hello, this is a test file."
@@ -375,7 +376,8 @@ class TestArtifactConversionService:
     @pytest.mark.asyncio
     async def test_convert_python_file(self):
         """Test converting a Python file."""
-        from app.services.artifact_conversion_service import ArtifactConversionService
+        # Use shared artifacts package
+        from artifacts import ArtifactConversionService
 
         service = ArtifactConversionService()
         content = b"def hello():\n    print('Hello!')"
@@ -389,7 +391,8 @@ class TestArtifactConversionService:
     @pytest.mark.asyncio
     async def test_convert_unknown_file(self):
         """Test converting an unknown file type."""
-        from app.services.artifact_conversion_service import ArtifactConversionService
+        # Use shared artifacts package
+        from artifacts import ArtifactConversionService
 
         service = ArtifactConversionService()
         content = b"\x00\x01\x02\x03"  # Binary content

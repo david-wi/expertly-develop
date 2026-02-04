@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "artifacts-mongo"
+version = "0.1.0"
+description = "Shared MongoDB-based artifacts management for Expertly applications"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.100.0",
+    "motor>=3.0.0",
+    "pydantic>=2.0.0",
+    "aiofiles>=23.0.0",
+    # Re-use conversion service from artifacts package
+    "artifacts",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]

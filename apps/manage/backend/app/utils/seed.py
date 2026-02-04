@@ -111,5 +111,17 @@ async def create_indexes(db) -> None:
     await db.documents.create_index([("organization_id", 1), ("project_id", 1), ("deleted_at", 1)])
     await db.documents.create_index([("organization_id", 1), ("task_id", 1), ("deleted_at", 1)])
     await db.documents.create_index([("organization_id", 1), ("purpose", 1), ("deleted_at", 1)])
+    await db.documents.create_index([("document_key", 1), ("version", -1)])
+
+    # Artifacts (from artifacts-mongo package)
+    await db.artifacts.create_index("organization_id")
+    await db.artifacts.create_index([("organization_id", 1), ("task_id", 1)])
+    await db.artifacts.create_index([("organization_id", 1), ("project_id", 1)])
+    await db.artifacts.create_index([("organization_id", 1), ("status", 1)])
+    await db.artifacts.create_index("document_id")
+
+    # Artifact versions
+    await db.artifact_versions.create_index("artifact_id")
+    await db.artifact_versions.create_index([("artifact_id", 1), ("version_number", -1)])
 
     logger.info("Created database indexes")
