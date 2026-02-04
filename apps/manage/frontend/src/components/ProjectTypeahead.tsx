@@ -179,6 +179,7 @@ export default function ProjectTypeahead({
   }
 
   const openCreateForm = () => {
+    setShowDropdown(true)
     setShowCreateForm(true)
     setNewProjectName('')
     setNewProjectParentId(null)
