@@ -560,11 +560,12 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
                   <div className="p-3 text-sm text-gray-500">No notes yet. Create one above!</div>
                 ) : (
                   dashboardNotes.map((note) => {
-                    const isSelected = selectedNoteIds.includes(note.id)
+                    const noteId = note._id || note.id
+                    const isSelected = selectedNoteIds.includes(noteId)
                     return (
                       <div
-                        key={note.id}
-                        onClick={() => toggleNoteSelection(note.id)}
+                        key={noteId}
+                        onClick={() => toggleNoteSelection(noteId)}
                         className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 border-b border-gray-100 last:border-b-0 ${
                           isSelected ? 'bg-primary-50' : ''
                         }`}
