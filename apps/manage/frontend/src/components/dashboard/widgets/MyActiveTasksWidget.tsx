@@ -714,14 +714,14 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                                 className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                               />
                               {showTopProjectDropdown && topTaskProjectQuery && (
-                                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+                                <div className="absolute z-10 top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto min-w-max">
                                   {projects
                                     .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(topTaskProjectQuery.toLowerCase()))
                                     .slice(0, 5)
                                     .map(project => (
                                       <div
                                         key={project._id || project.id}
-                                        className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
+                                        className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer whitespace-nowrap"
                                         onMouseDown={() => {
                                           setTopTaskProjectId(project._id || project.id)
                                           setTopTaskProjectQuery(getProjectDisplayName(project, projects))
@@ -940,14 +940,14 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                                 className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                               />
                               {showBottomProjectDropdown && bottomTaskProjectQuery && (
-                                <div className="absolute z-10 bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+                                <div className="absolute z-10 bottom-full left-0 mb-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto min-w-max">
                                   {projects
                                     .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(bottomTaskProjectQuery.toLowerCase()))
                                     .slice(0, 5)
                                     .map(project => (
                                       <div
                                         key={project._id || project.id}
-                                        className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
+                                        className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer whitespace-nowrap"
                                         onMouseDown={() => {
                                           setBottomTaskProjectId(project._id || project.id)
                                           setBottomTaskProjectQuery(getProjectDisplayName(project, projects))
