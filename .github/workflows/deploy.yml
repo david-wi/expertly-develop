@@ -527,3 +527,42 @@ jobs:
               echo "✗ $app: HTTP $status"
             fi
           done
+
+      - name: Verify deployed versions
+        env:
+          APPS_TO_CHECK: ${{ needs.detect-changes.outputs.apps_to_deploy }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          echo "=== Verifying deployed versions match commit ${EXPECTED_COMMIT:0:7} ==="
+
+          # Parse the apps to check from JSON array
+          APPS=$(echo "$APPS_TO_CHECK" | jq -r '.[]' 2>/dev/null || echo "")
+
+          if [ -z "$APPS" ]; then
+            echo "No apps to verify"
+            exit 0
+          fi
+
+          FAILED=0
+          for app in $APPS; do
+            # Try to fetch version.json (not all apps have it yet)
+            VERSION_JSON=$(curl -s "https://${app}.ai.devintensive.com/version.json" 2>/dev/null || echo "{}")
+            DEPLOYED_VERSION=$(echo "$VERSION_JSON" | jq -r '.version // "unknown"' 2>/dev/null || echo "unknown")
+
+            if [ "$DEPLOYED_VERSION" = "unknown" ] || [ "$DEPLOYED_VERSION" = "null" ]; then
+              echo "⚠ $app: No version.json (skipping verification)"
+            elif [ "$DEPLOYED_VERSION" = "${EXPECTED_COMMIT:0:7}" ]; then
+              echo "✓ $app: Version matches ($DEPLOYED_VERSION)"
+            else
+              echo "✗ $app: Version mismatch! Expected ${EXPECTED_COMMIT:0:7}, got $DEPLOYED_VERSION"
+              echo "  This may indicate Docker layer caching prevented the new code from being deployed."
+              echo "  Consider rebuilding with --no-cache: docker compose build --no-cache $app-frontend"
+              FAILED=1
+            fi
+          done
+
+          if [ "$FAILED" = "1" ]; then
+            echo ""
+            echo "⚠ WARNING: Some apps have version mismatches. The deployment may not include the latest code."
+            # Don't fail the build, just warn - version.json is being rolled out gradually
+          fi
