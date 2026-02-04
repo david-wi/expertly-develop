@@ -595,7 +595,8 @@ export default function Users() {
         onClose={() => setShowEditModal(false)}
         title="Edit User"
       >
-        <form onSubmit={handleEdit} className="space-y-4 max-h-[70vh] overflow-y-auto">
+        <form onSubmit={handleEdit} className="flex flex-col max-h-[70vh]">
+          <div className="space-y-4 overflow-y-auto flex-1 pr-1">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
@@ -728,6 +729,7 @@ export default function Users() {
                   </div>
                 </div>
               )}
+          </div>
 
           <ModalFooter>
             <button
