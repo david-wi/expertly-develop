@@ -10,13 +10,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy shared packages
 COPY packages/identity-client /tmp/identity-client
 COPY packages/ai-config /tmp/ai-config
+COPY packages/artifacts /tmp/artifacts
+COPY packages/artifacts-mongo /tmp/artifacts-mongo
 
 # Install Python dependencies
 COPY apps/manage/backend/requirements.txt .
 RUN pip install --no-cache-dir /tmp/identity-client && \
     pip install --no-cache-dir /tmp/ai-config && \
+    pip install --no-cache-dir /tmp/artifacts && \
+    pip install --no-cache-dir /tmp/artifacts-mongo && \
     pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /tmp/identity-client /tmp/ai-config
+    rm -rf /tmp/identity-client /tmp/ai-config /tmp/artifacts /tmp/artifacts-mongo
 
 # Copy application code
 COPY apps/manage/backend/app/ app/
