@@ -531,13 +531,15 @@ export default function Users() {
                       {generatingAvatar ? 'Generating...' : 'Describe Appearance to Generate Avatar'}
                     </button>
                   )}
-                  <input
-                    type="url"
-                    value={formData.avatar_url || ''}
-                    onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    placeholder="Or paste avatar URL directly"
-                  />
+                  {!formData.avatar_url?.startsWith('data:') && (
+                    <input
+                      type="url"
+                      value={formData.avatar_url || ''}
+                      onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      placeholder="Or paste avatar URL directly"
+                    />
+                  )}
                 </div>
               </div>
 
@@ -688,13 +690,15 @@ export default function Users() {
                       {generatingAvatar ? 'Generating...' : 'Describe Appearance to Generate Avatar'}
                     </button>
                   )}
-                  <input
-                    type="url"
-                    value={formData.avatar_url || ''}
-                    onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                    className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    placeholder="Or paste avatar URL directly"
-                  />
+                  {!formData.avatar_url?.startsWith('data:') && (
+                    <input
+                      type="url"
+                      value={formData.avatar_url || ''}
+                      onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      placeholder="Or paste avatar URL directly"
+                    />
+                  )}
                 </div>
               </div>
 
