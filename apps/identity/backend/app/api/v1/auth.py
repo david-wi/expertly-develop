@@ -30,6 +30,8 @@ from app.schemas.auth import (
     ResetPasswordResponse,
     AccessibleOrganization,
     AccessibleOrganizationsResponse,
+    SwitchOrganizationRequest,
+    SwitchOrganizationResponse,
 )
 from app.core.redis import (
     cache_session,
@@ -400,6 +402,122 @@ async def get_accessible_organizations(
     return AccessibleOrganizationsResponse(
         organizations=accessible_orgs,
         is_expertly_admin=user.is_expertly_admin or False,
+    )
+
+
+@router.post("/switch-organization", response_model=SwitchOrganizationResponse)
+async def switch_organization(
+    switch_data: SwitchOrganizationRequest,
+    request: Request,
+    session_token_header: Optional[str] = Header(None, alias="X-Session-Token"),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Switch to a different organization.
+
+    Updates the session's organization context. The user must have access
+    to the target organization (via primary org, membership, or Expertly Admin status).
+    """
+    session_token = _get_session_token(request, session_token_header)
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Validate session and get user
+    validation = await validate_session(session_token, db)
+    if not validation.valid or not validation.user:
+        raise HTTPException(status_code=401, detail="Session invalid or expired")
+
+    user_id = validation.user.id
+    if isinstance(user_id, str):
+        user_id = UUID(user_id)
+
+    # Get the full user record
+    user_query = (
+        select(User)
+        .options(joinedload(User.organization))
+        .where(User.id == user_id)
+    )
+    user_result = await db.execute(user_query)
+    user = user_result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    target_org_id = switch_data.organization_id
+
+    # Check if user has access to the target organization
+    has_access = False
+    target_org = None
+    target_role = user.role
+
+    # Expertly Admins can access any organization
+    if user.is_expertly_admin:
+        org_query = select(Organization).where(
+            Organization.id == target_org_id,
+            Organization.is_active == True
+        )
+        org_result = await db.execute(org_query)
+        target_org = org_result.scalar_one_or_none()
+        if target_org:
+            has_access = True
+            target_role = "admin"  # Expertly admins have admin access to all orgs
+    else:
+        # Check if it's the user's primary organization
+        if user.organization_id == target_org_id:
+            target_org = user.organization
+            has_access = True
+            target_role = user.role
+        else:
+            # Check organization memberships
+            membership_query = (
+                select(OrganizationMembership)
+                .options(joinedload(OrganizationMembership.organization))
+                .where(
+                    OrganizationMembership.user_id == user_id,
+                    OrganizationMembership.organization_id == target_org_id
+                )
+            )
+            membership_result = await db.execute(membership_query)
+            membership = membership_result.scalar_one_or_none()
+
+            if membership and membership.organization and membership.organization.is_active:
+                target_org = membership.organization
+                has_access = True
+                target_role = membership.role
+
+    if not has_access or not target_org:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not have access to this organization"
+        )
+
+    # Update the session cache with the new organization context
+    user_data = {
+        "id": str(user.id),
+        "name": user.name,
+        "email": user.email,
+        "organization_id": str(target_org_id),
+        "organization_name": target_org.name,
+        "role": target_role,
+        "avatar_url": user.avatar_url,
+        "is_expertly_admin": user.is_expertly_admin or False,
+    }
+    await cache_session(session_token, user_data)
+
+    logger.info(f"User {user.id} switched to organization {target_org_id} ({target_org.name})")
+
+    return SwitchOrganizationResponse(
+        message=f"Switched to {target_org.name}",
+        user=AuthUserResponse(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            organization_id=target_org_id,
+            organization_name=target_org.name,
+            role=target_role,
+            avatar_url=user.avatar_url,
+            is_expertly_admin=user.is_expertly_admin or False,
+        )
     )
 
 
