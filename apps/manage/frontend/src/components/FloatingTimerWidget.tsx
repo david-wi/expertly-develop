@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Pause, X, Clock, Plus, Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { Play, Pause, X, Clock, Plus, Check, ChevronDown, ChevronUp, GripHorizontal } from 'lucide-react'
 import {
   useTimerStore,
   formatTime,
@@ -35,6 +35,12 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
   const [savingNotes, setSavingNotes] = useState(false)
   const hasPlayedAlertRef = useRef<Set<string>>(new Set())
+
+  // Draggable state
+  const [position, setPosition] = useState({ x: 16, y: 16 }) // top-right default (right: 16, top: 16)
+  const [isDragging, setIsDragging] = useState(false)
+  const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 })
+  const containerRef = useRef<HTMLDivElement>(null)
 
   // Get the active (non-acknowledged) timer
   const activeTimer = timers.find((t) => !t.acknowledged)
@@ -116,6 +122,54 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     }
   }
 
+  // Drag handlers
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      posX: position.x,
+      posY: position.y,
+    }
+  }, [position])
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return
+
+    const deltaX = e.clientX - dragStartRef.current.x
+    const deltaY = e.clientY - dragStartRef.current.y
+
+    // Calculate new position (using right/top positioning)
+    const newX = Math.max(0, dragStartRef.current.posX - deltaX)
+    const newY = Math.max(0, dragStartRef.current.posY + deltaY)
+
+    // Constrain to viewport
+    const maxX = window.innerWidth - (containerRef.current?.offsetWidth || 320) - 16
+    const maxY = window.innerHeight - (containerRef.current?.offsetHeight || 200) - 16
+
+    setPosition({
+      x: Math.min(newX, maxX),
+      y: Math.min(newY, maxY),
+    })
+  }, [isDragging])
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false)
+  }, [])
+
+  // Add/remove global mouse event listeners for dragging
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    }
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp])
+
   if (!activeTimer) return null
 
   const progress = activeTimer.duration > 0
@@ -124,32 +178,61 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 ${className}`}
-      style={{ minWidth: '320px', maxWidth: '400px' }}
+      ref={containerRef}
+      className={`fixed z-50 ${className} ${isDragging ? 'cursor-grabbing' : ''}`}
+      style={{
+        minWidth: '320px',
+        maxWidth: '400px',
+        right: `${position.x}px`,
+        top: `${position.y}px`,
+      }}
     >
       <div
         className={`bg-white rounded-xl shadow-2xl border-2 overflow-hidden transition-all ${
           activeTimer.isComplete
-            ? 'border-green-400 animate-pulse'
+            ? 'border-green-400 shadow-[0_0_20px_rgba(74,222,128,0.5)] animate-glow'
             : 'border-primary-400'
         }`}
+        style={activeTimer.isComplete ? {
+          animation: 'timer-glow 2s ease-in-out infinite',
+        } : undefined}
       >
+        {/* Custom keyframes for glow animation */}
+        <style>{`
+          @keyframes timer-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(74, 222, 128, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(74, 222, 128, 0.8), 0 0 60px rgba(74, 222, 128, 0.4); }
+          }
+        `}</style>
         {/* Header */}
         <div
-          className={`px-4 py-3 flex items-center justify-between cursor-pointer ${
+          className={`px-4 py-3 flex items-center justify-between ${
             activeTimer.isComplete
               ? 'bg-gradient-to-r from-green-500 to-green-600'
               : 'bg-gradient-to-r from-primary-500 to-primary-600'
           }`}
-          onClick={() => setIsExpanded(!isExpanded)}
         >
-          <div className="flex items-center gap-2 text-white">
+          {/* Drag handle */}
+          <div
+            className="cursor-grab active:cursor-grabbing p-1 -ml-2 mr-1 hover:bg-white/20 rounded transition-colors"
+            onMouseDown={handleMouseDown}
+            title="Drag to move"
+          >
+            <GripHorizontal className="w-4 h-4 text-white/70" />
+          </div>
+          <div
+            className="flex items-center gap-2 text-white flex-1 cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
             <Clock className="w-5 h-5" />
             <span className="font-medium truncate max-w-[200px]">
               {activeTimer.isComplete ? 'Time\'s Up!' : activeTimer.label}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
             <span className="text-white font-mono text-lg font-bold">
               {formatTime(activeTimer.remaining)}
             </span>
@@ -197,33 +280,33 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
               </div>
             )}
 
-            {/* Add time buttons */}
-            {!activeTimer.isComplete && (
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <span className="text-xs text-gray-500">Add time:</span>
-                <button
-                  onClick={() => addTime(activeTimer.id, 5 * 60)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  5m
-                </button>
-                <button
-                  onClick={() => addTime(activeTimer.id, 20 * 60)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  20m
-                </button>
-                <button
-                  onClick={() => addTime(activeTimer.id, 60 * 60)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                >
-                  <Plus className="w-3 h-3" />
-                  1hr
-                </button>
-              </div>
-            )}
+            {/* Add time buttons - always visible so user can extend even after completion */}
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <span className="text-xs text-gray-500">
+                {activeTimer.isComplete ? 'Extend:' : 'Add time:'}
+              </span>
+              <button
+                onClick={() => addTime(activeTimer.id, 5 * 60)}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                5m
+              </button>
+              <button
+                onClick={() => addTime(activeTimer.id, 20 * 60)}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                20m
+              </button>
+              <button
+                onClick={() => addTime(activeTimer.id, 60 * 60)}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                1hr
+              </button>
+            </div>
 
             {/* What next field */}
             <div>
