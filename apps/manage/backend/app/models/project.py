@@ -25,10 +25,23 @@ class ProjectCustomField(BaseModel):
     value: str
 
 
+class ProjectCommentAttachment(BaseModel):
+    """An attachment on a project comment."""
+    id: str  # UUID
+    filename: str
+    url: str  # Storage URL
+    content_type: Optional[str] = None
+    size_bytes: Optional[int] = None
+
+
 class ProjectComment(BaseModel):
     """A comment on a project."""
     id: str  # UUID
-    content: str  # HTML content for rich text
+    content: str  # Summary/comment text (HTML content for rich text)
+    full_content: Optional[str] = None  # Full original content (e.g., email body)
+    url: Optional[str] = None  # Optional URL reference (e.g., email or calendar link)
+    import_source: Optional[str] = None  # Where this was imported from (e.g., "David's calendar", "wisdev slack #channel")
+    attachments: list[ProjectCommentAttachment] = []  # File attachments
     author_id: str  # User ID
     author_name: str
     created_at: str  # ISO timestamp
@@ -55,6 +68,9 @@ class Project(MongoModel):
     ai_suggestions: Optional[str] = None
     comments: list[ProjectComment] = Field(default_factory=list)
 
+    # Content identification rules (for classifying emails, calendar items, etc.)
+    identification_rules: Optional[str] = None
+
     # Avatar
     avatar_url: Optional[str] = None
     avatar_prompt: Optional[str] = None  # Custom prompt for avatar generation
@@ -70,6 +86,7 @@ class ProjectCreate(BaseModel):
     resources: Optional[list[ProjectResource]] = None
     custom_fields: Optional[list[ProjectCustomField]] = None
     next_steps: Optional[str] = None
+    identification_rules: Optional[str] = None
     avatar_url: Optional[str] = None
     avatar_prompt: Optional[str] = None
 
@@ -87,5 +104,6 @@ class ProjectUpdate(BaseModel):
     next_steps: Optional[str] = None
     ai_suggestions: Optional[str] = None
     comments: Optional[list[ProjectComment]] = None
+    identification_rules: Optional[str] = None
     avatar_url: Optional[str] = None
     avatar_prompt: Optional[str] = None

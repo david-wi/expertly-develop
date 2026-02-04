@@ -1124,9 +1124,21 @@ export interface ProjectCustomField {
   value: string
 }
 
+export interface ProjectCommentAttachment {
+  id: string
+  filename: string
+  url: string
+  content_type?: string
+  size_bytes?: number
+}
+
 export interface ProjectComment {
   id: string
   content: string
+  full_content?: string
+  url?: string
+  import_source?: string
+  attachments?: ProjectCommentAttachment[]
   author_id: string
   author_name: string
   created_at: string
@@ -1147,6 +1159,7 @@ export interface Project {
   next_steps?: string
   ai_suggestions?: string
   comments?: ProjectComment[]
+  identification_rules?: string
   avatar_url?: string
   avatar_prompt?: string
   created_at: string
@@ -1162,6 +1175,7 @@ export interface CreateProjectRequest {
   resources?: ProjectResource[]
   custom_fields?: ProjectCustomField[]
   next_steps?: string
+  identification_rules?: string
   avatar_url?: string
   avatar_prompt?: string
 }
@@ -1178,6 +1192,7 @@ export interface UpdateProjectRequest {
   next_steps?: string
   ai_suggestions?: string
   comments?: ProjectComment[]
+  identification_rules?: string
   avatar_url?: string
   avatar_prompt?: string
 }

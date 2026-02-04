@@ -12,6 +12,7 @@ import {
   ProjectResource,
   ProjectCustomField,
   ProjectComment,
+  ProjectCommentAttachment,
   Playbook,
 } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
@@ -118,8 +119,15 @@ export default function ProjectDetail() {
   const [localResources, setLocalResources] = useState<ProjectResource[]>([])
   const [localFields, setLocalFields] = useState<ProjectCustomField[]>([])
   const [localNextSteps, setLocalNextSteps] = useState('')
+  const [localIdentificationRules, setLocalIdentificationRules] = useState('')
   const [localComments, setLocalComments] = useState<ProjectComment[]>([])
   const [newComment, setNewComment] = useState('')
+  const [newCommentUrl, setNewCommentUrl] = useState('')
+  const [newCommentFullContent, setNewCommentFullContent] = useState('')
+  const [newCommentImportSource, setNewCommentImportSource] = useState('')
+  const [showFullContentInput, setShowFullContentInput] = useState(false)
+  const [newCommentAttachments, setNewCommentAttachments] = useState<ProjectCommentAttachment[]>([])
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set())
   const [isDraggingFile, setIsDraggingFile] = useState(false)
 
   // Inline add states
@@ -220,6 +228,7 @@ export default function ProjectDetail() {
       const existingFields = projectData.custom_fields || []
       setLocalFields(existingFields.length === 0 ? DEFAULT_CUSTOM_FIELDS : existingFields)
       setLocalNextSteps(projectData.next_steps || '')
+      setLocalIdentificationRules(projectData.identification_rules || '')
       setLocalComments(projectData.comments || [])
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load project'
@@ -282,6 +291,15 @@ export default function ProjectDetail() {
       await api.updateProject(id, { next_steps: nextSteps })
     } catch (err) {
       console.error('Failed to save next steps:', err)
+    }
+  }
+
+  const saveIdentificationRules = async (rules: string) => {
+    if (!id) return
+    try {
+      await api.updateProject(id, { identification_rules: rules })
+    } catch (err) {
+      console.error('Failed to save identification rules:', err)
     }
   }
 
@@ -378,6 +396,11 @@ export default function ProjectDetail() {
     saveNextSteps(localNextSteps)
   }
 
+  // Identification rules handlers
+  const handleIdentificationRulesBlur = () => {
+    saveIdentificationRules(localIdentificationRules)
+  }
+
   // Description inline edit handlers
   const handleDescriptionClick = () => {
     setLocalDescription(project?.description || '')
@@ -404,6 +427,10 @@ export default function ProjectDetail() {
     const comment: ProjectComment = {
       id: crypto.randomUUID(),
       content: newComment, // HTML content from rich text editor
+      full_content: newCommentFullContent.trim() || undefined, // Full original content (e.g., email body)
+      url: newCommentUrl.trim() || undefined, // Optional URL reference
+      import_source: newCommentImportSource.trim() || undefined, // Where it was imported from
+      attachments: newCommentAttachments.length > 0 ? newCommentAttachments : undefined,
       author_id: 'current-user', // Would come from auth context
       author_name: 'David', // Would come from auth context
       created_at: new Date().toISOString(),
@@ -411,7 +438,44 @@ export default function ProjectDetail() {
     const updated = [comment, ...localComments] // Newest first
     setLocalComments(updated)
     setNewComment('')
+    setNewCommentUrl('')
+    setNewCommentFullContent('')
+    setNewCommentImportSource('')
+    setNewCommentAttachments([])
+    setShowFullContentInput(false)
     saveComments(updated)
+  }
+
+  const handleCommentAttachmentUpload = (files: File[]) => {
+    // For now, create local attachment entries (in production, would upload to storage)
+    const newAttachments: ProjectCommentAttachment[] = files.map((file) => ({
+      id: crypto.randomUUID(),
+      filename: file.name,
+      url: URL.createObjectURL(file), // Temporary local URL
+      content_type: file.type || undefined,
+      size_bytes: file.size,
+    }))
+    setNewCommentAttachments([...newCommentAttachments, ...newAttachments])
+  }
+
+  const handleRemoveCommentAttachment = (attachmentId: string) => {
+    setNewCommentAttachments(newCommentAttachments.filter((a) => a.id !== attachmentId))
+  }
+
+  const toggleExpandedComment = (commentId: string) => {
+    const updated = new Set(expandedComments)
+    if (updated.has(commentId)) {
+      updated.delete(commentId)
+    } else {
+      updated.add(commentId)
+    }
+    setExpandedComments(updated)
+  }
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
   const handleDeleteComment = (commentId: string) => {
@@ -1118,6 +1182,28 @@ export default function ProjectDetail() {
               <p className="text-xs text-gray-300 italic">No AI suggestions available</p>
             )}
           </div>
+
+          {/* Identification Rules */}
+          <div className="bg-white shadow rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-semibold text-gray-900">Identification Rules</h3>
+              {localIdentificationRules && (
+                <button
+                  onClick={() => handleCopy(localIdentificationRules)}
+                  className="text-gray-400 hover:text-gray-600 text-xs"
+                >
+                  Copy
+                </button>
+              )}
+            </div>
+            <textarea
+              value={localIdentificationRules}
+              onChange={(e) => setLocalIdentificationRules(e.target.value)}
+              onBlur={handleIdentificationRulesBlur}
+              placeholder="How to identify related content (emails, calendar items, etc.)...&#10;&#10;Examples:&#10;• Emails from @qrcargo.com&#10;• Mentions of 'Qatar Airways' (business context)&#10;• Calendar items with Mathias or Mirja"
+              className="w-full text-xs text-gray-700 border-0 bg-transparent px-0 py-1 outline-none resize-none min-h-[80px] placeholder-gray-300"
+            />
+          </div>
         </div>
       </div>
 
@@ -1134,10 +1220,98 @@ export default function ProjectDetail() {
             <RichTextEditor
               value={newComment}
               onChange={setNewComment}
-              placeholder="Add a comment..."
+              placeholder="Add a comment or summary..."
               minHeight={80}
             />
-            <div className="flex justify-end mt-2">
+            <div className="mt-2 space-y-2">
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={newCommentUrl}
+                  onChange={(e) => setNewCommentUrl(e.target.value)}
+                  placeholder="Reference URL (optional)"
+                  className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+                <input
+                  type="text"
+                  value={newCommentImportSource}
+                  onChange={(e) => setNewCommentImportSource(e.target.value)}
+                  placeholder="Import source (optional)"
+                  className="w-48 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                />
+              </div>
+
+              {/* Full content toggle and input */}
+              {!showFullContentInput ? (
+                <button
+                  onClick={() => setShowFullContentInput(true)}
+                  className="text-xs text-gray-500 hover:text-blue-600"
+                >
+                  + Add full content (e.g., original email)
+                </button>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-gray-600">Full Content (e.g., email body)</label>
+                    <button
+                      onClick={() => {
+                        setShowFullContentInput(false)
+                        setNewCommentFullContent('')
+                        setNewCommentImportSource('')
+                      }}
+                      className="text-xs text-gray-400 hover:text-gray-600"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <textarea
+                    value={newCommentFullContent}
+                    onChange={(e) => setNewCommentFullContent(e.target.value)}
+                    placeholder="Paste original content here..."
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none min-h-[100px] resize-y"
+                  />
+                </div>
+              )}
+
+              {/* Attachments */}
+              {newCommentAttachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {newCommentAttachments.map((attachment) => (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-1.5 text-sm"
+                    >
+                      <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                      <span className="text-gray-700 truncate max-w-[150px]">{attachment.filename}</span>
+                      {attachment.size_bytes && (
+                        <span className="text-gray-400 text-xs">({formatFileSize(attachment.size_bytes)})</span>
+                      )}
+                      <button
+                        onClick={() => handleRemoveCommentAttachment(attachment.id)}
+                        className="text-gray-400 hover:text-red-500"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between mt-2">
+              <label className="cursor-pointer text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                Attach files
+                <input
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => e.target.files && handleCommentAttachmentUpload(Array.from(e.target.files))}
+                />
+              </label>
               <button
                 onClick={handleAddComment}
                 disabled={isRichTextEmpty(newComment)}
@@ -1167,6 +1341,11 @@ export default function ProjectDetail() {
                       <span className="text-xs text-gray-400">
                         {formatRelativeTime(comment.created_at)}
                       </span>
+                      {comment.import_source && (
+                        <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">
+                          via {comment.import_source}
+                        </span>
+                      )}
                       <button
                         onClick={() => handleDeleteComment(comment.id)}
                         className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs ml-auto"
@@ -1174,10 +1353,69 @@ export default function ProjectDetail() {
                         Delete
                       </button>
                     </div>
+                    {comment.url && (
+                      <a
+                        href={comment.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 mb-2"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                        {comment.url.length > 60 ? comment.url.substring(0, 60) + '...' : comment.url}
+                      </a>
+                    )}
                     <div
                       className="text-sm text-gray-700 prose prose-sm max-w-none"
                       dangerouslySetInnerHTML={{ __html: comment.content }}
                     />
+                    {/* Full content (expandable) */}
+                    {comment.full_content && (
+                      <div className="mt-2">
+                        <button
+                          onClick={() => toggleExpandedComment(comment.id)}
+                          className="text-xs text-gray-500 hover:text-blue-600 flex items-center gap-1"
+                        >
+                          <svg
+                            className={`w-3 h-3 transition-transform ${expandedComments.has(comment.id) ? 'rotate-90' : ''}`}
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          {expandedComments.has(comment.id) ? 'Hide full content' : 'Show full content'}
+                        </button>
+                        {expandedComments.has(comment.id) && (
+                          <div className="mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200 text-sm text-gray-700 whitespace-pre-wrap max-h-[400px] overflow-y-auto">
+                            {comment.full_content}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Attachments */}
+                    {comment.attachments && comment.attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {comment.attachments.map((attachment) => (
+                          <a
+                            key={attachment.id}
+                            href={attachment.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg px-2.5 py-1.5 text-xs text-gray-700 transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                            </svg>
+                            <span className="truncate max-w-[120px]">{attachment.filename}</span>
+                            {attachment.size_bytes && (
+                              <span className="text-gray-400">({formatFileSize(attachment.size_bytes)})</span>
+                            )}
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
