@@ -85,10 +85,11 @@ Do not include any text before or after the JSON array."""
             List of generated step dictionaries with title, description, when_to_perform
         """
         # Get the model configuration for this use case
-        try:
-            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
-        except Exception:
-            logger.info(f"Use case '{self.USE_CASE}' not found, trying fallback")
+        use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
+
+        # Check if we got actual config or defaults (use_case won't match if defaulted)
+        if use_case_config.use_case != self.USE_CASE:
+            logger.info(f"Use case '{self.USE_CASE}' not found in config, trying fallback")
             use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
 
         model_id = use_case_config.model_id

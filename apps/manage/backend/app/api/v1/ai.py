@@ -60,7 +60,7 @@ async def generate_playbook_steps(
     if not ai_service.is_configured():
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service is not configured. Please set ANTHROPIC_API_KEY."
+            detail="AI service is not configured. Please set OPENAI_API_KEY, GROQ_API_KEY, or another supported provider key."
         )
 
     try:
