@@ -68,8 +68,9 @@ export const useTimerStore = create<TimerState>()(
           // Remove existing timer with same ID if any
           const filtered = state.timers.filter((t) => t.id !== id)
           return {
+            // Add new timer at the BEGINNING so it becomes the active displayed timer
+            // (active timer is the first unacknowledged one)
             timers: [
-              ...filtered,
               {
                 id,
                 label,
@@ -85,6 +86,7 @@ export const useTimerStore = create<TimerState>()(
                 acknowledged: false,
                 timeLogged: false,
               },
+              ...filtered,
             ],
           }
         })
