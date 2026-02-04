@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Maximize2, Check, Plus, Timer } from 'lucide-react'
+import { Maximize2, Check, Plus, Timer, X } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -960,14 +960,54 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             return (
               <div className="w-1/2 p-3 overflow-auto bg-gray-50/50 border-l border-gray-200">
                 <div className="space-y-3">
-                  {/* Start Timer button - prominent at top */}
-                  <button
-                    onClick={() => setShowTimerModal(true)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
-                  >
-                    <Timer className="w-4 h-4" />
-                    Start Focused Work
-                  </button>
+                  {/* Start Timer button and action icons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowTimerModal(true)}
+                      className="flex items-center justify-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium text-sm"
+                    >
+                      <Timer className="w-4 h-4" />
+                      Start Focus
+                    </button>
+                    <div className="flex items-center gap-1 ml-auto">
+                      <button
+                        onClick={(e) => handleQuickComplete(e, editingTaskId)}
+                        disabled={completingTaskId === editingTaskId}
+                        className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                        title="Mark as done"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setShowTimerModal(true)}
+                        className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                        title="Start timer"
+                      >
+                        <Timer className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => setSelectedTaskId(editingTaskId)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        title="Open full details"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        ref={editDoneRef}
+                        onClick={closeEditPanel}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            closeEditPanel()
+                          }
+                        }}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        title="Close"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
 
                   {/* Editable title */}
                   <div>
@@ -1073,37 +1113,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
-                    <button
-                      onClick={() => setShowTimerModal(true)}
-                      className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
-                      title="Start timer"
-                    >
-                      <Timer className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedTaskId(editingTaskId)}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                      title="Open full details"
-                    >
-                      <Maximize2 className="w-4 h-4" />
-                    </button>
-                    <button
-                      ref={editDoneRef}
-                      onClick={closeEditPanel}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault()
-                          closeEditPanel()
-                        }
-                      }}
-                      className="px-3 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
-                    >
-                      Close
-                    </button>
                   </div>
                 </div>
               </div>
