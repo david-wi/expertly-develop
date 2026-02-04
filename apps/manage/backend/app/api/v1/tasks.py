@@ -1,4 +1,5 @@
 from datetime import datetime, timezone, timedelta
+from uuid import uuid4
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 from pydantic import BaseModel
@@ -15,6 +16,35 @@ from app.api.deps import get_current_user
 from app.api.v1.websocket import emit_event
 
 router = APIRouter()
+
+
+async def add_task_completion_to_project_timeline(
+    task: dict,
+    user: User,
+    db
+) -> None:
+    """Add a timeline entry to the project when a task is completed."""
+    project_id = task.get("project_id")
+    if not project_id:
+        return
+
+    task_id = str(task.get("_id", task.get("id", "")))
+    task_title = task.get("title", "Untitled task")
+
+    # Create a system-generated comment for the project timeline
+    comment = {
+        "id": str(uuid4()),
+        "content": f'<p>✅ Task completed: <a href="/queues?task={task_id}">{task_title}</a></p>',
+        "author_id": user.id,
+        "author_name": user.name,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+
+    # Add the comment to the project's comments array
+    await db.projects.update_one(
+        {"_id": ObjectId(str(project_id))},
+        {"$push": {"comments": comment}}
+    )
 
 
 class TaskReorderItem(BaseModel):
@@ -420,6 +450,9 @@ async def complete_task(
 
     serialized = serialize_task(result)
 
+    # Add timeline entry to project if task belongs to one
+    await add_task_completion_to_project_timeline(result, current_user, db)
+
     # Emit WebSocket event for real-time updates
     await emit_event(str(current_user.organization_id), "task.completed", serialized)
 
@@ -722,6 +755,9 @@ async def approve_task(
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot approve")
 
+    # Add timeline entry to project if task belongs to one
+    await add_task_completion_to_project_timeline(result, current_user, db)
+
     return serialize_task(result)
 
 
@@ -809,6 +845,9 @@ async def quick_complete_task(
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is already {task.get('status', 'unknown')}")
+
+    # Add timeline entry to project if task belongs to one
+    await add_task_completion_to_project_timeline(result, current_user, db)
 
     return serialize_task(result)
 

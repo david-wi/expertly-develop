@@ -68,3 +68,4 @@ Warns users before losing changes on modal close or page refresh.
 20260202 - Fix Manage dashboard: (1) Widget customization not persisting after refresh (race condition), (2) My Team widget default height too short for names
 20260202 - Fix queues API serialization error - handle ObjectId fields from legacy data
 20260204 - Fix ProjectTypeahead to show 'None (top-level)' at bottom when searching, make project multi-select hierarchical in AddWidgetModal, improve configure step titles
+20260204 - Add task completion to project timeline - When a task is completed and belongs to a project, add timeline entry with link to task
