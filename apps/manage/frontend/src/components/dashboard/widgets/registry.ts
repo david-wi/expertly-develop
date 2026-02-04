@@ -1,7 +1,8 @@
-import { LayoutDashboard, ListTodo, Inbox, Activity, Users, ListChecks } from 'lucide-react'
+import { LayoutDashboard, ListTodo, Inbox, Activity, Users, ListChecks, ClipboardList } from 'lucide-react'
 import { WidgetDefinition } from './types'
 import { StatsOverviewWidget } from './StatsOverviewWidget'
 import { MyActiveTasksWidget } from './MyActiveTasksWidget'
+import { ActiveTasksWidget } from './ActiveTasksWidget'
 import { MyQueuesWidget } from './MyQueuesWidget'
 import { MonitorsSummaryWidget } from './MonitorsSummaryWidget'
 import { TeamMembersWidget } from './TeamMembersWidget'
@@ -37,6 +38,19 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
     minSize: { w: 4, h: 3 },
     maxSize: { w: 12, h: 8 },
     component: MyActiveTasksWidget,
+    hidden: true, // Hidden from Add Widget modal - already in default layout
+  },
+  'active-tasks': {
+    id: 'active-tasks',
+    name: 'Active Tasks',
+    description: 'Show active tasks filtered by project or playbook',
+    icon: ClipboardList,
+    defaultSize: { w: 6, h: 5 },
+    minSize: { w: 4, h: 3 },
+    maxSize: { w: 12, h: 8 },
+    component: ActiveTasksWidget,
+    requiresConfig: 'active-tasks',
+    allowMultiple: true,
   },
   'my-queues': {
     id: 'my-queues',
@@ -72,4 +86,5 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
   },
 }
 
-export const widgetList = Object.values(widgetRegistry)
+// Filter out hidden widgets for the Add Widget modal
+export const widgetList = Object.values(widgetRegistry).filter(w => !w.hidden)

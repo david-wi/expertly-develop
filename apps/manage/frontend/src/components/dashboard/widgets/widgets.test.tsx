@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { StatsOverviewWidget } from './StatsOverviewWidget'
 import { MyActiveTasksWidget } from './MyActiveTasksWidget'
+import { ActiveTasksWidget } from './ActiveTasksWidget'
 import { MyQueuesWidget } from './MyQueuesWidget'
 import { MonitorsSummaryWidget } from './MonitorsSummaryWidget'
 import { useAppStore } from '../../../stores/appStore'
@@ -37,6 +38,9 @@ const mockAppStoreDefault = {
   tasks: [],
   queues: [],
   loading: { tasks: false, queues: false },
+  fetchTasks: vi.fn(),
+  viewingUserId: null,
+  setViewingUserId: vi.fn(),
 }
 
 describe('Widgets', () => {
@@ -245,6 +249,94 @@ describe('Widgets', () => {
       )
       // Wait for the async effect
       expect(await screen.findByText('No monitors configured')).toBeInTheDocument()
+    })
+  })
+
+  describe('ActiveTasksWidget', () => {
+    it('renders default widget title when no config', () => {
+      render(
+        <BrowserRouter>
+          <ActiveTasksWidget {...mockWidgetProps} />
+        </BrowserRouter>
+      )
+      expect(screen.getByText('Active Tasks')).toBeInTheDocument()
+    })
+
+    it('shows loading state', () => {
+      vi.mocked(useAppStore).mockReturnValue({
+        ...mockAppStoreDefault,
+        loading: { tasks: true, queues: false },
+      } as ReturnType<typeof useAppStore>)
+
+      render(
+        <BrowserRouter>
+          <ActiveTasksWidget {...mockWidgetProps} />
+        </BrowserRouter>
+      )
+      expect(screen.getByText('Loading...')).toBeInTheDocument()
+    })
+
+    it('shows empty state when no active tasks', () => {
+      render(
+        <BrowserRouter>
+          <ActiveTasksWidget {...mockWidgetProps} />
+        </BrowserRouter>
+      )
+      expect(screen.getByText('No active tasks')).toBeInTheDocument()
+    })
+
+    it('filters tasks by projectIds', () => {
+      vi.mocked(useAppStore).mockReturnValue({
+        ...mockAppStoreDefault,
+        tasks: [
+          { id: '1', _id: '1', title: 'Task 1', status: 'queued', project_id: 'proj-1', queue_id: 'q1', created_at: new Date().toISOString() },
+          { id: '2', _id: '2', title: 'Task 2', status: 'queued', project_id: 'proj-2', queue_id: 'q1', created_at: new Date().toISOString() },
+          { id: '3', _id: '3', title: 'Task 3', status: 'queued', queue_id: 'q1', created_at: new Date().toISOString() },
+        ],
+        queues: [
+          { id: 'q1', _id: 'q1', purpose: 'My Tasks', scope_type: 'user', scope_id: 'user-1' },
+        ],
+        fetchTasks: vi.fn(),
+      } as unknown as ReturnType<typeof useAppStore>)
+
+      render(
+        <BrowserRouter>
+          <ActiveTasksWidget
+            {...mockWidgetProps}
+            config={{ projectIds: ['proj-1'] }}
+          />
+        </BrowserRouter>
+      )
+
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+      expect(screen.queryByText('Task 2')).not.toBeInTheDocument()
+      expect(screen.queryByText('Task 3')).not.toBeInTheDocument()
+    })
+
+    it('filters tasks by playbookId', () => {
+      vi.mocked(useAppStore).mockReturnValue({
+        ...mockAppStoreDefault,
+        tasks: [
+          { id: '1', _id: '1', title: 'Task 1', status: 'queued', playbook_id: 'pb-1', queue_id: 'q1', created_at: new Date().toISOString() },
+          { id: '2', _id: '2', title: 'Task 2', status: 'queued', playbook_id: 'pb-2', queue_id: 'q1', created_at: new Date().toISOString() },
+        ],
+        queues: [
+          { id: 'q1', _id: 'q1', purpose: 'My Tasks', scope_type: 'user', scope_id: 'user-1' },
+        ],
+        fetchTasks: vi.fn(),
+      } as unknown as ReturnType<typeof useAppStore>)
+
+      render(
+        <BrowserRouter>
+          <ActiveTasksWidget
+            {...mockWidgetProps}
+            config={{ playbookId: 'pb-1' }}
+          />
+        </BrowserRouter>
+      )
+
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+      expect(screen.queryByText('Task 2')).not.toBeInTheDocument()
     })
   })
 })

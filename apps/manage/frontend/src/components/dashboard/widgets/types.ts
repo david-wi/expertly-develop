@@ -5,6 +5,9 @@ export interface WidgetConfig {
   teamId?: string
   userId?: string
   limit?: number
+  projectIds?: string[]  // Filter by one or more projects
+  playbookId?: string    // Filter by playbook
+  widgetTitle?: string   // Custom title for the widget
 }
 
 export interface WidgetProps {
@@ -22,8 +25,9 @@ export interface WidgetDefinition {
   minSize?: { w: number; h: number }
   maxSize?: { w: number; h: number }
   component: React.ComponentType<WidgetProps>
-  requiresConfig?: 'queue' | 'team' | 'user'
+  requiresConfig?: 'queue' | 'team' | 'user' | 'active-tasks'
   allowMultiple?: boolean
+  hidden?: boolean  // Hide from Add Widget modal but keep for backwards compatibility
 }
 
 export interface WidgetInstance {
