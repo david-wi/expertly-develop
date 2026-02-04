@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { Maximize2, Check } from 'lucide-react'
+import { Maximize2, Check, Plus } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -48,6 +48,13 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [bottomTaskInstructions, setBottomTaskInstructions] = useState('')
   const [isCreatingBottom, setIsCreatingBottom] = useState(false)
   const [showBottomProjectDropdown, setShowBottomProjectDropdown] = useState(false)
+  // Create project inline state
+  const [showTopCreateProject, setShowTopCreateProject] = useState(false)
+  const [topNewProjectName, setTopNewProjectName] = useState('')
+  const [isCreatingTopProject, setIsCreatingTopProject] = useState(false)
+  const [showBottomCreateProject, setShowBottomCreateProject] = useState(false)
+  const [bottomNewProjectName, setBottomNewProjectName] = useState('')
+  const [isCreatingBottomProject, setIsCreatingBottomProject] = useState(false)
   // Edit panel state
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
@@ -68,6 +75,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const editPlaybookRef = useRef<HTMLSelectElement>(null)
   const editDoneRef = useRef<HTMLButtonElement>(null)
   const dragRef = useRef<HTMLDivElement>(null)
+  const topNewProjectRef = useRef<HTMLInputElement>(null)
+  const bottomNewProjectRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error)
@@ -470,6 +479,46 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }
 
+  const handleCreateTopProject = async () => {
+    if (!topNewProjectName.trim() || isCreatingTopProject) return
+    setIsCreatingTopProject(true)
+    try {
+      const created = await api.createProject({ name: topNewProjectName.trim() })
+      const projectId = created._id || created.id
+      // Refresh projects list and select the new one
+      const updatedProjects = await api.getProjects({ status: 'active' })
+      setProjects(updatedProjects)
+      setTopTaskProjectId(projectId)
+      setTopTaskProjectQuery(topNewProjectName.trim())
+      setTopNewProjectName('')
+      setShowTopCreateProject(false)
+    } catch (err) {
+      console.error('Failed to create project:', err)
+    } finally {
+      setIsCreatingTopProject(false)
+    }
+  }
+
+  const handleCreateBottomProject = async () => {
+    if (!bottomNewProjectName.trim() || isCreatingBottomProject) return
+    setIsCreatingBottomProject(true)
+    try {
+      const created = await api.createProject({ name: bottomNewProjectName.trim() })
+      const projectId = created._id || created.id
+      // Refresh projects list and select the new one
+      const updatedProjects = await api.getProjects({ status: 'active' })
+      setProjects(updatedProjects)
+      setBottomTaskProjectId(projectId)
+      setBottomTaskProjectQuery(bottomNewProjectName.trim())
+      setBottomNewProjectName('')
+      setShowBottomCreateProject(false)
+    } catch (err) {
+      console.error('Failed to create project:', err)
+    } finally {
+      setIsCreatingBottomProject(false)
+    }
+  }
+
   return (
   <>
     <WidgetWrapper widgetId={widgetId} title={widgetTitle} headerAction={headerAction}>
@@ -560,48 +609,109 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       className="flex-1 text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
                     />
                     {topTaskTitle && (
-                      <div className="relative w-28 flex-shrink-0">
-                        <input
-                          ref={topProjectRef}
-                          type="text"
-                          placeholder="Project..."
-                          value={topTaskProjectQuery}
-                          onChange={(e) => {
-                            setTopTaskProjectQuery(e.target.value)
-                            setShowTopProjectDropdown(true)
-                            // Clear selection if typing
-                            if (topTaskProjectId) {
-                              const selectedProject = projects.find(p => (p._id || p.id) === topTaskProjectId)
-                              if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
-                                setTopTaskProjectId('')
-                              }
-                            }
-                          }}
-                          onFocus={() => setShowTopProjectDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowTopProjectDropdown(false), 200)}
-                          onKeyDown={handleTopProjectKeyDown}
-                          disabled={isCreatingTop}
-                          className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
-                        />
-                        {showTopProjectDropdown && topTaskProjectQuery && (
-                          <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
-                            {projects
-                              .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(topTaskProjectQuery.toLowerCase()))
-                              .slice(0, 5)
-                              .map(project => (
-                                <div
-                                  key={project._id || project.id}
-                                  className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
-                                  onMouseDown={() => {
-                                    setTopTaskProjectId(project._id || project.id)
-                                    setTopTaskProjectQuery(getProjectDisplayName(project, projects))
-                                    setShowTopProjectDropdown(false)
-                                  }}
-                                >
-                                  {getProjectDisplayName(project, projects)}
-                                </div>
-                              ))}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {showTopCreateProject ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              ref={topNewProjectRef}
+                              type="text"
+                              placeholder="New project name..."
+                              value={topNewProjectName}
+                              onChange={(e) => setTopNewProjectName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && topNewProjectName.trim()) {
+                                  e.preventDefault()
+                                  handleCreateTopProject()
+                                } else if (e.key === 'Escape') {
+                                  setShowTopCreateProject(false)
+                                  setTopNewProjectName('')
+                                }
+                              }}
+                              disabled={isCreatingTopProject}
+                              className="w-28 text-xs text-gray-600 placeholder-gray-400 bg-white border border-primary-300 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-primary-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleCreateTopProject}
+                              disabled={!topNewProjectName.trim() || isCreatingTopProject}
+                              className="p-0.5 text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                              title="Create project"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowTopCreateProject(false)
+                                setTopNewProjectName('')
+                              }}
+                              className="p-0.5 text-gray-400 hover:text-gray-600"
+                              title="Cancel"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
+                        ) : (
+                          <>
+                            <div className="relative w-24">
+                              <input
+                                ref={topProjectRef}
+                                type="text"
+                                placeholder="Project..."
+                                value={topTaskProjectQuery}
+                                onChange={(e) => {
+                                  setTopTaskProjectQuery(e.target.value)
+                                  setShowTopProjectDropdown(true)
+                                  // Clear selection if typing
+                                  if (topTaskProjectId) {
+                                    const selectedProject = projects.find(p => (p._id || p.id) === topTaskProjectId)
+                                    if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
+                                      setTopTaskProjectId('')
+                                    }
+                                  }
+                                }}
+                                onFocus={() => setShowTopProjectDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowTopProjectDropdown(false), 200)}
+                                onKeyDown={handleTopProjectKeyDown}
+                                disabled={isCreatingTop}
+                                className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                              />
+                              {showTopProjectDropdown && topTaskProjectQuery && (
+                                <div className="absolute z-10 top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+                                  {projects
+                                    .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(topTaskProjectQuery.toLowerCase()))
+                                    .slice(0, 5)
+                                    .map(project => (
+                                      <div
+                                        key={project._id || project.id}
+                                        className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
+                                        onMouseDown={() => {
+                                          setTopTaskProjectId(project._id || project.id)
+                                          setTopTaskProjectQuery(getProjectDisplayName(project, projects))
+                                          setShowTopProjectDropdown(false)
+                                        }}
+                                      >
+                                        {getProjectDisplayName(project, projects)}
+                                      </div>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowTopCreateProject(true)
+                                setTimeout(() => topNewProjectRef.current?.focus(), 0)
+                              }}
+                              disabled={isCreatingTop}
+                              className="p-0.5 text-gray-400 hover:text-primary-600 transition-colors"
+                              title="Create new project"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
                       </div>
                     )}
@@ -716,48 +826,109 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       className="flex-1 text-xs font-medium text-gray-900 placeholder-gray-400 bg-transparent border-none outline-none focus:ring-0 p-0"
                     />
                     {bottomTaskTitle && (
-                      <div className="relative w-28 flex-shrink-0">
-                        <input
-                          ref={bottomProjectRef}
-                          type="text"
-                          placeholder="Project..."
-                          value={bottomTaskProjectQuery}
-                          onChange={(e) => {
-                            setBottomTaskProjectQuery(e.target.value)
-                            setShowBottomProjectDropdown(true)
-                            // Clear selection if typing
-                            if (bottomTaskProjectId) {
-                              const selectedProject = projects.find(p => (p._id || p.id) === bottomTaskProjectId)
-                              if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
-                                setBottomTaskProjectId('')
-                              }
-                            }
-                          }}
-                          onFocus={() => setShowBottomProjectDropdown(true)}
-                          onBlur={() => setTimeout(() => setShowBottomProjectDropdown(false), 200)}
-                          onKeyDown={handleBottomProjectKeyDown}
-                          disabled={isCreatingBottom}
-                          className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
-                        />
-                        {showBottomProjectDropdown && bottomTaskProjectQuery && (
-                          <div className="absolute z-10 bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
-                            {projects
-                              .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(bottomTaskProjectQuery.toLowerCase()))
-                              .slice(0, 5)
-                              .map(project => (
-                                <div
-                                  key={project._id || project.id}
-                                  className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
-                                  onMouseDown={() => {
-                                    setBottomTaskProjectId(project._id || project.id)
-                                    setBottomTaskProjectQuery(getProjectDisplayName(project, projects))
-                                    setShowBottomProjectDropdown(false)
-                                  }}
-                                >
-                                  {getProjectDisplayName(project, projects)}
-                                </div>
-                              ))}
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        {showBottomCreateProject ? (
+                          <div className="flex items-center gap-1">
+                            <input
+                              ref={bottomNewProjectRef}
+                              type="text"
+                              placeholder="New project name..."
+                              value={bottomNewProjectName}
+                              onChange={(e) => setBottomNewProjectName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && bottomNewProjectName.trim()) {
+                                  e.preventDefault()
+                                  handleCreateBottomProject()
+                                } else if (e.key === 'Escape') {
+                                  setShowBottomCreateProject(false)
+                                  setBottomNewProjectName('')
+                                }
+                              }}
+                              disabled={isCreatingBottomProject}
+                              className="w-28 text-xs text-gray-600 placeholder-gray-400 bg-white border border-primary-300 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-primary-200"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleCreateBottomProject}
+                              disabled={!bottomNewProjectName.trim() || isCreatingBottomProject}
+                              className="p-0.5 text-primary-600 hover:text-primary-700 disabled:opacity-50"
+                              title="Create project"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowBottomCreateProject(false)
+                                setBottomNewProjectName('')
+                              }}
+                              className="p-0.5 text-gray-400 hover:text-gray-600"
+                              title="Cancel"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
                           </div>
+                        ) : (
+                          <>
+                            <div className="relative w-24">
+                              <input
+                                ref={bottomProjectRef}
+                                type="text"
+                                placeholder="Project..."
+                                value={bottomTaskProjectQuery}
+                                onChange={(e) => {
+                                  setBottomTaskProjectQuery(e.target.value)
+                                  setShowBottomProjectDropdown(true)
+                                  // Clear selection if typing
+                                  if (bottomTaskProjectId) {
+                                    const selectedProject = projects.find(p => (p._id || p.id) === bottomTaskProjectId)
+                                    if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
+                                      setBottomTaskProjectId('')
+                                    }
+                                  }
+                                }}
+                                onFocus={() => setShowBottomProjectDropdown(true)}
+                                onBlur={() => setTimeout(() => setShowBottomProjectDropdown(false), 200)}
+                                onKeyDown={handleBottomProjectKeyDown}
+                                disabled={isCreatingBottom}
+                                className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-0.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                              />
+                              {showBottomProjectDropdown && bottomTaskProjectQuery && (
+                                <div className="absolute z-10 bottom-full left-0 right-0 mb-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto">
+                                  {projects
+                                    .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(bottomTaskProjectQuery.toLowerCase()))
+                                    .slice(0, 5)
+                                    .map(project => (
+                                      <div
+                                        key={project._id || project.id}
+                                        className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer truncate"
+                                        onMouseDown={() => {
+                                          setBottomTaskProjectId(project._id || project.id)
+                                          setBottomTaskProjectQuery(getProjectDisplayName(project, projects))
+                                          setShowBottomProjectDropdown(false)
+                                        }}
+                                      >
+                                        {getProjectDisplayName(project, projects)}
+                                      </div>
+                                    ))}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowBottomCreateProject(true)
+                                setTimeout(() => bottomNewProjectRef.current?.focus(), 0)
+                              }}
+                              disabled={isCreatingBottom}
+                              className="p-0.5 text-gray-400 hover:text-primary-600 transition-colors"
+                              title="Create new project"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                          </>
                         )}
                       </div>
                     )}
