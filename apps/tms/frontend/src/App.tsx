@@ -13,6 +13,7 @@ import Settings from './pages/Settings'
 import MarginDashboard from './pages/MarginDashboard'
 import CarrierPerformance from './pages/CarrierPerformance'
 import DocumentReview from './pages/DocumentReview'
+import LoadBoards from './pages/LoadBoards'
 import LandingPage from './pages/LandingPage'
 import ProductComparison from './pages/ProductComparison'
 import Layout from './components/layout/Layout'
@@ -36,6 +37,7 @@ function App() {
           <Route path="margins" element={<MarginDashboard />} />
           <Route path="carrier-performance" element={<CarrierPerformance />} />
           <Route path="document-review" element={<DocumentReview />} />
+          <Route path="loadboards" element={<LoadBoards />} />
           <Route path="settings" element={<Settings />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>
