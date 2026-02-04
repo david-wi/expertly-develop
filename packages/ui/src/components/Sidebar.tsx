@@ -182,7 +182,7 @@ export function Sidebar({
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col ${sidebarBorderColor}`}>
+    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col ${sidebarBorderColor} overflow-hidden`}>
       {/* Version Update Banner */}
       {versionCheck?.currentCommit && (
         <VersionChecker
@@ -343,30 +343,32 @@ export function Sidebar({
         {children}
       </div>
 
-      {/* Build Info (optional - displayed above theme switcher line) */}
-      {buildInfo && (
-        <div className="px-4 py-1 flex-shrink-0">
-          {buildInfo}
-        </div>
-      )}
+      {/* Bottom sections wrapper - scrollable when viewport is very short */}
+      <div className="flex-shrink-0 flex flex-col min-h-0 max-h-[40vh] overflow-y-auto">
+        {/* Build Info (optional - displayed above theme switcher line) */}
+        {buildInfo && (
+          <div className="px-4 py-1">
+            {buildInfo}
+          </div>
+        )}
 
-      {/* Theme Switcher */}
-      {showThemeSwitcher && (
-        <div className={`px-4 py-3 border-t ${sidebarBorderColor} flex-shrink-0`}>
-          <ThemeSwitcher />
-        </div>
-      )}
+        {/* Theme Switcher */}
+        {showThemeSwitcher && (
+          <div className={`px-4 py-3 border-t ${sidebarBorderColor}`}>
+            <ThemeSwitcher />
+          </div>
+        )}
 
-      {/* Bottom Section (optional - for logout buttons, etc.) */}
-      {bottomSection && (
-        <div className={`border-t ${sidebarBorderColor} flex-shrink-0`}>
-          {bottomSection}
-        </div>
-      )}
+        {/* Bottom Section (optional - for logout buttons, etc.) */}
+        {bottomSection && (
+          <div className={`border-t ${sidebarBorderColor}`}>
+            {bottomSection}
+          </div>
+        )}
 
-      {/* User */}
-      {user && (
-        <div className={`p-4 border-t ${sidebarBorderColor} ${userBg} flex-shrink-0 relative`}>
+        {/* User */}
+        {user && (
+          <div className={`p-4 border-t ${sidebarBorderColor} ${userBg} relative`}>
           {userMenu ? (
             <>
               <button
@@ -408,6 +410,7 @@ export function Sidebar({
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }
