@@ -20,6 +20,8 @@ export interface Timer {
   }
   /** What to do after timer completes - user note */
   whatNext?: string
+  /** Rich text notes taken during the timer session */
+  notes?: string
   /** Whether the timer has completed and is showing the completion dialog */
   isComplete: boolean
   /** Whether the completion alert has been acknowledged */
@@ -40,6 +42,7 @@ interface TimerState {
   resumeTimer: (id: string) => void
   addTime: (id: string, seconds: number) => void
   setWhatNext: (id: string, text: string) => void
+  setNotes: (id: string, notes: string) => void
   tickTimers: () => void
   completeTimer: (id: string) => void
   acknowledgeTimer: (id: string) => void
@@ -68,6 +71,7 @@ export const useTimerStore = create<TimerState>()(
                 lastTick: Date.now(),
                 context,
                 whatNext: '',
+                notes: '',
                 isComplete: false,
                 acknowledged: false,
               },
@@ -112,6 +116,14 @@ export const useTimerStore = create<TimerState>()(
         set((state) => ({
           timers: state.timers.map((t) =>
             t.id === id ? { ...t, whatNext: text } : t
+          ),
+        }))
+      },
+
+      setNotes: (id, notes) => {
+        set((state) => ({
+          timers: state.timers.map((t) =>
+            t.id === id ? { ...t, notes } : t
           ),
         }))
       },
