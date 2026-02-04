@@ -209,18 +209,30 @@ export default function ProjectTypeahead({
         </div>
       ) : (
         <>
-          <input
-            ref={inputRef}
-            type="text"
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value)
-              setShowDropdown(true)
-            }}
-            onFocus={() => setShowDropdown(true)}
-            placeholder={placeholder}
-            className="w-full px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+          <div className="flex items-center gap-1">
+            <input
+              ref={inputRef}
+              type="text"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value)
+                setShowDropdown(true)
+              }}
+              onFocus={() => setShowDropdown(true)}
+              placeholder={placeholder}
+              className="flex-1 px-3 py-2 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary placeholder-theme-text-secondary focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+            {onProjectCreated && (
+              <button
+                type="button"
+                onClick={openCreateForm}
+                className="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 border border-gray-200 rounded-lg transition-colors flex-shrink-0"
+                title="Create new project"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
+          </div>
           {showDropdown && (
             <div
               ref={dropdownRef}
