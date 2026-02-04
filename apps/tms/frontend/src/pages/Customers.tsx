@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import type { Customer } from '../types'
-import { Plus, Building2, Mail, Phone, X } from 'lucide-react'
+import { Plus, Building2, Mail, Phone, X, CheckCircle, AlertCircle, PauseCircle } from 'lucide-react'
 
-const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  inactive: 'bg-gray-100 text-gray-700',
-  credit_hold: 'bg-red-100 text-red-700',
+const statusConfig: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
+  active: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: CheckCircle },
+  inactive: { bg: 'bg-gray-100', text: 'text-gray-700', icon: PauseCircle },
+  credit_hold: { bg: 'bg-red-100', text: 'text-red-700', icon: AlertCircle },
+  paused: { bg: 'bg-amber-100', text: 'text-amber-700', icon: PauseCircle },
 }
 
 export default function Customers() {
@@ -93,7 +94,7 @@ export default function Customers() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
         >
           <Plus className="h-4 w-4" />
           Add Customer
@@ -122,7 +123,7 @@ export default function Customers() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -134,7 +135,7 @@ export default function Customers() {
                     type="email"
                     value={formData.billing_email}
                     onChange={(e) => setFormData({ ...formData, billing_email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -145,7 +146,7 @@ export default function Customers() {
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -158,7 +159,7 @@ export default function Customers() {
                   value={formData.address_line1}
                   onChange={(e) => setFormData({ ...formData, address_line1: e.target.value })}
                   placeholder="Street address"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-3 gap-4">
@@ -170,7 +171,7 @@ export default function Customers() {
                     type="text"
                     value={formData.city}
                     onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -181,7 +182,7 @@ export default function Customers() {
                     type="text"
                     value={formData.state}
                     onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -192,14 +193,14 @@ export default function Customers() {
                     type="text"
                     value={formData.zip_code}
                     onChange={(e) => setFormData({ ...formData, zip_code: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="flex-1 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                 >
                   {editingCustomer ? 'Save Changes' : 'Create Customer'}
                 </button>
@@ -240,9 +241,16 @@ export default function Customers() {
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-gray-900">{customer.name}</h3>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${statusColors[customer.status]}`}>
-                          {customer.status.replace(/_/g, ' ')}
-                        </span>
+                        {(() => {
+                          const status = statusConfig[customer.status] || statusConfig.active
+                          const StatusIcon = status.icon
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${status.bg} ${status.text}`}>
+                              <StatusIcon className="h-3 w-3" />
+                              {customer.status.replace(/_/g, ' ')}
+                            </span>
+                          )
+                        })()}
                       </div>
                       <div className="mt-1 flex items-center gap-4 text-sm text-gray-500">
                         {customer.billing_email && (

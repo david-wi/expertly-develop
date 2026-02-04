@@ -4,8 +4,8 @@ import type { Carrier } from '../types'
 import { Plus, Truck, Mail, Phone, X, AlertTriangle, Shield } from 'lucide-react'
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-100 text-green-700',
-  pending: 'bg-yellow-100 text-yellow-700',
+  active: 'bg-emerald-100 text-emerald-700',
+  pending: 'bg-amber-100 text-amber-700',
   suspended: 'bg-red-100 text-red-700',
   do_not_use: 'bg-red-100 text-red-700',
 }
@@ -130,7 +130,7 @@ export default function Carriers() {
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
         >
           <Plus className="h-4 w-4" />
           Add Carrier
@@ -159,7 +159,7 @@ export default function Carriers() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -171,7 +171,7 @@ export default function Carriers() {
                     type="text"
                     value={formData.mc_number}
                     onChange={(e) => setFormData({ ...formData, mc_number: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -182,7 +182,7 @@ export default function Carriers() {
                     type="text"
                     value={formData.dot_number}
                     onChange={(e) => setFormData({ ...formData, dot_number: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -194,7 +194,7 @@ export default function Carriers() {
                   type="text"
                   value={formData.contact_name}
                   onChange={(e) => setFormData({ ...formData, contact_name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -206,7 +206,7 @@ export default function Carriers() {
                     type="email"
                     value={formData.contact_email}
                     onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
                 <div>
@@ -217,7 +217,7 @@ export default function Carriers() {
                     type="tel"
                     value={formData.contact_phone}
                     onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                   />
                 </div>
               </div>
@@ -229,7 +229,7 @@ export default function Carriers() {
                   type="date"
                   value={formData.insurance_expiration}
                   onChange={(e) => setFormData({ ...formData, insurance_expiration: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
               <div>
@@ -244,7 +244,7 @@ export default function Carriers() {
                       onClick={() => handleEquipmentToggle(type)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         formData.equipment_types.includes(type)
-                          ? 'bg-indigo-100 text-indigo-700 border-indigo-300'
+                          ? 'bg-emerald-100 text-emerald-700 border-emerald-300'
                           : 'bg-gray-100 text-gray-600 border-gray-200'
                       } border`}
                     >
@@ -256,7 +256,7 @@ export default function Carriers() {
               <div className="flex gap-3 pt-4">
                 <button
                   type="submit"
-                  className="flex-1 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  className="flex-1 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
                 >
                   {editingCarrier ? 'Save Changes' : 'Create Carrier'}
                 </button>
