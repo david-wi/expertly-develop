@@ -664,15 +664,15 @@ export function IdeaBacklog() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Current user email for voting
-  const { data: currentUser } = useQuery({
+  const { data: currentUser, isLoading: isUserLoading } = useQuery({
     queryKey: ['currentUser'],
     queryFn: () => usersApi.me(),
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
   })
   const userEmail = currentUser?.email
 
-  // Fetch ideas
-  const { data: ideas = [], isLoading, refetch } = useQuery({
+  // Fetch ideas - don't wait for user email, it's only needed for vote status
+  const { data: ideas = [], isLoading: isIdeasLoading, refetch } = useQuery({
     queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
@@ -681,8 +681,10 @@ export function IdeaBacklog() {
       include_archived: includeArchived,
       user_email: userEmail || undefined,
     }),
-    enabled: !!userEmail, // Wait for user email before fetching
   })
+
+  // Combined loading state
+  const isLoading = isUserLoading || isIdeasLoading
 
   // Create mutation
   const createMutation = useMutation({
