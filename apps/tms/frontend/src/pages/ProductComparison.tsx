@@ -46,6 +46,7 @@ interface Feature {
   descartes: FeatureStatus
   dat: FeatureStatus
   expertly: FeatureStatus
+  competitorAdvantages?: string
   notes?: {
     mcleod?: string
     trimble?: string
@@ -131,19 +132,19 @@ const categories: Category[] = [
     name: 'Quote Management',
     icon: FileText,
     features: [
-      { id: 'manual-quote', name: 'Manual quote creation', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'email-quote', name: 'Email-to-quote extraction', description: 'Parse incoming emails to auto-fill quote fields', mcleod: false, trimble: false, mercurygate: 'partial', descartes: false, dat: false, expertly: true },
-      { id: 'ai-extraction', name: 'AI-powered field extraction with evidence', description: 'AI extracts fields and shows source text as proof', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: true },
-      { id: 'quote-templates', name: 'Quote templates', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'multi-stop-quote', name: 'Multi-stop quote support', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: true },
-      { id: 'quote-expiration', name: 'Quote expiration tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'quote-versioning', name: 'Quote versioning/revisions', mcleod: true, trimble: true, mercurygate: true, descartes: 'partial', dat: false, expertly: 'planned' },
-      { id: 'customer-pricing', name: 'Customer-specific pricing rules', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: 'planned' },
-      { id: 'margin-calc', name: 'Margin calculation & display', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'quote-pdf', name: 'Quote PDF generation', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'email-quote-direct', name: 'Email quote directly from system', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'quote-approval', name: 'Quote approval workflows', mcleod: 'addon', trimble: true, mercurygate: true, descartes: false, dat: false, expertly: 'planned' },
-      { id: 'quote-to-shipment', name: 'Quote-to-shipment conversion', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
+      { id: 'manual-quote', name: 'Manual quote creation', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod has 35+ years of quote workflow refinement with extensive keyboard shortcuts. Trimble offers deep ERP integration for instant cost lookups.' },
+      { id: 'email-quote', name: 'Email-to-quote extraction', description: 'Parse incoming emails to auto-fill quote fields', mcleod: false, trimble: false, mercurygate: 'partial', descartes: false, dat: false, expertly: true, competitorAdvantages: 'MercuryGate has basic rules-based extraction. Our AI approach is more flexible but could improve reliability.' },
+      { id: 'ai-extraction', name: 'AI-powered field extraction with evidence', description: 'AI extracts fields and shows source text as proof', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: true, competitorAdvantages: 'This is our key differentiator - no competitor offers evidence-based AI extraction. Continue investing here.' },
+      { id: 'quote-templates', name: 'Quote templates', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod has sophisticated template inheritance and conditional fields. MercuryGate templates support dynamic pricing rules.' },
+      { id: 'multi-stop-quote', name: 'Multi-stop quote support', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: true, competitorAdvantages: 'Trimble and McLeod support unlimited stops with individual pricing per leg. MercuryGate has visual drag-drop stop reordering.' },
+      { id: 'quote-expiration', name: 'Quote expiration tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod offers automatic re-quote suggestions when quotes expire. MercuryGate has batch expiration management.' },
+      { id: 'quote-versioning', name: 'Quote versioning/revisions', mcleod: true, trimble: true, mercurygate: true, descartes: 'partial', dat: false, expertly: 'planned', competitorAdvantages: 'McLeod keeps complete audit trail of all quote changes with user attribution. Trimble allows side-by-side version comparison. HIGH PRIORITY for enterprise.' },
+      { id: 'customer-pricing', name: 'Customer-specific pricing rules', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: 'planned', competitorAdvantages: 'McLeod has extremely sophisticated pricing engines with lane-based, volume-based, and contract rate hierarchies. MercuryGate supports dynamic market-based pricing. KEY enterprise requirement.' },
+      { id: 'margin-calc', name: 'Margin calculation & display', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod shows real-time margin calculations with historical comparison. Trimble integrates fuel cost projections.' },
+      { id: 'quote-pdf', name: 'Quote PDF generation', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'All competitors offer customizable PDF templates with company branding. McLeod has dozens of pre-built templates.' },
+      { id: 'email-quote-direct', name: 'Email quote directly from system', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'MercuryGate tracks email opens and quote views. McLeod integrates with Outlook. Consider adding email tracking.' },
+      { id: 'quote-approval', name: 'Quote approval workflows', mcleod: 'addon', trimble: true, mercurygate: true, descartes: false, dat: false, expertly: 'planned', competitorAdvantages: 'Trimble has multi-level approval hierarchies with automatic escalation. MercuryGate offers threshold-based approval rules. Essential for larger brokerages.' },
+      { id: 'quote-to-shipment', name: 'Quote-to-shipment conversion', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod maintains full traceability from quote to final invoice. MercuryGate supports partial quote conversion.' },
     ],
   },
   {
@@ -185,18 +186,18 @@ const categories: Category[] = [
     name: 'Carrier Management',
     icon: Truck,
     features: [
-      { id: 'carrier-db', name: 'Carrier database', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'mc-dot-tracking', name: 'MC/DOT number tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'insurance-cert', name: 'Insurance certificate tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'insurance-alerts', name: 'Insurance expiration alerts', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'carrier-scoring', name: 'Carrier scoring/rating', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'lane-history', name: 'Lane history by carrier', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'ontime-tracking', name: 'On-time percentage tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'carrier-onboarding', name: 'Carrier onboarding workflow', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: 'partial' },
-      { id: 'compliance-dashboard', name: 'Carrier compliance dashboard', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: true },
-      { id: 'preferred-carriers', name: 'Preferred carrier lists', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'carrier-blacklist', name: 'Carrier blacklisting', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'capacity-tracking', name: 'Carrier capacity tracking', mcleod: 'partial', trimble: true, mercurygate: true, descartes: 'partial', dat: true, expertly: 'planned' },
+      { id: 'carrier-db', name: 'Carrier database', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod has 35+ years of carrier data. DAT has the largest database from load board usage. Consider FMCSA pre-population.' },
+      { id: 'mc-dot-tracking', name: 'MC/DOT number tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'All competitors auto-pull FMCSA data. Trimble has real-time authority monitoring. We do this well.' },
+      { id: 'insurance-cert', name: 'Insurance certificate tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod integrates with Rmis, MyCarrierPackets for automated cert collection. Trimble offers OCR certificate parsing.' },
+      { id: 'insurance-alerts', name: 'Insurance expiration alerts', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'Trimble has configurable alert windows (30/60/90 days). McLeod auto-suspends carriers on expiration.' },
+      { id: 'carrier-scoring', name: 'Carrier scoring/rating', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'DAT has CarrierWatch with predictive failure scoring. MercuryGate uses ML for performance prediction. Add predictive analytics.' },
+      { id: 'lane-history', name: 'Lane history by carrier', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod shows profitability by lane/carrier combination. Trimble offers lane-based carrier recommendations.' },
+      { id: 'ontime-tracking', name: 'On-time percentage tracking', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'DAT has industry benchmark comparisons. MercuryGate tracks by pickup AND delivery separately.' },
+      { id: 'carrier-onboarding', name: 'Carrier onboarding workflow', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: 'partial', competitorAdvantages: 'MercuryGate has carrier self-service portal with document upload. McLeod integrates with Highway, Rmis. HIGH PRIORITY - reduces manual work significantly.' },
+      { id: 'compliance-dashboard', name: 'Carrier compliance dashboard', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: 'partial', expertly: true, competitorAdvantages: 'Trimble has industry-leading compliance dashboards with real-time authority/insurance status.' },
+      { id: 'preferred-carriers', name: 'Preferred carrier lists', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'MercuryGate supports lane-specific preferred carriers. McLeod has customer-carrier preference mapping.' },
+      { id: 'carrier-blacklist', name: 'Carrier blacklisting', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'McLeod blocks blacklisted carriers at tender creation. Trimble shares blacklists across divisions.' },
+      { id: 'capacity-tracking', name: 'Carrier capacity tracking', mcleod: 'partial', trimble: true, mercurygate: true, descartes: 'partial', dat: true, expertly: 'planned', competitorAdvantages: 'MercuryGate integrates with carrier capacity APIs in real-time. DAT shows available trucks from load board data. HIGH VALUE for spot market.' },
     ],
   },
   {
@@ -236,19 +237,19 @@ const categories: Category[] = [
     name: 'EDI & Integrations',
     icon: Network,
     features: [
-      { id: 'edi-204', name: 'EDI 204 (Load Tender)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned' },
-      { id: 'edi-990', name: 'EDI 990 (Tender Response)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned' },
-      { id: 'edi-214', name: 'EDI 214 (Status Update)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned' },
-      { id: 'edi-210', name: 'EDI 210 (Invoice)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned' },
-      { id: 'api-access', name: 'API access', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true },
-      { id: 'quickbooks', name: 'QuickBooks integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: true, dat: 'addon', expertly: 'planned' },
-      { id: 'sage', name: 'Sage integration', mcleod: 'addon', trimble: true, mercurygate: true, descartes: 'addon', dat: false, expertly: false },
-      { id: 'netsuite', name: 'NetSuite integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: false },
-      { id: 'salesforce', name: 'Salesforce CRM integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned' },
-      { id: 'macropoint', name: 'MacroPoint/FourKites integration', mcleod: 'addon', trimble: true, mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned' },
-      { id: 'dat-loadboard', name: 'DAT load board integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: true, expertly: 'planned' },
-      { id: 'truckstop', name: 'Truckstop load board integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned' },
-      { id: 'trucker-tools', name: 'Trucker Tools integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned' },
+      { id: 'edi-204', name: 'EDI 204 (Load Tender)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned', competitorAdvantages: 'McLeod and Trimble have decades of EDI expertise with 95%+ trading partner coverage. CRITICAL for enterprise customers - top priority.' },
+      { id: 'edi-990', name: 'EDI 990 (Tender Response)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned', competitorAdvantages: 'Automatic response handling in McLeod/Trimble. Part of core EDI requirement.' },
+      { id: 'edi-214', name: 'EDI 214 (Status Update)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned', competitorAdvantages: 'Real-time status updates required by major shippers like Walmart, Target. Enterprise blocker.' },
+      { id: 'edi-210', name: 'EDI 210 (Invoice)', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: false, expertly: 'planned', competitorAdvantages: 'Electronic invoicing reduces DSO by 5-10 days. Major customer requirement.' },
+      { id: 'api-access', name: 'API access', mcleod: true, trimble: true, mercurygate: true, descartes: true, dat: true, expertly: true, competitorAdvantages: 'MercuryGate has most extensive REST API documentation. We should publish comprehensive API docs.' },
+      { id: 'quickbooks', name: 'QuickBooks integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: true, dat: 'addon', expertly: 'planned', competitorAdvantages: 'Descartes Aljex has native QuickBooks sync. Popular with smaller brokers - PRIORITY for SMB market.' },
+      { id: 'sage', name: 'Sage integration', mcleod: 'addon', trimble: true, mercurygate: true, descartes: 'addon', dat: false, expertly: false, competitorAdvantages: 'Trimble has certified Sage integration. Less common requirement than QuickBooks.' },
+      { id: 'netsuite', name: 'NetSuite integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: false, competitorAdvantages: 'MercuryGate offers pre-built NetSuite connector. Enterprise accounting requirement.' },
+      { id: 'salesforce', name: 'Salesforce CRM integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned', competitorAdvantages: 'MercuryGate has bi-directional Salesforce sync. Growing requirement for sales-driven brokers.' },
+      { id: 'macropoint', name: 'MacroPoint/FourKites integration', mcleod: 'addon', trimble: true, mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned', competitorAdvantages: 'Trimble has native MacroPoint integration. Essential for real-time visibility requirements.' },
+      { id: 'dat-loadboard', name: 'DAT load board integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: true, expertly: 'planned', competitorAdvantages: 'DAT has seamless native integration obviously. MercuryGate posts loads directly. HIGH VALUE for spot market.' },
+      { id: 'truckstop', name: 'Truckstop load board integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned', competitorAdvantages: 'MercuryGate supports multiple load boards. Important for capacity finding.' },
+      { id: 'trucker-tools', name: 'Trucker Tools integration', mcleod: 'addon', trimble: 'addon', mercurygate: true, descartes: 'addon', dat: false, expertly: 'planned', competitorAdvantages: 'MercuryGate has Trucker Tools tracking built-in. Good for smaller carriers without ELD.' },
     ],
   },
   {
@@ -351,15 +352,15 @@ const categories: Category[] = [
     name: 'AI & Automation',
     icon: Sparkles,
     features: [
-      { id: 'ai-email-parsing', name: 'AI email parsing', mcleod: false, trimble: false, mercurygate: 'partial', descartes: false, dat: false, expertly: true },
-      { id: 'ai-carrier-suggestions', name: 'AI carrier suggestions', mcleod: false, trimble: false, mercurygate: 'partial', descartes: false, dat: 'partial', expertly: true },
-      { id: 'ai-communications', name: 'AI-drafted communications', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: true },
-      { id: 'predictive-analytics', name: 'Predictive analytics', mcleod: false, trimble: 'partial', mercurygate: 'partial', descartes: false, dat: 'partial', expertly: 'planned' },
-      { id: 'ml-optimization', name: 'Machine learning optimization', mcleod: false, trimble: 'partial', mercurygate: 'partial', descartes: false, dat: false, expertly: 'planned' },
-      { id: 'nlp', name: 'Natural language processing', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: true },
-      { id: 'chatbot', name: 'Chatbot/virtual assistant', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: 'planned' },
-      { id: 'auto-assign', name: 'Auto-assign loads', mcleod: 'partial', trimble: 'partial', mercurygate: true, descartes: 'partial', dat: false, expertly: 'planned' },
-      { id: 'smart-exception', name: 'Smart exception detection', mcleod: 'partial', trimble: 'partial', mercurygate: true, descartes: 'partial', dat: false, expertly: true },
+      { id: 'ai-email-parsing', name: 'AI email parsing', mcleod: false, trimble: false, mercurygate: 'partial', descartes: false, dat: false, expertly: true, competitorAdvantages: 'MercuryGate has basic rules-based parsing. Our LLM-based approach is more flexible and accurate. MAINTAIN LEADERSHIP.' },
+      { id: 'ai-carrier-suggestions', name: 'AI carrier suggestions', mcleod: false, trimble: false, mercurygate: 'partial', descartes: false, dat: 'partial', expertly: true, competitorAdvantages: 'DAT suggests carriers based on load board history. MercuryGate uses historical data. Ours uses lane history + real-time factors.' },
+      { id: 'ai-communications', name: 'AI-drafted communications', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: true, competitorAdvantages: 'NO competitor offers this. Unique differentiator - continue developing.' },
+      { id: 'predictive-analytics', name: 'Predictive analytics', mcleod: false, trimble: 'partial', mercurygate: 'partial', descartes: false, dat: 'partial', expertly: 'planned', competitorAdvantages: 'Trimble predicts delivery times. MercuryGate forecasts capacity constraints. DAT predicts rate trends. Opportunity to leapfrog.' },
+      { id: 'ml-optimization', name: 'Machine learning optimization', mcleod: false, trimble: 'partial', mercurygate: 'partial', descartes: false, dat: false, expertly: 'planned', competitorAdvantages: 'Trimble uses ML for route optimization. MercuryGate optimizes carrier selection. Advanced use cases.' },
+      { id: 'nlp', name: 'Natural language processing', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: true, competitorAdvantages: 'NO competitor uses NLP. Our AI understands context and intent from emails. Huge advantage.' },
+      { id: 'chatbot', name: 'Chatbot/virtual assistant', mcleod: false, trimble: false, mercurygate: false, descartes: false, dat: false, expertly: 'planned', competitorAdvantages: 'No competitor has an AI assistant. Opportunity to create industry-first conversational TMS interface.' },
+      { id: 'auto-assign', name: 'Auto-assign loads', mcleod: 'partial', trimble: 'partial', mercurygate: true, descartes: 'partial', dat: false, expertly: 'planned', competitorAdvantages: 'MercuryGate has sophisticated auto-assignment based on carrier preferences, capacity, and cost. Rules-based but effective.' },
+      { id: 'smart-exception', name: 'Smart exception detection', mcleod: 'partial', trimble: 'partial', mercurygate: true, descartes: 'partial', dat: false, expertly: true, competitorAdvantages: 'MercuryGate flags at-risk shipments proactively. We do this well with AI-enhanced detection.' },
     ],
   },
   {
@@ -465,6 +466,7 @@ const pricingData = [
 export default function ProductComparison() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
   const [showBackToTop, setShowBackToTop] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -593,6 +595,18 @@ export default function ProductComparison() {
               <StatusIcon status="planned" />
               <span className="text-sm text-gray-600">Planned (Expertly)</span>
             </div>
+            <div className="ml-6 pl-6 border-l border-gray-300">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showNotes}
+                  onChange={(e) => setShowNotes(e.target.checked)}
+                  className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
+                  aria-label="Show Notes"
+                />
+                <span className="text-sm font-medium text-gray-700">Show Notes</span>
+              </label>
+            </div>
           </div>
         </div>
       </div>
@@ -638,7 +652,7 @@ export default function ProductComparison() {
               </div>
 
               <div className="overflow-x-auto rounded-xl border border-gray-200">
-                <table className="w-full min-w-[900px]">
+                <table className={`w-full ${showNotes ? 'min-w-[1200px]' : 'min-w-[900px]'}`}>
                   <thead>
                     <tr className="bg-gray-50">
                       <th className="text-left py-4 px-4 font-semibold text-gray-900 w-64">Feature</th>
@@ -648,6 +662,9 @@ export default function ProductComparison() {
                       <th className="text-center py-4 px-3 font-semibold text-gray-700 w-24">Aljex</th>
                       <th className="text-center py-4 px-3 font-semibold text-gray-700 w-24">DAT</th>
                       <th className="text-center py-4 px-3 font-bold text-emerald-700 bg-emerald-50 w-24">Expertly</th>
+                      {showNotes && (
+                        <th className="text-left py-4 px-4 font-semibold text-gray-900 min-w-[300px]">Notes</th>
+                      )}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -689,6 +706,11 @@ export default function ProductComparison() {
                             <StatusIcon status={feature.expertly} />
                           </div>
                         </td>
+                        {showNotes && (
+                          <td className="py-3 px-4 text-sm text-gray-600">
+                            {feature.competitorAdvantages || '-'}
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
