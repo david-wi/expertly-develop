@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Play, Pause, X, Clock, Plus, Check, ChevronDown, ChevronUp, GripHorizontal, MessageSquarePlus } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Play, Pause, X, Clock, Plus, Check, ChevronDown, ChevronUp, GripHorizontal, MessageSquarePlus, ExternalLink, ArrowDownToLine } from 'lucide-react'
 import {
   useTimerStore,
   formatTime,
@@ -19,6 +19,7 @@ interface FloatingTimerWidgetProps {
 
 export default function FloatingTimerWidget({ className = '' }: FloatingTimerWidgetProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { fetchTasks } = useAppStore()
   const {
     timers,
@@ -31,6 +32,8 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     acknowledgeTimer,
     stopTimer,
     markTimeLogged,
+    isPoppedOut,
+    setPoppedOut,
   } = useTimerStore()
 
   const [isExpanded, setIsExpanded] = useState(true)
@@ -44,6 +47,7 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   const [isDragging, setIsDragging] = useState(false)
   const dragStartRef = useRef({ x: 0, y: 0, posX: 0, posY: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
+  const popupWindowRef = useRef<Window | null>(null)
 
   // Get the active (non-acknowledged) timer
   const activeTimer = timers.find((t) => !t.acknowledged)
@@ -68,6 +72,20 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
       }
     })
   }, [timers])
+
+  // Listen for popup window closing
+  useEffect(() => {
+    if (!isPoppedOut) return
+
+    const checkPopupClosed = setInterval(() => {
+      if (popupWindowRef.current && popupWindowRef.current.closed) {
+        setPoppedOut(false)
+        popupWindowRef.current = null
+      }
+    }, 500)
+
+    return () => clearInterval(checkPopupClosed)
+  }, [isPoppedOut, setPoppedOut])
 
   // Log time worked to the task
   const logTimeToTask = async (timer: Timer): Promise<void> => {
@@ -153,6 +171,34 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     }
   }
 
+  // Handle popping out the timer to a separate window
+  const handlePopOut = () => {
+    const width = 380
+    const height = 500
+    const left = window.screen.width - width - 50
+    const top = 50
+
+    const popup = window.open(
+      '/timer-popup',
+      'timer-popup',
+      `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no,toolbar=no,menubar=no,location=no,status=no`
+    )
+
+    if (popup) {
+      popupWindowRef.current = popup
+      setPoppedOut(true)
+    }
+  }
+
+  // Handle popping timer back into main window
+  const handlePopIn = () => {
+    if (popupWindowRef.current && !popupWindowRef.current.closed) {
+      popupWindowRef.current.close()
+    }
+    popupWindowRef.current = null
+    setPoppedOut(false)
+  }
+
   // Drag handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -201,7 +247,30 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     }
   }, [isDragging, handleMouseMove, handleMouseUp])
 
-  if (!activeTimer) return null
+  // Don't render if no active timer or on the timer-popup page
+  if (!activeTimer || location.pathname === '/timer-popup') return null
+
+  // Show minimized indicator when popped out
+  if (isPoppedOut) {
+    return (
+      <div
+        className={`fixed z-50 ${className}`}
+        style={{
+          right: `${position.x}px`,
+          top: `${position.y}px`,
+        }}
+      >
+        <button
+          onClick={handlePopIn}
+          className="flex items-center gap-2 px-3 py-2 bg-primary-500 text-white rounded-lg shadow-lg hover:bg-primary-600 transition-colors"
+          title="Pop timer back in"
+        >
+          <ArrowDownToLine className="w-4 h-4" />
+          <span className="text-sm font-medium">{formatTime(activeTimer.remaining)}</span>
+        </button>
+      </div>
+    )
+  }
 
   const progress = activeTimer.duration > 0
     ? ((activeTimer.duration - activeTimer.remaining) / activeTimer.duration) * 100
@@ -256,22 +325,34 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
             onClick={() => setIsExpanded(!isExpanded)}
           >
             <Clock className="w-5 h-5" />
-            <span className="font-medium truncate max-w-[200px]">
+            <span className="font-medium truncate max-w-[160px]">
               {activeTimer.isComplete ? 'Time\'s Up!' : activeTimer.label}
             </span>
           </div>
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={() => setIsExpanded(!isExpanded)}
-          >
-            <span className="text-white font-mono text-lg font-bold">
+          <div className="flex items-center gap-1">
+            <span
+              className="text-white font-mono text-lg font-bold cursor-pointer"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
               {formatTime(activeTimer.remaining)}
             </span>
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-white/80" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-white/80" />
-            )}
+            <button
+              onClick={handlePopOut}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+              title="Pop out to separate window"
+            >
+              <ExternalLink className="w-4 h-4 text-white/80" />
+            </button>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1 hover:bg-white/20 rounded transition-colors"
+            >
+              {isExpanded ? (
+                <ChevronUp className="w-5 h-5 text-white/80" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-white/80" />
+              )}
+            </button>
           </div>
         </div>
 
