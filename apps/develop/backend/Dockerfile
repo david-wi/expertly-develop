@@ -7,14 +7,18 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy identity-client package first
+# Copy shared packages
 COPY packages/identity-client /tmp/identity-client
+COPY packages/artifacts /tmp/artifacts
+COPY packages/artifacts-mongo /tmp/artifacts-mongo
 
 # Copy requirements first for better caching
 COPY apps/develop/backend/requirements.txt .
 RUN pip install --no-cache-dir /tmp/identity-client && \
+    pip install --no-cache-dir /tmp/artifacts && \
+    pip install --no-cache-dir /tmp/artifacts-mongo && \
     pip install --no-cache-dir -r requirements.txt && \
-    rm -rf /tmp/identity-client
+    rm -rf /tmp/identity-client /tmp/artifacts /tmp/artifacts-mongo
 
 # Copy application code
 COPY apps/develop/backend/app/ app/

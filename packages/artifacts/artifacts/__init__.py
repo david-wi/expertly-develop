@@ -15,7 +15,7 @@ from artifacts.schemas import (
     ArtifactWithVersions,
 )
 from artifacts.router import create_artifacts_router, ArtifactRouterConfig
-from artifacts.service import ArtifactConversionService
+from artifacts.service import ArtifactConversionService, reflow_pdf_text
 from artifacts.storage import ArtifactStorage
 
 __all__ = [
@@ -36,6 +36,7 @@ __all__ = [
     # Services
     "ArtifactConversionService",
     "ArtifactStorage",
+    "reflow_pdf_text",
 ]
 
 __version__ = "0.1.0"
