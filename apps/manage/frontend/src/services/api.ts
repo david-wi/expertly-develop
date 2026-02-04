@@ -1709,6 +1709,7 @@ export interface UpdateExpertiseRequest {
 
 // Dashboard Note types
 export interface DashboardNote {
+  _id?: string
   id: string
   organization_id: string
   user_id: string
