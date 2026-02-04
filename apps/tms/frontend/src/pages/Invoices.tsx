@@ -119,7 +119,7 @@ export default function Invoices() {
             onClick={() => setStatusFilter(f.value)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
               statusFilter === f.value
-                ? 'bg-indigo-100 text-indigo-700'
+                ? 'bg-emerald-100 text-emerald-700'
                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
             }`}
           >
@@ -179,7 +179,7 @@ export default function Invoices() {
                       {invoice.status === 'draft' && (
                         <button
                           onClick={() => handleSend(invoice)}
-                          className="flex items-center gap-1 px-2 py-1 text-sm text-indigo-600 hover:bg-indigo-50 rounded"
+                          className="flex items-center gap-1 px-2 py-1 text-sm text-emerald-600 hover:bg-emerald-50 rounded"
                         >
                           <Send className="h-4 w-4" />
                           Send
