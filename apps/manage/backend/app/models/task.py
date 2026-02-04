@@ -103,6 +103,9 @@ class Task(MongoModel):
     # Initial value: YYYYMMDD.HHMMSS0001 (2 days after creation)
     sequence: Optional[float] = None
 
+    # Estimated duration in seconds (e.g., 600 = 10 minutes)
+    estimated_duration: Optional[int] = None
+
 
 class TaskCreate(BaseModel):
     """Schema for creating a task."""
@@ -126,6 +129,8 @@ class TaskCreate(BaseModel):
     schedule_timezone: Optional[str] = None
     # Source tracking
     source_url: Optional[str] = None
+    # Estimated duration in seconds
+    estimated_duration: Optional[int] = None
 
 
 class TaskUpdate(BaseModel):
@@ -151,6 +156,8 @@ class TaskUpdate(BaseModel):
     sequence: Optional[float] = None
     # Source tracking
     source_url: Optional[str] = None
+    # Estimated duration in seconds
+    estimated_duration: Optional[int] = None
 
 
 class TaskCheckout(BaseModel):
@@ -213,6 +220,9 @@ class RecurringTask(MongoModel):
     input_data: Optional[dict[str, Any]] = None
     max_retries: int = 3
 
+    # Estimated duration in seconds
+    estimated_duration: Optional[int] = None
+
 
 class RecurringTaskCreate(BaseModel):
     """Schema for creating a recurring task."""
@@ -231,6 +241,7 @@ class RecurringTaskCreate(BaseModel):
     timezone: str = "UTC"
     input_data: Optional[dict[str, Any]] = None
     max_retries: int = 3
+    estimated_duration: Optional[int] = None
 
 
 class RecurringTaskUpdate(BaseModel):
@@ -250,3 +261,4 @@ class RecurringTaskUpdate(BaseModel):
     is_active: Optional[bool] = None
     input_data: Optional[dict[str, Any]] = None
     max_retries: Optional[int] = None
+    estimated_duration: Optional[int] = None

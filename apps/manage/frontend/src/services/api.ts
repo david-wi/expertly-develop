@@ -804,6 +804,8 @@ export interface Task {
   sequence?: number
   // Source tracking
   source_url?: string
+  // Estimated duration in seconds
+  estimated_duration?: number
   created_at: string
   updated_at: string
 }
@@ -830,6 +832,8 @@ export interface CreateTaskRequest {
   schedule_timezone?: string
   // Source tracking
   source_url?: string
+  // Estimated duration in seconds
+  estimated_duration?: number
 }
 
 export interface UpdateTaskRequest {
@@ -855,6 +859,8 @@ export interface UpdateTaskRequest {
   schedule_timezone?: string | null
   // Manual ordering
   sequence?: number
+  // Estimated duration in seconds
+  estimated_duration?: number | null
 }
 
 export interface TaskReorderItem {
@@ -969,6 +975,7 @@ export interface CreateRecurringTaskRequest {
   timezone?: string
   input_data?: Record<string, unknown>
   max_retries?: number
+  estimated_duration?: number
 }
 
 export interface UpdateRecurringTaskRequest {
@@ -987,6 +994,7 @@ export interface UpdateRecurringTaskRequest {
   is_active?: boolean
   input_data?: Record<string, unknown>
   max_retries?: number
+  estimated_duration?: number | null
 }
 
 export type ScopeType = 'user' | 'team' | 'organization'
