@@ -11,6 +11,7 @@ import Carriers from './pages/Carriers'
 import Invoices from './pages/Invoices'
 import Settings from './pages/Settings'
 import MarginDashboard from './pages/MarginDashboard'
+import CarrierPerformance from './pages/CarrierPerformance'
 import LandingPage from './pages/LandingPage'
 import ProductComparison from './pages/ProductComparison'
 import Layout from './components/layout/Layout'
@@ -32,6 +33,7 @@ function App() {
           <Route path="carriers" element={<Carriers />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="margins" element={<MarginDashboard />} />
+          <Route path="carrier-performance" element={<CarrierPerformance />} />
           <Route path="settings" element={<Settings />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>

@@ -11,6 +11,7 @@ import type {
   Tender,
   TrackingEvent,
   MarginDashboard,
+  CarrierPerformance,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -191,4 +192,7 @@ export const api = {
   // Analytics
   getMarginDashboard: (days: number = 30) =>
     request<MarginDashboard>(`/api/v1/analytics/margins?days=${days}`),
+
+  getCarrierPerformance: (days: number = 30) =>
+    request<CarrierPerformance>(`/api/v1/analytics/carrier-performance?days=${days}`),
 }

@@ -10,6 +10,7 @@ import {
   Building2,
   Receipt,
   BarChart3,
+  Trophy,
   Settings,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
@@ -24,7 +25,8 @@ const navigation = [
   { name: 'Customers', href: '/customers', icon: Users, spacerBefore: true },
   { name: 'Carriers', href: '/carriers', icon: Building2 },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
-  { name: 'Margins', href: '/margins', icon: BarChart3 },
+  { name: 'Margins', href: '/margins', icon: BarChart3, spacerBefore: true },
+  { name: 'Carrier Performance', href: '/carrier-performance', icon: Trophy },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
 ]
 
