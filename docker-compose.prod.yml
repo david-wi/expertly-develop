@@ -451,6 +451,57 @@ services:
     restart: unless-stopped
 
   # ===================
+  # EXPERTLY TMS
+  # ===================
+  tms-backend:
+    build:
+      context: .
+      dockerfile: ./apps/tms/backend/Dockerfile
+    environment:
+      - MONGODB_URL=mongodb://expertly-shared-mongo:27017
+      - MONGODB_DATABASE=expertly_tms
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    networks:
+      - traefik
+      - default
+      - expertly-shared
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.tms-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.tms-backend${DEPLOY_COLOR:-}.rule=Host(`tms-api.ai.devintensive.com`)"
+      - "traefik.http.routers.tms-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.tms-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tms-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  tms-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/tms/frontend/Dockerfile
+      args:
+        VITE_API_URL: https://tms-api.ai.devintensive.com/api/v1
+    depends_on:
+      - tms-backend
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.tms-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.tms-frontend${DEPLOY_COLOR:-}.rule=Host(`tms.ai.devintensive.com`)"
+      - "traefik.http.routers.tms-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.tms-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.tms-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
   # EXPERTLY VIBECODE
   # ===================
   vibecode:
