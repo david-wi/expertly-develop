@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@expertly/ui": "*",
+    "@tanstack/react-query": "^5.64.2",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.563.0",
     "react": "^19.0.0",
