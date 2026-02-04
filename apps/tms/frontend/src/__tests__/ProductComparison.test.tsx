@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import ProductComparison from '../pages/ProductComparison'
 
@@ -15,6 +15,39 @@ describe('ProductComparison', () => {
   it('renders the main heading', () => {
     renderComponent()
     expect(screen.getByText('TMS Comparison: How We Stack Up')).toBeInTheDocument()
+  })
+
+  it('has Show Notes toggle checkbox', () => {
+    renderComponent()
+    const checkbox = screen.getByRole('checkbox', { name: /show notes/i })
+    expect(checkbox).toBeInTheDocument()
+    expect(checkbox).not.toBeChecked()
+  })
+
+  it('shows Notes column when toggle is enabled', () => {
+    renderComponent()
+    const checkbox = screen.getByRole('checkbox', { name: /show notes/i })
+
+    // Notes column header should not be visible initially
+    expect(screen.queryAllByText('Notes').length).toBeLessThanOrEqual(1) // Only pricing table has Notes
+
+    // Enable notes
+    fireEvent.click(checkbox)
+    expect(checkbox).toBeChecked()
+
+    // Notes column headers should now appear (one per category table)
+    expect(screen.getAllByText('Notes').length).toBeGreaterThan(1)
+  })
+
+  it('displays competitor advantage notes when toggle is enabled', () => {
+    renderComponent()
+    const checkbox = screen.getByRole('checkbox', { name: /show notes/i })
+
+    // Enable notes
+    fireEvent.click(checkbox)
+
+    // Check that some competitor advantage notes appear (multiple may match)
+    expect(screen.getAllByText(/McLeod has 35\+ years/i).length).toBeGreaterThan(0)
   })
 
   it('displays the subtitle with feature count', () => {
