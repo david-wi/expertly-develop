@@ -74,6 +74,9 @@ class IdeaResponse(BaseModel):
     created_by_email: Optional[str]
     created_at: datetime
     updated_at: datetime
+    vote_count: int = 0
+    user_voted: bool = False
+    comment_count: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -83,6 +86,55 @@ class IdeaListResponse(BaseModel):
 
     items: List[IdeaResponse]
     total: int
+
+
+class IdeaBulkUpdateItem(BaseModel):
+    """Schema for bulk update operations."""
+
+    status: Optional[IdeaStatus] = None
+    priority: Optional[IdeaPriority] = None
+    tags_to_add: Optional[List[str]] = None
+
+
+class IdeaBulkUpdate(BaseModel):
+    """Schema for bulk updating multiple ideas."""
+
+    ids: List[UUID] = Field(..., min_length=1)
+    updates: IdeaBulkUpdateItem
+
+
+class IdeaBulkUpdateResponse(BaseModel):
+    """Schema for bulk update response."""
+
+    updated_count: int
+    updated_ids: List[UUID]
+
+
+class VoteResponse(BaseModel):
+    """Schema for vote toggle response."""
+
+    idea_id: UUID
+    vote_count: int
+    user_voted: bool
+
+
+class CommentCreate(BaseModel):
+    """Schema for creating a comment."""
+
+    content: str = Field(..., min_length=1, max_length=5000)
+
+
+class CommentResponse(BaseModel):
+    """Schema for comment response."""
+
+    id: UUID
+    idea_id: UUID
+    author_email: str
+    content: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
 
 
 # Aliases for consistency with other schemas

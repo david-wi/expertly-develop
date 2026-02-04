@@ -8,7 +8,6 @@ import DownloadBanner from './components/DownloadBanner';
 import LandingPage from './pages/LandingPage';
 import DownloadPage from './pages/DownloadPage';
 import ChangelogPage from './pages/Changelog';
-import { ExternalLink } from 'lucide-react';
 
 function MainApp() {
   const { connected, serverConfig } = useDashboardStore();
@@ -24,15 +23,6 @@ function MainApp() {
         </main>
       </div>
       <ConnectionStatus connected={connected} />
-
-      {/* Fixed bottom-right link to marketing page */}
-      <a
-        href="/landing"
-        className="fixed bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 bg-brand-600 text-white text-sm rounded-lg hover:bg-brand-700 transition-colors shadow-lg"
-      >
-        <ExternalLink className="w-4 h-4" />
-        View marketing page
-      </a>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   FolderKanban,
@@ -76,14 +76,6 @@ export default function Layout() {
       <MainContent>
         <Outlet />
       </MainContent>
-
-      {/* Subtle marketing page link - fixed to bottom-right of page */}
-      <Link
-        to="/landing"
-        className="fixed bottom-4 right-4 text-xs text-theme-text-muted hover:text-primary-600 transition-colors"
-      >
-        View marketing page
-      </Link>
     </div>
   )
 }

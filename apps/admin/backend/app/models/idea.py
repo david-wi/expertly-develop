@@ -3,7 +3,8 @@
 import uuid
 from enum import Enum
 
-from sqlalchemy import Column, String, Text, Index
+from sqlalchemy import Column, String, Text, Index, Integer
+from sqlalchemy.orm import relationship
 
 from app.models.base import Base, TimestampMixin, UUID, JSONB
 
@@ -46,6 +47,13 @@ class Idea(Base, TimestampMixin):
 
     # Creator tracking
     created_by_email = Column(String(255), nullable=True)
+
+    # Vote count (denormalized for performance)
+    vote_count = Column(Integer, default=0, nullable=False)
+
+    # Relationships
+    votes = relationship("IdeaVote", back_populates="idea", cascade="all, delete-orphan")
+    comments = relationship("IdeaComment", back_populates="idea", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index('ix_ideas_status', 'status'),

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect } from 'react'
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, Palette, Activity, AlertTriangle, Radio, Bot, Lightbulb } from 'lucide-react'
 import { Sidebar, MainContent, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { usersApi } from '@/services/api'
@@ -94,14 +94,6 @@ export function Layout() {
       <MainContent>
         <Outlet />
       </MainContent>
-
-      {/* Subtle marketing page link - fixed to bottom-right of page */}
-      <Link
-        to="/landing"
-        className="fixed bottom-4 right-4 text-xs text-gray-400 hover:text-primary-600 transition-colors"
-      >
-        View marketing page
-      </Link>
     </div>
   )
 }
