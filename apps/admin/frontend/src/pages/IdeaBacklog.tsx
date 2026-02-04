@@ -264,7 +264,7 @@ function IdeaCard({
               </span>
             </div>
             <h3 className="text-lg font-semibold text-theme-text-primary mb-1">{idea.title}</h3>
-            {idea.description && (
+            {idea.description && !expanded && (
               <p className="text-sm text-theme-text-secondary line-clamp-2">{idea.description}</p>
             )}
             {/* Vote and comment counts in collapsed view */}
@@ -297,6 +297,17 @@ function IdeaCard({
             <span className="text-xs text-theme-text-muted whitespace-nowrap">
               {formatDate(idea.created_at)}
             </span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                onEdit()
+              }}
+              className="p-1.5 text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-elevated rounded-lg transition-colors"
+              aria-label="Edit idea"
+              title="Edit"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
             {expanded ? (
               <ChevronUp className="w-5 h-5 text-theme-text-muted" />
             ) : (
@@ -334,65 +345,52 @@ function IdeaCard({
             )}
           </div>
 
-          <div className="flex justify-between items-center pt-2">
-            <div className="flex gap-2">
-              {idea.status === 'new' && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onUpdateStatus('in_progress')
-                  }}
-                  className="px-3 py-1.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 rounded-lg text-sm font-medium hover:bg-yellow-200 dark:hover:bg-yellow-900/70 transition-colors"
-                >
-                  Start Exploring
-                </button>
-              )}
-              {idea.status === 'in_progress' && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onUpdateStatus('done')
-                  }}
-                  className="px-3 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900/70 transition-colors"
-                >
-                  Mark Implemented
-                </button>
-              )}
-              {idea.status !== 'archived' ? (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onUpdateStatus('archived')
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <Archive className="w-4 h-4" />
-                  Archive
-                </button>
-              ) : (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onUpdateStatus('new')
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-lg text-sm font-medium hover:bg-primary-200 dark:hover:bg-primary-900/70 transition-colors"
-                >
-                  <ArchiveRestore className="w-4 h-4" />
-                  Unarchive
-                </button>
-              )}
-            </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onEdit()
-              }}
-              className="p-2 text-theme-text-secondary hover:bg-theme-bg-elevated rounded-lg transition-colors"
-              aria-label="Edit idea"
-              title="Edit"
-            >
-              <Pencil className="w-4 h-4" />
-            </button>
+          <div className="flex flex-wrap gap-2 pt-2">
+            {idea.status === 'new' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdateStatus('in_progress')
+                }}
+                className="px-3 py-1.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 rounded-lg text-sm font-medium hover:bg-yellow-200 dark:hover:bg-yellow-900/70 transition-colors"
+              >
+                Start Exploring
+              </button>
+            )}
+            {idea.status === 'in_progress' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdateStatus('done')
+                }}
+                className="px-3 py-1.5 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 rounded-lg text-sm font-medium hover:bg-green-200 dark:hover:bg-green-900/70 transition-colors"
+              >
+                Mark Implemented
+              </button>
+            )}
+            {idea.status !== 'archived' ? (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdateStatus('archived')
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Archive className="w-4 h-4" />
+                Archive
+              </button>
+            ) : (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onUpdateStatus('new')
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300 rounded-lg text-sm font-medium hover:bg-primary-200 dark:hover:bg-primary-900/70 transition-colors"
+              >
+                <ArchiveRestore className="w-4 h-4" />
+                Unarchive
+              </button>
+            )}
           </div>
         </div>
       )}
