@@ -91,6 +91,13 @@ const initialFormState: FormState = {
   approver_queue_id: '',
 }
 
+// Format seconds to H:MM display (e.g., 600 -> "0:10" for 10 minutes)
+function formatDuration(seconds: number): string {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  return `${hours}:${minutes.toString().padStart(2, '0')}`
+}
+
 // Parse H:MM string to seconds (e.g., "0:10" -> 600 for 10 minutes)
 function parseDuration(value: string): number | null {
   if (!value.trim()) return null
@@ -419,16 +426,29 @@ export default function CreateAssignmentModal({
                 ))}
               </select>
             </div>
-            <div className="w-24">
+            <div className="w-32">
               <label className="block text-sm font-medium text-gray-700 mb-1">Est. Time</label>
-              <input
-                type="text"
-                value={form.estimated_duration}
-                onChange={(e) => setForm({ ...form, estimated_duration: e.target.value })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 font-mono"
-                placeholder="0:10"
-                title="Estimated duration (H:MM)"
-              />
+              <div className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={form.estimated_duration}
+                  onChange={(e) => setForm({ ...form, estimated_duration: e.target.value })}
+                  className="w-16 border border-gray-300 rounded-md px-2 py-2 font-mono"
+                  placeholder="0:10"
+                  title="Estimated duration (H:MM)"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentSeconds = parseDuration(form.estimated_duration) || 0
+                    setForm({ ...form, estimated_duration: formatDuration(currentSeconds + 600) })
+                  }}
+                  className="px-2 py-2 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                  title="Add 10 minutes"
+                >
+                  +10m
+                </button>
+              </div>
             </div>
           </div>
 
