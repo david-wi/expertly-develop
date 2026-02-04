@@ -374,23 +374,39 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
               </div>
             )}
 
-            {/* Task link and cancel */}
+            {/* Action buttons while timer is running */}
             {!activeTimer.isComplete && (
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                {activeTimer.context?.type === 'task' && (
+              <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                {activeTimer.context?.type === 'task' && activeTimer.context.taskId && (
                   <button
-                    onClick={() => handleGoToTask(activeTimer)}
-                    className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                    onClick={() => handleCompleteTask(activeTimer)}
+                    disabled={completingTaskId === activeTimer.context.taskId}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors disabled:opacity-50 text-sm"
                   >
-                    View task
+                    <Check className="w-4 h-4" />
+                    {completingTaskId === activeTimer.context.taskId
+                      ? 'Completing...'
+                      : 'Mark Complete'}
                   </button>
                 )}
                 <button
                   onClick={() => handleDismiss(activeTimer)}
-                  className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors ml-auto"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors text-sm"
                 >
-                  <X className="w-3 h-3" />
-                  Cancel timer
+                  <X className="w-4 h-4" />
+                  Close
+                </button>
+              </div>
+            )}
+
+            {/* Task link */}
+            {!activeTimer.isComplete && activeTimer.context?.type === 'task' && (
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={() => handleGoToTask(activeTimer)}
+                  className="text-xs text-primary-600 hover:text-primary-700 hover:underline"
+                >
+                  View task
                 </button>
               </div>
             )}
