@@ -11,6 +11,10 @@ export default defineConfig({
       '@expertly/ui': path.resolve(__dirname, './src/test/__mocks__/expertly_ui.ts'),
     },
   },
+  define: {
+    __BUILD_VERSION__: JSON.stringify('test'),
+    __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
+  },
   test: {
     globals: true,
     environment: 'jsdom',

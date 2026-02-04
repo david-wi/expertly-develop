@@ -105,6 +105,7 @@ services:
       dockerfile: ./apps/admin/frontend/Dockerfile
       args:
         VITE_API_URL: https://admin-api.ai.devintensive.com/api
+        BUILD_VERSION: ${GIT_COMMIT:-unknown}
     depends_on:
       - admin-backend
     networks:

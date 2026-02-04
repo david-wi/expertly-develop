@@ -6,6 +6,7 @@ WORKDIR /app
 # Accept build args
 ARG VITE_API_URL
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
+ARG BUILD_VERSION=unknown
 
 # Copy monorepo package files for workspace resolution
 COPY package.json package-lock.json ./
@@ -28,6 +29,7 @@ COPY apps/admin/frontend ./apps/admin/frontend
 # Set environment variables for Vite build
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
+ENV BUILD_VERSION=$BUILD_VERSION
 
 # Build the application
 WORKDIR /app/apps/admin/frontend
