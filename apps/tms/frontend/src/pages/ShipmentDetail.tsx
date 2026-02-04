@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Shipment, Tender, TrackingEvent } from '../types'
 import ShipmentDocuments from '../components/ShipmentDocuments'
+import ShipmentConversation from '../components/ShipmentConversation'
 import {
   ArrowRight,
   Truck,
@@ -42,7 +43,7 @@ export default function ShipmentDetail() {
   const [tenders, setTenders] = useState<Tender[]>([])
   const [trackingEvents, setTrackingEvents] = useState<TrackingEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'tracking' | 'documents'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'tracking' | 'documents' | 'conversation'>('overview')
   const [showAddTracking, setShowAddTracking] = useState(false)
   const [newEvent, setNewEvent] = useState({
     event_type: 'check_call',
@@ -184,6 +185,7 @@ export default function ShipmentDetail() {
             { id: 'overview', label: 'Overview' },
             { id: 'tracking', label: 'Tracking' },
             { id: 'documents', label: 'Documents' },
+            { id: 'conversation', label: 'Conversation' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -433,6 +435,10 @@ export default function ShipmentDetail() {
 
       {activeTab === 'documents' && id && (
         <ShipmentDocuments shipmentId={id} />
+      )}
+
+      {activeTab === 'conversation' && id && (
+        <ShipmentConversation shipmentId={id} />
       )}
     </div>
   )
