@@ -18,6 +18,8 @@
     {"name": "Vibecode", "url": "https://vibecode.ai.devintensive.com", "healthEndpoint": "/health"},
     {"name": "Vibetest", "url": "https://vibetest.ai.devintensive.com", "healthEndpoint": "/"},
     {"name": "Vibetest API", "url": "https://vibetest.ai.devintensive.com", "healthEndpoint": "/api/health"},
+    {"name": "TMS", "url": "https://tms.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "TMS API", "url": "https://tms-api.ai.devintensive.com", "healthEndpoint": "/health"},
     {"name": "Chem", "url": "https://chem.ai.devintensive.com", "healthEndpoint": "/"},
     {"name": "Chem API", "url": "https://chem-api.ai.devintensive.com", "healthEndpoint": "/health"}
   ]

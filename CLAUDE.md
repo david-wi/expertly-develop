@@ -66,6 +66,7 @@ curl -s -o /dev/null -w "today: %{http_code}\n" https://today.ai.devintensive.co
 curl -s -o /dev/null -w "vibetest: %{http_code}\n" https://vibetest.ai.devintensive.com/
 curl -s -o /dev/null -w "vibecode: %{http_code}\n" https://vibecode.ai.devintensive.com/
 curl -s -o /dev/null -w "vibetest: %{http_code}\n" https://vibetest.ai.devintensive.com/
+curl -s -o /dev/null -w "tms: %{http_code}\n" https://tms.ai.devintensive.com/
 curl -s -o /dev/null -w "chem: %{http_code}\n" https://chem.ai.devintensive.com/
 curl -s -o /dev/null -w "demos: %{http_code}\n" https://demos.ai.devintensive.com/
 ```
@@ -83,6 +84,7 @@ curl -s -o /dev/null -w "demos: %{http_code}\n" https://demos.ai.devintensive.co
 | Today | `apps/today` | https://today.ai.devintensive.com | Task/workflow management |
 | Vibetest | `apps/vibetest` | https://vibetest.ai.devintensive.com | Vibe testing platform |
 | Vibecode | `apps/vibecode` | https://vibecode.ai.devintensive.com | Vibe coding platform |
+| TMS | `apps/tms` | https://tms.ai.devintensive.com | AI-powered Transportation Management System |
 
 ## Adding New Apps - CHECKLIST
 
