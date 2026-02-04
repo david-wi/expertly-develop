@@ -44,7 +44,7 @@ export default function Dashboard() {
   return (
     <div className="px-6 py-8 max-w-7xl mx-auto">
       <div className="mb-2">
-        <span className="text-sm text-gray-500">ExpertlyAI</span>
+        <span className="text-sm text-gray-500">Expertly Define</span>
       </div>
       <h1 className="text-4xl font-bold text-gray-900 mb-8">Dashboard</h1>
 
