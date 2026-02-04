@@ -8,6 +8,8 @@ export interface WidgetConfig {
   projectIds?: string[]  // Filter by one or more projects
   playbookId?: string    // Filter by playbook
   widgetTitle?: string   // Custom title for the widget
+  projectId?: string     // Single project (for project next steps widget)
+  noteIds?: string[]     // Dashboard note IDs (for notes widget with tabs)
 }
 
 export interface WidgetProps {
@@ -25,7 +27,7 @@ export interface WidgetDefinition {
   minSize?: { w: number; h: number }
   maxSize?: { w: number; h: number }
   component: React.ComponentType<WidgetProps>
-  requiresConfig?: 'queue' | 'team' | 'user' | 'active-tasks'
+  requiresConfig?: 'queue' | 'team' | 'user' | 'active-tasks' | 'project' | 'notes'
   allowMultiple?: boolean
   hidden?: boolean  // Hide from Add Widget modal but keep for backwards compatibility
 }

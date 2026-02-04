@@ -1,4 +1,4 @@
-import { LayoutDashboard, ListTodo, Inbox, Activity, Users, ListChecks, ClipboardList } from 'lucide-react'
+import { LayoutDashboard, ListTodo, Inbox, Activity, Users, ListChecks, ClipboardList, Footprints, FileText } from 'lucide-react'
 import { WidgetDefinition } from './types'
 import { StatsOverviewWidget } from './StatsOverviewWidget'
 import { MyActiveTasksWidget } from './MyActiveTasksWidget'
@@ -7,6 +7,8 @@ import { MyQueuesWidget } from './MyQueuesWidget'
 import { MonitorsSummaryWidget } from './MonitorsSummaryWidget'
 import { TeamMembersWidget } from './TeamMembersWidget'
 import { SingleQueueWidget } from './SingleQueueWidget'
+import { ProjectNextStepsWidget } from './ProjectNextStepsWidget'
+import { DashboardNotesWidget } from './DashboardNotesWidget'
 
 export const widgetRegistry: Record<string, WidgetDefinition> = {
   'team-members': {
@@ -82,6 +84,30 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
     maxSize: { w: 12, h: 8 },
     component: SingleQueueWidget,
     requiresConfig: 'queue',
+    allowMultiple: true,
+  },
+  'project-next-steps': {
+    id: 'project-next-steps',
+    name: 'Project Next Steps',
+    description: 'Display next steps for a specific project',
+    icon: Footprints,
+    defaultSize: { w: 4, h: 4 },
+    minSize: { w: 3, h: 3 },
+    maxSize: { w: 12, h: 8 },
+    component: ProjectNextStepsWidget,
+    requiresConfig: 'project',
+    allowMultiple: true,
+  },
+  'dashboard-notes': {
+    id: 'dashboard-notes',
+    name: 'Notes',
+    description: 'Personal markdown notes with tabs and version history',
+    icon: FileText,
+    defaultSize: { w: 4, h: 5 },
+    minSize: { w: 3, h: 3 },
+    maxSize: { w: 12, h: 10 },
+    component: DashboardNotesWidget,
+    requiresConfig: 'notes',
     allowMultiple: true,
   },
 }
