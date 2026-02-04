@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { X, Clock, Play } from 'lucide-react'
 import { useTimerStore } from '../stores/timerStore'
 
@@ -33,8 +34,6 @@ export default function StartTimerModal({
   const { startTimer } = useTimerStore()
   const [selectedDuration, setSelectedDuration] = useState(5 * 60) // 5 minutes default
   const [customMinutes, setCustomMinutes] = useState('')
-
-  if (!isOpen) return null
 
   const label = context?.taskTitle || defaultLabel
 
@@ -71,7 +70,9 @@ export default function StartTimerModal({
 
   const effectiveDuration = customMinutes ? parseInt(customMinutes, 10) * 60 : selectedDuration
 
-  return (
+  if (!isOpen) return null
+
+  return createPortal(
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen px-4">
         <div className="fixed inset-0 bg-black bg-opacity-30" onClick={onClose} />
@@ -170,6 +171,7 @@ export default function StartTimerModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
