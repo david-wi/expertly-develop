@@ -155,6 +155,23 @@ export default function Users() {
     })
   }
 
+  const pollAvatarJob = async (jobId: string): Promise<string> => {
+    // Poll every 2 seconds for up to 2 minutes
+    const maxAttempts = 60
+    for (let i = 0; i < maxAttempts; i++) {
+      const status = await api.getAvatarJobStatus(jobId)
+      if (status.status === 'completed' && status.url) {
+        return status.url
+      }
+      if (status.status === 'failed') {
+        throw new Error(status.error || 'Avatar generation failed')
+      }
+      // Wait 2 seconds before next poll
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    throw new Error('Avatar generation timed out')
+  }
+
   const generateBotAvatar = async () => {
     if (!formData.responsibilities?.trim()) {
       alert('Please enter responsibilities first to generate an avatar')
@@ -162,12 +179,15 @@ export default function Users() {
     }
     setGeneratingAvatar(true)
     try {
-      const result = await api.generateAvatar({
+      // Start async generation
+      const { job_id } = await api.generateAvatarAsync({
         user_type: 'virtual',
         description: formData.responsibilities,
         name: formData.name,
       })
-      setFormData({ ...formData, avatar_url: result.url })
+      // Poll for completion
+      const url = await pollAvatarJob(job_id)
+      setFormData({ ...formData, avatar_url: url })
     } catch (error) {
       console.error('Failed to generate avatar:', error)
       alert(error instanceof Error ? error.message : 'Failed to generate avatar')
@@ -183,12 +203,15 @@ export default function Users() {
     }
     setGeneratingAvatar(true)
     try {
-      const result = await api.generateAvatar({
+      // Start async generation
+      const { job_id } = await api.generateAvatarAsync({
         user_type: 'human',
         description: appearanceDescription,
         name: formData.name,
       })
-      setFormData({ ...formData, avatar_url: result.url })
+      // Poll for completion
+      const url = await pollAvatarJob(job_id)
+      setFormData({ ...formData, avatar_url: url })
       setShowAppearanceModal(false)
       setAppearanceDescription('')
     } catch (error) {

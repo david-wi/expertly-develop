@@ -568,20 +568,41 @@ export default function ProjectDetail() {
   }
 
   // Avatar generation handlers
+  const pollAvatarJob = async (jobId: string): Promise<string> => {
+    // Poll every 2 seconds for up to 2 minutes
+    const maxAttempts = 60
+    for (let i = 0; i < maxAttempts; i++) {
+      const status = await api.getAvatarJobStatus(jobId)
+      if (status.status === 'completed' && status.url) {
+        return status.url
+      }
+      if (status.status === 'failed') {
+        throw new Error(status.error || 'Avatar generation failed')
+      }
+      // Wait 2 seconds before next poll
+      await new Promise(resolve => setTimeout(resolve, 2000))
+    }
+    throw new Error('Avatar generation timed out')
+  }
+
   const handleGenerateAvatar = async (customPrompt?: string) => {
     if (!project || !id) return
 
     setGeneratingAvatar(true)
     try {
-      const result = await api.generateProjectAvatar({
+      // Start async generation
+      const { job_id } = await api.generateProjectAvatarAsync({
         project_name: project.name,
         project_description: project.description || undefined,
         custom_prompt: customPrompt || undefined,
       })
 
+      // Poll for completion
+      const url = await pollAvatarJob(job_id)
+
       // Save the avatar URL and prompt to the project
       await api.updateProject(id, {
-        avatar_url: result.url,
+        avatar_url: url,
         avatar_prompt: customPrompt || undefined,
       })
 
