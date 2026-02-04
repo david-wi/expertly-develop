@@ -12,6 +12,8 @@ import type {
   TrackingEvent,
   MarginDashboard,
   CarrierPerformance,
+  Document,
+  DocumentType,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -116,12 +118,13 @@ export const api = {
     request<{ email_body: string }>(`/api/v1/quotes/${id}/draft-email`, { method: 'POST' }),
 
   // Shipments
-  getShipments: (params?: { status?: string; customer_id?: string; carrier_id?: string; at_risk?: boolean }) => {
+  getShipments: (params?: { status?: string; customer_id?: string; carrier_id?: string; at_risk?: boolean; search?: string }) => {
     const searchParams = new URLSearchParams()
     if (params?.status) searchParams.set('status', params.status)
     if (params?.customer_id) searchParams.set('customer_id', params.customer_id)
     if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
     if (params?.at_risk !== undefined) searchParams.set('at_risk', String(params.at_risk))
+    if (params?.search) searchParams.set('search', params.search)
     const query = searchParams.toString()
     return request<Shipment[]>(`/api/v1/shipments${query ? `?${query}` : ''}`)
   },
@@ -195,4 +198,66 @@ export const api = {
 
   getCarrierPerformance: (days: number = 30) =>
     request<CarrierPerformance>(`/api/v1/analytics/carrier-performance?days=${days}`),
+
+  // Documents
+  getDocuments: (params?: { shipment_id?: string; carrier_id?: string; customer_id?: string; document_type?: DocumentType; needs_review?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
+    if (params?.customer_id) searchParams.set('customer_id', params.customer_id)
+    if (params?.document_type) searchParams.set('document_type', params.document_type)
+    if (params?.needs_review !== undefined) searchParams.set('needs_review', String(params.needs_review))
+    const query = searchParams.toString()
+    return request<Document[]>(`/api/v1/documents${query ? `?${query}` : ''}`)
+  },
+
+  getDocumentsPendingReview: () =>
+    request<Document[]>('/api/v1/documents/pending-review'),
+
+  getDocument: (id: string) =>
+    request<Document>(`/api/v1/documents/${id}`),
+
+  uploadDocument: async (file: File, data: {
+    document_type: DocumentType
+    shipment_id?: string
+    carrier_id?: string
+    customer_id?: string
+    description?: string
+    auto_process?: boolean
+    source?: string
+  }) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('document_type', data.document_type)
+    if (data.shipment_id) formData.append('shipment_id', data.shipment_id)
+    if (data.carrier_id) formData.append('carrier_id', data.carrier_id)
+    if (data.customer_id) formData.append('customer_id', data.customer_id)
+    if (data.description) formData.append('description', data.description)
+    if (data.auto_process !== undefined) formData.append('auto_process', String(data.auto_process))
+    if (data.source) formData.append('source', data.source)
+
+    const response = await fetch(`${API_BASE}/api/v1/documents/upload`, {
+      method: 'POST',
+      body: formData,
+    })
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`)
+    }
+    return response.json() as Promise<Document>
+  },
+
+  processDocument: (id: string) =>
+    request<Document>(`/api/v1/documents/${id}/process`, { method: 'POST' }),
+
+  linkDocumentToShipment: (id: string, shipmentId: string) =>
+    request<Document>(`/api/v1/documents/${id}/link-shipment?shipment_id=${shipmentId}`, { method: 'POST' }),
+
+  verifyDocument: (id: string) =>
+    request<Document>(`/api/v1/documents/${id}/verify`, { method: 'POST' }),
+
+  deleteDocument: (id: string) =>
+    request<{ success: boolean }>(`/api/v1/documents/${id}`, { method: 'DELETE' }),
+
+  getDocumentDownloadUrl: (id: string) =>
+    `${API_BASE}/api/v1/documents/${id}/download`,
 }

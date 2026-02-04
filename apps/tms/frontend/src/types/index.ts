@@ -399,3 +399,76 @@ export interface TrackingEvent {
   notes?: string
   created_at: string
 }
+
+// Document types
+export type DocumentType =
+  | 'bol'
+  | 'pod'
+  | 'rate_confirmation'
+  | 'lumper_receipt'
+  | 'scale_ticket'
+  | 'invoice'
+  | 'carrier_invoice'
+  | 'insurance_certificate'
+  | 'commercial_invoice'
+  | 'packing_list'
+  | 'certificate_of_origin'
+  | 'customs_entry'
+  | 'other'
+
+export type ExtractionStatus = 'pending' | 'processing' | 'complete' | 'failed' | 'skipped'
+
+export interface DocumentExtractedField {
+  field_name: string
+  value: string | null
+  confidence: number
+  evidence_text?: string
+}
+
+export interface Document {
+  id: string
+  document_type: DocumentType
+  filename: string
+  original_filename: string
+  mime_type: string
+  size_bytes: number
+  shipment_id?: string
+  quote_id?: string
+  carrier_id?: string
+  customer_id?: string
+  description?: string
+  uploaded_by?: string
+  source?: string
+  is_verified: boolean
+  verified_by?: string
+  created_at?: string
+
+  // AI Extraction
+  extraction_status?: ExtractionStatus
+  ocr_text?: string
+  ocr_confidence?: number
+  ai_classified_type?: DocumentType
+  classification_confidence?: number
+  extracted_fields?: DocumentExtractedField[]
+  suggested_shipment_ids?: string[]
+  auto_matched: boolean
+  match_confidence?: number
+  needs_review: boolean
+}
+
+// Document type labels for display
+export const DOCUMENT_TYPE_LABELS: Record<DocumentType, string> = {
+  bol: 'Bill of Lading',
+  pod: 'Proof of Delivery',
+  rate_confirmation: 'Rate Confirmation',
+  lumper_receipt: 'Lumper Receipt',
+  scale_ticket: 'Scale Ticket',
+  invoice: 'Invoice',
+  carrier_invoice: 'Carrier Invoice',
+  insurance_certificate: 'Insurance Certificate',
+  commercial_invoice: 'Commercial Invoice',
+  packing_list: 'Packing List',
+  certificate_of_origin: 'Certificate of Origin',
+  customs_entry: 'Customs Entry',
+  other: 'Other',
+}

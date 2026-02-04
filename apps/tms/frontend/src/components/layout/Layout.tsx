@@ -11,6 +11,7 @@ import {
   Receipt,
   BarChart3,
   Trophy,
+  FolderSearch,
   Settings,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
@@ -27,6 +28,7 @@ const navigation = [
   { name: 'Invoices', href: '/invoices', icon: Receipt },
   { name: 'Margins', href: '/margins', icon: BarChart3, spacerBefore: true },
   { name: 'Carrier Performance', href: '/carrier-performance', icon: Trophy },
+  { name: 'Document Review', href: '/document-review', icon: FolderSearch },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
 ]
 

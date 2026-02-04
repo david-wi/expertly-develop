@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Shipment, Tender, TrackingEvent } from '../types'
+import ShipmentDocuments from '../components/ShipmentDocuments'
 import {
   ArrowRight,
   Truck,
@@ -430,13 +431,8 @@ export default function ShipmentDetail() {
         </div>
       )}
 
-      {activeTab === 'documents' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold mb-4">Documents</h2>
-          <p className="text-sm text-gray-500 text-center py-4">
-            Document management coming soon
-          </p>
-        </div>
+      {activeTab === 'documents' && id && (
+        <ShipmentDocuments shipmentId={id} />
       )}
     </div>
   )
