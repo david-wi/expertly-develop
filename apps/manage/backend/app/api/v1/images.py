@@ -412,3 +412,121 @@ Square format, solid black background, white icon only."""
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to generate project avatar: {str(e)}"
         )
+
+
+class MigrationResult(BaseModel):
+    """Result of avatar migration."""
+    projects_migrated: int
+    projects_failed: int
+    users_migrated: int
+    users_failed: int
+    details: list[str]
+
+
+@router.post("/migrate-base64-avatars", response_model=MigrationResult)
+async def migrate_base64_avatars(
+    current_user: User = Depends(get_current_user)
+) -> MigrationResult:
+    """Migrate existing base64 avatars to persistent file storage.
+
+    Scans projects and users for data: URLs and converts them to stored files.
+    Requires admin privileges.
+    """
+    if current_user.role not in ["admin", "owner"]:
+        raise HTTPException(status_code=403, detail="Admin access required")
+
+    from app.database import get_database
+    from app.utils.auth import get_identity_client
+    import httpx
+
+    db = get_database()
+    results = {
+        "projects_migrated": 0,
+        "projects_failed": 0,
+        "users_migrated": 0,
+        "users_failed": 0,
+        "details": [],
+    }
+
+    # Migrate project avatars in Manage's MongoDB
+    try:
+        cursor = db.projects.find({
+            "organization_id": current_user.organization_id,
+            "avatar_url": {"$regex": "^data:"}
+        })
+        projects = await cursor.to_list(1000)
+
+        for project in projects:
+            try:
+                avatar_url = project.get("avatar_url", "")
+                if avatar_url.startswith("data:"):
+                    # Extract base64 data (after the comma)
+                    b64_data = avatar_url.split(",", 1)[1] if "," in avatar_url else ""
+                    if b64_data:
+                        new_url = await save_avatar_to_storage(b64_data, "project")
+                        await db.projects.update_one(
+                            {"_id": project["_id"]},
+                            {"$set": {"avatar_url": new_url}}
+                        )
+                        results["projects_migrated"] += 1
+                        results["details"].append(f"Project {project.get('name', project['_id'])}: migrated")
+            except Exception as e:
+                results["projects_failed"] += 1
+                results["details"].append(f"Project {project.get('name', project['_id'])}: failed - {str(e)}")
+
+    except Exception as e:
+        results["details"].append(f"Project scan error: {str(e)}")
+
+    # Migrate user avatars in Identity service
+    # This requires calling Identity's API to list and update users
+    try:
+        identity_client = get_identity_client()
+
+        # Get all users from Identity
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            response = await http_client.get(
+                f"{identity_client.base_url}/api/v1/users",
+                headers={
+                    "X-Organization-Id": current_user.organization_id,
+                    "X-Session-Token": current_user.id,  # Use user ID as token for internal call
+                },
+            )
+            if response.status_code == 200:
+                users_data = response.json()
+                users = users_data.get("items", users_data) if isinstance(users_data, dict) else users_data
+
+                for user in users:
+                    try:
+                        avatar_url = user.get("avatar_url", "")
+                        if avatar_url and avatar_url.startswith("data:"):
+                            # Extract base64 data
+                            b64_data = avatar_url.split(",", 1)[1] if "," in avatar_url else ""
+                            if b64_data:
+                                prefix = "bot" if user.get("user_type") == "virtual" else "user"
+                                new_url = await save_avatar_to_storage(b64_data, prefix)
+
+                                # Update user in Identity
+                                update_response = await http_client.patch(
+                                    f"{identity_client.base_url}/api/v1/users/{user['id']}",
+                                    json={"avatar_url": new_url},
+                                    headers={
+                                        "X-Organization-Id": current_user.organization_id,
+                                        "X-Session-Token": current_user.id,
+                                        "Content-Type": "application/json",
+                                    },
+                                )
+                                if update_response.status_code == 200:
+                                    results["users_migrated"] += 1
+                                    results["details"].append(f"User {user.get('name', user['id'])}: migrated")
+                                else:
+                                    results["users_failed"] += 1
+                                    results["details"].append(f"User {user.get('name', user['id'])}: update failed - {update_response.status_code}")
+                    except Exception as e:
+                        results["users_failed"] += 1
+                        results["details"].append(f"User {user.get('name', user.get('id', 'unknown'))}: failed - {str(e)}")
+
+    except Exception as e:
+        results["details"].append(f"User migration error: {str(e)}")
+
+    logger.info(f"Avatar migration complete: {results}")
+    return MigrationResult(**results)
