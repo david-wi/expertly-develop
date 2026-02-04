@@ -525,15 +525,14 @@ export default function Connections() {
                       <input
                         type="checkbox"
                         checked={isCompleted}
-                        onChange={() => {}}
-                        className={`w-5 h-5 rounded border-2 cursor-pointer ${
+                        readOnly
+                        className={`w-5 h-5 rounded border-2 cursor-pointer accent-green-600 ${
                           isCompleted
-                            ? 'text-green-600 border-green-600 accent-green-600'
+                            ? 'text-green-600'
                             : isCurrent
-                              ? 'border-blue-500 accent-blue-500'
-                              : 'border-gray-300'
+                              ? 'accent-blue-500'
+                              : ''
                         }`}
-                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                     {/* Step text with auto-linked URLs */}
