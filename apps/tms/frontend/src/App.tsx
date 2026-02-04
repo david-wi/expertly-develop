@@ -10,12 +10,14 @@ import Customers from './pages/Customers'
 import Carriers from './pages/Carriers'
 import Invoices from './pages/Invoices'
 import Settings from './pages/Settings'
+import LandingPage from './pages/LandingPage'
 import Layout from './components/layout/Layout'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/landing" element={<LandingPage />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="inbox" element={<Inbox />} />

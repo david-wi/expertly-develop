@@ -7,4 +7,10 @@ export default defineConfig({
   resolve: { alias: { '@': path.resolve(__dirname, './src') } },
   build: { target: 'esnext', minify: true },
   server: { port: 5173, proxy: { '/api': { target: 'http://localhost:8000', changeOrigin: true } } },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/__tests__/setup.ts'],
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+  },
 })
