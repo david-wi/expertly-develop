@@ -229,6 +229,15 @@ export const api = {
       method: 'POST',
     }),
 
+  // Task Time Entries
+  getTaskTimeEntries: (taskId: string) =>
+    request<TimeEntry[]>(`/api/v1/tasks/${taskId}/time-entries`),
+  logTimeEntry: (taskId: string, data: CreateTimeEntryRequest) =>
+    request<TimeEntry>(`/api/v1/tasks/${taskId}/time-entries`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Task Attachments
   getTaskAttachments: (taskId: string, params?: { step_id?: string; task_level_only?: boolean }) => {
     const searchParams = new URLSearchParams()
@@ -806,8 +815,26 @@ export interface Task {
   source_url?: string
   // Estimated duration in seconds
   estimated_duration?: number
+  // Time tracking
+  time_entries?: TimeEntry[]
   created_at: string
   updated_at: string
+}
+
+export interface TimeEntry {
+  id: string
+  start_time: string
+  end_time: string
+  duration_seconds: number
+  user_id: string
+  user_name?: string
+  notes?: string
+}
+
+export interface CreateTimeEntryRequest {
+  start_time: string
+  end_time: string
+  notes?: string
 }
 
 export interface CreateTaskRequest {

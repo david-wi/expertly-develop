@@ -133,6 +133,12 @@ function parseDuration(value: string): number | null {
   return null
 }
 
+// Calculate total logged time from time entries
+function getTotalLoggedTime(task: Task | null): number {
+  if (!task?.time_entries?.length) return 0
+  return task.time_entries.reduce((sum, entry) => sum + entry.duration_seconds, 0)
+}
+
 function CommentContent({ content }: { content: string }) {
   const [expanded, setExpanded] = useState(false)
   const shouldTruncate = content.length > COMMENT_TRUNCATE_LENGTH
@@ -576,17 +582,42 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     ))}
                   </select>
                 </div>
-                <div className="w-20">
+                <div className="w-28">
                   <label className="block text-xs font-medium text-theme-text-secondary mb-1">Est. Time</label>
-                  <input
-                    type="text"
-                    value={editedDuration}
-                    onChange={(e) => setEditedDuration(e.target.value)}
-                    placeholder="0:10"
-                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    title="Estimated duration (H:MM)"
-                  />
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="text"
+                      value={editedDuration}
+                      onChange={(e) => setEditedDuration(e.target.value)}
+                      placeholder="0:10"
+                      className="w-16 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                      title="Estimated duration (H:MM)"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const currentSeconds = parseDuration(editedDuration) || 0
+                        setEditedDuration(formatDuration(currentSeconds + 600))
+                      }}
+                      className="px-1.5 py-1.5 text-xs font-medium text-theme-text-secondary bg-theme-bg-elevated hover:bg-theme-bg-hover rounded-lg transition-colors"
+                      title="Add 10 minutes"
+                    >
+                      +10m
+                    </button>
+                  </div>
                 </div>
+                {/* Total logged time - read-only display */}
+                {getTotalLoggedTime(task) > 0 && (
+                  <div className="w-20">
+                    <label className="block text-xs font-medium text-theme-text-secondary mb-1">Logged</label>
+                    <div
+                      className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-elevated text-theme-text-secondary font-mono text-sm cursor-default"
+                      title={`Total time logged: ${task?.time_entries?.length || 0} entries`}
+                    >
+                      {formatDuration(getTotalLoggedTime(task))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

@@ -10,6 +10,7 @@ from app.models import (
     TaskComplete, TaskFail,
     TaskProgressUpdate, TaskProgressUpdateCreate,
     TaskStepResponse, StepStatus,
+    TimeEntry, TimeEntryCreate,
     User
 )
 from app.api.deps import get_current_user
@@ -946,3 +947,81 @@ async def reorder_tasks(
         )
 
     return {"success": True, "updated_count": len(data.items)}
+
+
+# Time tracking endpoints
+
+@router.get("/{task_id}/time-entries")
+async def list_time_entries(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> list[dict]:
+    """Get all time entries for a task."""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    task = await db.tasks.find_one({
+        "_id": ObjectId(task_id),
+        "organization_id": current_user.organization_id
+    })
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    return task.get("time_entries", [])
+
+
+@router.post("/{task_id}/time-entries", status_code=status.HTTP_201_CREATED)
+async def log_time_entry(
+    task_id: str,
+    data: TimeEntryCreate,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Log time worked on a task."""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    # Verify task exists
+    task = await db.tasks.find_one({
+        "_id": ObjectId(task_id),
+        "organization_id": current_user.organization_id
+    })
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Calculate duration from start/end times
+    duration_seconds = int((data.end_time - data.start_time).total_seconds())
+    if duration_seconds < 0:
+        raise HTTPException(status_code=400, detail="End time must be after start time")
+
+    # Create the time entry
+    time_entry = TimeEntry(
+        start_time=data.start_time,
+        end_time=data.end_time,
+        duration_seconds=duration_seconds,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        notes=data.notes
+    )
+
+    # Add to task's time_entries array
+    result = await db.tasks.find_one_and_update(
+        {"_id": ObjectId(task_id)},
+        {
+            "$push": {"time_entries": time_entry.model_dump()},
+            "$set": {"updated_at": datetime.now(timezone.utc)}
+        },
+        return_document=True
+    )
+
+    serialized = serialize_task(result)
+
+    # Emit WebSocket event for real-time updates
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+
+    return time_entry.model_dump()

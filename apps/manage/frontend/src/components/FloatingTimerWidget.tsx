@@ -30,6 +30,7 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     setNotes,
     acknowledgeTimer,
     stopTimer,
+    markTimeLogged,
   } = useTimerStore()
 
   const [isExpanded, setIsExpanded] = useState(true)
@@ -68,6 +69,30 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     })
   }, [timers])
 
+  // Log time worked to the task
+  const logTimeToTask = async (timer: Timer): Promise<void> => {
+    // Only log time for task timers that haven't been logged yet
+    if (!timer.context?.taskId || timer.timeLogged) return
+
+    // Calculate time worked (duration - remaining = time elapsed)
+    const timeWorked = timer.duration - timer.remaining
+    if (timeWorked < 60) return // Don't log less than 1 minute
+
+    try {
+      const startTime = timer.startedAt || new Date().toISOString()
+      const endTime = new Date().toISOString()
+
+      await api.logTimeEntry(timer.context.taskId, {
+        start_time: startTime,
+        end_time: endTime,
+        notes: timer.notes || undefined,
+      })
+      markTimeLogged(timer.id)
+    } catch (err) {
+      console.error('Failed to log time to task:', err)
+    }
+  }
+
   // Explicitly save notes as a task comment
   const handleAddNotesToTask = async (timer: Timer): Promise<void> => {
     if (!timer.context?.taskId || !timer.notes || isRichTextEmpty(timer.notes)) {
@@ -98,6 +123,8 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
     stopSpeech() // Stop any ongoing speech when completing
     setCompletingTaskId(timer.context.taskId)
     try {
+      // Log time worked before completing
+      await logTimeToTask(timer)
       await api.quickCompleteTask(timer.context.taskId)
       fetchTasks()
       stopTimer(timer.id)
@@ -109,8 +136,10 @@ export default function FloatingTimerWidget({ className = '' }: FloatingTimerWid
   }
 
   // Handle dismissing the timer
-  const handleDismiss = (timer: Timer) => {
+  const handleDismiss = async (timer: Timer) => {
     stopSpeech() // Stop any ongoing speech when dismissing
+    // Log time worked before dismissing
+    await logTimeToTask(timer)
     if (timer.isComplete) {
       acknowledgeTimer(timer.id)
     }

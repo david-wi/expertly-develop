@@ -19,7 +19,8 @@ from app.models.queue import Queue, QueueCreate, QueueUpdate, QueueType, ScopeTy
 from app.models.task import (
     Task, TaskCreate, TaskUpdate, TaskStatus, TaskPhase, VALID_PHASE_TRANSITIONS,
     TaskCheckout, TaskStart, TaskComplete, TaskFail,
-    RecurringTask, RecurringTaskCreate, RecurringTaskUpdate, RecurrenceType
+    RecurringTask, RecurringTaskCreate, RecurringTaskUpdate, RecurrenceType,
+    TimeEntry, TimeEntryCreate
 )
 from app.models.task_update import TaskProgressUpdate, TaskProgressUpdateCreate
 from app.models.project import Project, ProjectCreate, ProjectUpdate, ProjectStatus
@@ -100,6 +101,8 @@ __all__ = [
     "TaskStart",
     "TaskComplete",
     "TaskFail",
+    "TimeEntry",
+    "TimeEntryCreate",
     "RecurringTask",
     "RecurringTaskCreate",
     "RecurringTaskUpdate",
