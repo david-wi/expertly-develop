@@ -466,6 +466,7 @@ export default function Connections() {
           setCurrentStep(0)
         }}
         title={`Setup ${selectedProvider?.name} Connection`}
+        size="lg"
       >
         <div className="space-y-4">
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
@@ -519,21 +520,21 @@ export default function Connections() {
                       }
                     }}
                   >
-                    {/* Step indicator */}
-                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                      isCompleted
-                        ? 'bg-green-500 text-white'
-                        : isCurrent
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-gray-300 text-gray-600'
-                    }`}>
-                      {isCompleted ? (
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        index + 1
-                      )}
+                    {/* Checkbox indicator */}
+                    <div className="flex-shrink-0 flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={isCompleted}
+                        onChange={() => {}}
+                        className={`w-5 h-5 rounded border-2 cursor-pointer ${
+                          isCompleted
+                            ? 'text-green-600 border-green-600 accent-green-600'
+                            : isCurrent
+                              ? 'border-blue-500 accent-blue-500'
+                              : 'border-gray-300'
+                        }`}
+                        onClick={(e) => e.stopPropagation()}
+                      />
                     </div>
                     {/* Step text with auto-linked URLs */}
                     <div className={`flex-1 text-sm ${isCompleted ? 'text-green-800' : isCurrent ? 'text-blue-800' : 'text-gray-600'}`}>
