@@ -746,6 +746,54 @@ async def resume_work(
     return serialize_task(result)
 
 
+@router.post("/{task_id}/quick-complete")
+async def quick_complete_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Quick-complete a task from any active state. For dashboard use."""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    # Allow completion from any non-completed, non-failed status
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "status": {"$in": [
+                TaskStatus.QUEUED.value,
+                TaskStatus.BLOCKED.value,
+                TaskStatus.CHECKED_OUT.value,
+                TaskStatus.IN_PROGRESS.value
+            ]}
+        },
+        {
+            "$set": {
+                "status": TaskStatus.COMPLETED.value,
+                "phase": TaskPhase.APPROVED.value,
+                "completed_at": now,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is already {task.get('status', 'unknown')}")
+
+    return serialize_task(result)
+
+
 # Task progress updates
 
 @router.get("/{task_id}/updates")
