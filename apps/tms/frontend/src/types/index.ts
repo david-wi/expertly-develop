@@ -735,3 +735,96 @@ export const POSTING_STATUS_LABELS: Record<PostingStatus, string> = {
   expired: 'Expired',
   cancelled: 'Cancelled',
 }
+
+// Accounting/QuickBooks types
+export type AccountingProvider = 'quickbooks' | 'xero' | 'sage'
+export type SyncStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'partial'
+export type SyncDirection = 'to_accounting' | 'from_accounting' | 'bidirectional'
+export type AccountingEntityType = 'customer' | 'invoice' | 'payment' | 'vendor' | 'bill'
+
+export interface AccountingConnection {
+  provider: AccountingProvider
+  is_connected: boolean
+  company_id?: string
+  company_name?: string
+  connected_at?: string
+  last_sync_at?: string
+  connection_error?: string
+  auto_sync_enabled: boolean
+  sync_interval_minutes: number
+  sync_customers: boolean
+  sync_invoices: boolean
+  sync_payments: boolean
+  sync_vendors: boolean
+  sync_bills: boolean
+  revenue_account_id?: string
+  revenue_account_name?: string
+  expense_account_id?: string
+  expense_account_name?: string
+}
+
+export interface AccountingMapping {
+  id: string
+  entity_type: AccountingEntityType
+  tms_entity_id: string
+  tms_entity_name?: string
+  provider_entity_id: string
+  provider_entity_name?: string
+  last_synced_at?: string
+  sync_error?: string
+}
+
+export interface SyncJob {
+  id: string
+  status: SyncStatus
+  direction: SyncDirection
+  started_at?: string
+  completed_at?: string
+  triggered_by: string
+  entity_types: AccountingEntityType[]
+  full_sync: boolean
+  total_records: number
+  synced_count: number
+  failed_count: number
+  skipped_count: number
+  error_message?: string
+  created_at: string
+}
+
+export interface SyncLogEntry {
+  entity_type: AccountingEntityType
+  tms_entity_id?: string
+  provider_entity_id?: string
+  operation: string
+  status: SyncStatus
+  error_message?: string
+  timestamp: string
+}
+
+export interface AccountingStats {
+  mappings: Record<string, number>
+  sync_jobs: Record<string, number>
+  recent_syncs: {
+    id: string
+    status: string
+    synced_count: number
+    failed_count: number
+    created_at: string
+  }[]
+}
+
+export const SYNC_STATUS_LABELS: Record<SyncStatus, string> = {
+  pending: 'Pending',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  failed: 'Failed',
+  partial: 'Partial',
+}
+
+export const ACCOUNTING_ENTITY_TYPE_LABELS: Record<AccountingEntityType, string> = {
+  customer: 'Customer',
+  invoice: 'Invoice',
+  payment: 'Payment',
+  vendor: 'Vendor',
+  bill: 'Bill',
+}
