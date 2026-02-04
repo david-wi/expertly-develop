@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { Maximize2 } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -230,17 +231,18 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       const firstTask = activeTasks[0]
       const topSequence = firstTask?.sequence ? firstTask.sequence - 1 : 0
 
-      await api.createTask({
+      // Create the task and use the returned ID directly (avoids race condition)
+      const newTask = await api.createTask({
         queue_id: defaultQueue._id || defaultQueue.id,
         title: topTaskTitle.trim(),
         description: topTaskInstructions.trim() || undefined,
         project_id: topTaskProjectId || undefined,
       })
-      // Reorder to put at top
-      const newTasks = await api.getTasks()
-      const createdTask = newTasks.find(t => t.title === topTaskTitle.trim())
-      if (createdTask) {
-        await api.reorderTasks([{ id: createdTask._id || createdTask.id, sequence: topSequence }])
+
+      // Reorder to put at top using the task ID from the response
+      const taskId = newTask._id || newTask.id
+      if (taskId) {
+        await api.reorderTasks([{ id: taskId, sequence: topSequence }])
       }
 
       setTopTaskTitle('')
@@ -390,14 +392,22 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
   // Save edited task
   const saveEditedTask = async () => {
+    await saveEditedTaskImpl()
+  }
+
+  // Internal save implementation - accepts optional overrides for values that may not be in state yet
+  const saveEditedTaskImpl = async (overrides?: { projectId?: string }) => {
     if (!editingTaskId || isSaving) return
 
     const originalTask = activeTasks.find(t => (t._id || t.id) === editingTaskId)
     if (!originalTask) return
 
+    // Use override if provided, otherwise use state
+    const projectIdToSave = overrides?.projectId !== undefined ? overrides.projectId : editProjectId
+
     // Only save if something changed
     const titleChanged = editTitle !== originalTask.title
-    const projectChanged = editProjectId !== (originalTask.project_id || '')
+    const projectChanged = projectIdToSave !== (originalTask.project_id || '')
     const descChanged = editDescription !== (originalTask.description || '')
     const playbookChanged = editPlaybookId !== (originalTask.playbook_id || '')
 
@@ -411,7 +421,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     try {
       await api.updateTask(editingTaskId, {
         title: editTitle.trim(),
-        project_id: editProjectId || undefined,
+        project_id: projectIdToSave || undefined,
         description: editDescription.trim() || undefined,
         playbook_id: editPlaybookId || undefined,
       })
@@ -772,7 +782,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       selectedProjectId={editProjectId || null}
                       onChange={(projectId) => {
                         setEditProjectId(projectId || '')
-                        setTimeout(() => saveEditedTask(), 0)
+                        // Pass projectId directly to avoid stale state
+                        saveEditedTaskImpl({ projectId: projectId || '' })
                       }}
                       onProjectCreated={() => {
                         // Refresh projects list after creating a new one
@@ -843,12 +854,13 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
                     <button
                       onClick={() => setSelectedTaskId(editingTaskId)}
-                      className="text-xs text-gray-500 hover:text-gray-700"
+                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      title="Open full details"
                     >
-                      More options...
+                      <Maximize2 className="w-4 h-4" />
                     </button>
                     <button
                       ref={editDoneRef}
@@ -859,9 +871,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                           closeEditPanel()
                         }
                       }}
-                      className="px-3 py-1 text-xs font-medium text-white bg-primary-600 hover:bg-primary-700 rounded"
+                      className="px-3 py-1 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors"
                     >
-                      Done
+                      Close
                     </button>
                   </div>
                 </div>
