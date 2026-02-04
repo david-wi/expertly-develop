@@ -268,7 +268,7 @@ export default function ProjectDetail() {
                         required
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setNewTestTitle(newTestTitle ? newTestTitle + ' ' + text : text)}
                         size="md"
                         className="self-center"

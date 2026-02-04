@@ -384,7 +384,7 @@ function ClientStep({ selected, onSelect }: ClientStepProps) {
           />
         </div>
         <InlineVoiceTranscription
-          wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+          tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
           onTranscribe={(text) => setSearchQuery(searchQuery ? searchQuery + ' ' + text : text)}
           size="md"
         />
@@ -464,7 +464,7 @@ function CreateClientInline({ onCreated, onCancel }: CreateClientInlineProps) {
             />
           </div>
           <InlineVoiceTranscription
-            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
             onTranscribe={(text) => setFirstName(firstName ? firstName + ' ' + text : text)}
             size="md"
             className="self-end mb-[2px]"
@@ -480,7 +480,7 @@ function CreateClientInline({ onCreated, onCancel }: CreateClientInlineProps) {
             />
           </div>
           <InlineVoiceTranscription
-            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
             onTranscribe={(text) => setLastName(lastName ? lastName + ' ' + text : text)}
             size="md"
             className="self-end mb-[2px]"
@@ -564,7 +564,7 @@ function ConfirmStep({ service, slot, client, notes, onNotesChange }: ConfirmSte
             placeholder="Any special requests or notes..."
           />
           <InlineVoiceTranscription
-            wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+            tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
             onTranscribe={(text) => onNotesChange(notes ? notes + ' ' + text : text)}
             size="md"
             className="self-start mt-1"

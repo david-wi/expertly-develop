@@ -360,7 +360,7 @@ export default function ProductDetail() {
                                     className="flex-1"
                                   />
                                   <InlineVoiceTranscription
-                                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                                     onTranscribe={(text) => setNewReq({ ...newReq, title: newReq.title ? newReq.title + ' ' + text : text })}
                                     size="md"
                                   />
@@ -380,7 +380,7 @@ export default function ProductDetail() {
                                       className="flex-1"
                                     />
                                     <InlineVoiceTranscription
-                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                                       onTranscribe={(text) => setNewReq({ ...newReq, what_this_does: newReq.what_this_does ? newReq.what_this_does + ' ' + text : text })}
                                       size="sm"
                                       className="self-start mt-1"
@@ -400,7 +400,7 @@ export default function ProductDetail() {
                                       className="flex-1"
                                     />
                                     <InlineVoiceTranscription
-                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                                       onTranscribe={(text) => setNewReq({ ...newReq, why_this_exists: newReq.why_this_exists ? newReq.why_this_exists + ' ' + text : text })}
                                       size="sm"
                                       className="self-start mt-1"
@@ -420,7 +420,7 @@ export default function ProductDetail() {
                                       className="flex-1"
                                     />
                                     <InlineVoiceTranscription
-                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                                       onTranscribe={(text) => setNewReq({ ...newReq, acceptance_criteria: newReq.acceptance_criteria ? newReq.acceptance_criteria + ' ' + text : text })}
                                       size="sm"
                                       className="self-start mt-1"
@@ -440,7 +440,7 @@ export default function ProductDetail() {
                                       className="flex-1"
                                     />
                                     <InlineVoiceTranscription
-                                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                                       onTranscribe={(text) => setNewReq({ ...newReq, not_included: newReq.not_included ? newReq.not_included + ' ' + text : text })}
                                       size="sm"
                                       className="self-start mt-1"

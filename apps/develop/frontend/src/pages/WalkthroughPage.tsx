@@ -141,7 +141,7 @@ Capture "After navigation"`}
                   />
                 </div>
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, scenario_text: formData.scenario_text ? formData.scenario_text + '\n' + text : text })}
                   size="md"
                   className="mt-6"
@@ -161,7 +161,7 @@ Capture "After navigation"`}
                   />
                 </div>
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, label: formData.label ? formData.label + ' ' + text : text })}
                   size="md"
                   className="mb-[2px]"
@@ -182,7 +182,7 @@ Capture "After navigation"`}
                   />
                 </div>
                 <InlineVoiceTranscription
-                  wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                   onTranscribe={(text) => setFormData({ ...formData, description: formData.description ? formData.description + ' ' + text : text })}
                   size="md"
                   className="mt-6"

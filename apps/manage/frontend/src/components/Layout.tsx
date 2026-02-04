@@ -81,7 +81,7 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-theme-bg">
-      <VoiceTranscription wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe" />
+      <VoiceTranscription tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token" />
       <Sidebar
         productCode="manage"
         productName="Manage"

@@ -166,7 +166,7 @@ export default function Projects() {
                         required
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setNewProjectName(newProjectName ? newProjectName + ' ' + text : text)}
                         size="md"
                         className="self-center"
@@ -186,7 +186,7 @@ export default function Projects() {
                         placeholder="Optional description..."
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setNewProjectDescription(newProjectDescription ? newProjectDescription + ' ' + text : text)}
                         size="md"
                         className="self-start mt-1"

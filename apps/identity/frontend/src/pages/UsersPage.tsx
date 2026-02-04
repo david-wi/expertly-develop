@@ -500,7 +500,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                         autoFocus
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
                         size="md"
                         className="self-center"
@@ -534,7 +534,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                         placeholder="e.g., Senior Developer"
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setFormData({ ...formData, title: formData.title ? formData.title + ' ' + text : text })}
                         size="md"
                         className="self-center"
@@ -571,7 +571,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                         required
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setFormData({ ...formData, name: formData.name ? formData.name + ' ' + text : text })}
                         size="md"
                         className="self-center"
@@ -589,7 +589,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                         placeholder="e.g., AI Assistant"
                       />
                       <InlineVoiceTranscription
-                        wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                        tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                         onTranscribe={(text) => setFormData({ ...formData, title: formData.title ? formData.title + ' ' + text : text })}
                         size="md"
                         className="self-center"
@@ -615,7 +615,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                       : 'Describe their responsibilities...'}
                   />
                   <InlineVoiceTranscription
-                    wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                     onTranscribe={(text) => setFormData({ ...formData, responsibilities: formData.responsibilities ? formData.responsibilities + ' ' + text : text })}
                     size="md"
                     className="self-start mt-1"
@@ -695,7 +695,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
                       placeholder="e.g., LinkedIn posting, research, content writing..."
                     />
                     <InlineVoiceTranscription
-                      wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                       onTranscribe={(text) =>
                         setFormData({
                           ...formData,
@@ -853,7 +853,7 @@ export default function UsersPage({ defaultFilter = 'all' }: UsersPageProps) {
               placeholder="e.g., Woman with short brown hair and glasses, friendly smile, wearing a blue blazer"
             />
             <InlineVoiceTranscription
-              wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+              tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
               onTranscribe={(text) => setAppearanceDescription(appearanceDescription ? appearanceDescription + ' ' + text : text)}
               size="md"
               className="self-start mt-1"

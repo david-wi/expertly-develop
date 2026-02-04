@@ -351,7 +351,7 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
                 autoComplete="off"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setSetupName(setupName ? setupName + ' ' + text : text)}
                 size="md"
                 className="self-center"
@@ -442,7 +442,7 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
                 className="flex-1 px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400 resize-none"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setSetupPrompt(setupPrompt ? setupPrompt + ' ' + text : text)}
                 size="md"
                 className="self-start mt-1"
@@ -522,7 +522,7 @@ export default function Widget({ widget, session, ws }: WidgetProps) {
                 className="flex-1 px-3 py-2 rounded-lg bg-white border border-gray-200 text-gray-700 text-sm placeholder:text-gray-400 focus:outline-none focus:border-blue-400 disabled:opacity-50"
               />
               <InlineVoiceTranscription
-                wsUrl="wss://identity-api.ai.devintensive.com/ws/transcribe"
+                tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
                 onTranscribe={(text) => setInput(input ? input + ' ' + text : text)}
                 size="md"
                 className="self-center"
