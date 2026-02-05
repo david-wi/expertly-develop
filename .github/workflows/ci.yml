@@ -23,6 +23,7 @@ jobs:
           - { name: salon, path: apps/salon/frontend }
           - { name: today, path: apps/today/frontend }
           - { name: tms, path: apps/tms/frontend }
+          - { name: aipocalypse, path: apps/aipocalypse/frontend }
           # TODO: Fix type issues in these apps:
           # - { name: vibetest, path: apps/vibetest/frontend }  # React types conflict
           # - { name: vibecode, path: apps/vibecode/packages/client }  # Missing module types

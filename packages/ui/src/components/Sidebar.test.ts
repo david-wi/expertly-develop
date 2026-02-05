@@ -57,14 +57,14 @@ describe('EXPERTLY_PRODUCTS', () => {
     })
   })
 
-  // List of deployed products - update this when adding/removing apps
+  // List of deployed products in main sidebar - update this when adding/removing apps
   const DEPLOYED_PRODUCTS = [
     'define',
     'develop',
     'identity',
     'manage',
     'salon',
-    'today',
+    'tms',
     'vibecode',
     'vibetest',
     'admin',

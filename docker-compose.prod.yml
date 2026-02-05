@@ -569,6 +569,57 @@ services:
     restart: unless-stopped
 
   # ===================
+  # AIPOCALYPSE FUND
+  # ===================
+  aipocalypse-backend:
+    build:
+      context: .
+      dockerfile: ./apps/aipocalypse/backend/Dockerfile
+    environment:
+      - MONGODB_URL=mongodb://expertly-shared-mongo:27017
+      - MONGODB_DATABASE=aipocalypse_fund
+    networks:
+      - traefik
+      - default
+      - expertly-shared
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.aipocalypse-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.aipocalypse-backend${DEPLOY_COLOR:-}.rule=Host(`aipocalypse-api.ai.devintensive.com`)"
+      - "traefik.http.routers.aipocalypse-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.aipocalypse-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.aipocalypse-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  aipocalypse-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/aipocalypse/frontend/Dockerfile
+      args:
+        VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
+    depends_on:
+      - aipocalypse-backend
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.aipocalypse-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.aipocalypse-frontend${DEPLOY_COLOR:-}.rule=Host(`aipocalypse.ai.devintensive.com`)"
+      - "traefik.http.routers.aipocalypse-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.aipocalypse-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.aipocalypse-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
   # EXPERTLY VIBECODE
   # ===================
   vibecode:

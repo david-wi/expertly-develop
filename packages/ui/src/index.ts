@@ -4,6 +4,8 @@ export {
   MainContent,
   ExpertlyLogo,
   EXPERTLY_PRODUCTS,
+  EXPERTLY_TOOLS,
+  EXPERTLY_MORE_APPS,
   SUPPORTED_LANGUAGES,
   violetPalette,
   type NavItem,
