@@ -49,6 +49,11 @@ async def create_indexes(db) -> None:
     await db.tasks.create_index([("queue_id", 1), ("status", 1), ("priority", 1)])
     await db.tasks.create_index("project_id")
     await db.tasks.create_index("parent_task_id")
+    # Sparse index for cross-monitor dedup on source_url
+    await db.tasks.create_index(
+        [("organization_id", 1), ("source_url", 1)],
+        sparse=True,
+    )
 
     # Task updates
     await db.task_updates.create_index("task_id")

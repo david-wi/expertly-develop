@@ -69,13 +69,23 @@ class MonitorService:
             "scopes": connection.get("scopes", []),
         }
 
-    async def poll_monitor(self, monitor_id: str, organization_id: Optional[ObjectId] = None) -> dict:
+    async def poll_monitor(
+        self,
+        monitor_id: str,
+        organization_id: Optional[ObjectId] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
+        is_backfill: bool = False,
+    ) -> dict:
         """
         Poll a single monitor for new events.
 
         Args:
             monitor_id: The monitor ID to poll
             organization_id: Optional org ID for security validation
+            oldest: Optional start date for date-range poll (backfill)
+            latest: Optional end date for date-range poll (backfill)
+            is_backfill: If True, do NOT update poll_cursor (only update event counts)
 
         Returns:
             Dict with poll results: events_found, events_processed, error
@@ -124,7 +134,11 @@ class MonitorService:
 
         # Poll for events
         try:
-            events, new_cursor = await adapter.poll(monitor.get("poll_cursor"))
+            events, new_cursor = await adapter.poll(
+                monitor.get("poll_cursor"),
+                oldest=oldest,
+                latest=latest,
+            )
             result["events_found"] = len(events)
 
             # Process each event
@@ -141,10 +155,13 @@ class MonitorService:
             now = datetime.now(timezone.utc)
             update_data = {
                 "last_polled_at": now,
-                "poll_cursor": new_cursor,
                 "last_error": None,
                 "status": MonitorStatus.ACTIVE.value,
             }
+            # For backfill, do NOT update poll_cursor (preserve normal cursor position)
+            if not is_backfill:
+                update_data["poll_cursor"] = new_cursor
+
             if events:
                 update_data["last_event_at"] = now
                 update_data["$inc"] = {
@@ -245,6 +262,17 @@ class MonitorService:
                 if not is_actionable:
                     logger.info(f"Skipping non-actionable Slack message: {message_text[:80]}")
                     return None
+
+                # Check if the mention has already been handled in the thread
+                handled_context = None
+                if event.context_data and event.context_data.get("thread"):
+                    thread_messages = event.context_data["thread"][:20]
+                    handled_context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+
+                is_handled = await slack_title_service.is_already_handled(message_text, handled_context)
+                if is_handled:
+                    logger.info(f"Skipping already-handled Slack message: {message_text[:80]}")
+                    return None
             except Exception as e:
                 logger.warning(f"Actionability check failed, creating task anyway: {e}")
 
@@ -294,6 +322,16 @@ class MonitorService:
 
         # Extract source_url from event (e.g., Slack permalink)
         source_url = event.event_data.get("permalink")
+
+        # Cross-monitor dedup: skip if a task with this source_url already exists
+        if source_url:
+            existing_task = await self.db.tasks.find_one({
+                "organization_id": monitor["organization_id"],
+                "source_url": source_url,
+            })
+            if existing_task:
+                logger.info(f"Skipping duplicate: task already exists for {source_url}")
+                return None
 
         # Create the task
         from app.models import Task, TaskStatus

@@ -108,7 +108,10 @@ class OutlookMonitorAdapter(MonitorAdapter):
         return well_known.get(folder_name.lower(), folder_name)
 
     async def poll(
-        self, cursor: Optional[dict] = None
+        self,
+        cursor: Optional[dict] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
     ) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
         """
         Poll Outlook for new messages.

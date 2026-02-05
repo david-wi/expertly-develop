@@ -54,19 +54,29 @@ class SlackMonitorAdapter(MonitorAdapter):
 
             return result
 
-    async def poll(self, cursor: Optional[dict] = None) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
+    async def poll(
+        self,
+        cursor: Optional[dict] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
+    ) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
         """
         Poll Slack for new messages.
 
         For my_mentions mode: Uses search.messages API for efficiency (single API call).
         For other modes: Uses conversations.history to fetch messages since the last poll.
+
+        Args:
+            cursor: Previous poll state
+            oldest: Optional ISO date string for start of date range (backfill)
+            latest: Optional ISO date string for end of date range (backfill)
         """
         events: list[MonitorAdapterEvent] = []
         new_cursor: dict = cursor.copy() if cursor else {}
 
         # Use efficient search API for @mentions mode
         if self.my_mentions:
-            return await self._poll_via_search(cursor)
+            return await self._poll_via_search(cursor, oldest=oldest, latest=latest)
 
         # Get channels to poll
         channels_to_poll = await self._get_channels_to_poll()
@@ -78,7 +88,9 @@ class SlackMonitorAdapter(MonitorAdapter):
             try:
                 channel_events, channel_cursor = await self._poll_channel(
                     channel_id,
-                    cursor.get(channel_id) if cursor else None
+                    cursor.get(channel_id) if cursor else None,
+                    oldest=oldest,
+                    latest=latest,
                 )
                 events.extend(channel_events)
                 if channel_cursor:
@@ -88,7 +100,12 @@ class SlackMonitorAdapter(MonitorAdapter):
 
         return events, new_cursor if new_cursor else None
 
-    async def _poll_via_search(self, cursor: Optional[dict] = None) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
+    async def _poll_via_search(
+        self,
+        cursor: Optional[dict] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
+    ) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
         """
         Poll for @mentions using Slack's search.messages API.
 
@@ -106,9 +123,16 @@ class SlackMonitorAdapter(MonitorAdapter):
 
         try:
             # Search for messages mentioning this user
-            # The query <@USER_ID> finds all @mentions
+            query = f"<@{self.provider_user_id}>"
+
+            # Append date filters for backfill
+            if oldest:
+                query += f" after:{self._to_slack_date(oldest)}"
+            if latest:
+                query += f" before:{self._to_slack_date(latest)}"
+
             result = await self._slack_request("search.messages", {
-                "query": f"<@{self.provider_user_id}>",
+                "query": query,
                 "sort": "timestamp",
                 "sort_dir": "desc",
                 "count": 50
@@ -202,7 +226,9 @@ class SlackMonitorAdapter(MonitorAdapter):
     async def _poll_channel(
         self,
         channel_id: str,
-        oldest_ts: Optional[str] = None
+        oldest_ts: Optional[str] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
     ) -> tuple[list[MonitorAdapterEvent], Optional[str]]:
         """Poll a single channel for new messages."""
         events: list[MonitorAdapterEvent] = []
@@ -211,8 +237,13 @@ class SlackMonitorAdapter(MonitorAdapter):
             "channel": channel_id,
             "limit": 100,
         }
-        if oldest_ts:
+        # Use explicit date range if provided (backfill), else cursor
+        if oldest:
+            params["oldest"] = self._to_unix_ts(oldest)
+        elif oldest_ts:
             params["oldest"] = oldest_ts
+        if latest:
+            params["latest"] = self._to_unix_ts(latest)
 
         try:
             result = await self._slack_request("conversations.history", params)
@@ -319,20 +350,42 @@ class SlackMonitorAdapter(MonitorAdapter):
         message_ts: str,
         thread_ts: Optional[str] = None
     ) -> Optional[dict]:
-        """Fetch surrounding context for a message."""
+        """Fetch surrounding context for a message.
+
+        For threaded messages: fetches ALL thread replies (up to 400) via pagination.
+        For non-threaded messages: fetches surrounding channel messages using context_messages setting.
+        """
         context: dict = {"before": [], "after": [], "thread": []}
 
         try:
-            # If in a thread, get thread replies
             if thread_ts:
-                result = await self._slack_request("conversations.replies", {
-                    "channel": channel_id,
-                    "ts": thread_ts,
-                    "limit": self.context_messages * 2
-                })
-                context["thread"] = result.get("messages", [])
+                # Paginate through ALL thread replies (up to 400 max)
+                all_replies: list[dict] = []
+                cursor_token: Optional[str] = None
+                max_replies = 400
+
+                while len(all_replies) < max_replies:
+                    params: dict = {
+                        "channel": channel_id,
+                        "ts": thread_ts,
+                        "limit": 200,
+                    }
+                    if cursor_token:
+                        params["cursor"] = cursor_token
+
+                    result = await self._slack_request("conversations.replies", params)
+                    messages = result.get("messages", [])
+                    all_replies.extend(messages)
+
+                    # Check for more pages
+                    response_metadata = result.get("response_metadata", {})
+                    cursor_token = response_metadata.get("next_cursor")
+                    if not cursor_token:
+                        break
+
+                context["thread"] = all_replies[:max_replies]
             else:
-                # Get messages around this one
+                # Get messages around this one (non-threaded)
                 result = await self._slack_request("conversations.history", {
                     "channel": channel_id,
                     "latest": message_ts,
@@ -355,6 +408,21 @@ class SlackMonitorAdapter(MonitorAdapter):
             logger.error(f"Error fetching message context: {e}")
 
         return context
+
+    @staticmethod
+    def _to_slack_date(iso_date: str) -> str:
+        """Convert an ISO date string (YYYY-MM-DD or full ISO) to Slack search date YYYY-MM-DD."""
+        return iso_date[:10]
+
+    @staticmethod
+    def _to_unix_ts(iso_date: str) -> str:
+        """Convert an ISO date string to a Unix timestamp string for Slack API."""
+        try:
+            dt = datetime.fromisoformat(iso_date.replace("Z", "+00:00"))
+        except ValueError:
+            # Try as date-only
+            dt = datetime.strptime(iso_date[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        return str(dt.timestamp())
 
     @staticmethod
     def _parse_slack_ts(ts: Optional[str]) -> Optional[datetime]:

@@ -387,6 +387,13 @@ export default function Monitors() {
   const [polling, setPolling] = useState<string | null>(null)
   const [showSlackSetupGuide, setShowSlackSetupGuide] = useState(false)
 
+  // Backfill modal state
+  const [showBackfillModal, setShowBackfillModal] = useState(false)
+  const [backfillMonitor, setBackfillMonitor] = useState<Monitor | null>(null)
+  const [backfillFrom, setBackfillFrom] = useState('')
+  const [backfillTo, setBackfillTo] = useState('')
+  const [backfilling, setBackfilling] = useState(false)
+
   // Notification state
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
@@ -601,6 +608,41 @@ export default function Monitors() {
       })
     } finally {
       setPolling(null)
+    }
+  }
+
+  const openBackfillModal = (monitor: Monitor) => {
+    setBackfillMonitor(monitor)
+    // Default: last 7 days
+    const to = new Date()
+    const from = new Date()
+    from.setDate(from.getDate() - 7)
+    setBackfillFrom(from.toISOString().slice(0, 10))
+    setBackfillTo(to.toISOString().slice(0, 10))
+    setShowBackfillModal(true)
+  }
+
+  const handleBackfill = async () => {
+    if (!backfillMonitor || !backfillFrom || !backfillTo) return
+    const monitorId = backfillMonitor._id || backfillMonitor.id
+    setBackfilling(true)
+    try {
+      const result = await api.backfillMonitor(monitorId, backfillFrom, backfillTo)
+      await loadData()
+      setShowBackfillModal(false)
+      setBackfillMonitor(null)
+      setNotification({
+        type: 'success',
+        message: `Backfill complete: ${result.events_found} events found, ${result.playbooks_triggered} tasks created`,
+      })
+    } catch (error) {
+      console.error('Failed to backfill monitor:', error)
+      setNotification({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to backfill monitor',
+      })
+    } finally {
+      setBackfilling(false)
     }
   }
 
@@ -922,7 +964,14 @@ export default function Monitors() {
                         disabled={polling === monitorId || monitor.status === 'paused'}
                         className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
                       >
-                        {polling === monitorId ? 'Polling...' : 'Poll'}
+                        {polling === monitorId ? 'Fetching...' : 'Fetch Now'}
+                      </button>
+                      <button
+                        onClick={() => openBackfillModal(monitor)}
+                        disabled={monitor.status === 'paused'}
+                        className="text-purple-600 hover:text-purple-800 text-sm disabled:opacity-50"
+                      >
+                        Backfill...
                       </button>
                       <button
                         onClick={() => handlePauseResume(monitor)}
@@ -1402,6 +1451,64 @@ export default function Monitors() {
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
             Close
+          </button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Backfill Modal */}
+      <Modal
+        isOpen={showBackfillModal && !!backfillMonitor}
+        onClose={() => {
+          setShowBackfillModal(false)
+          setBackfillMonitor(null)
+        }}
+        title={`Backfill - ${backfillMonitor?.name}`}
+        size="sm"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Fetch historical messages from a date range. This will not affect your normal polling cursor — new messages will continue to be picked up as usual.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
+              <input
+                type="date"
+                value={backfillFrom}
+                onChange={(e) => setBackfillFrom(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">To</label>
+              <input
+                type="date"
+                value={backfillTo}
+                onChange={(e) => setBackfillTo(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">
+            Duplicate messages will be automatically skipped if they already created tasks.
+          </p>
+        </div>
+        <ModalFooter>
+          <button
+            onClick={() => {
+              setShowBackfillModal(false)
+              setBackfillMonitor(null)
+            }}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleBackfill}
+            disabled={backfilling || !backfillFrom || !backfillTo}
+            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+          >
+            {backfilling ? 'Backfilling...' : 'Start Backfill'}
           </button>
         </ModalFooter>
       </Modal>

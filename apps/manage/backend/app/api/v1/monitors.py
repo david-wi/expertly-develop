@@ -1,12 +1,21 @@
 from datetime import datetime, timezone
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
+from pydantic import BaseModel
 
 from app.database import get_database
 from app.models import Monitor, MonitorCreate, MonitorUpdate, MonitorEvent, User, MonitorStatus, MonitorProvider
 from app.models.queue import ScopeType
 from app.api.deps import get_current_user
 from app.services.monitor_service import MonitorService
+
+
+class PollRequest(BaseModel):
+    """Optional request body for triggering a poll with date range (backfill)."""
+    oldest: Optional[str] = None
+    latest: Optional[str] = None
+    is_backfill: bool = False
 
 router = APIRouter()
 
@@ -291,9 +300,10 @@ async def delete_monitor(
 @router.post("/{monitor_id}/poll")
 async def trigger_poll(
     monitor_id: str,
+    body: Optional[PollRequest] = None,
     current_user: User = Depends(get_current_user)
 ) -> dict:
-    """Manually trigger a poll for a monitor."""
+    """Manually trigger a poll for a monitor. Optionally pass date range for backfill."""
     db = get_database()
 
     if not ObjectId.is_valid(monitor_id):
@@ -309,7 +319,13 @@ async def trigger_poll(
         raise HTTPException(status_code=404, detail="Monitor not found")
 
     service = MonitorService()
-    result = await service.poll_monitor(monitor_id, current_user.organization_id)
+    result = await service.poll_monitor(
+        monitor_id,
+        current_user.organization_id,
+        oldest=body.oldest if body else None,
+        latest=body.latest if body else None,
+        is_backfill=body.is_backfill if body else False,
+    )
 
     if result.get("error"):
         raise HTTPException(status_code=500, detail=result["error"])

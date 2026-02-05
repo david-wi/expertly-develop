@@ -347,6 +347,47 @@ Respond with ONLY "yes" or "no"."""
             logger.warning(f"AI actionability check failed: {e}")
             return self._fallback_actionability(message_text)
 
+    ALREADY_HANDLED_SYSTEM_PROMPT = """You are a message classifier. Given a Slack message where someone mentioned David, along with the thread context (subsequent replies), determine if the request has ALREADY been handled or resolved by someone in the thread.
+
+A message IS already handled (respond "yes") if:
+- Someone in the thread has already answered the question or fulfilled the request
+- The original poster confirmed the issue is resolved
+- Someone committed to handling it and followed through
+- The thread shows the work was completed or the decision was made
+
+A message is NOT already handled (respond "no") if:
+- No one has responded yet
+- The responses are only acknowledgments without actually handling it
+- The request is still open/pending
+- David was specifically asked to do something that hasn't been done
+- The thread shows ongoing discussion without resolution
+
+Respond with ONLY "yes" or "no"."""
+
+    async def is_already_handled(self, message_text: str, context: Optional[str] = None) -> bool:
+        """
+        Determine if a Slack mention has already been handled by someone in the thread.
+
+        Returns True if the request appears to be resolved, False otherwise.
+        Defaults to False (not handled → create task) on failure.
+        """
+        if not self.is_configured():
+            return False
+
+        prompt = f"Slack message: {message_text}"
+        if context:
+            prompt += f"\n\nThread replies:\n{context}"
+
+        try:
+            response_text = await self._call_with_fallback(
+                self.ALREADY_HANDLED_SYSTEM_PROMPT, prompt, 10, 0.0,
+                fallback_fn=lambda: "no"
+            )
+            return response_text.strip().lower().startswith("yes")
+        except Exception as e:
+            logger.warning(f"AI already-handled check failed: {e}")
+            return False
+
     def _fallback_actionability(self, message_text: str) -> bool:
         """Simple heuristic fallback for actionability check."""
         import re

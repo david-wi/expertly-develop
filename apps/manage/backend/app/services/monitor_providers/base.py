@@ -34,12 +34,19 @@ class MonitorAdapter(ABC):
         self.provider_config = provider_config
 
     @abstractmethod
-    async def poll(self, cursor: Optional[dict] = None) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
+    async def poll(
+        self,
+        cursor: Optional[dict] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
+    ) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
         """
         Poll the provider for new events.
 
         Args:
             cursor: Optional cursor from previous poll for pagination
+            oldest: Optional start date/time filter (ISO format or provider-specific)
+            latest: Optional end date/time filter (ISO format or provider-specific)
 
         Returns:
             A tuple of (events, new_cursor) where:
