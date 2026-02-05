@@ -58,11 +58,15 @@ class SlackMonitorAdapter(MonitorAdapter):
         """
         Poll Slack for new messages.
 
-        Uses conversations.history to fetch messages since the last poll.
-        Filters based on configured keywords, channels, and tagged users.
+        For my_mentions mode: Uses search.messages API for efficiency (single API call).
+        For other modes: Uses conversations.history to fetch messages since the last poll.
         """
         events: list[MonitorAdapterEvent] = []
         new_cursor: dict = cursor.copy() if cursor else {}
+
+        # Use efficient search API for @mentions mode
+        if self.my_mentions:
+            return await self._poll_via_search(cursor)
 
         # Get channels to poll
         channels_to_poll = await self._get_channels_to_poll()
@@ -83,6 +87,97 @@ class SlackMonitorAdapter(MonitorAdapter):
                 logger.error(f"Error polling channel {channel_id}: {e}")
 
         return events, new_cursor if new_cursor else None
+
+    async def _poll_via_search(self, cursor: Optional[dict] = None) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
+        """
+        Poll for @mentions using Slack's search.messages API.
+
+        Much more efficient than scanning all channels - single API call
+        searches the entire workspace for messages mentioning the user.
+        """
+        events: list[MonitorAdapterEvent] = []
+
+        if not self.provider_user_id:
+            logger.warning("my_mentions enabled but no provider_user_id available")
+            return events, cursor
+
+        # Get the last seen timestamp from cursor
+        last_seen_ts = cursor.get("last_seen_ts") if cursor else None
+
+        try:
+            # Search for messages mentioning this user
+            # The query <@USER_ID> finds all @mentions
+            result = await self._slack_request("search.messages", {
+                "query": f"<@{self.provider_user_id}>",
+                "sort": "timestamp",
+                "sort_dir": "desc",
+                "count": 50
+            })
+
+            messages = result.get("messages", {}).get("matches", [])
+            if not messages:
+                return events, cursor
+
+            newest_ts = None
+
+            for message in messages:
+                msg_ts = message.get("ts", "0")
+
+                # Track newest for cursor
+                if newest_ts is None or msg_ts > newest_ts:
+                    newest_ts = msg_ts
+
+                # Skip messages we've already seen
+                if last_seen_ts and msg_ts <= last_seen_ts:
+                    continue
+
+                # Skip bot messages
+                if message.get("subtype") == "bot_message":
+                    continue
+
+                channel_id = message.get("channel", {}).get("id")
+                if not channel_id:
+                    continue
+
+                # Fetch context if configured
+                context_data = None
+                if self.context_messages > 0:
+                    context_data = await self._fetch_message_context(
+                        channel_id,
+                        msg_ts,
+                        message.get("thread_ts")
+                    )
+
+                # Get permalink from search result or fetch it
+                permalink = message.get("permalink")
+                if not permalink:
+                    permalink = await self._get_message_permalink(channel_id, msg_ts)
+
+                event = MonitorAdapterEvent(
+                    provider_event_id=f"{channel_id}:{msg_ts}",
+                    event_type="mention",
+                    event_data={
+                        "channel_id": channel_id,
+                        "channel_name": message.get("channel", {}).get("name"),
+                        "message": message,
+                        "text": message.get("text", ""),
+                        "user": message.get("user") or message.get("username"),
+                        "ts": msg_ts,
+                        "thread_ts": message.get("thread_ts"),
+                        "permalink": permalink,
+                    },
+                    context_data=context_data,
+                    provider_timestamp=self._parse_slack_ts(msg_ts)
+                )
+                events.append(event)
+
+            # Update cursor with newest timestamp
+            new_cursor = {"last_seen_ts": newest_ts} if newest_ts else cursor
+            return events, new_cursor
+
+        except Exception as e:
+            logger.error(f"Error searching for mentions: {e}")
+            return events, cursor
 
     async def _get_channels_to_poll(self) -> list[str]:
         """Get list of channel IDs to poll."""
@@ -424,4 +519,5 @@ class SlackMonitorAdapter(MonitorAdapter):
             "mpim:history",
             "mpim:read",
             "users:read",
+            "search:read",  # For efficient @mentions search
         ]
