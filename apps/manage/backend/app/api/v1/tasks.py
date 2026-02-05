@@ -74,7 +74,7 @@ def serialize_task(task: dict) -> dict:
 
     for field in ["organization_id", "queue_id", "assigned_to_id", "checked_out_by_id",
                   "parent_task_id", "project_id", "sop_id", "approver_id", "approver_queue_id",
-                  "reviewer_id"]:
+                  "reviewer_id", "source_monitor_id", "playbook_id"]:
         if task.get(field):
             result[field] = str(task[field])
 
