@@ -251,7 +251,14 @@ export default function Monitors() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim() || !formData.connection_id) return
+    if (!formData.name.trim()) {
+      setNotification({ type: 'error', message: 'Please enter a name for the monitor' })
+      return
+    }
+    if (!formData.connection_id) {
+      setNotification({ type: 'error', message: 'Please select a connection' })
+      return
+    }
 
     setSaving(true)
     try {
