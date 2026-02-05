@@ -367,8 +367,8 @@ export function Sidebar({
                   <div
                     className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${textSecondary} hover:${activeBg} hover:${activeText}`}
                   >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
-                      <LayoutGrid className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-primary-100 dark:bg-primary-900/50 group-hover:bg-gradient-to-br group-hover:from-primary-500 group-hover:to-primary-600">
+                      <LayoutGrid className="w-4 h-4 transition-colors text-primary-600 dark:text-primary-400 group-hover:text-white" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">More Apps</p>
@@ -458,8 +458,8 @@ export function Sidebar({
                         setShowMoreAppsSubmenu(false)
                       }}
                     >
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
-                        <app.icon className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-primary-100 dark:bg-primary-900/50 group-hover:bg-gradient-to-br group-hover:from-primary-500 group-hover:to-primary-600">
+                        <app.icon className="w-4 h-4 transition-colors text-primary-600 dark:text-primary-400 group-hover:text-white" />
                       </div>
                       <div>
                         <p className="font-medium">{app.name}</p>
