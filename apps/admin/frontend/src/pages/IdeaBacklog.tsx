@@ -57,10 +57,10 @@ const PRODUCT_TAGS: Record<string, string[]> = {
   develop: ['walkthroughs', 'recording', 'playback', 'projects', 'artifacts'],
   identity: ['auth', 'users', 'organizations', 'teams', 'permissions', 'sso'],
   salon: ['appointments', 'clients', 'services', 'staff', 'scheduling'],
+  tms: ['shipments', 'carriers', 'routes', 'tracking', 'dispatch', 'loads'],
   today: ['tasks', 'workflows', 'calendar', 'notifications', 'integrations'],
   vibecode: ['agents', 'sessions', 'tools', 'streaming', 'widgets'],
   vibetest: ['testing', 'automation', 'reports', 'scenarios', 'ai'],
-  chem: ['formulas', 'calculations', 'visualization', 'data'],
 }
 
 // Helper to get product icon from EXPERTLY_PRODUCTS
@@ -93,21 +93,9 @@ interface IdeaCreate {
   priority?: Idea['priority']
   tags?: string[]
   organization_id?: string
+  created_by_email?: string
 }
 
-// Valid products
-const VALID_PRODUCTS = [
-  'admin',
-  'define',
-  'develop',
-  'identity',
-  'manage',
-  'salon',
-  'today',
-  'vibecode',
-  'vibetest',
-  'chem',
-]
 
 // API functions
 // VITE_API_URL already includes /api prefix (e.g., https://admin-api.ai.devintensive.com/api)
@@ -661,9 +649,9 @@ function CreateIdeaModal({
               required
               className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              {VALID_PRODUCTS.map((product) => (
-                <option key={product} value={product}>
-                  {product.charAt(0).toUpperCase() + product.slice(1)}
+              {EXPERTLY_PRODUCTS.map((product) => (
+                <option key={product.code} value={product.code}>
+                  {product.name}
                 </option>
               ))}
             </select>
@@ -671,7 +659,7 @@ function CreateIdeaModal({
 
           <div>
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
-              What's the idea? *
+              {organizationId ? 'Title *' : "What's the idea? *"}
             </label>
             <div className="flex gap-2">
               <input
@@ -681,7 +669,7 @@ function CreateIdeaModal({
                 required
                 autoFocus
                 className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="e.g., AI-powered task suggestions"
+                placeholder={organizationId ? "e.g., Implement user authentication" : "e.g., AI-powered task suggestions"}
               />
               <InlineVoiceTranscription
                 tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
@@ -694,7 +682,7 @@ function CreateIdeaModal({
 
           <div>
             <label className="block text-sm font-medium text-theme-text-primary mb-1">
-              Tell me more (optional)
+              {organizationId ? 'Description (optional)' : 'Tell me more (optional)'}
             </label>
             <div className="flex gap-2">
               <textarea
@@ -702,7 +690,7 @@ function CreateIdeaModal({
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
                 rows={4}
                 className="flex-1 px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Why is this idea valuable? What problem does it solve?"
+                placeholder={organizationId ? "Describe the work item..." : "Why is this idea valuable? What problem does it solve?"}
               />
               <InlineVoiceTranscription
                 tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
@@ -876,6 +864,10 @@ export function IdeaBacklog() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideas'] })
       setShowCreateModal(false)
+    },
+    onError: (error: Error) => {
+      console.error('Failed to create idea:', error)
+      alert(`Failed to create: ${error.message}`)
     },
   })
 
@@ -1162,9 +1154,9 @@ export function IdeaBacklog() {
             className="px-3 py-1.5 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary"
           >
             <option value="">All Products</option>
-            {VALID_PRODUCTS.map((product) => (
-              <option key={product} value={product}>
-                {product.charAt(0).toUpperCase() + product.slice(1)}
+            {EXPERTLY_PRODUCTS.map((product) => (
+              <option key={product.code} value={product.code}>
+                {product.name}
               </option>
             ))}
           </select>
@@ -1291,10 +1283,11 @@ export function IdeaBacklog() {
             if (editingIdea) {
               updateMutation.mutate({ id: editingIdea.id, data })
             } else {
-              // Include organization_id when creating in work backlog mode
+              // Include organization_id and created_by_email when creating
               const createData = {
                 ...data,
                 organization_id: organizationId || undefined,
+                created_by_email: userEmail || undefined,
               } as IdeaCreate
               createMutation.mutate(createData)
             }
