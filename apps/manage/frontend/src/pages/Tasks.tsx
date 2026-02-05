@@ -1,9 +1,19 @@
-import { useEffect, useState, useMemo } from 'react'
-import { Check, ChevronDown, ChevronRight } from 'lucide-react'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { api, Task, User, Project, Playbook } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
+
+// Build a display name with parent hierarchy
+function getProjectDisplayName(project: Project, allProjects: Project[]): string {
+  if (!project.parent_project_id) return project.name
+  const parent = allProjects.find(p => (p._id || p.id) === project.parent_project_id)
+  if (parent) {
+    return `${getProjectDisplayName(parent, allProjects)} > ${project.name}`
+  }
+  return project.name
+}
 
 const STATUS_COLORS: Record<string, string> = {
   queued: 'bg-blue-100 text-blue-800',
@@ -60,6 +70,18 @@ export default function Tasks() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+
+  // Inline add task state
+  const [addingInGroup, setAddingInGroup] = useState<string | null>(null)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
+  const [newTaskProjectId, setNewTaskProjectId] = useState('')
+  const [newTaskProjectQuery, setNewTaskProjectQuery] = useState('')
+  const [newTaskInstructions, setNewTaskInstructions] = useState('')
+  const [isCreatingTask, setIsCreatingTask] = useState(false)
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false)
+  const newTaskTitleRef = useRef<HTMLInputElement>(null)
+  const newTaskProjectRef = useRef<HTMLInputElement>(null)
+  const newTaskInstructionsRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     fetchQueues()
@@ -207,6 +229,153 @@ export default function Tasks() {
   }
 
   const hasFilters = filterQueue || filterStatus || filterPhase || filterProject || filterPlaybook || filterAssignee || filterApprover
+
+  // Get user's default queue for quick task creation
+  const userQueues = queues.filter((q) => q.scope_type === 'user')
+  const defaultQueue = userQueues[0]
+
+  // Start adding a task in a group
+  const startAddingInGroup = (groupKey: string) => {
+    setAddingInGroup(groupKey)
+    setNewTaskTitle('')
+    setNewTaskProjectId('')
+    setNewTaskProjectQuery('')
+    setNewTaskInstructions('')
+    // Pre-fill project if grouped by project
+    if (groupBy === 'project' && groupKey !== '_none') {
+      const project = projects.find((p) => (p._id || p.id) === groupKey)
+      if (project) {
+        setNewTaskProjectId(groupKey)
+        setNewTaskProjectQuery(getProjectDisplayName(project, projects))
+      }
+    }
+    setTimeout(() => newTaskTitleRef.current?.focus(), 0)
+  }
+
+  // Cancel adding task
+  const cancelAddingTask = () => {
+    setAddingInGroup(null)
+    setNewTaskTitle('')
+    setNewTaskProjectId('')
+    setNewTaskProjectQuery('')
+    setNewTaskInstructions('')
+    setShowProjectDropdown(false)
+  }
+
+  // Create task with inferred parameters based on grouping
+  const handleCreateTask = async () => {
+    if (!newTaskTitle.trim() || !defaultQueue || isCreatingTask) return
+
+    setIsCreatingTask(true)
+    try {
+      // Build task data with inferred parameters
+      const taskData: {
+        queue_id: string
+        title: string
+        description?: string
+        project_id?: string
+        playbook_id?: string
+      } = {
+        queue_id: defaultQueue._id || defaultQueue.id,
+        title: newTaskTitle.trim(),
+        description: newTaskInstructions.trim() || undefined,
+      }
+
+      // Infer parameters based on grouping
+      if (addingInGroup && addingInGroup !== '_none') {
+        switch (groupBy) {
+          case 'project':
+            taskData.project_id = addingInGroup
+            break
+          case 'queue':
+            taskData.queue_id = addingInGroup
+            break
+          case 'playbook':
+            taskData.playbook_id = addingInGroup
+            break
+          // For assignee, we'll update after creation
+          // For status/phase, tasks start as queued/planning by default
+        }
+      }
+
+      // Allow manual project override
+      if (newTaskProjectId && groupBy !== 'project') {
+        taskData.project_id = newTaskProjectId
+      }
+
+      const newTask = await api.createTask(taskData)
+      const taskId = newTask._id || newTask.id
+
+      // For assignee grouping, update the task with the assigned user
+      if (groupBy === 'assignee' && addingInGroup && addingInGroup !== '_none' && taskId) {
+        await api.updateTask(taskId, { assigned_to_id: addingInGroup })
+      }
+
+      cancelAddingTask()
+      fetchTasks()
+    } catch (err) {
+      console.error('Failed to create task:', err)
+    } finally {
+      setIsCreatingTask(false)
+    }
+  }
+
+  // Keyboard handlers for inline task creation
+  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (newTaskTitle.trim()) {
+        handleCreateTask()
+      }
+    } else if (e.key === 'Tab' && !e.shiftKey && newTaskTitle.trim()) {
+      // Only show project field if not grouped by project
+      if (groupBy !== 'project') {
+        e.preventDefault()
+        newTaskProjectRef.current?.focus()
+        setShowProjectDropdown(true)
+      } else {
+        e.preventDefault()
+        newTaskInstructionsRef.current?.focus()
+      }
+    } else if (e.key === 'Escape') {
+      cancelAddingTask()
+    }
+  }
+
+  const handleProjectKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      // Auto-select if single match
+      const filteredProjects = projects.filter(p =>
+        getProjectDisplayName(p, projects).toLowerCase().includes(newTaskProjectQuery.toLowerCase())
+      )
+      if (filteredProjects.length === 1) {
+        setNewTaskProjectId(filteredProjects[0]._id || filteredProjects[0].id)
+        setNewTaskProjectQuery(getProjectDisplayName(filteredProjects[0], projects))
+      }
+      setShowProjectDropdown(false)
+      if (newTaskTitle.trim()) {
+        handleCreateTask()
+      }
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault()
+      setShowProjectDropdown(false)
+      newTaskInstructionsRef.current?.focus()
+    } else if (e.key === 'Escape') {
+      setShowProjectDropdown(false)
+    }
+  }
+
+  const handleInstructionsKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (newTaskTitle.trim()) {
+        handleCreateTask()
+      }
+    } else if (e.key === 'Escape') {
+      cancelAddingTask()
+    }
+  }
 
   // Sort groups - put "_none" at the end
   const sortedGroupKeys = Object.keys(groupedTasks).sort((a, b) => {
@@ -377,6 +546,112 @@ export default function Tasks() {
       ) : groupBy === 'none' ? (
         // Flat list view
         <div className="bg-white shadow rounded-lg">
+          {/* Inline Add Task for flat list */}
+          {defaultQueue && (
+            addingInGroup === '' ? (
+              <div className="px-3 py-2 border-b border-gray-100 bg-blue-50/30">
+                <div className="flex items-start gap-2">
+                  <div className="flex-shrink-0 text-blue-400 pt-0.5">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <input
+                      ref={newTaskTitleRef}
+                      type="text"
+                      placeholder="Task title..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      onKeyDown={handleTitleKeyDown}
+                      disabled={isCreatingTask}
+                      className="w-full text-sm font-medium text-gray-900 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                    />
+                    {newTaskTitle && (
+                      <>
+                        <div className="relative">
+                          <input
+                            ref={newTaskProjectRef}
+                            type="text"
+                            placeholder="Project (optional)..."
+                            value={newTaskProjectQuery}
+                            onChange={(e) => {
+                              setNewTaskProjectQuery(e.target.value)
+                              setShowProjectDropdown(true)
+                              if (newTaskProjectId) {
+                                const selectedProject = projects.find(p => (p._id || p.id) === newTaskProjectId)
+                                if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
+                                  setNewTaskProjectId('')
+                                }
+                              }
+                            }}
+                            onFocus={() => setShowProjectDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowProjectDropdown(false), 200)}
+                            onKeyDown={handleProjectKeyDown}
+                            disabled={isCreatingTask}
+                            className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                          />
+                          {showProjectDropdown && newTaskProjectQuery && (
+                            <div className="absolute z-10 top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto min-w-max">
+                              {projects
+                                .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(newTaskProjectQuery.toLowerCase()))
+                                .slice(0, 5)
+                                .map(project => (
+                                  <div
+                                    key={project._id || project.id}
+                                    className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer whitespace-nowrap"
+                                    onMouseDown={() => {
+                                      setNewTaskProjectId(project._id || project.id)
+                                      setNewTaskProjectQuery(getProjectDisplayName(project, projects))
+                                      setShowProjectDropdown(false)
+                                    }}
+                                  >
+                                    {getProjectDisplayName(project, projects)}
+                                  </div>
+                                ))}
+                            </div>
+                          )}
+                        </div>
+                        <textarea
+                          ref={newTaskInstructionsRef}
+                          placeholder="Instructions (optional)..."
+                          value={newTaskInstructions}
+                          onChange={(e) => setNewTaskInstructions(e.target.value)}
+                          onKeyDown={handleInstructionsKeyDown}
+                          disabled={isCreatingTask}
+                          rows={2}
+                          className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200 resize-none"
+                        />
+                      </>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleCreateTask}
+                        disabled={!newTaskTitle.trim() || isCreatingTask}
+                        className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {isCreatingTask ? 'Adding...' : 'Add Task'}
+                      </button>
+                      <button
+                        onClick={cancelAddingTask}
+                        disabled={isCreatingTask}
+                        className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <span className="text-xs text-gray-400 ml-auto">Enter to save, Esc to cancel</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button
+                onClick={() => startAddingInGroup('')}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add task</span>
+              </button>
+            )
+          )}
           <TaskList
             tasks={filteredTasks}
             projects={projects}
@@ -417,15 +692,124 @@ export default function Tasks() {
 
                 {/* Group Tasks */}
                 {!isCollapsed && (
-                  <TaskList
-                    tasks={groupTasks}
-                    projects={projects}
-                    queues={queues}
-                    completingTaskId={completingTaskId}
-                    onTaskClick={setSelectedTaskId}
-                    onQuickComplete={handleQuickComplete}
-                    compact
-                  />
+                  <>
+                    <TaskList
+                      tasks={groupTasks}
+                      projects={projects}
+                      queues={queues}
+                      completingTaskId={completingTaskId}
+                      onTaskClick={setSelectedTaskId}
+                      onQuickComplete={handleQuickComplete}
+                      compact
+                    />
+
+                    {/* Inline Add Task */}
+                    {defaultQueue && (
+                      addingInGroup === groupKey ? (
+                        <div className="px-2 py-2 border-t border-gray-100 bg-blue-50/30">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-shrink-0 text-blue-400 pt-0.5">
+                              <Plus className="w-3.5 h-3.5" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                              <input
+                                ref={newTaskTitleRef}
+                                type="text"
+                                placeholder="Task title..."
+                                value={newTaskTitle}
+                                onChange={(e) => setNewTaskTitle(e.target.value)}
+                                onKeyDown={handleTitleKeyDown}
+                                disabled={isCreatingTask}
+                                className="w-full text-xs font-medium text-gray-900 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                              />
+                              {newTaskTitle && groupBy !== 'project' && (
+                                <div className="relative">
+                                  <input
+                                    ref={newTaskProjectRef}
+                                    type="text"
+                                    placeholder="Project (optional)..."
+                                    value={newTaskProjectQuery}
+                                    onChange={(e) => {
+                                      setNewTaskProjectQuery(e.target.value)
+                                      setShowProjectDropdown(true)
+                                      if (newTaskProjectId) {
+                                        const selectedProject = projects.find(p => (p._id || p.id) === newTaskProjectId)
+                                        if (selectedProject && getProjectDisplayName(selectedProject, projects) !== e.target.value) {
+                                          setNewTaskProjectId('')
+                                        }
+                                      }
+                                    }}
+                                    onFocus={() => setShowProjectDropdown(true)}
+                                    onBlur={() => setTimeout(() => setShowProjectDropdown(false), 200)}
+                                    onKeyDown={handleProjectKeyDown}
+                                    disabled={isCreatingTask}
+                                    className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
+                                  />
+                                  {showProjectDropdown && newTaskProjectQuery && (
+                                    <div className="absolute z-10 top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-32 overflow-auto min-w-max">
+                                      {projects
+                                        .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(newTaskProjectQuery.toLowerCase()))
+                                        .slice(0, 5)
+                                        .map(project => (
+                                          <div
+                                            key={project._id || project.id}
+                                            className="px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 cursor-pointer whitespace-nowrap"
+                                            onMouseDown={() => {
+                                              setNewTaskProjectId(project._id || project.id)
+                                              setNewTaskProjectQuery(getProjectDisplayName(project, projects))
+                                              setShowProjectDropdown(false)
+                                            }}
+                                          >
+                                            {getProjectDisplayName(project, projects)}
+                                          </div>
+                                        ))}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              {newTaskTitle && (
+                                <textarea
+                                  ref={newTaskInstructionsRef}
+                                  placeholder="Instructions (optional)..."
+                                  value={newTaskInstructions}
+                                  onChange={(e) => setNewTaskInstructions(e.target.value)}
+                                  onKeyDown={handleInstructionsKeyDown}
+                                  disabled={isCreatingTask}
+                                  rows={2}
+                                  className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200 resize-none"
+                                />
+                              )}
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  onClick={handleCreateTask}
+                                  disabled={!newTaskTitle.trim() || isCreatingTask}
+                                  className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                >
+                                  {isCreatingTask ? 'Adding...' : 'Add'}
+                                </button>
+                                <button
+                                  onClick={cancelAddingTask}
+                                  disabled={isCreatingTask}
+                                  className="px-2 py-1 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                                >
+                                  Cancel
+                                </button>
+                                <span className="text-[10px] text-gray-400 ml-auto">Enter to save, Esc to cancel</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => startAddingInGroup(groupKey)}
+                          className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors border-t border-gray-100"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add task</span>
+                        </button>
+                      )
+                    )}
+                  </>
                 )}
               </div>
             )
