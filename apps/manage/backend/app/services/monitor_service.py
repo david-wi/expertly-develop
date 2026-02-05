@@ -578,6 +578,93 @@ class MonitorService:
 
         return result
 
+    async def handle_slack_webhook(self, payload: dict, headers: dict) -> dict:
+        """
+        Handle Slack Events API webhook.
+
+        Unlike generic webhooks, Slack webhooks are configured at the app level,
+        so we route to all active Slack monitors that have my_mentions enabled.
+
+        Args:
+            payload: The webhook payload from Slack
+            headers: HTTP headers
+
+        Returns:
+            Dict with processing results
+        """
+        result = {
+            "monitors_matched": 0,
+            "events_processed": 0,
+            "tasks_created": 0,
+            "errors": []
+        }
+
+        event = payload.get("event", {})
+        event_type = event.get("type")
+
+        # Only process app_mention and message events
+        if event_type not in ["app_mention", "message"]:
+            logger.debug(f"Ignoring Slack event type: {event_type}")
+            return result
+
+        # Find all active Slack monitors with my_mentions enabled
+        query = {
+            "provider": MonitorProvider.SLACK.value,
+            "status": MonitorStatus.ACTIVE.value,
+            "deleted_at": None,
+            "provider_config.my_mentions": True
+        }
+
+        cursor = self.db.monitors.find(query)
+        async for monitor in cursor:
+            try:
+                # Get connection data
+                connection_data = await self.get_connection_data(
+                    monitor["connection_id"],
+                    monitor["organization_id"]
+                )
+                if not connection_data:
+                    logger.warning(f"No connection data for monitor {monitor['_id']}")
+                    continue
+
+                # For app_mention events, check if the mentioned user matches the connection's user
+                if event_type == "app_mention":
+                    # Get the user ID from the connection
+                    connection_user_id = connection_data.get("provider_user_id")
+                    if connection_user_id:
+                        # Check if this mention is for this user
+                        text = event.get("text", "")
+                        if f"<@{connection_user_id}>" not in text:
+                            # This mention is not for this user's connection
+                            continue
+
+                # Get adapter and process webhook
+                adapter = get_adapter_for_provider(
+                    MonitorProvider.SLACK,
+                    connection_data,
+                    monitor.get("provider_config", {})
+                )
+
+                events = await adapter.handle_webhook(payload, headers)
+                result["monitors_matched"] += 1
+
+                for event_item in events:
+                    try:
+                        processed = await self.process_event(monitor, event_item)
+                        if processed:
+                            result["events_processed"] += 1
+                            result["tasks_created"] += 1
+                    except Exception as e:
+                        logger.error(f"Error processing Slack webhook event: {e}")
+                        result["errors"].append(str(e))
+
+            except Exception as e:
+                logger.error(f"Error handling Slack webhook for monitor {monitor['_id']}: {e}")
+                result["errors"].append(str(e))
+
+        logger.info(f"Slack webhook processed: {result['monitors_matched']} monitors, {result['tasks_created']} tasks created")
+        return result
+
     async def _set_monitor_error(self, monitor_id: ObjectId, error: str):
         """Set a monitor to error status."""
         await self.db.monitors.update_one(

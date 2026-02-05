@@ -329,6 +329,41 @@ class SlackMonitorAdapter(MonitorAdapter):
             event = payload.get("event", {})
             event_type = event.get("type")
 
+            # Handle app_mention events (when someone @mentions the app or user)
+            if event_type == "app_mention":
+                channel_id = event.get("channel")
+                context_data = None
+
+                # Fetch context if configured
+                if self.context_messages > 0:
+                    context_data = await self._fetch_message_context(
+                        channel_id,
+                        event.get("ts"),
+                        event.get("thread_ts")
+                    )
+
+                # Fetch permalink for direct link back to Slack
+                permalink = await self._get_message_permalink(channel_id, event.get("ts"))
+
+                adapter_event = MonitorAdapterEvent(
+                    provider_event_id=f"{channel_id}:{event.get('ts')}",
+                    event_type="app_mention",
+                    event_data={
+                        "channel_id": channel_id,
+                        "message": event,
+                        "text": event.get("text", ""),
+                        "user": event.get("user"),
+                        "ts": event.get("ts"),
+                        "thread_ts": event.get("thread_ts"),
+                        "permalink": permalink,
+                    },
+                    context_data=context_data,
+                    provider_timestamp=self._parse_slack_ts(event.get("ts"))
+                )
+                events.append(adapter_event)
+                return events
+
+            # Handle regular message events
             if event_type == "message":
                 # Filter out subtypes we don't care about
                 if event.get("subtype") in ["bot_message", "message_changed", "message_deleted"]:

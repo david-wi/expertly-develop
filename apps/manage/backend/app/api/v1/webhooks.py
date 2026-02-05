@@ -57,16 +57,16 @@ async def slack_webhook(request: Request):
     # Process event callback
     if body.get("type") == "event_callback":
         event = body.get("event", {})
-        logger.info(f"Received Slack event: {event.get('type')}")
+        event_type = event.get("type")
+        logger.info(f"Received Slack event: {event_type}")
 
         try:
             service = MonitorService()
             headers = dict(request.headers)
-            result = await service.handle_webhook(
-                MonitorProvider.SLACK,
-                body,
-                headers
-            )
+
+            # For Slack, we route to all active Slack monitors
+            # since webhooks are configured at the app level
+            result = await service.handle_slack_webhook(body, headers)
 
             logger.info(f"Processed Slack webhook: {result}")
         except Exception as e:

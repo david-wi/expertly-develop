@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     # OAuth - Slack
     slack_client_id: str = ""
     slack_client_secret: str = ""
+    slack_signing_secret: str = ""  # For verifying Slack Events API webhooks
 
     # OAuth - Microsoft
     microsoft_client_id: str = ""
