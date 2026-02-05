@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Modal, ModalFooter } from '@expertly/ui'
+import { RefreshCw, History, Pause, Play, Pencil, Trash2, Loader2 } from 'lucide-react'
 import {
   api,
   Monitor,
@@ -758,7 +759,7 @@ export default function Monitors() {
   }
 
   const getPlaybookLabel = (playbookId?: string) => {
-    if (!playbookId) return 'Direct to inbox'
+    if (!playbookId) return 'Direct to tasks'
     const playbook = playbooks.find((p) => p.id === playbookId)
     return playbook?.name || 'Unknown'
   }
@@ -958,39 +959,60 @@ export default function Monitors() {
                         {monitor.events_detected}
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-right space-x-2">
-                      <button
-                        onClick={() => handlePoll(monitor)}
-                        disabled={polling === monitorId || monitor.status === 'paused'}
-                        className="text-blue-600 hover:text-blue-800 text-sm disabled:opacity-50"
-                      >
-                        {polling === monitorId ? 'Fetching...' : 'Fetch Now'}
-                      </button>
-                      <button
-                        onClick={() => openBackfillModal(monitor)}
-                        disabled={monitor.status === 'paused'}
-                        className="text-purple-600 hover:text-purple-800 text-sm disabled:opacity-50"
-                      >
-                        Backfill...
-                      </button>
-                      <button
-                        onClick={() => handlePauseResume(monitor)}
-                        className="text-yellow-600 hover:text-yellow-800 text-sm"
-                      >
-                        {monitor.status === 'active' ? 'Pause' : 'Resume'}
-                      </button>
-                      <button onClick={() => openEditModal(monitor)} className="text-gray-600 hover:text-gray-800 text-sm">
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedMonitor(monitor)
-                          setShowDeleteConfirm(true)
-                        }}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Delete
-                      </button>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => handlePoll(monitor)}
+                          disabled={polling === monitorId || monitor.status === 'paused'}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Fetch new events now"
+                        >
+                          {polling === monitorId ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3.5 h-3.5" />
+                          )}
+                          {polling === monitorId ? 'Fetching…' : 'Fetch'}
+                        </button>
+                        <button
+                          onClick={() => openBackfillModal(monitor)}
+                          disabled={monitor.status === 'paused'}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                          title="Backfill historical events"
+                        >
+                          <History className="w-3.5 h-3.5" />
+                          Backfill
+                        </button>
+                        <button
+                          onClick={() => handlePauseResume(monitor)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors"
+                          title={monitor.status === 'active' ? 'Pause monitor' : 'Resume monitor'}
+                        >
+                          {monitor.status === 'active' ? (
+                            <Pause className="w-3.5 h-3.5" />
+                          ) : (
+                            <Play className="w-3.5 h-3.5" />
+                          )}
+                          {monitor.status === 'active' ? 'Pause' : 'Resume'}
+                        </button>
+                        <button
+                          onClick={() => openEditModal(monitor)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                          title="Edit monitor"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedMonitor(monitor)
+                            setShowDeleteConfirm(true)
+                          }}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-md text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          title="Delete monitor"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 )
@@ -1314,7 +1336,7 @@ export default function Monitors() {
               ))}
             </select>
             <p className="text-xs text-gray-500 mt-1">
-              Leave empty to create tasks directly in your inbox without running a playbook
+              Leave empty to create tasks directly without running a playbook
             </p>
           </div>
 
@@ -1469,6 +1491,41 @@ export default function Monitors() {
           <p className="text-sm text-gray-600">
             Fetch historical messages from a date range. This will not affect your normal polling cursor — new messages will continue to be picked up as usual.
           </p>
+
+          {/* Quick date range buttons */}
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-2">Quick select</label>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { label: 'Last 24h', days: 1 },
+                { label: 'Last 3 days', days: 3 },
+                { label: 'Last 7 days', days: 7 },
+                { label: 'Last 14 days', days: 14 },
+                { label: 'Last 30 days', days: 30 },
+              ].map(({ label, days }) => {
+                const to = new Date().toISOString().slice(0, 10)
+                const from = new Date(Date.now() - days * 86400000).toISOString().slice(0, 10)
+                const isActive = backfillFrom === from && backfillTo === to
+                return (
+                  <button
+                    key={days}
+                    onClick={() => {
+                      setBackfillFrom(from)
+                      setBackfillTo(to)
+                    }}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                      isActive
+                        ? 'bg-purple-100 text-purple-700 border-purple-300'
+                        : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">From</label>
@@ -1476,7 +1533,7 @@ export default function Monitors() {
                 type="date"
                 value={backfillFrom}
                 onChange={(e) => setBackfillFrom(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
             <div>
@@ -1485,7 +1542,7 @@ export default function Monitors() {
                 type="date"
                 value={backfillTo}
                 onChange={(e) => setBackfillTo(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
               />
             </div>
           </div>
@@ -1506,9 +1563,14 @@ export default function Monitors() {
           <button
             onClick={handleBackfill}
             disabled={backfilling || !backfillFrom || !backfillTo}
-            className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50"
           >
-            {backfilling ? 'Backfilling...' : 'Start Backfill'}
+            {backfilling ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <History className="w-4 h-4" />
+            )}
+            {backfilling ? 'Backfilling…' : 'Start Backfill'}
           </button>
         </ModalFooter>
       </Modal>
