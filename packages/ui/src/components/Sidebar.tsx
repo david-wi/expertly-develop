@@ -1,6 +1,7 @@
 import {
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   ClipboardList,
   MousePointerClick,
   Lock,
@@ -14,6 +15,7 @@ import {
   ScanSearch,
   Headphones,
   Users,
+  Wrench,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
@@ -53,8 +55,11 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },
   { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: FlaskConical, description: 'AI testing platform' },
   { name: 'Expertly Admin', code: 'admin', href: 'https://admin.ai.devintensive.com', icon: Settings, description: 'Platform administration', separatorBefore: true },
-  // Expertly Tools - native iOS/macOS/desktop apps with landing pages
-  { name: 'Expertly Discover', code: 'discover', href: 'https://discover.ai.devintensive.com', icon: ScanSearch, description: 'Video analysis app', separatorBefore: true, sectionHeader: 'Expertly Tools' },
+]
+
+// Expertly Tools - native iOS/macOS/desktop apps with landing pages (shown in submenu)
+export const EXPERTLY_TOOLS: ExpertlyProduct[] = [
+  { name: 'Expertly Discover', code: 'discover', href: 'https://discover.ai.devintensive.com', icon: ScanSearch, description: 'Video analysis app' },
   { name: 'Expertly Hear', code: 'hear', href: 'https://hear.ai.devintensive.com', icon: Headphones, description: 'Audio transcription app' },
   { name: 'Expertly Cowork', code: 'cowork', href: 'https://cowork.ai.devintensive.com', icon: Users, description: 'Desktop collaboration app' },
 ]
@@ -159,6 +164,7 @@ export function Sidebar({
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [showToolsSubmenu, setShowToolsSubmenu] = useState(false)
 
   // Use provided renderLink or create one from navigate function
   const renderLink = renderLinkProp ?? (navigate ? createRenderLink(navigate) : null)
@@ -261,19 +267,16 @@ export function Sidebar({
           <>
             <div
               className="fixed inset-0 z-40"
-              onClick={() => setShowProductSwitcher(false)}
+              onClick={() => {
+                setShowProductSwitcher(false)
+                setShowToolsSubmenu(false)
+              }}
             />
             <div className={`fixed left-0 top-14 w-72 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
               <div className="product-dropdown p-2">
                 <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>Switch Product</p>
-                {EXPERTLY_PRODUCTS.map((product) => (
+                {EXPERTLY_PRODUCTS.filter(p => p.code !== 'admin').map((product) => (
                   <div key={product.code}>
-                    {product.separatorBefore && (
-                      <hr className={`my-2 border-t ${borderColor}`} />
-                    )}
-                    {product.sectionHeader && (
-                      <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>{product.sectionHeader}</p>
-                    )}
                     <a
                       href={product.href}
                       className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
@@ -283,16 +286,8 @@ export function Sidebar({
                       }`}
                       onClick={() => setShowProductSwitcher(false)}
                     >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all ${
-                        product.separatorBefore
-                          ? 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700'
-                          : 'bg-primary-100 dark:bg-primary-900/50 group-hover:bg-gradient-to-br group-hover:from-primary-500 group-hover:to-primary-600'
-                      }`}>
-                        <product.icon className={`w-4 h-4 transition-colors ${
-                          product.separatorBefore
-                            ? 'text-gray-600 dark:text-gray-400 group-hover:text-white'
-                            : 'text-primary-600 dark:text-primary-400 group-hover:text-white'
-                        }`} />
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-primary-100 dark:bg-primary-900/50 group-hover:bg-gradient-to-br group-hover:from-primary-500 group-hover:to-primary-600">
+                        <product.icon className="w-4 h-4 transition-colors text-primary-600 dark:text-primary-400 group-hover:text-white" />
                       </div>
                       <div>
                         <p className="font-medium">{product.name}</p>
@@ -300,6 +295,77 @@ export function Sidebar({
                       </div>
                     </a>
                   </div>
+                ))}
+
+                {/* Expertly Tools with submenu */}
+                <hr className={`my-2 border-t ${borderColor}`} />
+                <div
+                  className="relative"
+                  onMouseEnter={() => setShowToolsSubmenu(true)}
+                  onMouseLeave={() => setShowToolsSubmenu(false)}
+                >
+                  <div
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${textSecondary} hover:${activeBg} hover:${activeText}`}
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-purple-100 dark:bg-purple-900/50 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-purple-600">
+                      <Wrench className="w-4 h-4 transition-colors text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">Expertly Tools</p>
+                      <p className={`text-xs ${textMuted}`}>Native apps & utilities</p>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${textMuted}`} />
+                  </div>
+
+                  {/* Tools Submenu */}
+                  {showToolsSubmenu && (
+                    <div className={`absolute left-full top-0 ml-1 w-64 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-60`}>
+                      <div className="p-2">
+                        {EXPERTLY_TOOLS.map((tool) => (
+                          <a
+                            key={tool.code}
+                            href={tool.href}
+                            className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${textSecondary} hover:${activeBg} hover:${activeText}`}
+                            onClick={() => {
+                              setShowProductSwitcher(false)
+                              setShowToolsSubmenu(false)
+                            }}
+                          >
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-purple-100 dark:bg-purple-900/50 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-purple-600">
+                              <tool.icon className="w-4 h-4 transition-colors text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{tool.name}</p>
+                              <p className={`text-xs ${textMuted}`}>{tool.description}</p>
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Admin */}
+                <hr className={`my-2 border-t ${borderColor}`} />
+                {EXPERTLY_PRODUCTS.filter(p => p.code === 'admin').map((product) => (
+                  <a
+                    key={product.code}
+                    href={product.href}
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                      product.code === productCode
+                        ? `product-item-active ${activeBg} ${activeText}`
+                        : `${textSecondary} hover:${activeBg} hover:${activeText}`
+                    }`}
+                    onClick={() => setShowProductSwitcher(false)}
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
+                      <product.icon className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
+                    </div>
+                    <div>
+                      <p className="font-medium">{product.name}</p>
+                      <p className={`text-xs ${textMuted}`}>{product.description}</p>
+                    </div>
+                  </a>
                 ))}
               </div>
             </div>
