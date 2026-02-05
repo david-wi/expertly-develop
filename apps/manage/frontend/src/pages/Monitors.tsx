@@ -725,7 +725,6 @@ export default function Monitors() {
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
               placeholder="e.g., Slack Support Requests"
-              required
               autoFocus
             />
           </div>
@@ -776,7 +775,6 @@ export default function Monitors() {
               value={formData.connection_id}
               onChange={(e) => setFormData({ ...formData, connection_id: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
-              required
               disabled={!showCreateModal}
             >
               <option value="">Select a connection</option>
@@ -1073,7 +1071,8 @@ export default function Monitors() {
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={(e) => showCreateModal ? handleCreate(e) : handleUpdate(e)}
               disabled={saving}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
             >
