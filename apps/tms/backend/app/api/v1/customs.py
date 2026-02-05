@@ -14,7 +14,7 @@ from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
-from app.db import get_db
+from app.database import get_database
 from app.models.customs import (
     CustomsEntry,
     CustomsEntryStatus,
@@ -24,6 +24,12 @@ from app.models.customs import (
 )
 
 router = APIRouter()
+
+
+# FastAPI dependency wrapper for database
+def get_db():
+    """Get database as FastAPI dependency."""
+    return get_database()
 
 
 # ============== Pydantic Schemas ==============
