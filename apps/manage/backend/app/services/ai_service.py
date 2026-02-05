@@ -226,14 +226,15 @@ Do not include any text before or after the JSON array."""
 class SlackMentionTitleService:
     """Service for generating task titles from Slack mentions using AI."""
 
-    SYSTEM_PROMPT = """You are a task title generator. Given a Slack message where someone was mentioned, generate a short, actionable task title.
+    SYSTEM_PROMPT = """You are a task title generator for David's task management system. Given a Slack message where David was mentioned, generate a short, actionable task title from David's perspective — what does David need to do?
 
 Guidelines:
-1. Start with an action verb when possible (Review, Respond to, Help with, etc.)
+1. Start with an action verb (Review, Respond to, Approve, Decide on, Follow up on, Join, etc.)
 2. Keep it under 60 characters
-3. Capture the essence of what's being asked
-4. Don't include the @mention itself
-5. If no clear action, use "Review Slack message from [topic/context]"
+3. Capture the essence of what David needs to do
+4. Don't include @mentions, Slack markup, or user IDs
+5. Write from David's perspective as a task he needs to complete
+6. If no clear action, use "Review: [brief topic summary]"
 
 Respond with ONLY the task title, nothing else."""
 
@@ -305,11 +306,165 @@ Respond with ONLY the task title, nothing else."""
             logger.warning(f"AI title generation failed: {e}")
             return self._fallback_title(message_text)
 
+    DESCRIPTION_SYSTEM_PROMPT = """You are a task description writer for David's task management system. Given a Slack message (and optionally thread context), write a clear, concise task description from David's perspective.
+
+Guidelines:
+1. Summarize what David needs to do and why
+2. Include key details (names, deadlines, links mentioned, specific questions)
+3. Keep it to 2-4 sentences
+4. Don't include raw Slack markup, @mentions with user IDs, or channel codes
+5. Replace user mentions with actual names where possible
+6. Write in a professional, clear tone
+
+Respond with ONLY the description text, nothing else."""
+
+    ACTIONABILITY_SYSTEM_PROMPT = """You are a message classifier. Given a Slack message where someone mentioned David, determine if this message requires David to take any action or gives him new information he needs to act on.
+
+Messages that are NOT actionable (respond "no"):
+- Simple acknowledgments ("okay", "sure", "got it", "thanks")
+- Bot-generated standup reports listing who didn't post
+- Messages that are just CC'ing David with no new info for him
+- Auto-generated notifications with no action needed
+
+Messages that ARE actionable (respond "yes"):
+- Requests for David to review, approve, or decide something
+- Questions directed at David
+- Information David needs to act on (incidents, updates, deadlines)
+- Meeting requests or scheduling
+- Follow-ups asking David to do something
+- New information that changes David's work
+
+Respond with ONLY "yes" or "no"."""
+
+    async def is_actionable(self, message_text: str, context: Optional[str] = None) -> bool:
+        """
+        Determine if a Slack message is actionable for David.
+
+        Returns True if the message requires action, False if it's just
+        an acknowledgment or non-actionable notification.
+        """
+        if not self.is_configured():
+            return self._fallback_actionability(message_text)
+
+        try:
+            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
+        except Exception:
+            try:
+                use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
+            except Exception:
+                return self._fallback_actionability(message_text)
+
+        model_id = use_case_config.model_id
+        provider = use_case_config.provider_name
+        max_tokens = 10
+        temperature = 0.0
+
+        prompt = f"Slack message: {message_text}"
+        if context:
+            prompt += f"\n\nThread context:\n{context}"
+
+        try:
+            if provider == "groq":
+                response_text = await self._call_groq_with_system(
+                    model_id, self.ACTIONABILITY_SYSTEM_PROMPT, prompt, max_tokens, temperature
+                )
+            elif provider == "anthropic":
+                response_text = await self._call_anthropic_with_system(
+                    model_id, self.ACTIONABILITY_SYSTEM_PROMPT, prompt, max_tokens, temperature
+                )
+            else:
+                response_text = await self._call_openai_with_system(
+                    model_id, self.ACTIONABILITY_SYSTEM_PROMPT, prompt, max_tokens, temperature
+                )
+
+            return response_text.strip().lower().startswith("yes")
+
+        except Exception as e:
+            logger.warning(f"AI actionability check failed: {e}")
+            return self._fallback_actionability(message_text)
+
+    def _fallback_actionability(self, message_text: str) -> bool:
+        """Simple heuristic fallback for actionability check."""
+        import re
+        clean = re.sub(r'<@[A-Z0-9]+(\|[^>]+)?>', '', message_text).strip().lower()
+
+        # Skip very short acknowledgments
+        non_actionable = [
+            "okay", "ok", "sure", "got it", "thanks", "thank you",
+            "noted", "will do", "done", "yes", "no", "agreed",
+        ]
+        if clean.rstrip(".!") in non_actionable:
+            return False
+
+        # Skip standup bot reports
+        if "did not post a standup for" in clean:
+            return False
+
+        return True
+
+    async def generate_description(self, message_text: str, context: Optional[str] = None) -> str:
+        """
+        Generate a task description from a Slack message.
+
+        Args:
+            message_text: The main message text
+            context: Optional context (thread messages, etc.)
+
+        Returns:
+            Generated task description
+        """
+        if not self.is_configured():
+            return self._fallback_description(message_text)
+
+        try:
+            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
+        except Exception:
+            try:
+                use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
+            except Exception:
+                return self._fallback_description(message_text)
+
+        model_id = use_case_config.model_id
+        provider = use_case_config.provider_name
+        max_tokens = min(use_case_config.max_tokens, 300)
+        temperature = use_case_config.temperature
+
+        prompt = f"Slack message: {message_text}"
+        if context:
+            prompt += f"\n\nThread context:\n{context}"
+
+        try:
+            if provider == "groq":
+                response_text = await self._call_groq_with_system(
+                    model_id, self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature
+                )
+            elif provider == "anthropic":
+                response_text = await self._call_anthropic_with_system(
+                    model_id, self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature
+                )
+            else:
+                response_text = await self._call_openai_with_system(
+                    model_id, self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature
+                )
+
+            return response_text.strip()
+
+        except Exception as e:
+            logger.warning(f"AI description generation failed: {e}")
+            return self._fallback_description(message_text)
+
+    def _fallback_description(self, message_text: str) -> str:
+        """Generate a simple fallback description."""
+        import re
+        clean_text = re.sub(r'<@[A-Z0-9]+(\|[^>]+)?>', lambda m: m.group(1)[1:] if m.group(1) else '', message_text).strip()
+        if len(clean_text) > 500:
+            clean_text = clean_text[:497] + "..."
+        return clean_text
+
     def _fallback_title(self, message_text: str) -> str:
         """Generate a simple fallback title."""
-        # Remove mentions
         import re
-        clean_text = re.sub(r'<@[A-Z0-9]+>', '', message_text).strip()
+        clean_text = re.sub(r'<@[A-Z0-9]+(\|[^>]+)?>', '', message_text).strip()
 
         if len(clean_text) > 50:
             return f"[Slack] {clean_text[:47]}..."
@@ -319,6 +474,18 @@ Respond with ONLY the task title, nothing else."""
 
     async def _call_groq(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
         """Call Groq API."""
+        return await self._call_groq_with_system(model_id, self.SYSTEM_PROMPT, prompt, max_tokens, temperature)
+
+    async def _call_anthropic(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call Anthropic API."""
+        return await self._call_anthropic_with_system(model_id, self.SYSTEM_PROMPT, prompt, max_tokens, temperature)
+
+    async def _call_openai(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call OpenAI API."""
+        return await self._call_openai_with_system(model_id, self.SYSTEM_PROMPT, prompt, max_tokens, temperature)
+
+    async def _call_groq_with_system(self, model_id: str, system_prompt: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call Groq API with a custom system prompt."""
         import os
         import openai
 
@@ -330,7 +497,7 @@ Respond with ONLY the task title, nothing else."""
         response = client.chat.completions.create(
             model=model_id,
             messages=[
-                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             max_tokens=max_tokens,
@@ -338,25 +505,25 @@ Respond with ONLY the task title, nothing else."""
         )
         return response.choices[0].message.content.strip()
 
-    async def _call_anthropic(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
-        """Call Anthropic API."""
+    async def _call_anthropic_with_system(self, model_id: str, system_prompt: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call Anthropic API with a custom system prompt."""
         client = self.ai_client.get_anthropic_client()
         response = client.messages.create(
             model=model_id,
             max_tokens=max_tokens,
             temperature=temperature,
-            system=self.SYSTEM_PROMPT,
+            system=system_prompt,
             messages=[{"role": "user", "content": prompt}],
         )
         return response.content[0].text.strip()
 
-    async def _call_openai(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
-        """Call OpenAI API."""
+    async def _call_openai_with_system(self, model_id: str, system_prompt: str, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Call OpenAI API with a custom system prompt."""
         client = self.ai_client.get_openai_client()
         response = client.chat.completions.create(
             model=model_id,
             messages=[
-                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt},
             ],
             max_tokens=max_tokens,

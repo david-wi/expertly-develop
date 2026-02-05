@@ -224,9 +224,30 @@ class MonitorService:
         it will be associated with the task. If no playbook is configured, the task
         is created directly in the inbox.
 
+        For Slack mentions, checks if the message is actionable before creating a task.
+
         Returns:
             The task ID if created, None otherwise
         """
+        # For Slack mentions, check if the message is actionable
+        provider = monitor.get("provider", "unknown")
+        provider_config = monitor.get("provider_config", {})
+        if provider == "slack" and provider_config.get("my_mentions"):
+            try:
+                slack_title_service = get_slack_title_service()
+                message_text = event.event_data.get("text", "")
+                context = None
+                if event.context_data and event.context_data.get("thread"):
+                    thread_messages = event.context_data["thread"][:5]
+                    context = "\n".join([m.get("text", "")[:200] for m in thread_messages])
+
+                is_actionable = await slack_title_service.is_actionable(message_text, context)
+                if not is_actionable:
+                    logger.info(f"Skipping non-actionable Slack message: {message_text[:80]}")
+                    return None
+            except Exception as e:
+                logger.warning(f"Actionability check failed, creating task anyway: {e}")
+
         playbook_id = monitor.get("playbook_id")
         playbook = None
 
@@ -267,8 +288,9 @@ class MonitorService:
             "provider_timestamp": event.provider_timestamp.isoformat() if event.provider_timestamp else None
         }
 
-        # Generate task title - use AI for Slack mentions
+        # Generate task title and description - use AI for Slack mentions
         task_title = await self._generate_ai_task_title(monitor, event)
+        task_description = await self._generate_ai_task_description(monitor, event)
 
         # Extract source_url from event (e.g., Slack permalink)
         source_url = event.event_data.get("permalink")
@@ -279,7 +301,7 @@ class MonitorService:
             organization_id=monitor["organization_id"],
             queue_id=queue_id,
             title=task_title,
-            description=self._generate_task_description(monitor, event),
+            description=task_description,
             status=TaskStatus.QUEUED,
             priority=5,
             project_id=monitor.get("project_id"),
@@ -329,6 +351,30 @@ class MonitorService:
 
         # Fallback to simple title generation
         return self._generate_task_title(monitor, event)
+
+    async def _generate_ai_task_description(self, monitor: dict, event: MonitorAdapterEvent) -> str:
+        """Generate an AI-powered task description for Slack mentions, fallback to simple description."""
+        provider = monitor.get("provider", "unknown")
+        provider_config = monitor.get("provider_config", {})
+
+        # Only use AI for Slack mentions (my_mentions mode)
+        if provider == "slack" and provider_config.get("my_mentions"):
+            try:
+                slack_title_service = get_slack_title_service()
+                message_text = event.event_data.get("text", "")
+
+                # Build context from thread if available
+                context = None
+                if event.context_data and event.context_data.get("thread"):
+                    thread_messages = event.context_data["thread"][:5]
+                    context = "\n".join([m.get("text", "")[:200] for m in thread_messages])
+
+                return await slack_title_service.generate_description(message_text, context)
+            except Exception as e:
+                logger.warning(f"AI description generation failed: {e}")
+
+        # Fallback to simple description generation
+        return self._generate_task_description(monitor, event)
 
     async def _create_context_comment(
         self,
@@ -410,28 +456,30 @@ class MonitorService:
         return f"[{monitor.get('name', 'Monitor')}] Event detected"
 
     def _generate_task_description(self, monitor: dict, event: MonitorAdapterEvent) -> str:
-        """Generate a task description from the event."""
-        lines = [
-            f"Detected by monitor: {monitor.get('name', 'Unknown')}",
-            f"Event type: {event.event_type}",
-            f"Event ID: {event.provider_event_id}",
-        ]
-
-        if event.provider_timestamp:
-            lines.append(f"Occurred at: {event.provider_timestamp.isoformat()}")
+        """Generate a task description from the event (fallback when AI is unavailable)."""
+        import re
+        lines = []
 
         provider = monitor.get("provider")
         if provider == "slack":
-            lines.append("")
-            lines.append("**Message:**")
-            lines.append(event.event_data.get("text", ""))
+            # Clean up Slack markup - replace <@USERID|Name> with just Name
+            text = event.event_data.get("text", "")
+            text = re.sub(r'<@[A-Z0-9]+\|([^>]+)>', r'\1', text)
+            text = re.sub(r'<@[A-Z0-9]+>', '', text)
+            text = text.strip()
+
+            if text:
+                lines.append(text)
 
             if event.context_data:
                 if event.context_data.get("thread"):
                     lines.append("")
                     lines.append("**Thread context:**")
                     for msg in event.context_data["thread"][:5]:
-                        lines.append(f"- {msg.get('text', '')[:100]}")
+                        msg_text = msg.get('text', '')[:100]
+                        msg_text = re.sub(r'<@[A-Z0-9]+\|([^>]+)>', r'\1', msg_text)
+                        msg_text = re.sub(r'<@[A-Z0-9]+>', '', msg_text)
+                        lines.append(f"- {msg_text.strip()}")
 
         elif provider in ("gmail", "outlook"):
             from_info = event.event_data.get("from", {})
@@ -439,7 +487,6 @@ class MonitorService:
             from_name = from_info.get("name", "")
             from_display = f"{from_name} <{from_email}>" if from_name else from_email
 
-            lines.append("")
             lines.append(f"**From:** {from_display}")
             lines.append(f"**Subject:** {event.event_data.get('subject', 'No subject')}")
 
@@ -448,12 +495,6 @@ class MonitorService:
                 lines.append("")
                 lines.append("**Preview:**")
                 lines.append(snippet[:500] + "..." if len(snippet) > 500 else snippet)
-
-            permalink = event.event_data.get("permalink")
-            if permalink:
-                lines.append("")
-                provider_name = "Gmail" if provider == "gmail" else "Outlook"
-                lines.append(f"[View in {provider_name}]({permalink})")
 
         return "\n".join(lines)
 
