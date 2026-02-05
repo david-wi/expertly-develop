@@ -270,38 +270,20 @@ Respond with ONLY the task title, nothing else."""
         if not self.is_configured():
             return self._fallback_title(message_text)
 
-        try:
-            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
-        except Exception:
-            try:
-                use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
-            except Exception:
-                return self._fallback_title(message_text)
-
-        model_id = use_case_config.model_id
-        provider = use_case_config.provider_name
-        max_tokens = min(use_case_config.max_tokens, 100)  # Title should be short
-        temperature = use_case_config.temperature
-
-        # Build prompt
         prompt = f"Slack message: {message_text}"
         if context:
             prompt += f"\n\nContext:\n{context}"
 
         try:
-            if provider == "groq":
-                response_text = await self._call_groq(model_id, prompt, max_tokens, temperature)
-            elif provider == "anthropic":
-                response_text = await self._call_anthropic(model_id, prompt, max_tokens, temperature)
-            else:
-                response_text = await self._call_openai(model_id, prompt, max_tokens, temperature)
-
+            title = await self._call_with_fallback(
+                self.SYSTEM_PROMPT, prompt, 100, 0.3,
+                fallback_fn=lambda: self._fallback_title(message_text)
+            )
             # Clean up response
-            title = response_text.strip().strip('"').strip("'")
+            title = title.strip().strip('"').strip("'")
             if len(title) > 80:
                 title = title[:77] + "..."
             return title
-
         except Exception as e:
             logger.warning(f"AI title generation failed: {e}")
             return self._fallback_title(message_text)
@@ -351,39 +333,16 @@ Respond with ONLY "yes" or "no"."""
         if not self.is_configured():
             return self._fallback_actionability(message_text)
 
-        try:
-            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
-        except Exception:
-            try:
-                use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
-            except Exception:
-                return self._fallback_actionability(message_text)
-
-        model_id = use_case_config.model_id
-        provider = use_case_config.provider_name
-        max_tokens = 10
-        temperature = 0.0
-
         prompt = f"Slack message: {message_text}"
         if context:
             prompt += f"\n\nThread context:\n{context}"
 
         try:
-            if provider == "groq":
-                response_text = await self._call_groq_with_system(
-                    model_id, self.ACTIONABILITY_SYSTEM_PROMPT, prompt, max_tokens, temperature
-                )
-            elif provider == "anthropic":
-                response_text = await self._call_anthropic_with_system(
-                    model_id, self.ACTIONABILITY_SYSTEM_PROMPT, prompt, max_tokens, temperature
-                )
-            else:
-                response_text = await self._call_openai_with_system(
-                    model_id, self.ACTIONABILITY_SYSTEM_PROMPT, prompt, max_tokens, temperature
-                )
-
+            response_text = await self._call_with_fallback(
+                self.ACTIONABILITY_SYSTEM_PROMPT, prompt, 10, 0.0,
+                fallback_fn=lambda: "yes" if self._fallback_actionability(message_text) else "no"
+            )
             return response_text.strip().lower().startswith("yes")
-
         except Exception as e:
             logger.warning(f"AI actionability check failed: {e}")
             return self._fallback_actionability(message_text)
@@ -421,42 +380,61 @@ Respond with ONLY "yes" or "no"."""
         if not self.is_configured():
             return self._fallback_description(message_text)
 
-        try:
-            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
-        except Exception:
-            try:
-                use_case_config = await self.ai_client.get_use_case_config(self.FALLBACK_USE_CASE)
-            except Exception:
-                return self._fallback_description(message_text)
-
-        model_id = use_case_config.model_id
-        provider = use_case_config.provider_name
-        max_tokens = min(use_case_config.max_tokens, 300)
-        temperature = use_case_config.temperature
-
         prompt = f"Slack message: {message_text}"
         if context:
             prompt += f"\n\nThread context:\n{context}"
 
+        max_tokens = 500
+        temperature = 0.3
+
+        # Try providers in order of availability
+        return await self._call_with_fallback(
+            self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature,
+            fallback_fn=lambda: self._fallback_description(message_text)
+        )
+
+    async def _call_with_fallback(
+        self, system_prompt: str, prompt: str, max_tokens: int, temperature: float,
+        fallback_fn=None
+    ) -> str:
+        """Try AI providers in order of availability, falling back gracefully."""
+        import os
+
+        # Try use case config first
         try:
-            if provider == "groq":
-                response_text = await self._call_groq_with_system(
-                    model_id, self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature
-                )
-            elif provider == "anthropic":
-                response_text = await self._call_anthropic_with_system(
-                    model_id, self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature
-                )
-            else:
-                response_text = await self._call_openai_with_system(
-                    model_id, self.DESCRIPTION_SYSTEM_PROMPT, prompt, max_tokens, temperature
-                )
+            use_case_config = await self.ai_client.get_use_case_config(self.USE_CASE)
+            model_id = use_case_config.model_id
+            provider = use_case_config.provider_name
 
-            return response_text.strip()
-
+            if provider == "groq" and os.getenv("GROQ_API_KEY"):
+                return (await self._call_groq_with_system(model_id, system_prompt, prompt, max_tokens, temperature)).strip()
+            elif provider == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):
+                return (await self._call_anthropic_with_system(model_id, system_prompt, prompt, max_tokens, temperature)).strip()
+            elif provider == "openai" and os.getenv("OPENAI_API_KEY"):
+                return (await self._call_openai_with_system(model_id, system_prompt, prompt, max_tokens, temperature)).strip()
         except Exception as e:
-            logger.warning(f"AI description generation failed: {e}")
-            return self._fallback_description(message_text)
+            logger.warning(f"Primary AI provider failed: {e}")
+
+        # Try available providers directly
+        providers = [
+            ("groq", "GROQ_API_KEY", "llama-3.3-70b-versatile"),
+            ("openai", "OPENAI_API_KEY", "gpt-4o-mini"),
+        ]
+        for provider_name, env_key, default_model in providers:
+            if os.getenv(env_key):
+                try:
+                    if provider_name == "groq":
+                        return (await self._call_groq_with_system(default_model, system_prompt, prompt, max_tokens, temperature)).strip()
+                    elif provider_name == "openai":
+                        return (await self._call_openai_with_system(default_model, system_prompt, prompt, max_tokens, temperature)).strip()
+                except Exception as e:
+                    logger.warning(f"Fallback AI provider {provider_name} failed: {e}")
+                    continue
+
+        logger.warning("All AI providers failed, using fallback")
+        if fallback_fn:
+            return fallback_fn()
+        return ""
 
     def _fallback_description(self, message_text: str) -> str:
         """Generate a simple fallback description."""
