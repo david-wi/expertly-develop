@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Modal, ModalFooter } from '@expertly/ui'
-import { ChevronDown, ChevronRight } from 'lucide-react'
 import {
   api,
   Queue,
@@ -128,9 +127,6 @@ export default function CreateAssignmentModal({
   // Scheduling toggle
   const [showScheduling, setShowScheduling] = useState(false)
 
-  // Advanced section toggle
-  const [showAdvanced, setShowAdvanced] = useState(false)
-
   // Project selector state
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(projectId || null)
 
@@ -197,7 +193,6 @@ export default function CreateAssignmentModal({
       setForm(initialFormState)
       setSelectedProjectId(projectId || null)
       setShowScheduling(false)
-      setShowAdvanced(false)
       setPlaybookSearch('')
       setShowPlaybookDropdown(false)
     }
@@ -218,9 +213,6 @@ export default function CreateAssignmentModal({
   const selectedPlaybook = useMemo(() => {
     return playbooks.find((p) => (p.id || (p as { _id?: string })._id) === form.playbook_id)
   }, [playbooks, form.playbook_id])
-
-  // Check if playbook has a default queue (for "Not Applicable" display)
-  const playbookHasQueue = selectedPlaybook?.default_queue_id ? true : false
 
   // Get user's inbox queue for display
   const userInboxQueue = useMemo(() => {
@@ -391,9 +383,9 @@ export default function CreateAssignmentModal({
         <div className="py-8 text-center text-gray-500">Loading...</div>
       ) : (
         <form onSubmit={(e) => handleSubmit(e, false)} className="space-y-4">
-          {/* Row 1: Title + Priority */}
+          {/* Row 1: Title + Priority + Est Time */}
           <div className="flex gap-3">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
               <input
                 type="text"
@@ -405,28 +397,29 @@ export default function CreateAssignmentModal({
                 autoFocus
               />
             </div>
-            <div className="w-28">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-              <select
-                value={form.priority}
-                onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) })}
-                className="w-full border border-gray-300 rounded-md px-3 py-2"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
-                  <option key={p} value={p}>
-                    {p} {p === 1 ? '(High)' : p === 10 ? '(Low)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="w-32">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Est. Time</label>
-              <div className="flex items-center gap-1">
+            <div className="flex-shrink-0 flex gap-2 items-end">
+              <div className="w-16">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select
+                  value={form.priority}
+                  onChange={(e) => setForm({ ...form, priority: parseInt(e.target.value) })}
+                  className="w-full border border-gray-300 rounded-md px-2 py-2"
+                  title="Priority (1=High, 10=Low)"
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="w-20">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Est. Time</label>
                 <input
                   type="text"
                   value={form.estimated_duration}
                   onChange={(e) => setForm({ ...form, estimated_duration: e.target.value })}
-                  className="w-16 border border-gray-300 rounded-md px-2 py-2 font-mono"
+                  className="w-full border border-gray-300 rounded-md px-2 py-2 font-mono"
                   placeholder="0:10"
                   title="Estimated duration (H:MM)"
                 />
@@ -434,8 +427,22 @@ export default function CreateAssignmentModal({
             </div>
           </div>
 
-          {/* Row 2: Playbook + Queue */}
+          {/* Row 2: Project + Playbook */}
           <div className="flex gap-3">
+            {/* Project */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Project (optional)
+              </label>
+              <ProjectTypeahead
+                projects={projectOptions}
+                selectedProjectId={selectedProjectId}
+                onChange={(projectId) => setSelectedProjectId(projectId)}
+                placeholder="Search projects..."
+                onProjectCreated={handleProjectCreated}
+              />
+            </div>
+
             {/* Playbook Typeahead */}
             <div className="flex-1 relative">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -499,37 +506,6 @@ export default function CreateAssignmentModal({
                 </>
               )}
             </div>
-
-            {/* Queue */}
-            <div className="w-40">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Queue</label>
-              {playbookHasQueue ? (
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-100 text-gray-500 text-sm">
-                  From Playbook
-                </div>
-              ) : (
-                <select
-                  value={form.queue_id}
-                  onChange={(e) => setForm({ ...form, queue_id: e.target.value })}
-                  className="w-full border border-gray-300 rounded-md px-3 py-2"
-                >
-                  {userInboxQueue && (
-                    <option value={userInboxQueue._id || userInboxQueue.id}>My Inbox</option>
-                  )}
-                  {queues
-                    .filter(
-                      (q) =>
-                        !userInboxQueue ||
-                        (q._id || q.id) !== (userInboxQueue._id || userInboxQueue.id)
-                    )
-                    .map((queue) => (
-                      <option key={queue._id || queue.id} value={queue._id || queue.id}>
-                        {queue.purpose}
-                      </option>
-                    ))}
-                </select>
-              )}
-            </div>
           </div>
 
           {/* Instructions (optional) */}
@@ -546,130 +522,181 @@ export default function CreateAssignmentModal({
             />
           </div>
 
-          {/* Project (optional) */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Project (optional)
-            </label>
-            <ProjectTypeahead
-              projects={projectOptions}
-              selectedProjectId={selectedProjectId}
-              onChange={(projectId) => setSelectedProjectId(projectId)}
-              placeholder="Search projects..."
-              onProjectCreated={handleProjectCreated}
-            />
-          </div>
+          {/* Optional Features - Checkbox Toggles */}
+          <div className="border-t pt-4 space-y-3">
+            {/* Checkbox row */}
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.assignment_type !== 'queue'}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setForm({ ...form, assignment_type: 'user', team_id: '', user_id: '' })
+                    } else {
+                      setForm({ ...form, assignment_type: 'queue', team_id: '', user_id: '' })
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Assign To</span>
+              </label>
 
-          {/* Advanced Section */}
-          <div className="border-t pt-4">
-            <button
-              type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900"
-            >
-              {showAdvanced ? (
-                <ChevronDown className="w-4 h-4" />
-              ) : (
-                <ChevronRight className="w-4 h-4" />
+              {!form.is_recurring && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!form.approver_type}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setForm({ ...form, approver_type: 'user', approver_id: '', approver_queue_id: '' })
+                      } else {
+                        setForm({ ...form, approver_type: '', approver_id: '', approver_queue_id: '' })
+                      }
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Approver</span>
+                </label>
               )}
-              Advanced
-              {(form.approver_type ||
-                form.scheduled_start_date ||
-                form.is_recurring ||
-                form.assignment_type !== 'queue') && (
-                <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                  {
-                    [
-                      form.approver_type ? 'Approval' : '',
-                      form.scheduled_start_date ? 'Scheduled' : '',
-                      form.is_recurring ? 'Recurring' : '',
-                      form.assignment_type !== 'queue' ? 'Direct Assign' : '',
-                    ].filter(Boolean).length
-                  }{' '}
-                  set
-                </span>
-              )}
-            </button>
 
-            {showAdvanced && (
-              <div className="mt-4 space-y-5 bg-gray-50 rounded-lg p-4">
-                {/* Approver Section */}
-                {!form.is_recurring && (
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showScheduling}
+                  onChange={(e) => {
+                    setShowScheduling(e.target.checked)
+                    if (!e.target.checked) {
+                      setForm({
+                        ...form,
+                        scheduled_start_date: '',
+                        scheduled_start_time: '',
+                        scheduled_end_date: '',
+                        scheduled_end_time: '',
+                        schedule_timezone: '',
+                      })
+                    }
+                  }}
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Schedule</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_recurring}
+                  onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })}
+                  className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">Repeat</span>
+              </label>
+            </div>
+
+            {/* Expanded sections based on checked options */}
+            {(form.assignment_type !== 'queue' || form.approver_type || showScheduling || form.is_recurring) && (
+              <div className="space-y-4 bg-gray-50 rounded-lg p-4">
+                {/* Assign To Section */}
+                {form.assignment_type !== 'queue' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Approver</label>
-                    <div className="flex flex-wrap gap-1.5 mb-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({
-                            ...form,
-                            approver_type: '',
-                            approver_id: '',
-                            approver_queue_id: '',
-                          })
-                        }
-                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                          !form.approver_type
-                            ? 'bg-white border-blue-500 text-blue-700'
-                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-700">Assign to:</span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, assignment_type: 'team', team_id: '', user_id: '' })}
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.assignment_type === 'team'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Team
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, assignment_type: 'user', team_id: '', user_id: '' })}
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.assignment_type === 'user'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          User
+                        </button>
+                      </div>
+                    </div>
+                    {form.assignment_type === 'team' && (
+                      <select
+                        value={form.team_id}
+                        onChange={(e) => setForm({ ...form, team_id: e.target.value })}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                       >
-                        No Approval
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({
-                            ...form,
-                            approver_type: 'user',
-                            approver_id: '',
-                            approver_queue_id: '',
-                          })
-                        }
-                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                          form.approver_type === 'user'
-                            ? 'bg-white border-blue-500 text-blue-700'
-                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
+                        <option value="">Select a team...</option>
+                        {teams.map((team) => (
+                          <option key={team._id || team.id} value={team._id || team.id}>
+                            {team.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {form.assignment_type === 'user' && (
+                      <select
+                        value={form.user_id}
+                        onChange={(e) => setForm({ ...form, user_id: e.target.value })}
+                        className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                       >
-                        User
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({
-                            ...form,
-                            approver_type: 'team',
-                            approver_id: '',
-                            approver_queue_id: '',
-                          })
-                        }
-                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                          form.approver_type === 'team'
-                            ? 'bg-white border-blue-500 text-blue-700'
-                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        Team
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({
-                            ...form,
-                            approver_type: 'anyone',
-                            approver_id: '',
-                            approver_queue_id: '',
-                          })
-                        }
-                        className={`px-3 py-1.5 text-sm rounded-md border transition-colors ${
-                          form.approver_type === 'anyone'
-                            ? 'bg-white border-blue-500 text-blue-700'
-                            : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'
-                        }`}
-                      >
-                        Anyone
-                      </button>
+                        <option value="">Select a user...</option>
+                        {users.map((user) => (
+                          <option key={user._id || user.id} value={user._id || user.id}>
+                            {user.name}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+
+                {/* Approver Section */}
+                {form.approver_type && !form.is_recurring && (
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm font-medium text-gray-700">Approver:</span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, approver_type: 'user', approver_id: '' })}
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.approver_type === 'user'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          User
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, approver_type: 'team', approver_id: '' })}
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.approver_type === 'team'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Team
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, approver_type: 'anyone', approver_id: '' })}
+                          className={`px-2 py-1 text-xs rounded ${
+                            form.approver_type === 'anyone'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          Anyone
+                        </button>
+                      </div>
                     </div>
                     {form.approver_type === 'user' && (
                       <select
@@ -702,277 +729,131 @@ export default function CreateAssignmentModal({
                   </div>
                 )}
 
-                {/* Schedule for Later */}
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setShowScheduling(!showScheduling)}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
-                  >
-                    {showScheduling ? (
-                      <ChevronDown className="w-4 h-4" />
-                    ) : (
-                      <ChevronRight className="w-4 h-4" />
-                    )}
-                    Schedule for Later
-                    {(form.scheduled_start_date || form.scheduled_end_date) && (
-                      <span className="ml-1 px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-xs">
-                        Set
-                      </span>
-                    )}
-                  </button>
-
-                  {showScheduling && (
-                    <div className="mt-3 space-y-3 pl-6">
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">
-                          Don't start before
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="date"
-                            value={form.scheduled_start_date}
-                            onChange={(e) =>
-                              setForm({ ...form, scheduled_start_date: e.target.value })
-                            }
-                            className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                          />
-                          <input
-                            type="time"
-                            value={form.scheduled_start_time}
-                            onChange={(e) =>
-                              setForm({ ...form, scheduled_start_time: e.target.value })
-                            }
-                            className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">
-                          Work window closes (optional)
-                        </label>
-                        <div className="flex gap-2">
-                          <input
-                            type="date"
-                            value={form.scheduled_end_date}
-                            onChange={(e) =>
-                              setForm({ ...form, scheduled_end_date: e.target.value })
-                            }
-                            className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                          />
-                          <input
-                            type="time"
-                            value={form.scheduled_end_time}
-                            onChange={(e) =>
-                              setForm({ ...form, scheduled_end_time: e.target.value })
-                            }
-                            className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm text-gray-600 mb-1">Timezone</label>
-                        <select
-                          value={form.schedule_timezone}
-                          onChange={(e) => setForm({ ...form, schedule_timezone: e.target.value })}
-                          className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                        >
-                          <option value="">Browser default</option>
-                          {TIMEZONES.map((tz) => (
-                            <option key={tz} value={tz}>
-                              {tz}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {(form.scheduled_start_date || form.scheduled_end_date) && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setForm({
-                              ...form,
-                              scheduled_start_date: '',
-                              scheduled_start_time: '',
-                              scheduled_end_date: '',
-                              scheduled_end_time: '',
-                              schedule_timezone: '',
-                            })
-                          }
-                          className="text-xs text-red-600 hover:text-red-700"
-                        >
-                          Clear scheduling
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Make Recurring */}
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={form.is_recurring}
-                      onChange={(e) => setForm({ ...form, is_recurring: e.target.checked })}
-                      className="mr-2"
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      Make this a recurring assignment
-                    </span>
-                  </label>
-
-                  {form.is_recurring && (
-                    <div className="mt-3 space-y-3 pl-6">
-                      <div className="flex items-center gap-3">
-                        <select
-                          value={form.recurrence_type}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              recurrence_type: e.target.value as RecurrenceType,
-                            })
-                          }
-                          className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
-                        >
-                          <option value="daily">Daily</option>
-                          <option value="weekly">Weekly</option>
-                          <option value="monthly">Monthly</option>
-                        </select>
-                        <span className="text-sm text-gray-600">every</span>
+                {/* Schedule Section */}
+                {showScheduling && (
+                  <div className="space-y-3">
+                    <span className="text-sm font-medium text-gray-700">Schedule:</span>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Don't start before
+                      </label>
+                      <div className="flex gap-2">
                         <input
-                          type="number"
-                          value={form.interval}
-                          onChange={(e) =>
-                            setForm({ ...form, interval: parseInt(e.target.value) || 1 })
-                          }
-                          className="w-16 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
-                          min={1}
+                          type="date"
+                          value={form.scheduled_start_date}
+                          onChange={(e) => setForm({ ...form, scheduled_start_date: e.target.value })}
+                          className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
                         />
-                        <span className="text-sm text-gray-600">
-                          {form.recurrence_type === 'daily'
-                            ? 'day(s)'
-                            : form.recurrence_type === 'weekly'
-                              ? 'week(s)'
-                              : 'month(s)'}
-                        </span>
+                        <input
+                          type="time"
+                          value={form.scheduled_start_time}
+                          onChange={(e) => setForm({ ...form, scheduled_start_time: e.target.value })}
+                          className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        />
                       </div>
-
-                      {form.recurrence_type === 'weekly' && (
-                        <div className="flex flex-wrap gap-1">
-                          {DAYS_OF_WEEK.map((day, index) => (
-                            <button
-                              key={day}
-                              type="button"
-                              onClick={() => toggleDayOfWeek(index)}
-                              className={`px-2 py-1 rounded text-xs ${
-                                form.days_of_week?.includes(index)
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                              }`}
-                            >
-                              {day}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {form.recurrence_type === 'monthly' && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">On day</span>
-                          <input
-                            type="number"
-                            value={form.day_of_month}
-                            onChange={(e) =>
-                              setForm({ ...form, day_of_month: parseInt(e.target.value) || 1 })
-                            }
-                            className="w-16 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
-                            min={1}
-                            max={31}
-                          />
-                        </div>
-                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* Direct Assignment (Team/User) */}
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
-                    <label className="text-sm font-medium text-gray-700">Assign To</label>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({ ...form, assignment_type: 'queue', team_id: '', user_id: '' })
-                        }
-                        className={`px-2 py-1 text-xs rounded ${
-                          form.assignment_type === 'queue'
-                            ? 'bg-gray-200 text-gray-800'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">
+                        Work window closes (optional)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="date"
+                          value={form.scheduled_end_date}
+                          onChange={(e) => setForm({ ...form, scheduled_end_date: e.target.value })}
+                          className="flex-1 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        />
+                        <input
+                          type="time"
+                          value={form.scheduled_end_time}
+                          onChange={(e) => setForm({ ...form, scheduled_end_time: e.target.value })}
+                          className="w-28 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-gray-600 mb-1">Timezone</label>
+                      <select
+                        value={form.schedule_timezone}
+                        onChange={(e) => setForm({ ...form, schedule_timezone: e.target.value })}
+                        className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm"
                       >
-                        Queue
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({ ...form, assignment_type: 'team', team_id: '', user_id: '' })
-                        }
-                        className={`px-2 py-1 text-xs rounded ${
-                          form.assignment_type === 'team'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        Team
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setForm({ ...form, assignment_type: 'user', team_id: '', user_id: '' })
-                        }
-                        className={`px-2 py-1 text-xs rounded ${
-                          form.assignment_type === 'user'
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        User
-                      </button>
+                        <option value="">Browser default</option>
+                        {TIMEZONES.map((tz) => (
+                          <option key={tz} value={tz}>
+                            {tz}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                  {form.assignment_type === 'team' && (
-                    <select
-                      value={form.team_id}
-                      onChange={(e) => setForm({ ...form, team_id: e.target.value })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    >
-                      <option value="">Select a team...</option>
-                      {teams.map((team) => (
-                        <option key={team._id || team.id} value={team._id || team.id}>
-                          {team.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                  {form.assignment_type === 'user' && (
-                    <select
-                      value={form.user_id}
-                      onChange={(e) => setForm({ ...form, user_id: e.target.value })}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
-                    >
-                      <option value="">Select a user...</option>
-                      {users.map((user) => (
-                        <option key={user._id || user.id} value={user._id || user.id}>
-                          {user.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
+                )}
+
+                {/* Repeat Section */}
+                {form.is_recurring && (
+                  <div className="space-y-3">
+                    <span className="text-sm font-medium text-gray-700">Repeat:</span>
+                    <div className="flex items-center gap-3">
+                      <select
+                        value={form.recurrence_type}
+                        onChange={(e) => setForm({ ...form, recurrence_type: e.target.value as RecurrenceType })}
+                        className="border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+                      >
+                        <option value="daily">Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                      </select>
+                      <span className="text-sm text-gray-600">every</span>
+                      <input
+                        type="number"
+                        value={form.interval}
+                        onChange={(e) => setForm({ ...form, interval: parseInt(e.target.value) || 1 })}
+                        className="w-16 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                        min={1}
+                      />
+                      <span className="text-sm text-gray-600">
+                        {form.recurrence_type === 'daily'
+                          ? 'day(s)'
+                          : form.recurrence_type === 'weekly'
+                            ? 'week(s)'
+                            : 'month(s)'}
+                      </span>
+                    </div>
+
+                    {form.recurrence_type === 'weekly' && (
+                      <div className="flex flex-wrap gap-1">
+                        {DAYS_OF_WEEK.map((day, index) => (
+                          <button
+                            key={day}
+                            type="button"
+                            onClick={() => toggleDayOfWeek(index)}
+                            className={`px-2 py-1 rounded text-xs ${
+                              form.days_of_week?.includes(index)
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {day}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {form.recurrence_type === 'monthly' && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">On day</span>
+                        <input
+                          type="number"
+                          value={form.day_of_month}
+                          onChange={(e) => setForm({ ...form, day_of_month: parseInt(e.target.value) || 1 })}
+                          className="w-16 border border-gray-300 rounded-md px-2 py-1.5 text-sm"
+                          min={1}
+                          max={31}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
