@@ -157,6 +157,8 @@ export interface SidebarProps {
   children?: ReactNode
   /** User menu configuration - when provided, makes user section clickable */
   userMenu?: UserMenuConfig
+  /** Override the "Expertly" prefix before productName. Set to empty string to remove it. */
+  productNamePrefix?: string
 }
 
 export function Sidebar({
@@ -177,6 +179,7 @@ export function Sidebar({
   versionCheck,
   children,
   userMenu,
+  productNamePrefix = 'Expertly',
 }: SidebarProps) {
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
@@ -238,7 +241,7 @@ export function Sidebar({
             className={`flex items-center gap-2 ${sidebarHoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
           >
             <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
-            <span className={`font-semibold text-theme-sidebar-text-strong text-base whitespace-nowrap`}>Expertly {productName}</span>
+            <span className={`font-semibold text-theme-sidebar-text-strong text-base whitespace-nowrap`}>{productNamePrefix ? `${productNamePrefix} ` : ''}{productName}</span>
             <ChevronDown className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
           </button>
 
