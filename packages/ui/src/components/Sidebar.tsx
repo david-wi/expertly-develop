@@ -11,6 +11,9 @@ import {
   FlaskConical,
   Settings,
   Truck,
+  ScanSearch,
+  Headphones,
+  Users,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
@@ -35,6 +38,8 @@ export interface ExpertlyProduct {
   description: string
   /** If true, renders a horizontal rule before this item */
   separatorBefore?: boolean
+  /** If set, renders a section header label before this item */
+  sectionHeader?: string
 }
 
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
@@ -48,6 +53,10 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },
   { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: FlaskConical, description: 'AI testing platform' },
   { name: 'Expertly Admin', code: 'admin', href: 'https://admin.ai.devintensive.com', icon: Settings, description: 'Platform administration', separatorBefore: true },
+  // Expertly Tools - native iOS/macOS/desktop apps with landing pages
+  { name: 'Expertly Discover', code: 'discover', href: 'https://discover.ai.devintensive.com', icon: ScanSearch, description: 'Video analysis app', separatorBefore: true, sectionHeader: 'Expertly Tools' },
+  { name: 'Expertly Hear', code: 'hear', href: 'https://hear.ai.devintensive.com', icon: Headphones, description: 'Audio transcription app' },
+  { name: 'Expertly Cowork', code: 'cowork', href: 'https://cowork.ai.devintensive.com', icon: Users, description: 'Desktop collaboration app' },
 ]
 
 export type SupportedLanguage = 'en' | 'es'
@@ -261,6 +270,9 @@ export function Sidebar({
                   <div key={product.code}>
                     {product.separatorBefore && (
                       <hr className={`my-2 border-t ${borderColor}`} />
+                    )}
+                    {product.sectionHeader && (
+                      <p className={`px-3 py-2 text-xs font-medium ${textMuted} uppercase`}>{product.sectionHeader}</p>
                     )}
                     <a
                       href={product.href}
