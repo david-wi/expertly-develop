@@ -348,15 +348,18 @@ export default function Users() {
                 return (
                   <tr key={userId} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <div className="flex items-center space-x-3">
+                      <button
+                        onClick={() => openEditModal(user)}
+                        className="flex items-center space-x-3 hover:opacity-80 transition-opacity text-left"
+                      >
                         {getUserAvatar(user)}
                         <div>
-                          <p className="font-medium text-gray-900">{user.name}</p>
+                          <p className="font-medium text-gray-900 hover:text-blue-600">{user.name}</p>
                           {user.user_type !== 'virtual' && (
                             <p className="text-xs text-gray-500">{user.email}</p>
                           )}
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <span
