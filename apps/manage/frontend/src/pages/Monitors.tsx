@@ -874,14 +874,19 @@ export default function Monitors() {
                 return (
                   <tr key={monitorId} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <div>
-                        <p className="font-medium text-gray-900">{monitor.name}</p>
-                        {monitor.description && (
-                          <p className="text-xs text-gray-500 truncate max-w-xs">{monitor.description}</p>
-                        )}
-                        <p className="text-xs text-gray-400">
-                          Triggers: {getPlaybookLabel(monitor.playbook_id)}
-                        </p>
+                      <div className="flex items-start gap-3">
+                        <div className="flex-shrink-0 mt-0.5 [&>svg]:w-6 [&>svg]:h-6 [&>div]:w-6 [&>div]:h-6 [&>div]:text-[7px]">
+                          {PROVIDER_ICONS[monitor.provider]}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{monitor.name}</p>
+                          {monitor.description && (
+                            <p className="text-xs text-gray-500 truncate max-w-xs">{monitor.description}</p>
+                          )}
+                          <p className="text-xs text-gray-400">
+                            Triggers: {getPlaybookLabel(monitor.playbook_id)}
+                          </p>
+                        </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
