@@ -4,7 +4,7 @@ export function Dashboard() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Aipocalypse Fund</h1>
+        <h1 className="text-2xl font-bold text-gray-900">The Aipocalypse Fund</h1>
         <p className="text-gray-500 mt-1">AI-impact investment research dashboard</p>
       </div>
 

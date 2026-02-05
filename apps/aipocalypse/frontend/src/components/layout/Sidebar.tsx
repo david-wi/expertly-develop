@@ -36,6 +36,7 @@ export function Sidebar() {
     <SharedSidebar
       productCode="aipocalypse"
       productName="Aipocalypse Fund"
+      productNamePrefix=""
       navigation={navigation}
       currentPath={location.pathname}
       buildInfo={
