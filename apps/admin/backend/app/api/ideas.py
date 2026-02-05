@@ -59,14 +59,20 @@ async def list_ideas(
     priority: Optional[str] = Query(None, description="Filter by priority"),
     include_archived: bool = Query(False, description="Include archived ideas"),
     user_email: Optional[str] = Query(None, description="Current user email for vote status"),
+    organization_id: Optional[str] = Query(None, description="Filter by organization ID (UUID)"),
     service: IdeaService = Depends(get_idea_service),
 ):
-    """List ideas with optional filters."""
+    """List ideas with optional filters.
+
+    When organization_id is provided, returns org-specific backlog items.
+    When organization_id is not provided, returns only product-wide ideas (org_id=NULL).
+    """
     ideas = await service.get_ideas(
         product=product,
         status=status,
         priority=priority,
         include_archived=include_archived,
+        organization_id=organization_id,
     )
 
     # Enrich with user_voted and comment_count
@@ -81,6 +87,7 @@ async def list_ideas(
             "priority": idea.priority,
             "tags": idea.tags,
             "created_by_email": idea.created_by_email,
+            "organization_id": idea.organization_id,
             "created_at": idea.created_at,
             "updated_at": idea.updated_at,
             "vote_count": idea.vote_count or 0,

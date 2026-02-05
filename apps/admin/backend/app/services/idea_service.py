@@ -28,6 +28,7 @@ class IdeaService:
             priority=data.priority.value,
             tags=data.tags or [],
             created_by_email=data.created_by_email,
+            organization_id=data.organization_id,
         )
 
         self.db.add(idea)
@@ -42,9 +43,23 @@ class IdeaService:
         status: Optional[str] = None,
         priority: Optional[str] = None,
         include_archived: bool = False,
+        organization_id: Optional[str] = None,
     ) -> List[Idea]:
-        """List ideas with filters."""
+        """List ideas with filters.
+
+        When organization_id is provided, returns org-specific backlog items.
+        When organization_id is not provided, returns only product-wide ideas (org_id=NULL).
+        """
         conditions = []
+
+        # Filter by organization
+        if organization_id:
+            # Return org-specific items
+            conditions.append(Idea.organization_id == organization_id)
+        else:
+            # Return only product-wide ideas (no org)
+            conditions.append(Idea.organization_id.is_(None))
+
         if product:
             conditions.append(Idea.product == product)
         if status:

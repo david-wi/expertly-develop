@@ -32,6 +32,7 @@ interface Idea {
   priority: 'low' | 'medium' | 'high'
   tags: string[] | null
   created_by_email: string | null
+  organization_id: string | null
   created_at: string
   updated_at: string
   vote_count?: number
@@ -91,6 +92,7 @@ interface IdeaCreate {
   status?: Idea['status']
   priority?: Idea['priority']
   tags?: string[]
+  organization_id?: string
 }
 
 // Valid products
@@ -112,13 +114,14 @@ const VALID_PRODUCTS = [
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const ideasApi = {
-  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string }): Promise<Idea[]> {
+  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string }): Promise<Idea[]> {
     const searchParams = new URLSearchParams()
     if (params?.product) searchParams.set('product', params.product)
     if (params?.status) searchParams.set('status', params.status)
     if (params?.priority) searchParams.set('priority', params.priority)
     if (params?.include_archived) searchParams.set('include_archived', 'true')
     if (params?.user_email) searchParams.set('user_email', params.user_email)
+    if (params?.organization_id) searchParams.set('organization_id', params.organization_id)
     const query = searchParams.toString()
     const res = await fetch(`${API_BASE}/ideas${query ? `?${query}` : ''}`, {
       credentials: 'include',
@@ -577,11 +580,13 @@ function IdeaCard({
 function CreateIdeaModal({
   idea,
   defaultProduct,
+  organizationId,
   onClose,
   onSave,
 }: {
   idea?: Idea
   defaultProduct?: string
+  organizationId?: string
   onClose: () => void
   onSave: (data: IdeaCreate | Partial<Idea>) => void
 }) {
@@ -635,7 +640,7 @@ function CreateIdeaModal({
       <div className="bg-theme-bg-surface rounded-xl border border-theme-border w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-theme-border flex items-center justify-between">
           <h2 className="text-lg font-semibold text-theme-text-primary">
-            {idea ? 'Edit Idea' : 'Capture New Idea'}
+            {idea ? (organizationId ? 'Edit Backlog Item' : 'Edit Idea') : (organizationId ? 'Add Backlog Item' : 'Capture New Idea')}
           </h2>
           <button
             onClick={onClose}
@@ -810,7 +815,7 @@ function CreateIdeaModal({
               type="submit"
               className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
             >
-              {idea ? 'Save Changes' : 'Capture Idea'}
+              {idea ? 'Save Changes' : (organizationId ? 'Add Item' : 'Capture Idea')}
             </button>
           </div>
         </form>
@@ -823,12 +828,16 @@ export function IdeaBacklog() {
   const [searchParams, setSearchParams] = useSearchParams()
   const queryClient = useQueryClient()
 
-  // Get product filter from URL
+  // Get filters from URL
   const productFilter = searchParams.get('product') || ''
+  const organizationId = searchParams.get('organization_id') || ''
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
   const [includeArchived, setIncludeArchived] = useState(false)
   const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority')
+
+  // Determine if we're in "Work Backlog" mode (org-specific) vs "Idea Backlog" mode (product-wide)
+  const isWorkBacklogMode = !!organizationId
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null)
@@ -847,13 +856,14 @@ export function IdeaBacklog() {
 
   // Fetch ideas - don't wait for user email, it's only needed for vote status
   const { data: ideas = [], isLoading: isIdeasLoading, refetch } = useQuery({
-    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
+    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
       status: statusFilter || undefined,
       priority: priorityFilter || undefined,
       include_archived: includeArchived,
       user_email: userEmail || undefined,
+      organization_id: organizationId || undefined,
     }),
   })
 
@@ -1002,10 +1012,18 @@ export function IdeaBacklog() {
     bulkUpdateMutation.mutate({ ids: Array.from(selectedIds), updates: { priority } })
   }, [selectedIds, bulkUpdateMutation])
 
-  // Dynamic header title based on product filter
-  const headerTitle = productFilter
-    ? `Idea Backlog - Expertly ${getProductDisplayName(productFilter)}`
-    : 'Idea Backlog'
+  // Dynamic header title based on mode and product filter
+  const headerTitle = isWorkBacklogMode
+    ? productFilter
+      ? `Work Backlog - Expertly ${getProductDisplayName(productFilter)}`
+      : 'Work Backlog'
+    : productFilter
+      ? `Idea Backlog - Expertly ${getProductDisplayName(productFilter)}`
+      : 'Idea Backlog'
+
+  const headerDescription = isWorkBacklogMode
+    ? 'Track work items and tasks for your organization'
+    : 'Capture and nurture ideas across all Expertly products'
 
   return (
     <div className="space-y-6">
@@ -1016,7 +1034,7 @@ export function IdeaBacklog() {
           <div>
             <h1 className="text-2xl font-bold text-theme-text-primary">{headerTitle}</h1>
             <p className="text-theme-text-secondary mt-1">
-              Capture and nurture ideas across all Expertly products
+              {headerDescription}
             </p>
           </div>
         </div>
@@ -1044,7 +1062,7 @@ export function IdeaBacklog() {
             className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            New Idea
+            {isWorkBacklogMode ? 'New Item' : 'New Idea'}
           </button>
         </div>
       </div>
@@ -1264,6 +1282,7 @@ export function IdeaBacklog() {
         <CreateIdeaModal
           idea={editingIdea || undefined}
           defaultProduct={productFilter || undefined}
+          organizationId={organizationId || undefined}
           onClose={() => {
             setShowCreateModal(false)
             setEditingIdea(null)
@@ -1272,7 +1291,12 @@ export function IdeaBacklog() {
             if (editingIdea) {
               updateMutation.mutate({ id: editingIdea.id, data })
             } else {
-              createMutation.mutate(data as IdeaCreate)
+              // Include organization_id when creating in work backlog mode
+              const createData = {
+                ...data,
+                organization_id: organizationId || undefined,
+              } as IdeaCreate
+              createMutation.mutate(createData)
             }
           }}
         />
