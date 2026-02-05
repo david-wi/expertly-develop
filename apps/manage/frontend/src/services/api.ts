@@ -1501,7 +1501,7 @@ export interface Monitor {
   provider: MonitorProviderType
   connection_id: string
   provider_config: SlackConfig | GmailConfig | OutlookConfig | Record<string, unknown>
-  playbook_id: string
+  playbook_id?: string  // Optional - if not set, creates tasks directly
   input_data_template?: Record<string, unknown>
   queue_id?: string
   project_id?: string
@@ -1540,7 +1540,7 @@ export interface CreateMonitorRequest {
   provider: MonitorProviderType
   connection_id: string
   provider_config: SlackConfig | GmailConfig | OutlookConfig | Record<string, unknown>
-  playbook_id: string
+  playbook_id?: string  // Optional - if not set, creates tasks directly without playbook
   input_data_template?: Record<string, unknown>
   queue_id?: string
   project_id?: string

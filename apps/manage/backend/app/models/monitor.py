@@ -103,7 +103,7 @@ class Monitor(MongoModel):
     provider_config: dict = Field(default_factory=dict)  # Provider-specific settings
 
     # Trigger configuration
-    playbook_id: str  # Playbook to trigger when event detected
+    playbook_id: Optional[str] = None  # Playbook to trigger when event detected (optional - if None, creates tasks directly)
     input_data_template: Optional[dict] = None  # Template for playbook inputs
     queue_id: Optional[PyObjectId] = None  # Optional queue for triggered tasks
 
@@ -167,7 +167,7 @@ class MonitorCreate(BaseModel):
     provider: MonitorProvider
     connection_id: str
     provider_config: dict = Field(default_factory=dict)
-    playbook_id: str
+    playbook_id: Optional[str] = None  # Optional - if None, creates tasks directly
     input_data_template: Optional[dict] = None
     queue_id: Optional[str] = None
     project_id: Optional[str] = None

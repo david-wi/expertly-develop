@@ -218,23 +218,24 @@ class MonitorService:
 
     async def trigger_playbook(self, monitor: dict, event: MonitorAdapterEvent) -> Optional[ObjectId]:
         """
-        Trigger a playbook based on a detected event.
+        Create a task based on a detected event, optionally triggering a playbook.
 
-        Creates a task with the event data as input.
+        Creates a task with the event data as input. If a playbook is configured,
+        it will be associated with the task. If no playbook is configured, the task
+        is created directly in the inbox.
 
         Returns:
             The task ID if created, None otherwise
         """
         playbook_id = monitor.get("playbook_id")
-        if not playbook_id:
-            logger.warning(f"Monitor {monitor['_id']} has no playbook configured")
-            return None
+        playbook = None
 
-        # Get the playbook
-        playbook = await self.db.playbooks.find_one({"_id": playbook_id})
-        if not playbook:
-            logger.warning(f"Playbook {playbook_id} not found for monitor {monitor['_id']}")
-            return None
+        if playbook_id:
+            # Get the playbook if configured
+            playbook = await self.db.playbooks.find_one({"_id": playbook_id})
+            if not playbook:
+                logger.warning(f"Playbook {playbook_id} not found for monitor {monitor['_id']}, creating task without playbook")
+                playbook_id = None
 
         # Determine which queue to use
         queue_id = monitor.get("queue_id")
@@ -284,7 +285,7 @@ class MonitorService:
             project_id=monitor.get("project_id"),
             input_data=input_data,
             source_monitor_id=monitor["_id"],
-            source_playbook_id=playbook_id,
+            source_playbook_id=playbook_id if playbook_id else None,
             source_url=source_url
         )
 
@@ -292,7 +293,8 @@ class MonitorService:
         task_dict = task.model_dump_mongo()
         task_dict["input_data"] = input_data
         task_dict["source_monitor_id"] = monitor["_id"]
-        task_dict["source_playbook_id"] = playbook_id
+        if playbook_id:
+            task_dict["source_playbook_id"] = playbook_id
         task_dict["source_url"] = source_url
 
         result = await self.db.tasks.insert_one(task_dict)
