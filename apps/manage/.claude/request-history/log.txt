@@ -12,3 +12,6 @@
 20260131 - Add autoFocus to first field in Create dialogs, Escape to cancel, Enter to submit - apply across all similar modals site-wide
 20260202 - My Active Tasks: Remove Queue column (add to hover tooltip), compact layout (smaller text, less padding), add drag handles for reordering with sequence field
 20260202 Remove (top) and (bottom) labels from Add task placeholders in MyActiveTasksWidget
+20260205 - Improve Manage task writeups: show source_url in active tasks edit panel, improve AI description prompt to be more actionable/self-contained (include ~5 messages of context), expand context truncation in monitor_service, regenerate descriptions for existing Slack-sourced tasks.
+20250205 - Add provider icon (Slack, Gmail, etc) to the left of monitor entries in the Monitors table
+20260205 - Add multi-workspace Slack connection instructions: Show info tip modal when adding another Slack workspace, with instructions about enabling distribution, using workspace dropdown, and signing into other workspace first.
