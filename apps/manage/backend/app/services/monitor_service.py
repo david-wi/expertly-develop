@@ -239,7 +239,7 @@ class MonitorService:
                 context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:5]
-                    context = "\n".join([m.get("text", "")[:200] for m in thread_messages])
+                    context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
                 is_actionable = await slack_title_service.is_actionable(message_text, context)
                 if not is_actionable:
@@ -343,7 +343,7 @@ class MonitorService:
                 context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:5]
-                    context = "\n".join([m.get("text", "")[:200] for m in thread_messages])
+                    context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
                 return await slack_title_service.generate_title(message_text, context)
             except Exception as e:
@@ -367,7 +367,7 @@ class MonitorService:
                 context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:5]
-                    context = "\n".join([m.get("text", "")[:200] for m in thread_messages])
+                    context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
                 return await slack_title_service.generate_description(message_text, context)
             except Exception as e:

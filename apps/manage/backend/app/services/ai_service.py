@@ -306,15 +306,20 @@ Respond with ONLY the task title, nothing else."""
             logger.warning(f"AI title generation failed: {e}")
             return self._fallback_title(message_text)
 
-    DESCRIPTION_SYSTEM_PROMPT = """You are a task description writer for David's task management system. Given a Slack message (and optionally thread context), write a clear, concise task description from David's perspective.
+    DESCRIPTION_SYSTEM_PROMPT = """You are a task description writer for David's task management system. Given a Slack message (and optionally thread context of up to 5 messages), write a thorough, actionable task description from David's perspective.
+
+The goal is to write a description complete enough that David can understand and respond WITHOUT having to click through to the original Slack message most of the time.
 
 Guidelines:
-1. Summarize what David needs to do and why
-2. Include key details (names, deadlines, links mentioned, specific questions)
-3. Keep it to 2-4 sentences
-4. Don't include raw Slack markup, @mentions with user IDs, or channel codes
-5. Replace user mentions with actual names where possible
-6. Write in a professional, clear tone
+1. Start with a one-line summary of what David needs to do
+2. Then provide the key context: who is asking, what they need, and any relevant background from the thread
+3. Include specific details: names, deadlines, links mentioned, exact questions asked, options being considered
+4. If the thread shows a conversation, summarize the progression so David understands where things stand
+5. End with the specific ask or next step David should take
+6. Aim for a thorough but scannable description — use line breaks between sections
+7. Don't include raw Slack markup, @mentions with user IDs, or channel codes
+8. Replace user mentions with actual names where possible
+9. Write in a professional, clear tone
 
 Respond with ONLY the description text, nothing else."""
 
