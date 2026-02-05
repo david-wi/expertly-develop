@@ -16,6 +16,13 @@ import {
   Headphones,
   Users,
   Wrench,
+  LayoutGrid,
+  TrendingUp,
+  FlaskRound,
+  Heart,
+  Globe,
+  Play,
+  Cpu,
 } from 'lucide-react'
 import { useState, useRef } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
@@ -51,7 +58,6 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Expertly Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
   { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: Scissors, description: 'Salon management' },
   { name: 'Expertly TMS', code: 'tms', href: 'https://tms.ai.devintensive.com', icon: Truck, description: 'Transportation management' },
-  { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: Calendar, description: 'Daily workflow' },
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },
   { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: FlaskConical, description: 'AI testing platform' },
   { name: 'Expertly Admin', code: 'admin', href: 'https://admin.ai.devintensive.com', icon: Settings, description: 'Platform administration', separatorBefore: true },
@@ -62,6 +68,17 @@ export const EXPERTLY_TOOLS: ExpertlyProduct[] = [
   { name: 'Expertly Discover', code: 'discover', href: 'https://discover.ai.devintensive.com', icon: ScanSearch, description: 'Video analysis app' },
   { name: 'Expertly Hear', code: 'hear', href: 'https://hear.ai.devintensive.com', icon: Headphones, description: 'Audio transcription app' },
   { name: 'Expertly Cowork', code: 'cowork', href: 'https://cowork.ai.devintensive.com', icon: Users, description: 'Desktop collaboration app' },
+]
+
+// More Apps - additional web apps (shown in submenu)
+export const EXPERTLY_MORE_APPS: ExpertlyProduct[] = [
+  { name: 'Aipocalypse Fund', code: 'aipocalypse', href: 'https://aipocalypse.ai.devintensive.com', icon: TrendingUp, description: 'AI investment research' },
+  { name: 'Expertly Chem', code: 'chem', href: 'https://chem.ai.devintensive.com', icon: FlaskRound, description: 'Chemistry platform' },
+  { name: 'Expertly Demos', code: 'demos', href: 'https://demos.ai.devintensive.com', icon: Play, description: 'AI demos' },
+  { name: 'Expertly Simulate', code: 'simulate', href: 'https://simulate.ai.devintensive.com', icon: Cpu, description: 'Simulation platform' },
+  { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: Calendar, description: 'Daily workflow' },
+  { name: 'Expertly Website', code: 'website', href: 'https://expertly.ai.devintensive.com', icon: Globe, description: 'Expertly website' },
+  { name: 'Most Loved Workplaces', code: 'mlw', href: 'https://mlw-v2.vercel.app', icon: Heart, description: 'Workplace rankings' },
 ]
 
 export type SupportedLanguage = 'en' | 'es'
@@ -167,6 +184,9 @@ export function Sidebar({
   const [showToolsSubmenu, setShowToolsSubmenu] = useState(false)
   const [toolsRowPosition, setToolsRowPosition] = useState({ top: 0, left: 0 })
   const toolsRowRef = useRef<HTMLDivElement>(null)
+  const [showMoreAppsSubmenu, setShowMoreAppsSubmenu] = useState(false)
+  const [moreAppsRowPosition, setMoreAppsRowPosition] = useState({ top: 0, left: 0 })
+  const moreAppsRowRef = useRef<HTMLDivElement>(null)
 
   // Use provided renderLink or create one from navigate function
   const renderLink = renderLinkProp ?? (navigate ? createRenderLink(navigate) : null)
@@ -272,6 +292,7 @@ export function Sidebar({
               onClick={() => {
                 setShowProductSwitcher(false)
                 setShowToolsSubmenu(false)
+                setShowMoreAppsSubmenu(false)
               }}
             />
             <div className={`fixed left-0 top-14 w-72 ${dropdownBg} border ${borderColor} rounded-b-lg shadow-lg z-50 max-h-[calc(100vh-4rem)] overflow-y-auto`}>
@@ -316,12 +337,39 @@ export function Sidebar({
                   <div
                     className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${textSecondary} hover:${activeBg} hover:${activeText}`}
                   >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-purple-100 dark:bg-purple-900/50 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-purple-600">
-                      <Wrench className="w-4 h-4 transition-colors text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
+                      <Wrench className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
                     </div>
                     <div className="flex-1">
                       <p className="font-medium">Expertly Tools</p>
                       <p className={`text-xs ${textMuted}`}>Native apps & utilities</p>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${textMuted}`} />
+                  </div>
+                </div>
+
+                {/* More Apps with submenu */}
+                <div
+                  ref={moreAppsRowRef}
+                  className="relative"
+                  onMouseEnter={() => {
+                    if (moreAppsRowRef.current) {
+                      const rect = moreAppsRowRef.current.getBoundingClientRect()
+                      setMoreAppsRowPosition({ top: rect.top, left: rect.right })
+                    }
+                    setShowMoreAppsSubmenu(true)
+                  }}
+                  onMouseLeave={() => setShowMoreAppsSubmenu(false)}
+                >
+                  <div
+                    className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors cursor-pointer ${textSecondary} hover:${activeBg} hover:${activeText}`}
+                  >
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
+                      <LayoutGrid className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">More Apps</p>
+                      <p className={`text-xs ${textMuted}`}>Additional applications</p>
                     </div>
                     <ChevronRight className={`w-4 h-4 ${textMuted}`} />
                   </div>
@@ -371,12 +419,48 @@ export function Sidebar({
                         setShowToolsSubmenu(false)
                       }}
                     >
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-purple-100 dark:bg-purple-900/50 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-purple-600">
-                        <tool.icon className="w-4 h-4 transition-colors text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
+                        <tool.icon className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
                       </div>
                       <div>
                         <p className="font-medium">{tool.name}</p>
                         <p className={`text-xs ${textMuted}`}>{tool.description}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* More Apps Submenu - rendered outside scrollable container */}
+            {showMoreAppsSubmenu && (
+              <div
+                className={`fixed ml-1 w-64 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50`}
+                style={{ top: moreAppsRowPosition.top, left: moreAppsRowPosition.left }}
+                onMouseEnter={() => setShowMoreAppsSubmenu(true)}
+                onMouseLeave={() => setShowMoreAppsSubmenu(false)}
+              >
+                <div className="p-2">
+                  {EXPERTLY_MORE_APPS.map((app) => (
+                    <a
+                      key={app.code}
+                      href={app.href}
+                      className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                        app.code === productCode
+                          ? `product-item-active ${activeBg} ${activeText}`
+                          : `${textSecondary} hover:${activeBg} hover:${activeText}`
+                      }`}
+                      onClick={() => {
+                        setShowProductSwitcher(false)
+                        setShowMoreAppsSubmenu(false)
+                      }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-gray-100 dark:bg-gray-800 group-hover:bg-gradient-to-br group-hover:from-gray-500 group-hover:to-gray-700">
+                        <app.icon className="w-4 h-4 transition-colors text-gray-600 dark:text-gray-400 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{app.name}</p>
+                        <p className={`text-xs ${textMuted}`}>{app.description}</p>
                       </div>
                     </a>
                   ))}

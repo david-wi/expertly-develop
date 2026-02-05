@@ -67,6 +67,7 @@ curl -s -o /dev/null -w "vibetest: %{http_code}\n" https://vibetest.ai.devintens
 curl -s -o /dev/null -w "vibecode: %{http_code}\n" https://vibecode.ai.devintensive.com/
 curl -s -o /dev/null -w "vibetest: %{http_code}\n" https://vibetest.ai.devintensive.com/
 curl -s -o /dev/null -w "tms: %{http_code}\n" https://tms.ai.devintensive.com/
+curl -s -o /dev/null -w "aipocalypse: %{http_code}\n" https://aipocalypse.ai.devintensive.com/
 curl -s -o /dev/null -w "chem: %{http_code}\n" https://chem.ai.devintensive.com/
 curl -s -o /dev/null -w "demos: %{http_code}\n" https://demos.ai.devintensive.com/
 ```
@@ -85,6 +86,7 @@ curl -s -o /dev/null -w "demos: %{http_code}\n" https://demos.ai.devintensive.co
 | Vibetest | `apps/vibetest` | https://vibetest.ai.devintensive.com | Vibe testing platform |
 | Vibecode | `apps/vibecode` | https://vibecode.ai.devintensive.com | Vibe coding platform |
 | TMS | `apps/tms` | https://tms.ai.devintensive.com | AI-powered Transportation Management System |
+| Aipocalypse | `apps/aipocalypse` | https://aipocalypse.ai.devintensive.com | AI investment research fund |
 
 ## Adding New Apps - CHECKLIST
 

@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Source the shared UI package for Tailwind */
+@source "../../../../packages/ui/src/**/*.{js,ts,jsx,tsx}";
+/* Docker build: UI package copied to packages-ui-src */
+@source "./packages-ui-src/**/*.{js,ts,jsx,tsx}";
+
+/* Violet primary color theme for unified Expertly branding */
+@theme {
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+  --color-primary-950: #2e1065;
+
+  /* Theme colors using CSS variables for shared UI components */
+  --color-theme-bg: var(--theme-bg-default);
+  --color-theme-bg-surface: var(--theme-bg-surface);
+  --color-theme-bg-elevated: var(--theme-bg-elevated);
+  --color-theme-text-primary: var(--theme-text-primary);
+  --color-theme-text-secondary: var(--theme-text-secondary);
+  --color-theme-text-muted: var(--theme-text-muted);
+  --color-theme-border: var(--theme-border-default);
+  --color-theme-border-subtle: var(--theme-border-subtle);
+}
+
+/* Base styles */
+body {
+  @apply bg-gray-50 text-gray-900 min-h-screen;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-gray-100;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
