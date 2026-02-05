@@ -50,7 +50,7 @@ export default function Tasks() {
 
   // Filters
   const [filterQueue, setFilterQueue] = useState<string>('')
-  const [filterStatus, setFilterStatus] = useState<string>('')
+  const [filterStatus, setFilterStatus] = useState<string>('active')
   const [filterPhase, setFilterPhase] = useState<string>('')
   const [filterProject, setFilterProject] = useState<string>('')
   const [filterPlaybook, setFilterPlaybook] = useState<string>('')
@@ -94,7 +94,8 @@ export default function Tasks() {
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       if (filterQueue && task.queue_id !== filterQueue) return false
-      if (filterStatus && task.status !== filterStatus) return false
+      if (filterStatus === 'active' && (task.status === 'completed' || task.status === 'failed')) return false
+      if (filterStatus && filterStatus !== 'active' && task.status !== filterStatus) return false
       if (filterPhase && task.phase !== filterPhase) return false
       if (filterProject && task.project_id !== filterProject) return false
       if (filterPlaybook && task.playbook_id !== filterPlaybook) return false
@@ -220,7 +221,7 @@ export default function Tasks() {
 
   const clearFilters = () => {
     setFilterQueue('')
-    setFilterStatus('')
+    setFilterStatus('active')
     setFilterPhase('')
     setFilterProject('')
     setFilterPlaybook('')
@@ -228,7 +229,7 @@ export default function Tasks() {
     setFilterApprover('')
   }
 
-  const hasFilters = filterQueue || filterStatus || filterPhase || filterProject || filterPlaybook || filterAssignee || filterApprover
+  const hasFilters = filterQueue || (filterStatus && filterStatus !== 'active') || filterPhase || filterProject || filterPlaybook || filterAssignee || filterApprover
 
   // Get user's default queue for quick task creation
   const userQueues = queues.filter((q) => q.scope_type === 'user')
@@ -478,6 +479,7 @@ export default function Tasks() {
             onChange={(e) => setFilterStatus(e.target.value)}
             className="border border-gray-300 rounded px-2 py-1.5 text-xs"
           >
+            <option value="active">Active</option>
             <option value="">All Statuses</option>
             <option value="queued">Queued</option>
             <option value="checked_out">Checked Out</option>
@@ -656,6 +658,7 @@ export default function Tasks() {
             tasks={filteredTasks}
             projects={projects}
             queues={queues}
+            users={users}
             completingTaskId={completingTaskId}
             onTaskClick={setSelectedTaskId}
             onQuickComplete={handleQuickComplete}
@@ -697,6 +700,7 @@ export default function Tasks() {
                       tasks={groupTasks}
                       projects={projects}
                       queues={queues}
+                      users={users}
                       completingTaskId={completingTaskId}
                       onTaskClick={setSelectedTaskId}
                       onQuickComplete={handleQuickComplete}
@@ -848,6 +852,7 @@ interface TaskListProps {
   tasks: Task[]
   projects: Project[]
   queues: { _id?: string; id: string; purpose: string }[]
+  users: User[]
   completingTaskId: string | null
   onTaskClick: (taskId: string) => void
   onQuickComplete: (e: React.MouseEvent, taskId: string) => void
@@ -858,6 +863,7 @@ function TaskList({
   tasks,
   projects,
   queues,
+  users,
   completingTaskId,
   onTaskClick,
   onQuickComplete,
@@ -878,12 +884,19 @@ function TaskList({
     return queue?.purpose || ''
   }
 
+  const getUserName = (userId: string | undefined) => {
+    if (!userId) return null
+    const user = users.find((u) => (u._id || u.id) === userId)
+    return user?.name || null
+  }
+
   return (
     <div className={`divide-y divide-gray-100 ${compact ? 'max-h-80 overflow-auto' : ''}`}>
       {tasks.map((task) => {
         const taskId = task._id || task.id
         const projectName = getProjectName(task.project_id)
         const queueName = getQueueName(task.queue_id)
+        const assigneeName = getUserName(task.assigned_to_id)
 
         return (
           <div
@@ -910,6 +923,15 @@ function TaskList({
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-gray-900 truncate">{task.title}</p>
             </div>
+
+            {/* Assigned To */}
+            {assigneeName && (
+              <div className="flex-shrink-0 max-w-24">
+                <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded truncate block">
+                  {assigneeName}
+                </span>
+              </div>
+            )}
 
             {/* Duration */}
             {task.estimated_duration && (
