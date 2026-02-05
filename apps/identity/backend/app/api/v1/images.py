@@ -73,7 +73,7 @@ NOT a photograph - stylized vector art illustration with a recognizable face."""
         response = client.images.generate(
             model=use_case_config.model_id,
             prompt=prompt,
-            size="512x512",
+            size="1024x1024",
             quality="standard",
             n=1,
             response_format="b64_json",
