@@ -15,6 +15,7 @@ from app.models import (
 )
 from app.api.deps import get_current_user
 from app.api.v1.websocket import emit_event
+from app.services.ai_service import get_slack_title_service
 
 router = APIRouter()
 
@@ -1024,3 +1025,157 @@ async def log_time_entry(
     await emit_event(str(current_user.organization_id), "task.updated", serialized)
 
     return time_entry.model_dump()
+
+
+@router.post("/{task_id}/regenerate-description")
+async def regenerate_task_description(
+    task_id: str,
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_database),
+):
+    """
+    Regenerate a task's description using AI from its stored input_data.
+
+    Only works for tasks that were created from a monitor event (e.g., Slack).
+    Uses the stored _monitor_event data to regenerate the description with
+    the improved AI prompt.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    task = await db.tasks.find_one({
+        "_id": ObjectId(task_id),
+        "organization_id": current_user.organization_id
+    })
+
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+
+    # Get the stored monitor event data
+    input_data = task.get("input_data", {})
+    monitor_event = input_data.get("_monitor_event", {})
+    event_data = monitor_event.get("event_data", {})
+    context_data = monitor_event.get("context_data", {})
+
+    if not event_data:
+        raise HTTPException(
+            status_code=400,
+            detail="Task has no stored monitor event data to regenerate from"
+        )
+
+    message_text = event_data.get("text", "")
+    if not message_text:
+        raise HTTPException(
+            status_code=400,
+            detail="No message text found in stored event data"
+        )
+
+    # Build context from thread
+    context = None
+    if context_data and context_data.get("thread"):
+        thread_messages = context_data["thread"][:5]
+        context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+
+    # Generate new description
+    slack_title_service = get_slack_title_service()
+    try:
+        new_description = await slack_title_service.generate_description(message_text, context)
+    except Exception as e:
+        logger.error(f"Failed to regenerate description for task {task_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"AI description generation failed: {str(e)}"
+        )
+
+    # Update the task
+    result = await db.tasks.find_one_and_update(
+        {"_id": ObjectId(task_id)},
+        {"$set": {
+            "description": new_description,
+            "updated_at": datetime.now(timezone.utc)
+        }},
+        return_document=True
+    )
+
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+
+    return {"description": new_description, "task_id": task_id}
+
+
+class BulkRegenerateResponse(BaseModel):
+    total_found: int
+    regenerated: int
+    skipped: int
+    errors: list[str]
+
+
+@router.post("/bulk-regenerate-descriptions")
+async def bulk_regenerate_descriptions(
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_database),
+):
+    """
+    Regenerate descriptions for all active Slack-sourced tasks.
+
+    Finds all tasks with source_url set and status in (queued, checked_out, in_progress)
+    that have stored _monitor_event data, and regenerates their descriptions.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    # Find all active tasks with source_url
+    query = {
+        "organization_id": current_user.organization_id,
+        "status": {"$in": ["queued", "checked_out", "in_progress"]},
+        "source_url": {"$ne": None},
+        "input_data._monitor_event.event_data.text": {"$exists": True}
+    }
+
+    tasks = await db.tasks.find(query).to_list(length=100)
+
+    result = BulkRegenerateResponse(
+        total_found=len(tasks),
+        regenerated=0,
+        skipped=0,
+        errors=[]
+    )
+
+    slack_title_service = get_slack_title_service()
+
+    for task in tasks:
+        task_id = str(task["_id"])
+        try:
+            input_data = task.get("input_data", {})
+            monitor_event = input_data.get("_monitor_event", {})
+            event_data = monitor_event.get("event_data", {})
+            context_data = monitor_event.get("context_data", {})
+
+            message_text = event_data.get("text", "")
+            if not message_text:
+                result.skipped += 1
+                continue
+
+            # Build context from thread
+            context = None
+            if context_data and context_data.get("thread"):
+                thread_messages = context_data["thread"][:5]
+                context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+
+            new_description = await slack_title_service.generate_description(message_text, context)
+
+            await db.tasks.update_one(
+                {"_id": task["_id"]},
+                {"$set": {
+                    "description": new_description,
+                    "updated_at": datetime.now(timezone.utc)
+                }}
+            )
+            result.regenerated += 1
+            logger.info(f"Regenerated description for task {task_id}")
+
+        except Exception as e:
+            logger.error(f"Failed to regenerate task {task_id}: {e}")
+            result.errors.append(f"Task {task_id}: {str(e)}")
+
+    return result
