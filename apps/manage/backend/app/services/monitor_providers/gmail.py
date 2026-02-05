@@ -123,7 +123,10 @@ class GmailMonitorAdapter(MonitorAdapter):
         return {"email": email, "name": name}
 
     async def poll(
-        self, cursor: Optional[dict] = None
+        self,
+        cursor: Optional[dict] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
     ) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
         """
         Poll Gmail for new messages.

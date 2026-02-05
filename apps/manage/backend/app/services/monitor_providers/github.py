@@ -55,7 +55,10 @@ class GitHubMonitorAdapter(MonitorAdapter):
         }
 
     async def poll(
-        self, cursor: Optional[dict] = None
+        self,
+        cursor: Optional[dict] = None,
+        oldest: Optional[str] = None,
+        latest: Optional[str] = None,
     ) -> tuple[list[MonitorAdapterEvent], Optional[dict]]:
         """
         Poll GitHub Events API for new events.

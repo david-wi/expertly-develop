@@ -543,6 +543,11 @@ export const api = {
     request<MonitorPollResult>(`/api/v1/monitors/${id}/poll`, {
       method: 'POST',
     }),
+  backfillMonitor: (id: string, oldest: string, latest: string) =>
+    request<MonitorPollResult>(`/api/v1/monitors/${id}/poll`, {
+      method: 'POST',
+      body: JSON.stringify({ oldest, latest, is_backfill: true }),
+    }),
   pauseMonitor: (id: string) =>
     request<Monitor>(`/api/v1/monitors/${id}/pause`, {
       method: 'POST',
