@@ -13,8 +13,9 @@ COPY packages/ui ./packages/ui
 COPY apps/aipocalypse/frontend/package*.json ./apps/aipocalypse/frontend/
 
 # Install dependencies from monorepo root (resolves workspace packages)
-RUN npm install --workspace=apps/aipocalypse/frontend --ignore-scripts && \
-    npm install @rollup/rollup-linux-x64-musl --save-optional
+# After install, add musl-specific native bindings needed for Alpine Linux (TailwindCSS v4)
+RUN npm install --workspace=apps/aipocalypse/frontend && \
+    npm install --no-save lightningcss-linux-x64-musl @tailwindcss/oxide-linux-x64-musl
 
 # Copy source code
 COPY apps/aipocalypse/frontend ./apps/aipocalypse/frontend
