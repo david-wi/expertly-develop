@@ -13,8 +13,11 @@ jobs:
       matrix:
         app:
           - { name: admin, path: apps/admin/frontend }
+          - { name: cowork, path: apps/cowork/frontend }
           - { name: define, path: apps/define/frontend }
           - { name: develop, path: apps/develop/frontend }
+          - { name: discover, path: apps/discover/frontend }
+          - { name: hear, path: apps/hear/frontend }
           - { name: identity, path: apps/identity/frontend }
           - { name: manage, path: apps/manage/frontend }
           - { name: salon, path: apps/salon/frontend }

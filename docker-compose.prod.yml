@@ -502,6 +502,72 @@ services:
     restart: unless-stopped
 
   # ===================
+  # EXPERTLY DISCOVER (Landing Page)
+  # ===================
+  discover-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/discover/frontend/Dockerfile
+      args:
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.discover-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.discover-frontend${DEPLOY_COLOR:-}.rule=Host(`discover.ai.devintensive.com`)"
+      - "traefik.http.routers.discover-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.discover-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.discover-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY HEAR (Landing Page)
+  # ===================
+  hear-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/hear/frontend/Dockerfile
+      args:
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.hear-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.hear-frontend${DEPLOY_COLOR:-}.rule=Host(`hear.ai.devintensive.com`)"
+      - "traefik.http.routers.hear-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.hear-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.hear-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
+  # EXPERTLY COWORK (Landing Page)
+  # ===================
+  cowork-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/cowork/frontend/Dockerfile
+      args:
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.cowork-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.cowork-frontend${DEPLOY_COLOR:-}.rule=Host(`cowork.ai.devintensive.com`)"
+      - "traefik.http.routers.cowork-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.cowork-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.cowork-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
   # EXPERTLY VIBECODE
   # ===================
   vibecode:
