@@ -5,8 +5,253 @@ from pydantic import BaseModel
 from bson import ObjectId
 
 from app.database import get_database
+from app.services.exception_detection import ExceptionDetectionService
 
 router = APIRouter()
+
+
+# ============ Real-Time Dashboard Models ============
+
+class RealtimeMetrics(BaseModel):
+    """Real-time metrics for the main dashboard."""
+    # Shipment counts by status
+    shipments_booked: int
+    shipments_pending_pickup: int
+    shipments_in_transit: int
+    shipments_delivered_today: int
+
+    # Work items
+    open_work_items: int
+    high_priority_items: int
+    overdue_items: int
+
+    # Quote pipeline
+    pending_quotes: int
+    quotes_sent_today: int
+    quotes_accepted_today: int
+
+    # Tender pipeline
+    tenders_pending: int
+    tenders_accepted_today: int
+    tenders_declined_today: int
+
+    # Financial (today)
+    revenue_today: int  # cents
+    margin_today: int  # cents
+    margin_percent_today: float
+
+    # Exceptions
+    exception_count: int
+    high_severity_exceptions: int
+
+    # Activity
+    last_updated: datetime
+
+
+class RealtimeDashboardResponse(BaseModel):
+    """Complete real-time dashboard data."""
+    metrics: RealtimeMetrics
+    recent_activity: List[dict]
+    at_risk_shipments: List[dict]
+    upcoming_deliveries: List[dict]
+    exception_summary: dict
+
+
+@router.get("/realtime", response_model=RealtimeDashboardResponse)
+async def get_realtime_dashboard():
+    """Get real-time dashboard metrics and data."""
+    db = get_database()
+    now = datetime.utcnow()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # Shipment counts by status
+    shipments_booked = await db.shipments.count_documents({"status": "booked"})
+    shipments_pending_pickup = await db.shipments.count_documents({"status": "pending_pickup"})
+    shipments_in_transit = await db.shipments.count_documents({"status": "in_transit"})
+    shipments_delivered_today = await db.shipments.count_documents({
+        "status": "delivered",
+        "actual_delivery_date": {"$gte": today_start}
+    })
+
+    # Work items
+    open_work_items = await db.work_items.count_documents({
+        "status": {"$in": ["open", "in_progress"]}
+    })
+    high_priority_items = await db.work_items.count_documents({
+        "status": {"$in": ["open", "in_progress"]},
+        "priority": {"$lte": 2}  # 1 = highest, 2 = high
+    })
+    overdue_items = await db.work_items.count_documents({
+        "status": {"$in": ["open", "in_progress"]},
+        "is_overdue": True
+    })
+
+    # Quote pipeline
+    pending_quotes = await db.quotes.count_documents({"status": "draft"})
+    quotes_sent_today = await db.quotes.count_documents({
+        "status": "sent",
+        "sent_at": {"$gte": today_start}
+    })
+    quotes_accepted_today = await db.quotes.count_documents({
+        "status": "accepted",
+        "accepted_at": {"$gte": today_start}
+    })
+
+    # Tender pipeline
+    tenders_pending = await db.tenders.count_documents({"status": "sent"})
+    tenders_accepted_today = await db.tenders.count_documents({
+        "status": "accepted",
+        "responded_at": {"$gte": today_start}
+    })
+    tenders_declined_today = await db.tenders.count_documents({
+        "status": "declined",
+        "responded_at": {"$gte": today_start}
+    })
+
+    # Financial (today)
+    pipeline = [
+        {
+            "$match": {
+                "created_at": {"$gte": today_start},
+                "customer_price": {"$gt": 0}
+            }
+        },
+        {
+            "$group": {
+                "_id": None,
+                "revenue": {"$sum": "$customer_price"},
+                "cost": {"$sum": "$carrier_cost"}
+            }
+        }
+    ]
+    cursor = db.shipments.aggregate(pipeline)
+    financials = await cursor.to_list(1)
+    if financials:
+        revenue_today = financials[0].get("revenue", 0) or 0
+        cost_today = financials[0].get("cost", 0) or 0
+        margin_today = revenue_today - cost_today
+        margin_percent_today = (margin_today / revenue_today * 100) if revenue_today > 0 else 0
+    else:
+        revenue_today = 0
+        margin_today = 0
+        margin_percent_today = 0
+
+    # Exceptions
+    exception_summary = await ExceptionDetectionService.get_exception_summary()
+    exception_count = exception_summary.get("total", 0)
+    high_severity_exceptions = exception_summary.get("by_severity", {}).get("high", 0)
+
+    metrics = RealtimeMetrics(
+        shipments_booked=shipments_booked,
+        shipments_pending_pickup=shipments_pending_pickup,
+        shipments_in_transit=shipments_in_transit,
+        shipments_delivered_today=shipments_delivered_today,
+        open_work_items=open_work_items,
+        high_priority_items=high_priority_items,
+        overdue_items=overdue_items,
+        pending_quotes=pending_quotes,
+        quotes_sent_today=quotes_sent_today,
+        quotes_accepted_today=quotes_accepted_today,
+        tenders_pending=tenders_pending,
+        tenders_accepted_today=tenders_accepted_today,
+        tenders_declined_today=tenders_declined_today,
+        revenue_today=revenue_today,
+        margin_today=margin_today,
+        margin_percent_today=round(margin_percent_today, 1),
+        exception_count=exception_count,
+        high_severity_exceptions=high_severity_exceptions,
+        last_updated=now
+    )
+
+    # Recent activity (last 10 events)
+    recent_pipeline = [
+        {
+            "$match": {
+                "created_at": {"$gte": now - timedelta(hours=24)}
+            }
+        },
+        {"$sort": {"created_at": -1}},
+        {"$limit": 10},
+        {
+            "$project": {
+                "event_type": {"$literal": "tracking_event"},
+                "timestamp": "$created_at",
+                "shipment_id": 1,
+                "event_type_detail": "$event_type",
+                "location": 1,
+                "notes": 1
+            }
+        }
+    ]
+    cursor = db.tracking_events.aggregate(recent_pipeline)
+    recent_activity = await cursor.to_list(10)
+    recent_activity = [
+        {
+            "type": a.get("event_type"),
+            "timestamp": a.get("timestamp").isoformat() if a.get("timestamp") else None,
+            "shipment_id": str(a.get("shipment_id")),
+            "detail": a.get("event_type_detail"),
+            "location": a.get("location"),
+            "notes": a.get("notes")
+        }
+        for a in recent_activity
+    ]
+
+    # At-risk shipments (pickup in 24h without carrier, or late)
+    at_risk_cursor = db.shipments.find({
+        "$or": [
+            {
+                "status": {"$in": ["booked", "pending_pickup"]},
+                "carrier_id": None,
+                "pickup_date": {"$lt": now + timedelta(hours=24), "$gt": now}
+            },
+            {
+                "status": "in_transit",
+                "delivery_date": {"$lt": now}
+            }
+        ]
+    }).limit(10)
+    at_risk_shipments = []
+    async for s in at_risk_cursor:
+        at_risk_shipments.append({
+            "id": str(s["_id"]),
+            "shipment_number": s.get("shipment_number"),
+            "status": s.get("status"),
+            "risk_reason": "No carrier" if not s.get("carrier_id") else "Late delivery",
+            "pickup_date": s.get("pickup_date").isoformat() if s.get("pickup_date") else None,
+            "delivery_date": s.get("delivery_date").isoformat() if s.get("delivery_date") else None
+        })
+
+    # Upcoming deliveries (next 24h)
+    upcoming_cursor = db.shipments.find({
+        "status": "in_transit",
+        "delivery_date": {"$gte": now, "$lt": now + timedelta(hours=24)}
+    }).sort("delivery_date", 1).limit(10)
+    upcoming_deliveries = []
+    async for s in upcoming_cursor:
+        upcoming_deliveries.append({
+            "id": str(s["_id"]),
+            "shipment_number": s.get("shipment_number"),
+            "delivery_date": s.get("delivery_date").isoformat() if s.get("delivery_date") else None,
+            "status": s.get("status"),
+            "last_location": s.get("last_location"),
+            "eta": s.get("eta").isoformat() if s.get("eta") else None
+        })
+
+    # Exception summary by type
+    exception_by_type = exception_summary.get("by_type", {})
+
+    return RealtimeDashboardResponse(
+        metrics=metrics,
+        recent_activity=recent_activity,
+        at_risk_shipments=at_risk_shipments,
+        upcoming_deliveries=upcoming_deliveries,
+        exception_summary={
+            "total": exception_count,
+            "by_severity": exception_summary.get("by_severity", {}),
+            "by_type": exception_by_type
+        }
+    )
 
 
 # ============ Carrier Performance Models ============

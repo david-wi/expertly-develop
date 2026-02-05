@@ -10,6 +10,11 @@ from .tracking import TrackingEvent, TrackingEventType
 from .document import Document, DocumentType
 from .invoice import Invoice, InvoiceStatus, InvoiceLineItem
 from .work_item import WorkItem, WorkItemType, WorkItemStatus
+from .geofence import Geofence, GeofenceType, GeofenceTrigger, GeofenceEvent, TrackingLink, PODCapture
+from .portal import (
+    CarrierOnboarding, OnboardingStatus, OnboardingDocumentType, OnboardingDocument,
+    CarrierPortalSession, CustomerPortalSession, PortalNotification
+)
 
 __all__ = [
     "MongoModel",
@@ -45,4 +50,17 @@ __all__ = [
     "WorkItem",
     "WorkItemType",
     "WorkItemStatus",
+    "Geofence",
+    "GeofenceType",
+    "GeofenceTrigger",
+    "GeofenceEvent",
+    "TrackingLink",
+    "PODCapture",
+    "CarrierOnboarding",
+    "OnboardingStatus",
+    "OnboardingDocumentType",
+    "OnboardingDocument",
+    "CarrierPortalSession",
+    "CustomerPortalSession",
+    "PortalNotification",
 ]

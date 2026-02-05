@@ -16,12 +16,15 @@ import DocumentReview from './pages/DocumentReview'
 import LoadBoards from './pages/LoadBoards'
 import LandingPage from './pages/LandingPage'
 import ProductComparison from './pages/ProductComparison'
+import TrackingPortal from './pages/TrackingPortal'
 import Layout from './components/layout/Layout'
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public tracking portal (no auth required) */}
+        <Route path="/track/:token" element={<TrackingPortal />} />
         <Route path="/landing" element={<LandingPage />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
