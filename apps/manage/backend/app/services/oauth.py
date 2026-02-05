@@ -74,6 +74,8 @@ def get_provider_config(provider: str) -> OAuthProviderConfig:
             token_url="https://slack.com/api/oauth.v2.access",
             userinfo_url="https://slack.com/api/users.identity",
             scopes=[
+                "identity.basic",    # Required for users.identity endpoint
+                "identity.email",    # Get user email from identity
                 "channels:read",
                 "channels:history",  # Read public channel messages
                 "groups:history",    # Read private channel messages
