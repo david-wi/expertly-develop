@@ -130,10 +130,11 @@ async def create_monitor(
     if not connection:
         raise HTTPException(status_code=404, detail="Connection not found or inactive")
 
-    # Validate playbook exists
-    playbook = await db.playbooks.find_one({"_id": data.playbook_id})
-    if not playbook:
-        raise HTTPException(status_code=404, detail="Playbook not found")
+    # Validate playbook exists (if provided)
+    if data.playbook_id:
+        playbook = await db.playbooks.find_one({"_id": data.playbook_id})
+        if not playbook:
+            raise HTTPException(status_code=404, detail="Playbook not found")
 
     # Validate scope
     scope_id = None
