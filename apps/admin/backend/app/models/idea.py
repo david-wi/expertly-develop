@@ -1,4 +1,9 @@
-"""Idea model for centralized idea tracking across Expertly products."""
+"""Idea model for centralized idea tracking across Expertly products.
+
+Supports both product-wide ideas and organization-specific backlog items:
+- organization_id = NULL: Product-wide idea visible to all
+- organization_id = UUID: Organization-private backlog item
+"""
 
 import uuid
 from enum import Enum
@@ -31,6 +36,9 @@ class Idea(Base, TimestampMixin):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
+    # Organization ID for org-specific backlogs (NULL = product-wide idea)
+    organization_id = Column(UUID(as_uuid=True), nullable=True, index=True)
+
     # Product this idea belongs to
     product = Column(String(50), nullable=False, index=True)
 
@@ -59,6 +67,7 @@ class Idea(Base, TimestampMixin):
         Index('ix_ideas_status', 'status'),
         Index('ix_ideas_priority', 'priority'),
         Index('ix_ideas_product_status', 'product', 'status'),
+        Index('ix_ideas_org_status', 'organization_id', 'status'),
     )
 
     def __repr__(self) -> str:

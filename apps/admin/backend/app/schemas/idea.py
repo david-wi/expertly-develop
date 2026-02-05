@@ -48,6 +48,7 @@ class IdeaCreate(BaseModel):
     priority: IdeaPriority = IdeaPriority.MEDIUM
     tags: Optional[List[str]] = Field(default_factory=list)
     created_by_email: Optional[str] = Field(None, max_length=255)
+    organization_id: Optional[UUID] = Field(None, description="Organization ID for org-private items")
 
 
 class IdeaUpdate(BaseModel):
@@ -59,6 +60,7 @@ class IdeaUpdate(BaseModel):
     status: Optional[IdeaStatus] = None
     priority: Optional[IdeaPriority] = None
     tags: Optional[List[str]] = None
+    organization_id: Optional[UUID] = None
 
 
 class IdeaResponse(BaseModel):
@@ -72,6 +74,7 @@ class IdeaResponse(BaseModel):
     priority: str
     tags: Optional[List[str]]
     created_by_email: Optional[str]
+    organization_id: Optional[UUID] = None
     created_at: datetime
     updated_at: datetime
     vote_count: int = 0
