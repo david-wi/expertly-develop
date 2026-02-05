@@ -108,13 +108,12 @@ async def list_tasks(
 
     # Filter by user's queues if user_id is provided
     if user_id:
-        if not ObjectId.is_valid(user_id):
-            raise HTTPException(status_code=400, detail="Invalid user ID")
-        # Get all queues owned by this user
+        # user_id can be either a MongoDB ObjectId or a UUID from Identity service
+        # Get all queues owned by this user (scope_id is stored as string)
         user_queues_cursor = db.queues.find({
             "organization_id": current_user.organization_id,
             "scope_type": "user",
-            "scope_id": user_id
+            "scope_id": user_id  # Match string directly (UUIDs are stored as strings)
         })
         user_queues = await user_queues_cursor.to_list(100)
         user_queue_ids = [q["_id"] for q in user_queues]
