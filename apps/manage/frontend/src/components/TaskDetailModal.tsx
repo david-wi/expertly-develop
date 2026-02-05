@@ -24,9 +24,10 @@ import {
   RotateCcw,
   Check,
   Timer,
+  RefreshCw,
 } from 'lucide-react'
 import { InlineVoiceTranscription } from '@expertly/ui'
-import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase } from '../services/api'
+import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase, RecurrenceType } from '../services/api'
 import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
@@ -192,6 +193,14 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const [scheduleTimezone, setScheduleTimezone] = useState('')
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false)
 
+  // Recurrence state
+  const [isRecurring, setIsRecurring] = useState(false)
+  const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>('daily')
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1)
+  const [recurrenceDaysOfWeek, setRecurrenceDaysOfWeek] = useState<number[]>([])
+  const [recurrenceDayOfMonth, setRecurrenceDayOfMonth] = useState(1)
+  const [showRepeatSettings, setShowRepeatSettings] = useState(false)
+
   // Attachment state
   const [showAddAttachment, setShowAddAttachment] = useState(false)
   const [attachmentType, setAttachmentType] = useState<'file' | 'link'>('file')
@@ -262,6 +271,16 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       }
       setScheduleTimezone(taskData.schedule_timezone || '')
 
+      // Initialize recurrence state
+      setIsRecurring(taskData.is_recurring || false)
+      setRecurrenceType(taskData.recurrence_type || 'daily')
+      setRecurrenceInterval(taskData.recurrence_interval || 1)
+      setRecurrenceDaysOfWeek(taskData.recurrence_days_of_week || [])
+      setRecurrenceDayOfMonth(taskData.recurrence_day_of_month || 1)
+      if (taskData.is_recurring) {
+        setShowRepeatSettings(true)
+      }
+
       setHasChanges(false)
     } catch (err) {
       console.error('Failed to fetch task details:', err)
@@ -304,6 +323,10 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     const parsedDuration = parseDuration(editedDuration)
     const durationChanged = parsedDuration !== (task.estimated_duration || null)
 
+    // Check recurrence changes
+    const originalDaysOfWeek = task.recurrence_days_of_week || []
+    const daysOfWeekChanged = JSON.stringify(recurrenceDaysOfWeek.sort()) !== JSON.stringify(originalDaysOfWeek.sort())
+
     const changed =
       editedTitle !== task.title ||
       editedDescription !== (task.description || '') ||
@@ -315,9 +338,14 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       newScheduledStart !== originalScheduledStart ||
       newScheduledEnd !== originalScheduledEnd ||
       scheduleTimezone !== (task.schedule_timezone || '') ||
-      durationChanged
+      durationChanged ||
+      isRecurring !== (task.is_recurring || false) ||
+      recurrenceType !== (task.recurrence_type || 'daily') ||
+      recurrenceInterval !== (task.recurrence_interval || 1) ||
+      daysOfWeekChanged ||
+      recurrenceDayOfMonth !== (task.recurrence_day_of_month || 1)
     setHasChanges(changed)
-  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone, editedDuration])
+  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone, editedDuration, isRecurring, recurrenceType, recurrenceInterval, recurrenceDaysOfWeek, recurrenceDayOfMonth])
 
   // Hook for unsaved changes warning
   const { confirmClose } = useUnsavedChanges(hasChanges)
@@ -341,6 +369,11 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         scheduled_end: buildScheduledEnd(),
         schedule_timezone: scheduleTimezone || null,
         estimated_duration: parseDuration(editedDuration),
+        is_recurring: isRecurring,
+        recurrence_type: isRecurring ? recurrenceType : undefined,
+        recurrence_interval: isRecurring ? recurrenceInterval : null,
+        recurrence_days_of_week: isRecurring && recurrenceType === 'weekly' ? recurrenceDaysOfWeek : null,
+        recurrence_day_of_month: isRecurring && recurrenceType === 'monthly' ? recurrenceDayOfMonth : null,
       }
       await api.updateTask(taskId, updateData)
       setHasChanges(false)
@@ -712,7 +745,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 >
                   <span className="text-xs font-medium text-theme-text-secondary flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" />
-                    Advanced Settings
+                    Schedule Task
                     {(scheduledStartDate || scheduledEndDate) && (
                       <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded text-[10px]">
                         Scheduled
@@ -802,6 +835,159 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                         className="text-xs text-red-600 hover:text-red-700"
                       >
                         Clear scheduling
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Repeat Settings - Collapsible */}
+              <div className="border border-theme-border rounded-lg overflow-hidden">
+                <button
+                  onClick={() => setShowRepeatSettings(!showRepeatSettings)}
+                  className="w-full px-3 py-2 flex items-center justify-between bg-theme-bg-elevated hover:bg-theme-bg-surface transition-colors"
+                >
+                  <span className="text-xs font-medium text-theme-text-secondary flex items-center gap-2">
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Repeat
+                    {isRecurring && (
+                      <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded text-[10px]">
+                        {recurrenceType === 'daily' ? 'Daily' : recurrenceType === 'weekly' ? 'Weekly' : 'Monthly'}
+                      </span>
+                    )}
+                  </span>
+                  {showRepeatSettings ? (
+                    <ChevronDown className="w-4 h-4 text-theme-text-secondary" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-theme-text-secondary" />
+                  )}
+                </button>
+
+                {showRepeatSettings && (
+                  <div className="p-3 space-y-3 border-t border-theme-border bg-theme-bg-surface">
+                    {/* Enable Repeat Toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={isRecurring}
+                        onChange={(e) => setIsRecurring(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-theme-text-primary">Enable repeat</span>
+                    </label>
+
+                    {isRecurring && (
+                      <>
+                        {/* Recurrence Type */}
+                        <div>
+                          <label className="block text-xs font-medium text-theme-text-secondary mb-1">
+                            Repeat every
+                          </label>
+                          <div className="flex gap-2 items-center">
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              value={recurrenceInterval}
+                              onChange={(e) => setRecurrenceInterval(Math.max(1, parseInt(e.target.value) || 1))}
+                              className="w-16 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                            />
+                            <select
+                              value={recurrenceType}
+                              onChange={(e) => setRecurrenceType(e.target.value as RecurrenceType)}
+                              className="flex-1 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                            >
+                              <option value="daily">{recurrenceInterval === 1 ? 'day' : 'days'}</option>
+                              <option value="weekly">{recurrenceInterval === 1 ? 'week' : 'weeks'}</option>
+                              <option value="monthly">{recurrenceInterval === 1 ? 'month' : 'months'}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Days of Week (for weekly) */}
+                        {recurrenceType === 'weekly' && (
+                          <div>
+                            <label className="block text-xs font-medium text-theme-text-secondary mb-2">
+                              On these days
+                            </label>
+                            <div className="flex gap-1 flex-wrap">
+                              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+                                <button
+                                  key={day}
+                                  type="button"
+                                  onClick={() => {
+                                    setRecurrenceDaysOfWeek(prev =>
+                                      prev.includes(index)
+                                        ? prev.filter(d => d !== index)
+                                        : [...prev, index]
+                                    )
+                                  }}
+                                  className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                    recurrenceDaysOfWeek.includes(index)
+                                      ? 'bg-primary-600 text-white'
+                                      : 'bg-theme-bg-elevated text-theme-text-secondary hover:bg-theme-bg-surface'
+                                  }`}
+                                >
+                                  {day}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Day of Month (for monthly) */}
+                        {recurrenceType === 'monthly' && (
+                          <div>
+                            <label className="block text-xs font-medium text-theme-text-secondary mb-1">
+                              On day
+                            </label>
+                            <select
+                              value={recurrenceDayOfMonth}
+                              onChange={(e) => setRecurrenceDayOfMonth(parseInt(e.target.value))}
+                              className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                            >
+                              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                                <option key={day} value={day}>
+                                  {day}{day === 1 ? 'st' : day === 2 ? 'nd' : day === 3 ? 'rd' : 'th'}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+
+                        {/* Summary */}
+                        <div className="text-xs text-theme-text-secondary bg-theme-bg-elevated p-2 rounded">
+                          {recurrenceType === 'daily' && (
+                            <>Repeats every {recurrenceInterval === 1 ? 'day' : `${recurrenceInterval} days`}</>
+                          )}
+                          {recurrenceType === 'weekly' && (
+                            <>
+                              Repeats every {recurrenceInterval === 1 ? 'week' : `${recurrenceInterval} weeks`}
+                              {recurrenceDaysOfWeek.length > 0 && (
+                                <> on {recurrenceDaysOfWeek.sort().map(d => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d]).join(', ')}</>
+                              )}
+                            </>
+                          )}
+                          {recurrenceType === 'monthly' && (
+                            <>Repeats every {recurrenceInterval === 1 ? 'month' : `${recurrenceInterval} months`} on day {recurrenceDayOfMonth}</>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Clear repeat button */}
+                    {isRecurring && (
+                      <button
+                        onClick={() => {
+                          setIsRecurring(false)
+                          setRecurrenceType('daily')
+                          setRecurrenceInterval(1)
+                          setRecurrenceDaysOfWeek([])
+                          setRecurrenceDayOfMonth(1)
+                        }}
+                        className="text-xs text-red-600 hover:text-red-700"
+                      >
+                        Clear repeat
                       </button>
                     )}
                   </div>

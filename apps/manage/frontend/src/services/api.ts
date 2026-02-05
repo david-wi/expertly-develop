@@ -838,6 +838,12 @@ export interface Task {
   scheduled_start?: string
   scheduled_end?: string
   schedule_timezone?: string
+  // Recurrence fields
+  is_recurring?: boolean
+  recurrence_type?: RecurrenceType
+  recurrence_interval?: number
+  recurrence_days_of_week?: number[]
+  recurrence_day_of_month?: number
   // Manual ordering
   sequence?: number
   // Source tracking
@@ -913,6 +919,12 @@ export interface UpdateTaskRequest {
   scheduled_start?: string | null
   scheduled_end?: string | null
   schedule_timezone?: string | null
+  // Recurrence fields
+  is_recurring?: boolean
+  recurrence_type?: RecurrenceType
+  recurrence_interval?: number | null
+  recurrence_days_of_week?: number[] | null
+  recurrence_day_of_month?: number | null
   // Manual ordering
   sequence?: number
   // Estimated duration in seconds
