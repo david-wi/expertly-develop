@@ -251,7 +251,7 @@ export default function Monitors() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim() || !formData.connection_id || !formData.playbook_id) return
+    if (!formData.name.trim() || !formData.connection_id) return
 
     setSaving(true)
     try {
@@ -261,7 +261,7 @@ export default function Monitors() {
         provider: formData.provider,
         connection_id: formData.connection_id,
         provider_config: buildProviderConfig(),
-        playbook_id: formData.playbook_id,
+        playbook_id: formData.playbook_id || undefined,
         queue_id: formData.queue_id || undefined,
         project_id: formData.project_id || undefined,
         poll_interval_seconds: formData.poll_interval_seconds,
@@ -387,7 +387,7 @@ export default function Monitors() {
       description: monitor.description || '',
       provider: monitor.provider,
       connection_id: monitor.connection_id,
-      playbook_id: monitor.playbook_id,
+      playbook_id: monitor.playbook_id || '',
       queue_id: monitor.queue_id || '',
       project_id: monitor.project_id || '',
       poll_interval_seconds: monitor.poll_interval_seconds,
@@ -456,17 +456,20 @@ export default function Monitors() {
     })
   }
 
-  const getConnectionLabel = (connectionId: string) => {
+  const getConnectionLabel = (connectionId: string, includeProvider = false) => {
     const connection = connections.find((c) => c.id === connectionId)
     if (!connection) return 'Unknown'
-    // For Slack, show workspace name; for others, show email
-    if (connection.provider_account_name) {
-      return connection.provider_account_name
+    // Build label with account name or email
+    const accountLabel = connection.provider_account_name || connection.provider_email || connection.provider
+    if (includeProvider) {
+      const providerName = connection.provider.charAt(0).toUpperCase() + connection.provider.slice(1)
+      return `${providerName} / ${accountLabel}`
     }
-    return connection.provider_email || connection.provider
+    return accountLabel
   }
 
-  const getPlaybookLabel = (playbookId: string) => {
+  const getPlaybookLabel = (playbookId?: string) => {
+    if (!playbookId) return 'Direct to inbox'
     const playbook = playbooks.find((p) => p.id === playbookId)
     return playbook?.name || 'Unknown'
   }
@@ -772,7 +775,7 @@ export default function Monitors() {
               <option value="">Select a connection</option>
               {filteredConnections.map((conn) => (
                 <option key={conn.id} value={conn.id}>
-                  {conn.provider_account_name || conn.provider_email || conn.provider}
+                  {getConnectionLabel(conn.id, true)}
                 </option>
               ))}
             </select>
@@ -983,20 +986,22 @@ export default function Monitors() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Playbook to Trigger *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Playbook to Trigger (optional)</label>
             <select
               value={formData.playbook_id}
               onChange={(e) => setFormData({ ...formData, playbook_id: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2"
-              required
             >
-              <option value="">Select a playbook</option>
+              <option value="">None - create tasks directly</option>
               {playbooks.map((pb) => (
                 <option key={pb.id} value={pb.id}>
                   {pb.name}
                 </option>
               ))}
             </select>
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to create tasks directly in your inbox without running a playbook
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
