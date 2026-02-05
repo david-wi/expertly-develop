@@ -17,6 +17,7 @@ export default function Connections() {
   const [selectedConnection, setSelectedConnection] = useState<Connection | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<ConnectionProvider | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [showSlackTipModal, setShowSlackTipModal] = useState(false)
 
   // Toast/notification state
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -402,6 +403,9 @@ export default function Connections() {
                     setSelectedProvider(provider)
                     setShowAddModal(false)
                     setShowSetupModal(true)
+                  } else if (provider.id === 'slack' && existingCount > 0) {
+                    setShowAddModal(false)
+                    setShowSlackTipModal(true)
                   } else {
                     setShowAddModal(false)
                     handleConnect(provider.id)
@@ -612,6 +616,84 @@ export default function Connections() {
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
             Close
+          </button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Slack Multi-Workspace Tip Modal */}
+      <Modal
+        isOpen={showSlackTipModal}
+        onClose={() => setShowSlackTipModal(false)}
+        title="Adding Another Slack Workspace"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start space-x-2">
+              <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-sm text-blue-800">
+                Slack may auto-select your first workspace. Follow these tips to connect a different one.
+              </p>
+            </div>
+          </div>
+
+          <ol className="space-y-3 text-sm text-gray-700">
+            <li className="flex gap-2">
+              <span className="font-semibold text-gray-900 flex-shrink-0">1.</span>
+              <span>
+                <strong>One-time setup:</strong> Ensure your Slack app has "Distribute App" enabled at{' '}
+                <a
+                  href="https://api.slack.com/apps"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  api.slack.com/apps
+                </a>{' '}
+                &rarr; Manage Distribution.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-semibold text-gray-900 flex-shrink-0">2.</span>
+              <span>
+                <strong>During authorization:</strong> Use the <strong>"Workspace"</strong> dropdown at the top-right of the Slack consent page to select a different workspace.
+              </span>
+            </li>
+            <li className="flex gap-2">
+              <span className="font-semibold text-gray-900 flex-shrink-0">3.</span>
+              <span>
+                <strong>If workspace not listed:</strong> Sign into it at{' '}
+                <a
+                  href="https://slack.com/signin"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 underline"
+                >
+                  slack.com
+                </a>{' '}
+                in this browser first, then retry.
+              </span>
+            </li>
+          </ol>
+        </div>
+        <ModalFooter>
+          <button
+            onClick={() => setShowSlackTipModal(false)}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => {
+              setShowSlackTipModal(false)
+              handleConnect('slack')
+            }}
+            disabled={connecting}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+          >
+            {connecting ? 'Connecting...' : 'Continue to Slack'}
           </button>
         </ModalFooter>
       </Modal>
