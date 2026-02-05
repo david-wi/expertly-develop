@@ -88,6 +88,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [editDuration, setEditDuration] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  // Inline duration editing state
+  const [inlineDurationTaskId, setInlineDurationTaskId] = useState<string | null>(null)
+  const [inlineDurationValue, setInlineDurationValue] = useState('')
   // Timer modal state
   const [showTimerModal, setShowTimerModal] = useState(false)
   // Refs
@@ -105,6 +108,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const dragRef = useRef<HTMLDivElement>(null)
   const topNewProjectRef = useRef<HTMLInputElement>(null)
   const bottomNewProjectRef = useRef<HTMLInputElement>(null)
+  const inlineDurationRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error)
@@ -514,6 +518,40 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }
 
+  // Start inline duration editing
+  const startInlineDurationEdit = (e: React.MouseEvent, taskId: string, currentDuration: number | undefined) => {
+    e.stopPropagation() // Don't trigger task selection
+    setInlineDurationTaskId(taskId)
+    setInlineDurationValue(formatDuration(currentDuration))
+    setTimeout(() => inlineDurationRef.current?.focus(), 0)
+  }
+
+  // Save inline duration
+  const saveInlineDuration = async () => {
+    if (!inlineDurationTaskId) return
+
+    const parsed = parseDuration(inlineDurationValue)
+    const task = activeTasks.find(t => (t._id || t.id) === inlineDurationTaskId)
+    const originalDuration = task?.estimated_duration || null
+
+    // Only save if changed
+    if (parsed !== originalDuration) {
+      try {
+        await api.updateTask(inlineDurationTaskId, { estimated_duration: parsed })
+        fetchTasks()
+        // Update edit panel if same task is being edited
+        if (editingTaskId === inlineDurationTaskId) {
+          setEditDuration(formatDuration(parsed || undefined))
+        }
+      } catch (err) {
+        console.error('Failed to update duration:', err)
+      }
+    }
+
+    setInlineDurationTaskId(null)
+    setInlineDurationValue('')
+  }
+
   const handleCreateTopProject = async () => {
     if (!topNewProjectName.trim() || isCreatingTopProject) return
     setIsCreatingTopProject(true)
@@ -825,13 +863,44 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         </p>
                       </div>
 
-                      {/* Duration column */}
-                      <div className="flex-shrink-0 w-10">
-                        {task.estimated_duration ? (
-                          <span className="text-[10px] text-gray-500 font-mono" title="Estimated duration">
-                            {formatDuration(task.estimated_duration)}
-                          </span>
-                        ) : null}
+                      {/* Duration column - editable */}
+                      <div className="flex-shrink-0 w-12" onClick={(e) => e.stopPropagation()}>
+                        {inlineDurationTaskId === taskId ? (
+                          <input
+                            ref={inlineDurationRef}
+                            type="text"
+                            value={inlineDurationValue}
+                            onChange={(e) => setInlineDurationValue(e.target.value)}
+                            onBlur={saveInlineDuration}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault()
+                                saveInlineDuration()
+                              } else if (e.key === 'Escape') {
+                                setInlineDurationTaskId(null)
+                                setInlineDurationValue('')
+                              }
+                            }}
+                            placeholder="0:10"
+                            className="w-full text-[10px] text-gray-700 font-mono bg-white border border-primary-300 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-primary-200"
+                          />
+                        ) : (
+                          <button
+                            onClick={(e) => startInlineDurationEdit(e, taskId, task.estimated_duration)}
+                            className="w-full text-left px-1 py-0.5 rounded hover:bg-gray-100 transition-colors group"
+                            title="Click to set duration"
+                          >
+                            {task.estimated_duration ? (
+                              <span className="text-[10px] text-gray-500 font-mono">
+                                {formatDuration(task.estimated_duration)}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-gray-300 group-hover:text-gray-400 font-mono">
+                                --:--
+                              </span>
+                            )}
+                          </button>
+                        )}
                       </div>
 
                       {/* Project column */}
