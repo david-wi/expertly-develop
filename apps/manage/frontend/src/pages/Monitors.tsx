@@ -35,6 +35,245 @@ const POLL_INTERVAL_OPTIONS = [
   { value: 3600, label: '1 hour' },
 ]
 
+// Slack Events API Setup Guide Component
+const SlackEventsSetupGuide = ({ isExpanded, onToggle }: { isExpanded: boolean; onToggle: () => void }) => {
+  const [copiedUrl, setCopiedUrl] = useState(false)
+  const webhookUrl = 'https://manage.ai.devintensive.com/api/v1/webhooks/slack'
+
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(webhookUrl)
+    setCopiedUrl(true)
+    setTimeout(() => setCopiedUrl(false), 2000)
+  }
+
+  return (
+    <div className="mt-3 border border-amber-200 bg-amber-50 rounded-lg overflow-hidden">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-amber-100 transition-colors"
+      >
+        <div className="flex items-center space-x-2">
+          <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <span className="font-medium text-amber-800">One-time Slack App Setup Required</span>
+        </div>
+        <svg
+          className={`w-5 h-5 text-amber-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {isExpanded && (
+        <div className="px-4 pb-4 space-y-4">
+          <p className="text-sm text-amber-700">
+            To receive real-time notifications when you're @mentioned, configure your Slack app's Events API:
+          </p>
+
+          {/* Step 1 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                1
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">Open your Slack App settings</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  Go to{' '}
+                  <a
+                    href="https://api.slack.com/apps"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline"
+                  >
+                    api.slack.com/apps
+                  </a>{' '}
+                  and select your app
+                </p>
+                {/* Visual mockup */}
+                <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="bg-[#4A154B] px-3 py-2 flex items-center space-x-2">
+                    <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52z"/>
+                    </svg>
+                    <span className="text-white text-sm font-medium">Slack API</span>
+                  </div>
+                  <div className="p-3">
+                    <div className="flex items-center space-x-2 p-2 bg-white border border-gray-200 rounded cursor-pointer hover:bg-gray-50">
+                      <div className="w-8 h-8 bg-purple-100 rounded flex items-center justify-center text-purple-600 font-bold text-xs">
+                        EM
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">Expertly Manage</div>
+                        <div className="text-xs text-gray-500">Your App</div>
+                      </div>
+                      <svg className="w-4 h-4 text-gray-400 ml-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                2
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">Navigate to Event Subscriptions</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  In the left sidebar, click <strong>"Event Subscriptions"</strong>
+                </p>
+                {/* Visual mockup */}
+                <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                  <div className="flex">
+                    <div className="w-48 bg-[#1a1d21] p-3 border-r border-gray-700">
+                      <div className="space-y-1">
+                        <div className="text-gray-400 text-xs px-2 py-1">Features</div>
+                        <div className="text-gray-300 text-sm px-2 py-1.5 rounded hover:bg-gray-700">OAuth & Permissions</div>
+                        <div className="text-white text-sm px-2 py-1.5 rounded bg-blue-600 flex items-center">
+                          <span>Event Subscriptions</span>
+                          <svg className="w-3 h-3 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="text-gray-300 text-sm px-2 py-1.5 rounded hover:bg-gray-700">Interactivity</div>
+                      </div>
+                    </div>
+                    <div className="flex-1 p-3 bg-white">
+                      <div className="text-lg font-medium text-gray-900">Event Subscriptions</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                3
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">Enable Events and set Request URL</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  Toggle "Enable Events" to <strong>On</strong>, then paste this URL:
+                </p>
+                {/* Webhook URL copy box */}
+                <div className="mt-2 flex items-center space-x-2">
+                  <code className="flex-1 bg-gray-100 px-3 py-2 rounded text-sm font-mono text-gray-800 border border-gray-200">
+                    {webhookUrl}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={copyWebhookUrl}
+                    className={`px-3 py-2 rounded text-sm font-medium transition-colors ${
+                      copiedUrl
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                    }`}
+                  >
+                    {copiedUrl ? '✓ Copied!' : 'Copy'}
+                  </button>
+                </div>
+                {/* Visual mockup */}
+                <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden bg-white p-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-medium text-gray-900">Enable Events</span>
+                    <div className="w-12 h-6 bg-green-500 rounded-full relative">
+                      <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm text-gray-600 block mb-1">Request URL</label>
+                    <div className="flex items-center space-x-2">
+                      <div className="flex-1 bg-gray-50 border border-gray-300 rounded px-3 py-2 text-sm text-gray-600 font-mono truncate">
+                        https://manage.ai.devintensive.com/api/v1/webhooks/slack
+                      </div>
+                      <span className="text-green-600 text-sm font-medium flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Verified
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 4 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-7 h-7 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                4
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">Subscribe to the app_mention event</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  Scroll down to <strong>"Subscribe to bot events"</strong>, click "Add Bot User Event", and add:
+                </p>
+                {/* Visual mockup */}
+                <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden bg-white p-3">
+                  <div className="text-sm font-medium text-gray-900 mb-2">Subscribe to bot events</div>
+                  <div className="bg-gray-50 border border-gray-200 rounded p-2">
+                    <div className="flex items-center justify-between p-2 bg-white border border-gray-200 rounded">
+                      <div>
+                        <div className="font-medium text-gray-900 text-sm">app_mention</div>
+                        <div className="text-xs text-gray-500">Subscribe to only the message events that mention your app or bot</div>
+                      </div>
+                      <button type="button" className="text-red-500 hover:text-red-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                  <button type="button" className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-medium">
+                    + Add Bot User Event
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Step 5 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 w-7 h-7 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
+                5
+              </div>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">Save Changes</h4>
+                <p className="text-sm text-gray-600 mt-1">
+                  Click the green <strong>"Save Changes"</strong> button at the bottom of the page. You're all set!
+                </p>
+                <div className="mt-3 flex items-center space-x-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>Once configured, @mentions will create tasks instantly — no polling delay!</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const PROVIDER_ICONS: Record<MonitorProviderType, React.ReactNode> = {
   slack: (
     <svg className="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
@@ -146,6 +385,7 @@ export default function Monitors() {
   const [formData, setFormData] = useState<MonitorFormData>(defaultFormData)
   const [saving, setSaving] = useState(false)
   const [polling, setPolling] = useState<string | null>(null)
+  const [showSlackSetupGuide, setShowSlackSetupGuide] = useState(false)
 
   // Notification state
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
@@ -713,6 +953,7 @@ export default function Monitors() {
           setShowCreateModal(false)
           setShowEditModal(false)
           setSelectedMonitor(null)
+          setShowSlackSetupGuide(false)
         }}
         title={showCreateModal ? 'Create Monitor' : 'Edit Monitor'}
       >
@@ -804,12 +1045,18 @@ export default function Monitors() {
                   type="checkbox"
                   id="my_mentions"
                   checked={formData.slack_my_mentions}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    slack_my_mentions: e.target.checked,
-                    // Auto-clear channel filters when my_mentions is enabled
-                    slack_channel_ids: e.target.checked ? '' : formData.slack_channel_ids,
-                  })}
+                  onChange={(e) => {
+                    setFormData({
+                      ...formData,
+                      slack_my_mentions: e.target.checked,
+                      // Auto-clear channel filters when my_mentions is enabled
+                      slack_channel_ids: e.target.checked ? '' : formData.slack_channel_ids,
+                    })
+                    // Auto-expand setup guide when enabling my_mentions
+                    if (e.target.checked) {
+                      setShowSlackSetupGuide(true)
+                    }
+                  }}
                   className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                 />
                 <div className="ml-2">
@@ -817,10 +1064,18 @@ export default function Monitors() {
                     Monitor my @mentions (recommended)
                   </label>
                   <p className="text-xs text-blue-600">
-                    Automatically create tasks when someone mentions you in any channel
+                    Real-time notifications when someone mentions you — no polling delay!
                   </p>
                 </div>
               </div>
+
+              {/* Slack Events API Setup Guide */}
+              {formData.slack_my_mentions && (
+                <SlackEventsSetupGuide
+                  isExpanded={showSlackSetupGuide}
+                  onToggle={() => setShowSlackSetupGuide(!showSlackSetupGuide)}
+                />
+              )}
 
               {!formData.slack_my_mentions && (
                 <>
@@ -1065,6 +1320,7 @@ export default function Monitors() {
                 setShowCreateModal(false)
                 setShowEditModal(false)
                 setSelectedMonitor(null)
+                setShowSlackSetupGuide(false)
               }}
               className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
             >
