@@ -72,10 +72,8 @@ def get_provider_config(provider: str) -> OAuthProviderConfig:
             client_secret=settings.slack_client_secret,
             auth_url="https://slack.com/oauth/v2/authorize",
             token_url="https://slack.com/api/oauth.v2.access",
-            userinfo_url="https://slack.com/api/users.identity",
+            userinfo_url="https://slack.com/api/auth.test",  # Get user_id, then use users.info
             scopes=[
-                "identity.basic",    # Required for users.identity endpoint
-                "identity.email",    # Get user email from identity
                 "channels:read",
                 "channels:history",  # Read public channel messages
                 "groups:history",    # Read private channel messages
@@ -279,13 +277,32 @@ async def get_user_info(provider: str, access_token: str) -> UserInfo:
             )
 
         if provider == "slack":
+            # Slack uses auth.test to get user_id, then users.info for details
             if not data.get("ok"):
                 raise ValueError(f"Failed to get user info: {data.get('error', 'Unknown error')}")
-            user = data.get("user", {})
+            user_id = data.get("user_id")
+            if not user_id:
+                raise ValueError("Failed to get user ID from auth.test")
+
+            # Now get full user info using users.info
+            user_response = await client.get(
+                "https://slack.com/api/users.info",
+                params={"user": user_id},
+                headers={"Authorization": f"Bearer {access_token}"},
+            )
+            if user_response.status_code != 200:
+                raise ValueError(f"Failed to get user info: {user_response.text}")
+
+            user_data = user_response.json()
+            if not user_data.get("ok"):
+                raise ValueError(f"Failed to get user info: {user_data.get('error', 'Unknown error')}")
+
+            user = user_data.get("user", {})
+            profile = user.get("profile", {})
             return UserInfo(
-                id=user.get("id", ""),
-                email=user.get("email"),
-                name=user.get("name"),
+                id=user_id,
+                email=profile.get("email"),
+                name=profile.get("real_name") or profile.get("display_name") or user.get("name"),
             )
 
         # Default handling
