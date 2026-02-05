@@ -23,7 +23,7 @@ class IdeaPriority(str, Enum):
     HIGH = "high"
 
 
-# Valid products for ideas
+# Valid products for ideas (should match EXPERTLY_PRODUCTS in packages/ui)
 VALID_PRODUCTS = [
     "admin",
     "define",
@@ -31,10 +31,10 @@ VALID_PRODUCTS = [
     "identity",
     "manage",
     "salon",
+    "tms",
     "today",
     "vibecode",
     "vibetest",
-    "chem",
 ]
 
 
