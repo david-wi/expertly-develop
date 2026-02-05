@@ -828,3 +828,454 @@ export const ACCOUNTING_ENTITY_TYPE_LABELS: Record<AccountingEntityType, string>
   vendor: 'Vendor',
   bill: 'Bill',
 }
+
+// ============================================================================
+// Geofence Types
+// ============================================================================
+
+export type GeofenceType = 'pickup' | 'delivery' | 'facility' | 'custom'
+export type GeofenceTrigger = 'enter' | 'exit' | 'both'
+
+export interface Geofence {
+  id: string
+  name: string
+  geofence_type: GeofenceType
+  latitude: number
+  longitude: number
+  radius_meters: number
+  trigger: GeofenceTrigger
+  shipment_id?: string
+  facility_id?: string
+  customer_id?: string
+  address?: string
+  city?: string
+  state?: string
+  zip_code?: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface GeofenceEvent {
+  id: string
+  geofence_id: string
+  shipment_id: string
+  event_type: GeofenceTrigger
+  event_timestamp: string
+  latitude: number
+  longitude: number
+  alert_sent: boolean
+}
+
+// ============================================================================
+// Tracking Link Types (Public Portal)
+// ============================================================================
+
+export interface TrackingLink {
+  id: string
+  shipment_id: string
+  token: string
+  tracking_url: string
+  expires_at?: string
+  is_active: boolean
+  view_count: number
+  allow_pod_view: boolean
+  allow_document_view: boolean
+  show_carrier_info: boolean
+  show_pricing: boolean
+  created_at: string
+}
+
+export interface PublicTracking {
+  shipment_number: string
+  status: ShipmentStatus
+  origin?: string
+  destination?: string
+  pickup_date?: string
+  delivery_date?: string
+  eta?: string
+  last_location?: string
+  last_update?: string
+  tracking_events: {
+    event_type: string
+    timestamp: string
+    location?: string
+    notes?: string
+  }[]
+  carrier?: {
+    name: string
+    mc_number?: string
+  }
+  customer_price?: number
+  pod?: {
+    captured_at: string
+    received_by?: string
+    has_signature: boolean
+    photo_count: number
+  }
+  documents?: {
+    id: string
+    type: DocumentType
+    filename: string
+  }[]
+}
+
+// ============================================================================
+// POD Capture Types
+// ============================================================================
+
+export interface PODCapture {
+  id: string
+  shipment_id: string
+  capture_type: 'signature' | 'photo' | 'both'
+  signer_name?: string
+  signer_title?: string
+  received_by?: string
+  delivery_notes?: string
+  photo_count: number
+  captured_at: string
+  is_verified: boolean
+  has_signature: boolean
+}
+
+// ============================================================================
+// Exception Types
+// ============================================================================
+
+export interface ShipmentException {
+  type: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  details?: Record<string, unknown>
+  shipment_id?: string
+  shipment_number?: string
+}
+
+export interface ExceptionSummary {
+  total_exceptions: number
+  by_severity: {
+    high: number
+    medium: number
+    low: number
+  }
+  exceptions: ShipmentException[]
+}
+
+// ============================================================================
+// Tracking Timeline Types
+// ============================================================================
+
+export interface TimelineEvent {
+  timestamp?: string
+  event_type: string
+  title: string
+  description?: string
+  location?: string
+  latitude?: number
+  longitude?: number
+  is_exception: boolean
+  icon: string
+}
+
+export interface Milestone {
+  status: string
+  label: string
+  completed: boolean
+}
+
+export interface TrackingTimeline {
+  shipment_number: string
+  status: ShipmentStatus
+  milestones: Milestone[]
+  timeline: TimelineEvent[]
+  current_location?: string
+  eta?: string
+  pod_captured: boolean
+}
+
+// ============================================================================
+// GPS Update Types
+// ============================================================================
+
+export interface GPSUpdate {
+  shipment_id: string
+  latitude: number
+  longitude: number
+  city?: string
+  state?: string
+  source?: string
+}
+
+export interface GPSUpdateResponse {
+  tracking_event_id: string
+  location?: string
+  latitude: number
+  longitude: number
+  triggered_geofences: {
+    geofence_id: string
+    geofence_name: string
+    geofence_type: GeofenceType
+    trigger_type: GeofenceTrigger
+    event_id: string
+  }[]
+  eta?: {
+    datetime: string
+    distance_miles: number
+  }
+}
+
+// ============================================================================
+// Carrier Portal Types
+// ============================================================================
+
+export interface CarrierSession {
+  token: string
+  carrier_id: string
+  carrier_name: string
+  expires_at: string
+}
+
+export interface AvailableLoad {
+  id: string
+  shipment_number: string
+  origin_city: string
+  origin_state: string
+  destination_city: string
+  destination_state: string
+  pickup_date?: string
+  delivery_date?: string
+  equipment_type: string
+  weight_lbs?: number
+  offered_rate: number
+  tender_id: string
+  tender_status: string
+  posted_at: string
+  expires_at?: string
+}
+
+export interface CarrierLoad {
+  id: string
+  shipment_number: string
+  status: ShipmentStatus
+  origin_city: string
+  origin_state: string
+  destination_city: string
+  destination_state: string
+  pickup_date?: string
+  delivery_date?: string
+  equipment_type: string
+  weight_lbs?: number
+  rate: number
+  booked_at: string
+}
+
+// ============================================================================
+// Customer Portal Types
+// ============================================================================
+
+export interface CustomerSession {
+  token: string
+  customer_id: string
+  customer_name: string
+  expires_at: string
+}
+
+export interface CustomerDashboard {
+  customer_name: string
+  shipment_counts: {
+    total: number
+    active: number
+    delivered: number
+    by_status: Record<string, number>
+  }
+  recent_shipments: {
+    id: string
+    shipment_number: string
+    status: ShipmentStatus
+    created_at: string
+  }[]
+  invoices: {
+    pending_count: number
+    total_outstanding: number
+  }
+}
+
+export interface CustomerShipment {
+  id: string
+  shipment_number: string
+  status: ShipmentStatus
+  origin_city: string
+  origin_state: string
+  destination_city: string
+  destination_state: string
+  pickup_date?: string
+  delivery_date?: string
+  equipment_type: string
+  last_location?: string
+  eta?: string
+  created_at: string
+}
+
+// ============================================================================
+// Carrier Onboarding Types
+// ============================================================================
+
+export type OnboardingStatus = 'not_started' | 'in_progress' | 'pending_review' | 'approved' | 'rejected'
+
+export interface CarrierOnboarding {
+  id: string
+  access_token: string
+  onboarding_url: string
+  status: OnboardingStatus
+  current_step: number
+  progress_percent: number
+  company_name: string
+  mc_number?: string
+  dot_number?: string
+  contact_name?: string
+  contact_email?: string
+  contact_phone?: string
+  equipment_types: string[]
+  truck_count?: number
+  agreement_accepted: boolean
+}
+
+// ============================================================================
+// Portal Notification Types
+// ============================================================================
+
+export interface PortalNotification {
+  id: string
+  title: string
+  message: string
+  notification_type: string
+  is_read: boolean
+  created_at: string
+  shipment_id?: string
+  tender_id?: string
+  invoice_id?: string
+}
+
+// ============================================================================
+// AI Communications Types
+// ============================================================================
+
+export interface DraftedEmail {
+  subject: string
+  body: string
+  key_points?: string[]
+}
+
+export interface CheckCallMessage {
+  message?: string
+  subject?: string
+  body?: string
+}
+
+export interface EmailThreadSummary {
+  summary: string
+  key_points: string[]
+  action_items: string[]
+  sentiment: 'positive' | 'neutral' | 'negative'
+  urgency: 'high' | 'medium' | 'low'
+}
+
+export interface DetectedExceptionResponse {
+  type: string
+  severity: 'high' | 'medium' | 'low'
+  message: string
+  shipment_id?: string
+  shipment_number?: string
+  carrier_id?: string
+  carrier_name?: string
+  invoice_id?: string
+  invoice_number?: string
+  tender_id?: string
+  data?: Record<string, unknown>
+  detected_at?: string
+}
+
+export interface ExceptionDetectionSummary {
+  total: number
+  by_type: Record<string, number>
+  by_severity: {
+    high: number
+    medium: number
+    low: number
+  }
+  exceptions: DetectedExceptionResponse[]
+}
+
+export interface CreateWorkItemsResult {
+  work_item_ids: string[]
+  total_exceptions: number
+  work_items_created: number
+}
+
+// ============================================================================
+// Real-Time Dashboard Types
+// ============================================================================
+
+export interface RealtimeMetrics {
+  shipments_booked: number
+  shipments_pending_pickup: number
+  shipments_in_transit: number
+  shipments_delivered_today: number
+  open_work_items: number
+  high_priority_items: number
+  overdue_items: number
+  pending_quotes: number
+  quotes_sent_today: number
+  quotes_accepted_today: number
+  tenders_pending: number
+  tenders_accepted_today: number
+  tenders_declined_today: number
+  revenue_today: number
+  margin_today: number
+  margin_percent_today: number
+  exception_count: number
+  high_severity_exceptions: number
+  last_updated: string
+}
+
+export interface RecentActivity {
+  type: string
+  timestamp: string
+  shipment_id: string
+  detail: string
+  location?: string
+  notes?: string
+}
+
+export interface AtRiskShipment {
+  id: string
+  shipment_number: string
+  status: ShipmentStatus
+  risk_reason: string
+  pickup_date?: string
+  delivery_date?: string
+}
+
+export interface UpcomingDelivery {
+  id: string
+  shipment_number: string
+  delivery_date?: string
+  status: ShipmentStatus
+  last_location?: string
+  eta?: string
+}
+
+export interface RealtimeDashboard {
+  metrics: RealtimeMetrics
+  recent_activity: RecentActivity[]
+  at_risk_shipments: AtRiskShipment[]
+  upcoming_deliveries: UpcomingDelivery[]
+  exception_summary: {
+    total: number
+    by_severity: {
+      high: number
+      medium: number
+      low: number
+    }
+    by_type: Record<string, number>
+  }
+}

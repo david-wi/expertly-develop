@@ -15,6 +15,7 @@ from .base import MongoModel, PyObjectId
 
 class LoadBoardProvider(str, Enum):
     """Supported load board providers."""
+    INTERNAL = "internal"  # Internal load board for carrier portal
     DAT = "dat"
     TRUCKSTOP = "truckstop"
     LOADLINK = "loadlink"

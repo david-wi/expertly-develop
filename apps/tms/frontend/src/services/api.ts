@@ -590,4 +590,645 @@ export const api = {
 
   getAccountingStats: () =>
     request<import('../types').AccountingStats>('/api/v1/accounting/stats'),
+
+  // ============================================================================
+  // Enhanced Tracking
+  // ============================================================================
+
+  // GPS Location Updates
+  updateGPSLocation: (data: import('../types').GPSUpdate) =>
+    request<import('../types').GPSUpdateResponse>('/api/v1/tracking/gps-update', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Geofences
+  getGeofences: (params?: { shipment_id?: string; facility_id?: string; is_active?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    if (params?.facility_id) searchParams.set('facility_id', params.facility_id)
+    if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active))
+    const query = searchParams.toString()
+    return request<import('../types').Geofence[]>(`/api/v1/tracking/geofences${query ? `?${query}` : ''}`)
+  },
+
+  createGeofence: (data: {
+    name: string
+    geofence_type?: import('../types').GeofenceType
+    latitude: number
+    longitude: number
+    radius_meters?: number
+    trigger?: import('../types').GeofenceTrigger
+    shipment_id?: string
+    facility_id?: string
+    customer_id?: string
+    address?: string
+    city?: string
+    state?: string
+    zip_code?: string
+    alert_email?: string
+    alert_webhook_url?: string
+    alert_push?: boolean
+  }) => request<import('../types').Geofence>('/api/v1/tracking/geofences', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  deleteGeofence: (id: string) =>
+    request<{ status: string }>(`/api/v1/tracking/geofences/${id}`, { method: 'DELETE' }),
+
+  toggleGeofence: (id: string) =>
+    request<{ is_active: boolean }>(`/api/v1/tracking/geofences/${id}/toggle`, { method: 'PATCH' }),
+
+  // Tracking Links (Public Portal)
+  createTrackingLink: (data: {
+    shipment_id: string
+    customer_id?: string
+    expires_in_days?: number
+    allow_pod_view?: boolean
+    allow_document_view?: boolean
+    show_carrier_info?: boolean
+    show_pricing?: boolean
+  }) => request<import('../types').TrackingLink>('/api/v1/tracking/links', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  getShipmentTrackingLinks: (shipmentId: string) =>
+    request<import('../types').TrackingLink[]>(`/api/v1/tracking/links/shipment/${shipmentId}`),
+
+  getPublicTracking: (token: string) =>
+    request<import('../types').PublicTracking>(`/api/v1/tracking/public/${token}`),
+
+  deactivateTrackingLink: (id: string) =>
+    request<{ status: string }>(`/api/v1/tracking/links/${id}`, { method: 'DELETE' }),
+
+  // POD Capture
+  capturePOD: (data: {
+    shipment_id: string
+    signature_data?: string
+    signer_name?: string
+    signer_title?: string
+    photo_urls?: string[]
+    received_by?: string
+    delivery_notes?: string
+    latitude?: number
+    longitude?: number
+  }) => request<import('../types').PODCapture>('/api/v1/tracking/pod', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  getShipmentPOD: (shipmentId: string) =>
+    request<import('../types').PODCapture | null>(`/api/v1/tracking/pod/shipment/${shipmentId}`),
+
+  verifyPOD: (podId: string, verifiedBy?: string) =>
+    request<{ status: string }>(`/api/v1/tracking/pod/${podId}/verify?verified_by=${verifiedBy || 'system'}`, {
+      method: 'POST',
+    }),
+
+  // Exception Detection
+  getShipmentExceptions: (shipmentId: string) =>
+    request<import('../types').ShipmentException[]>(`/api/v1/tracking/exceptions/shipment/${shipmentId}`),
+
+  getAllExceptions: () =>
+    request<import('../types').ExceptionSummary>('/api/v1/tracking/exceptions/all'),
+
+  // Tracking Timeline
+  getTrackingTimeline: (shipmentId: string) =>
+    request<import('../types').TrackingTimeline>(`/api/v1/tracking/timeline/${shipmentId}`),
+
+  // ============================================================================
+  // Carrier Portal
+  // ============================================================================
+
+  carrierPortal: {
+    requestAccess: (email: string) =>
+      request<{ message: string; email: string }>('/api/v1/carrier-portal/auth/request-access', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+
+    verify: (email: string, code: string) =>
+      request<import('../types').CarrierSession>('/api/v1/carrier-portal/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      }),
+
+    logout: (token: string) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+
+    getAvailableLoads: (token: string) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/loads/available`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()) as Promise<import('../types').AvailableLoad[]>,
+
+    respondToTender: (token: string, data: { tender_id: string; accept: boolean; counter_rate?: number; decline_reason?: string }) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/tenders/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }).then(r => r.json()),
+
+    getMyLoads: (token: string, status?: string) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/loads/my-loads${status ? `?status=${status}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()) as Promise<import('../types').CarrierLoad[]>,
+
+    getLoadDetail: (token: string, shipmentId: string) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/loads/${shipmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    updateTracking: (token: string, data: { shipment_id: string; event_type: string; location_city?: string; location_state?: string; notes?: string }) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/tracking/update`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }).then(r => r.json()),
+
+    getNotifications: (token: string, unreadOnly?: boolean) =>
+      fetch(`${API_BASE}/api/v1/carrier-portal/notifications${unreadOnly ? '?unread_only=true' : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()) as Promise<import('../types').PortalNotification[]>,
+
+    // Onboarding
+    startOnboarding: (data: { company_name: string; contact_name: string; contact_email: string; mc_number?: string; dot_number?: string }) =>
+      request<import('../types').CarrierOnboarding>('/api/v1/carrier-portal/onboarding/start', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+
+    getOnboarding: (token: string) =>
+      request<import('../types').CarrierOnboarding>(`/api/v1/carrier-portal/onboarding/${token}`),
+
+    updateOnboarding: (token: string, step: number, data: Record<string, unknown>) =>
+      request<{ status: string; next_step: number }>(`/api/v1/carrier-portal/onboarding/${token}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ step, data }),
+      }),
+
+    submitOnboarding: (token: string) =>
+      request<{ status: string; message: string }>(`/api/v1/carrier-portal/onboarding/${token}/submit`, {
+        method: 'POST',
+      }),
+  },
+
+  // ============================================================================
+  // Customer Portal
+  // ============================================================================
+
+  customerPortal: {
+    requestAccess: (email: string) =>
+      request<{ message: string; email: string }>('/api/v1/customer-portal/auth/request-access', {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }),
+
+    verify: (email: string, code: string) =>
+      request<import('../types').CustomerSession>('/api/v1/customer-portal/auth/verify', {
+        method: 'POST',
+        body: JSON.stringify({ email, code }),
+      }),
+
+    logout: (token: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/auth/logout`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+
+    getDashboard: (token: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()) as Promise<import('../types').CustomerDashboard>,
+
+    getShipments: (token: string, params?: { status?: string; search?: string }) => {
+      const searchParams = new URLSearchParams()
+      if (params?.status) searchParams.set('status', params.status)
+      if (params?.search) searchParams.set('search', params.search)
+      const query = searchParams.toString()
+      return fetch(`${API_BASE}/api/v1/customer-portal/shipments${query ? `?${query}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()) as Promise<import('../types').CustomerShipment[]>
+    },
+
+    getShipmentDetail: (token: string, shipmentId: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/shipments/${shipmentId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    getShipmentDocuments: (token: string, shipmentId: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/shipments/${shipmentId}/documents`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    getQuotes: (token: string, status?: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/quotes${status ? `?status=${status}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    getQuoteDetail: (token: string, quoteId: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/quotes/${quoteId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    acceptQuote: (token: string, quoteId: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/quotes/${quoteId}/accept`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    getInvoices: (token: string, status?: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/invoices${status ? `?status=${status}` : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    getInvoiceDetail: (token: string, invoiceId: string) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/invoices/${invoiceId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()),
+
+    createQuoteRequest: (token: string, data: {
+      origin_city: string
+      origin_state: string
+      destination_city: string
+      destination_state: string
+      pickup_date?: string
+      equipment_type?: string
+      weight_lbs?: number
+      commodity?: string
+    }) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/quote-requests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(data),
+      }).then(r => r.json()),
+
+    getNotifications: (token: string, unreadOnly?: boolean) =>
+      fetch(`${API_BASE}/api/v1/customer-portal/notifications${unreadOnly ? '?unread_only=true' : ''}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json()) as Promise<import('../types').PortalNotification[]>,
+  },
+
+  // ============================================================================
+  // Automation
+  // ============================================================================
+
+  automation: {
+    // Tender Waterfall
+    createWaterfall: (data: {
+      shipment_id: string
+      carrier_ids: string[]
+      offered_rate: number
+      timeout_minutes?: number
+      auto_escalate?: boolean
+      rate_increase_percent?: number
+      notes?: string
+    }) => request<{ waterfall_id: string; status: string; total_carriers: number }>('/api/v1/automation/waterfall', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getWaterfallStatus: (waterfallId: string) =>
+      request<{
+        waterfall_id: string
+        shipment_id: string
+        status: string
+        current_step: number
+        total_carriers: number
+        current_rate: number
+        base_rate: number
+        history: { step: number; carrier_name: string; rate: number; status: string; sent_at?: string }[]
+        started_at: string
+        completed_at?: string
+        winning_carrier_id?: string
+      }>(`/api/v1/automation/waterfall/${waterfallId}`),
+
+    cancelWaterfall: (waterfallId: string, reason?: string) =>
+      request<{ status: string }>(`/api/v1/automation/waterfall/${waterfallId}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      }),
+
+    // Auto Assignment
+    createAssignmentRule: (data: {
+      name: string
+      rule_type: string
+      priority?: number
+      conditions?: Record<string, unknown>
+      actions?: Record<string, unknown>
+    }) => request<{ rule_id: string; status: string }>('/api/v1/automation/rules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+    getAssignmentRules: () =>
+      request<{ _id: string; name: string; rule_type: string; priority: number; conditions: Record<string, unknown>; actions: Record<string, unknown> }[]>('/api/v1/automation/rules'),
+
+    deleteAssignmentRule: (ruleId: string) =>
+      request<{ status: string }>(`/api/v1/automation/rules/${ruleId}`, { method: 'DELETE' }),
+
+    autoAssignShipment: (shipmentId: string, options?: { use_waterfall?: boolean; timeout_minutes?: number; max_carriers?: number }) => {
+      const params = new URLSearchParams()
+      if (options?.use_waterfall !== undefined) params.set('use_waterfall', String(options.use_waterfall))
+      if (options?.timeout_minutes) params.set('timeout_minutes', String(options.timeout_minutes))
+      if (options?.max_carriers) params.set('max_carriers', String(options.max_carriers))
+      const query = params.toString()
+      return request<{ status: string; waterfall_id?: string; tender_id?: string; carrier_id?: string; assignment_method?: string }>(
+        `/api/v1/automation/auto-assign/${shipmentId}${query ? `?${query}` : ''}`,
+        { method: 'POST' }
+      )
+    },
+
+    evaluateRulesForShipment: (shipmentId: string) =>
+      request<{ carrier_id: string; carrier_name: string; score: number; rules: string[] }[]>(`/api/v1/automation/auto-assign/evaluate/${shipmentId}`),
+
+    // Invoice Automation
+    createInvoiceFromShipment: (shipmentId: string, autoSend?: boolean) =>
+      request<{ status: string; invoice_id?: string; invoice_number?: string; total?: number }>(
+        `/api/v1/automation/invoices/from-shipment/${shipmentId}?auto_send=${autoSend || false}`,
+        { method: 'POST' }
+      ),
+
+    batchCreateInvoices: (shipmentIds: string[], consolidate?: boolean) =>
+      request<{ status: string; count?: number; invoice_id?: string; results?: unknown[] }>('/api/v1/automation/invoices/batch', {
+        method: 'POST',
+        body: JSON.stringify({ shipment_ids: shipmentIds, consolidate }),
+      }),
+
+    // Document Classification
+    classifyDocument: (documentId: string) =>
+      request<{ status: string; document_id: string }>(`/api/v1/automation/documents/classify/${documentId}`, {
+        method: 'POST',
+      }),
+
+    // Status
+    getAutomationStatus: () =>
+      request<{
+        pending_document_classification: number
+        unassigned_shipments: number
+        delivered_without_invoice: number
+        active_waterfalls: number
+        timestamp: string
+      }>('/api/v1/automation/jobs/status'),
+
+    runAllAutomations: () =>
+      request<{ status: string; message: string }>('/api/v1/automation/jobs/run-all', { method: 'POST' }),
+  },
+
+  // ============================================================================
+  // Push Notifications
+  // ============================================================================
+
+  savePushSubscription: (subscription: PushSubscriptionJSON) =>
+    request<{ status: string }>('/api/v1/notifications/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify(subscription),
+    }),
+
+  removePushSubscription: () =>
+    request<{ status: string }>('/api/v1/notifications/push/unsubscribe', {
+      method: 'DELETE',
+    }),
+
+  sendPushNotification: (data: {
+    title: string
+    body: string
+    url?: string
+    user_ids?: string[]
+    data?: Record<string, unknown>
+  }) => request<{ status: string; sent: number }>('/api/v1/notifications/push/send', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+
+  // ============================================================================
+  // In-App Notifications
+  // ============================================================================
+
+  getNotificationsForUser: (userId: string, unreadOnly?: boolean) =>
+    request<{
+      id: string
+      user_id: string
+      title: string
+      message: string
+      notification_type: string
+      link_url?: string
+      is_read: boolean
+      created_at: string
+    }[]>(`/api/v1/notifications?user_id=${userId}${unreadOnly ? '&unread_only=true' : ''}`),
+
+  markNotificationRead: (notificationId: string) =>
+    request<{ status: string }>(`/api/v1/notifications/${notificationId}/read`, {
+      method: 'POST',
+    }),
+
+  markAllNotificationsRead: (userId: string) =>
+    request<{ status: string }>(`/api/v1/notifications/mark-all-read?user_id=${userId}`, {
+      method: 'POST',
+    }),
+
+  getNotificationPreferences: (userId: string) =>
+    request<{
+      email_enabled: boolean
+      push_enabled: boolean
+      sms_enabled: boolean
+      new_quote_request: boolean
+      tender_response: boolean
+      shipment_status_change: boolean
+      exception_alert: boolean
+      invoice_due: boolean
+      check_call_due: boolean
+      document_uploaded: boolean
+    }>(`/api/v1/notifications/preferences/${userId}`),
+
+  updateNotificationPreferences: (userId: string, prefs: Record<string, boolean>) =>
+    request<Record<string, boolean>>(`/api/v1/notifications/preferences/${userId}`, {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
+    }),
+
+  // ============================================================================
+  // AI Communications
+  // ============================================================================
+
+  draftQuoteEmailFromQuote: (quoteId: string, tone: string = 'professional') =>
+    request<{
+      subject: string
+      body: string
+      key_points?: string[]
+    }>('/api/v1/ai/communications/draft-quote-email', {
+      method: 'POST',
+      body: JSON.stringify({ quote_id: quoteId, tone }),
+    }),
+
+  draftTenderEmail: (tenderId: string, tone: string = 'professional') =>
+    request<{
+      subject: string
+      body: string
+    }>('/api/v1/ai/communications/draft-tender-email', {
+      method: 'POST',
+      body: JSON.stringify({ tender_id: tenderId, tone }),
+    }),
+
+  draftCheckCallMessage: (shipmentId: string, channel: 'sms' | 'email' = 'sms') =>
+    request<{
+      message?: string
+      subject?: string
+      body?: string
+    }>('/api/v1/ai/communications/draft-check-call', {
+      method: 'POST',
+      body: JSON.stringify({ shipment_id: shipmentId, channel }),
+    }),
+
+  draftExceptionNotification: (data: {
+    shipment_id: string
+    exception_type: string
+    exception_details: string
+    recipient: 'customer' | 'carrier'
+  }) =>
+    request<{
+      subject: string
+      body: string
+    }>('/api/v1/ai/communications/draft-exception-notification', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  summarizeEmailThread: (emails: {
+    from_email: string
+    subject: string
+    received_at: string
+    body_text: string
+  }[]) =>
+    request<{
+      summary: string
+      key_points: string[]
+      action_items: string[]
+      sentiment: 'positive' | 'neutral' | 'negative'
+      urgency: 'high' | 'medium' | 'low'
+    }>('/api/v1/ai/communications/summarize-thread', {
+      method: 'POST',
+      body: JSON.stringify({ emails }),
+    }),
+
+  // ============================================================================
+  // Exception Detection
+  // ============================================================================
+
+  detectAllExceptions: () =>
+    request<{
+      type: string
+      severity: 'high' | 'medium' | 'low'
+      message: string
+      shipment_id?: string
+      shipment_number?: string
+      carrier_id?: string
+      carrier_name?: string
+      invoice_id?: string
+      invoice_number?: string
+      tender_id?: string
+      data?: Record<string, unknown>
+      detected_at?: string
+    }[]>('/api/v1/ai/exceptions/detect-all'),
+
+  getExceptionSummary: () =>
+    request<{
+      total: number
+      by_type: Record<string, number>
+      by_severity: {
+        high: number
+        medium: number
+        low: number
+      }
+      exceptions: {
+        type: string
+        severity: 'high' | 'medium' | 'low'
+        message: string
+        shipment_id?: string
+        shipment_number?: string
+        carrier_id?: string
+        carrier_name?: string
+        invoice_id?: string
+        invoice_number?: string
+        tender_id?: string
+        data?: Record<string, unknown>
+        detected_at?: string
+      }[]
+    }>('/api/v1/ai/exceptions/summary'),
+
+  createWorkItemsFromExceptions: (autoCreate: boolean = true) =>
+    request<{
+      work_item_ids: string[]
+      total_exceptions: number
+      work_items_created: number
+    }>('/api/v1/ai/exceptions/create-work-items', {
+      method: 'POST',
+      body: JSON.stringify({ auto_create: autoCreate }),
+    }),
+
+  // ============================================================================
+  // Real-Time Dashboard
+  // ============================================================================
+
+  getRealtimeDashboard: () =>
+    request<{
+      metrics: {
+        shipments_booked: number
+        shipments_pending_pickup: number
+        shipments_in_transit: number
+        shipments_delivered_today: number
+        open_work_items: number
+        high_priority_items: number
+        overdue_items: number
+        pending_quotes: number
+        quotes_sent_today: number
+        quotes_accepted_today: number
+        tenders_pending: number
+        tenders_accepted_today: number
+        tenders_declined_today: number
+        revenue_today: number
+        margin_today: number
+        margin_percent_today: number
+        exception_count: number
+        high_severity_exceptions: number
+        last_updated: string
+      }
+      recent_activity: {
+        type: string
+        timestamp: string
+        shipment_id: string
+        detail: string
+        location?: string
+        notes?: string
+      }[]
+      at_risk_shipments: {
+        id: string
+        shipment_number: string
+        status: string
+        risk_reason: string
+        pickup_date?: string
+        delivery_date?: string
+      }[]
+      upcoming_deliveries: {
+        id: string
+        shipment_number: string
+        delivery_date?: string
+        status: string
+        last_location?: string
+        eta?: string
+      }[]
+      exception_summary: {
+        total: number
+        by_severity: {
+          high: number
+          medium: number
+          low: number
+        }
+        by_type: Record<string, number>
+      }
+    }>('/api/v1/analytics/realtime'),
 }
