@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -10,6 +11,9 @@ from app.api.v1 import organizations, users, teams, queues, tasks, projects, sop
 
 settings = get_settings()
 
+# Background task reference
+_monitor_polling_task: asyncio.Task | None = None
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level.upper()),
@@ -18,9 +22,79 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def poll_due_monitors():
+    """Background task that polls monitors when they're due."""
+    from datetime import datetime, timezone
+    from app.database import get_database
+    from app.services.monitor_service import MonitorService
+
+    logger.info("Monitor polling background task started")
+
+    while True:
+        try:
+            await asyncio.sleep(60)  # Check every minute
+
+            db = get_database()
+            now = datetime.now(timezone.utc)
+
+            # Find monitors that are:
+            # - Active
+            # - Not deleted
+            # - Due for polling (last_polled_at + poll_interval_seconds < now)
+            pipeline = [
+                {
+                    "$match": {
+                        "status": "active",
+                        "deleted_at": None
+                    }
+                },
+                {
+                    "$addFields": {
+                        "next_poll_at": {
+                            "$add": [
+                                {"$ifNull": ["$last_polled_at", "$created_at"]},
+                                {"$multiply": ["$poll_interval_seconds", 1000]}
+                            ]
+                        }
+                    }
+                },
+                {
+                    "$match": {
+                        "next_poll_at": {"$lte": now}
+                    }
+                }
+            ]
+
+            due_monitors = await db.monitors.aggregate(pipeline).to_list(100)
+
+            if due_monitors:
+                logger.info(f"Found {len(due_monitors)} monitors due for polling")
+                service = MonitorService()
+
+                for monitor in due_monitors:
+                    monitor_id = str(monitor["_id"])
+                    try:
+                        result = await service.poll_monitor(monitor_id)
+                        if result.get("error"):
+                            logger.warning(f"Monitor {monitor_id} poll error: {result['error']}")
+                        elif result.get("events_found", 0) > 0:
+                            logger.info(f"Monitor {monitor_id}: {result['events_found']} events found")
+                    except Exception as e:
+                        logger.error(f"Error polling monitor {monitor_id}: {e}")
+
+        except asyncio.CancelledError:
+            logger.info("Monitor polling task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in monitor polling loop: {e}")
+            await asyncio.sleep(60)  # Wait before retrying
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
+    global _monitor_polling_task
+
     # Startup
     logger.info("Starting Expertly Manage API")
     await connect_to_mongo()
@@ -33,10 +107,24 @@ async def lifespan(app: FastAPI):
         logger.info("Dev mode enabled (SKIP_AUTH=true), seeding database")
         await seed_database()
 
+    # Start background monitor polling task
+    _monitor_polling_task = asyncio.create_task(poll_due_monitors())
+    logger.info("Started monitor polling background task")
+
     yield
 
     # Shutdown
     logger.info("Shutting down Expertly Manage API")
+
+    # Cancel the background polling task
+    if _monitor_polling_task:
+        _monitor_polling_task.cancel()
+        try:
+            await _monitor_polling_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("Stopped monitor polling background task")
+
     await close_mongo_connection()
 
 
