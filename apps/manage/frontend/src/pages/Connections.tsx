@@ -186,8 +186,11 @@ export default function Connections() {
     })
   }
 
-  // Check which providers are already connected
-  const connectedProviders = new Set(connections.map((c) => c.provider))
+  // Count connections per provider (for showing connection count)
+  const connectionCountByProvider = connections.reduce((acc, c) => {
+    acc[c.provider] = (acc[c.provider] || 0) + 1
+    return acc
+  }, {} as Record<string, number>)
 
   return (
     <div className="space-y-4">
@@ -301,9 +304,16 @@ export default function Connections() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-sm text-gray-700">
-                      {connection.provider_email || 'Unknown account'}
-                    </span>
+                    <div className="text-sm">
+                      {connection.provider_account_name && (
+                        <span className="font-medium text-gray-900 block">
+                          {connection.provider_account_name}
+                        </span>
+                      )}
+                      <span className="text-gray-500">
+                        {connection.provider_email || 'Unknown account'}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3">{getStatusBadge(connection.status)}</td>
                   <td className="px-4 py-3">
@@ -382,13 +392,12 @@ export default function Connections() {
         </p>
         <div className="space-y-2">
           {providers.map((provider) => {
-            const isConnected = connectedProviders.has(provider.id as Connection['provider'])
+            const existingCount = connectionCountByProvider[provider.id] || 0
             const isConfigured = provider.configured
             return (
               <button
                 key={provider.id}
                 onClick={() => {
-                  if (isConnected) return
                   if (!isConfigured) {
                     setSelectedProvider(provider)
                     setShowAddModal(false)
@@ -398,13 +407,11 @@ export default function Connections() {
                     handleConnect(provider.id)
                   }
                 }}
-                disabled={connecting || isConnected}
+                disabled={connecting}
                 className={`w-full flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                  isConnected
-                    ? 'border-gray-200 bg-gray-50 cursor-not-allowed'
-                    : !isConfigured
-                      ? 'border-amber-200 bg-amber-50 hover:border-amber-300'
-                      : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
+                  !isConfigured
+                    ? 'border-amber-200 bg-amber-50 hover:border-amber-300'
+                    : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50'
                 }`}
               >
                 {getProviderIcon(provider.id)}
@@ -412,16 +419,16 @@ export default function Connections() {
                   <p className="font-medium text-gray-900">{provider.name}</p>
                   <p className="text-sm text-gray-500">{provider.description}</p>
                 </div>
-                {isConnected ? (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                    Connected
-                  </span>
-                ) : !isConfigured ? (
+                {!isConfigured ? (
                   <span className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded">
                     Setup Required
                   </span>
                 ) : connecting ? (
                   <span className="text-sm text-gray-500">Connecting...</span>
+                ) : existingCount > 0 ? (
+                  <span className="text-xs text-green-700 bg-green-100 px-2 py-1 rounded">
+                    {existingCount} connected
+                  </span>
                 ) : (
                   <svg
                     className="w-5 h-5 text-gray-400"
