@@ -10,6 +10,7 @@ import {
   Code,
   FlaskConical,
   Settings,
+  Truck,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
@@ -42,6 +43,7 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Expertly Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: Lock, description: 'Users & authentication' },
   { name: 'Expertly Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
   { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: Scissors, description: 'Salon management' },
+  { name: 'Expertly TMS', code: 'tms', href: 'https://tms.ai.devintensive.com', icon: Truck, description: 'Transportation management' },
   { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: Calendar, description: 'Daily workflow' },
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },
   { name: 'Expertly VibeTest', code: 'vibetest', href: 'https://vibetest.ai.devintensive.com', icon: FlaskConical, description: 'AI testing platform' },
