@@ -13,14 +13,20 @@ from datetime import datetime
 from typing import Optional, List
 from bson import ObjectId
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends
 from pydantic import BaseModel, Field
 
-from app.db import get_db
+from app.database import get_database
 from app.models.email_message import EmailMessage, EmailThread, EmailDirection, EmailCategory, EmailAttachment
 from app.services.email_classification import email_classifier
 
 router = APIRouter()
+
+
+# FastAPI dependency wrapper for database
+def get_db():
+    """Get database as FastAPI dependency."""
+    return get_database()
 
 
 # ============== Pydantic Schemas ==============
