@@ -80,6 +80,7 @@ def get_provider_config(provider: str) -> OAuthProviderConfig:
                 "chat:write",
                 "users:read",
                 "users:read.email",
+                "search:read",       # Efficient @mentions search
             ],
             redirect_uri=f"{base_url}/api/v1/connections/oauth/slack/callback",
         ),
