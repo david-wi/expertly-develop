@@ -43,7 +43,7 @@ export const api = {
   // Current User (from identity API)
   getCurrentUser: async () => {
     try {
-      const response = await fetch('https://identity-api.ai.devintensive.com/api/v1/me', {
+      const response = await fetch('https://identity-api.ai.devintensive.com/api/v1/auth/me', {
         credentials: 'include',
       })
       if (!response.ok) return null
