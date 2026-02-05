@@ -17,7 +17,7 @@ import {
   Users,
   Wrench,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { VersionChecker } from './VersionChecker'
@@ -165,6 +165,8 @@ export function Sidebar({
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showToolsSubmenu, setShowToolsSubmenu] = useState(false)
+  const [toolsRowPosition, setToolsRowPosition] = useState({ top: 0, left: 0 })
+  const toolsRowRef = useRef<HTMLDivElement>(null)
 
   // Use provided renderLink or create one from navigate function
   const renderLink = renderLinkProp ?? (navigate ? createRenderLink(navigate) : null)
@@ -300,8 +302,15 @@ export function Sidebar({
                 {/* Expertly Tools with submenu */}
                 <hr className={`my-2 border-t ${borderColor}`} />
                 <div
+                  ref={toolsRowRef}
                   className="relative"
-                  onMouseEnter={() => setShowToolsSubmenu(true)}
+                  onMouseEnter={() => {
+                    if (toolsRowRef.current) {
+                      const rect = toolsRowRef.current.getBoundingClientRect()
+                      setToolsRowPosition({ top: rect.top, left: rect.right })
+                    }
+                    setShowToolsSubmenu(true)
+                  }}
                   onMouseLeave={() => setShowToolsSubmenu(false)}
                 >
                   <div
@@ -316,33 +325,6 @@ export function Sidebar({
                     </div>
                     <ChevronRight className={`w-4 h-4 ${textMuted}`} />
                   </div>
-
-                  {/* Tools Submenu */}
-                  {showToolsSubmenu && (
-                    <div className={`absolute left-full top-0 ml-1 w-64 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-60`}>
-                      <div className="p-2">
-                        {EXPERTLY_TOOLS.map((tool) => (
-                          <a
-                            key={tool.code}
-                            href={tool.href}
-                            className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${textSecondary} hover:${activeBg} hover:${activeText}`}
-                            onClick={() => {
-                              setShowProductSwitcher(false)
-                              setShowToolsSubmenu(false)
-                            }}
-                          >
-                            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-purple-100 dark:bg-purple-900/50 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-purple-600">
-                              <tool.icon className="w-4 h-4 transition-colors text-purple-600 dark:text-purple-400 group-hover:text-white" />
-                            </div>
-                            <div>
-                              <p className="font-medium">{tool.name}</p>
-                              <p className={`text-xs ${textMuted}`}>{tool.description}</p>
-                            </div>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 {/* Admin */}
@@ -369,6 +351,38 @@ export function Sidebar({
                 ))}
               </div>
             </div>
+
+            {/* Tools Submenu - rendered outside scrollable container */}
+            {showToolsSubmenu && (
+              <div
+                className={`fixed ml-1 w-64 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50`}
+                style={{ top: toolsRowPosition.top, left: toolsRowPosition.left }}
+                onMouseEnter={() => setShowToolsSubmenu(true)}
+                onMouseLeave={() => setShowToolsSubmenu(false)}
+              >
+                <div className="p-2">
+                  {EXPERTLY_TOOLS.map((tool) => (
+                    <a
+                      key={tool.code}
+                      href={tool.href}
+                      className={`group flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${textSecondary} hover:${activeBg} hover:${activeText}`}
+                      onClick={() => {
+                        setShowProductSwitcher(false)
+                        setShowToolsSubmenu(false)
+                      }}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-all bg-purple-100 dark:bg-purple-900/50 group-hover:bg-gradient-to-br group-hover:from-purple-500 group-hover:to-purple-600">
+                        <tool.icon className="w-4 h-4 transition-colors text-purple-600 dark:text-purple-400 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{tool.name}</p>
+                        <p className={`text-xs ${textMuted}`}>{tool.description}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
