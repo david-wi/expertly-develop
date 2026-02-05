@@ -111,6 +111,13 @@ class Task(MongoModel):
     scheduled_end: Optional[datetime] = None  # Optional: work window closes
     schedule_timezone: Optional[str] = None  # Timezone for scheduling
 
+    # Recurrence fields
+    is_recurring: bool = False
+    recurrence_type: Optional[str] = None  # 'daily', 'weekly', 'monthly'
+    recurrence_interval: int = 1  # Every N days/weeks/months
+    recurrence_days_of_week: Optional[list[int]] = None  # 0=Monday, 6=Sunday
+    recurrence_day_of_month: Optional[int] = None  # 1-31
+
     # Manual ordering - decimal for easy insertion between items
     # Initial value: YYYYMMDD.HHMMSS0001 (2 days after creation)
     sequence: Optional[float] = None
@@ -142,6 +149,12 @@ class TaskCreate(BaseModel):
     scheduled_start: Optional[datetime] = None
     scheduled_end: Optional[datetime] = None
     schedule_timezone: Optional[str] = None
+    # Recurrence fields
+    is_recurring: bool = False
+    recurrence_type: Optional[str] = None
+    recurrence_interval: int = 1
+    recurrence_days_of_week: Optional[list[int]] = None
+    recurrence_day_of_month: Optional[int] = None
     # Source tracking
     source_url: Optional[str] = None
     # Estimated duration in seconds
@@ -167,6 +180,12 @@ class TaskUpdate(BaseModel):
     scheduled_start: Optional[datetime] = None
     scheduled_end: Optional[datetime] = None
     schedule_timezone: Optional[str] = None
+    # Recurrence fields
+    is_recurring: Optional[bool] = None
+    recurrence_type: Optional[str] = None
+    recurrence_interval: Optional[int] = None
+    recurrence_days_of_week: Optional[list[int]] = None
+    recurrence_day_of_month: Optional[int] = None
     # Manual ordering
     sequence: Optional[float] = None
     # Source tracking
