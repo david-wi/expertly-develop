@@ -42,6 +42,8 @@ app.add_middleware(
         "https://qa.ai.devintensive.com",
         "https://vibecode.ai.devintensive.com",
         "https://vibetest.ai.devintensive.com",
+        "https://tms.ai.devintensive.com",
+        "https://aipocalypse.ai.devintensive.com",
         "http://localhost:3000",
         "http://localhost:3010",
         "http://localhost:5173",
