@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import ReactMarkdown from 'react-markdown'
 import { usersApi } from '@/services/api'
 import {
   Lightbulb,
@@ -416,7 +417,9 @@ function IdeaCard({
           {idea.description && (
             <div>
               <h4 className="text-sm font-medium text-theme-text-primary mb-2">Description</h4>
-              <p className="text-sm text-theme-text-secondary whitespace-pre-wrap">{idea.description}</p>
+              <div className="text-sm text-theme-text-secondary prose prose-sm dark:prose-invert max-w-none">
+                <ReactMarkdown>{idea.description}</ReactMarkdown>
+              </div>
             </div>
           )}
 
@@ -518,7 +521,9 @@ function IdeaCard({
                                   {formatDate(comment.created_at)}
                                 </span>
                               </div>
-                              <p className="text-sm text-theme-text-secondary whitespace-pre-wrap">{comment.content}</p>
+                              <div className="text-sm text-theme-text-secondary prose prose-sm dark:prose-invert max-w-none">
+                                <ReactMarkdown>{comment.content}</ReactMarkdown>
+                              </div>
                             </div>
                             {userEmail === comment.author_email && (
                               <button
