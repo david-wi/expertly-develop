@@ -21,6 +21,10 @@ import {
   Zap,
   FileInput,
   DollarSign,
+  ArrowLeftRight,
+  Table2,
+  MessageSquare,
+  Shield,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
@@ -43,9 +47,13 @@ const navigation = [
   { name: 'Document Review', href: '/document-review', icon: FolderSearch },
   { name: 'Document Inbox', href: '/document-inbox', icon: FileInput },
   { name: 'Billing', href: '/billing', icon: DollarSign },
+  { name: 'EDI', href: '/edi', icon: ArrowLeftRight, spacerBefore: true },
+  { name: 'Rate Tables', href: '/rate-tables', icon: Table2 },
+  { name: 'Communications', href: '/communications', icon: MessageSquare },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
   { name: 'Desks', href: '/desks', icon: LayoutGrid },
   { name: 'Automations', href: '/automations', icon: Zap },
+  { name: 'Roles', href: '/roles', icon: Shield },
 ]
 
 // Local storage key for selected organization

@@ -1425,4 +1425,78 @@ export const api = {
 
   getBillingSummary: () =>
     request<any>('/api/v1/billing/summary'),
+
+  // ============================================================================
+  // EDI Integration
+  // ============================================================================
+
+  getEDITradingPartners: () =>
+    request<any[]>('/api/v1/edi/trading-partners'),
+
+  createEDITradingPartner: (data: Record<string, unknown>) =>
+    request<any>('/api/v1/edi/trading-partners', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateEDITradingPartner: (id: string, data: Record<string, unknown>) =>
+    request<any>(`/api/v1/edi/trading-partners/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteEDITradingPartner: (id: string) =>
+    request<any>(`/api/v1/edi/trading-partners/${id}`, { method: 'DELETE' }),
+
+  getEDIMessages: (params?: { message_type?: string; direction?: string; status?: string; trading_partner_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.message_type) searchParams.set('message_type', params.message_type)
+    if (params?.direction) searchParams.set('direction', params.direction)
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.trading_partner_id) searchParams.set('trading_partner_id', params.trading_partner_id)
+    const query = searchParams.toString()
+    return request<any[]>(`/api/v1/edi/messages${query ? `?${query}` : ''}`)
+  },
+
+  sendEDIMessage: (data: Record<string, unknown>) =>
+    request<any>('/api/v1/edi/messages', { method: 'POST', body: JSON.stringify(data) }),
+
+  reparseEDIMessage: (id: string) =>
+    request<any>(`/api/v1/edi/messages/${id}/reparse`, { method: 'POST' }),
+
+  acknowledgeEDIMessage: (id: string, accept: boolean) =>
+    request<any>(`/api/v1/edi/messages/${id}/acknowledge`, {
+      method: 'POST',
+      body: JSON.stringify({ accept }),
+    }),
+
+  ediParsePreview: (data: { raw_content: string }) =>
+    request<any>('/api/v1/edi/parse-preview', { method: 'POST', body: JSON.stringify(data) }),
+
+  getEDIStats: () =>
+    request<any>('/api/v1/edi/stats'),
+
+  // ============================================================================
+  // Rate Tables
+  // ============================================================================
+
+  getRateTables: (params?: { customer_id?: string; include_expired?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.customer_id) searchParams.set('customer_id', params.customer_id)
+    if (params?.include_expired) searchParams.set('include_expired', 'true')
+    const query = searchParams.toString()
+    return request<any[]>(`/api/v1/rate-tables${query ? `?${query}` : ''}`)
+  },
+
+  createRateTable: (data: Record<string, unknown>) =>
+    request<any>('/api/v1/rate-tables', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateRateTable: (id: string, data: Record<string, unknown>) =>
+    request<any>(`/api/v1/rate-tables/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteRateTable: (id: string) =>
+    request<any>(`/api/v1/rate-tables/${id}`, { method: 'DELETE' }),
+
+  rateLookup: (data: Record<string, unknown>) =>
+    request<any[]>('/api/v1/rate-tables/lookup', { method: 'POST', body: JSON.stringify(data) }),
+
+  bulkImportLanes: (tableId: string, data: { lanes: any[] }) =>
+    request<any>(`/api/v1/rate-tables/${tableId}/import-lanes`, { method: 'POST', body: JSON.stringify(data) }),
+
+  getExpiringContracts: (days: number = 30) =>
+    request<any[]>(`/api/v1/rate-tables/expiring/soon?days=${days}`),
 }
