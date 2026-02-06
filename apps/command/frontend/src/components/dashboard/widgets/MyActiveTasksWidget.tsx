@@ -501,7 +501,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     setCompletingTaskId(taskId)
     try {
       await api.quickCompleteTask(taskId)
-      fetchTasks()
+      // Optimistically remove from local state to preserve scroll position
+      const { tasks: currentTasks, setTasks } = useAppStore.getState()
+      setTasks(currentTasks.filter(t => (t._id || t.id) !== taskId))
       // Close edit panel if we completed the task being edited
       if (editingTaskId === taskId) {
         setEditingTaskId(null)
@@ -513,6 +515,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       }
     } catch (err) {
       console.error('Failed to complete task:', err)
+      fetchTasks() // Refetch on error to restore correct state
     } finally {
       setCompletingTaskId(null)
     }
