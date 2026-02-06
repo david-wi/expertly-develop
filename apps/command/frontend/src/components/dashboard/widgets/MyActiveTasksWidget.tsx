@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Maximize2, Check, Plus, Timer, X, ExternalLink, Star } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
@@ -1350,13 +1351,14 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       </div>
     </WidgetWrapper>
 
-    {selectedTaskId && (
+    {selectedTaskId && createPortal(
       <TaskDetailModal
         taskId={selectedTaskId}
         isOpen={!!selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
         onUpdate={() => fetchTasks()}
-      />
+      />,
+      document.body
     )}
 
     {/* Timer Modal */}
