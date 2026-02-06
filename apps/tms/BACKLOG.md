@@ -32,11 +32,24 @@ Features deferred to future phases.
 - [x] Rate Management & Contract Tables
 - [x] Role-based access control
 
-## Future Integrations
+## Phase 5: Driver App & Performance (COMPLETED - PR #527)
+
+- [x] Mobile Driver App (responsive PWA with login, loads, schedule, check calls, POD, exceptions)
+- [x] Performance optimization (VirtualList, PaginatedTable, MongoDB indexes, unified search)
+- [x] Offline support / PWA (service worker, cache strategies, background sync, offline fallback)
+- [x] Global search (Cmd+K across shipments, customers, carriers)
+
+## Phase 6: Multi-Tenant (COMPLETED - PR #528)
+
+- [x] Multi-tenant middleware with org-based data isolation
+- [x] Tenant settings (timezone, currency, numbering, branding, custom fields)
+- [x] User management and invitations
+
+## Future Integrations (ALL COMPLETED)
 
 - [x] Accounting Integration (QuickBooks)
 - [x] Load Board Integration (DAT, Truckstop)
-- [ ] Mobile Driver App — IN PROGRESS
+- [x] Mobile Driver App
 - [x] Customer Self-Service Portal
 - [x] Carrier Portal with onboarding
 
@@ -44,6 +57,3 @@ Features deferred to future phases.
 
 - [ ] Add comprehensive unit tests
 - [ ] Add Playwright E2E tests
-- [ ] Performance optimization for large datasets — IN PROGRESS
-- [ ] Offline support / PWA — IN PROGRESS
-- [ ] Multi-tenant support
