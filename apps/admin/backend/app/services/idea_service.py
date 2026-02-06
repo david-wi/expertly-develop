@@ -44,11 +44,13 @@ class IdeaService:
         priority: Optional[str] = None,
         include_archived: bool = False,
         organization_id: Optional[str] = None,
+        backlog_type: Optional[str] = None,
     ) -> List[Idea]:
         """List ideas with filters.
 
         When organization_id is provided, returns org-specific backlog items.
-        When organization_id is not provided, returns only product-wide ideas (org_id=NULL).
+        When backlog_type='work' (without organization_id), returns all items that have an org_id.
+        When neither is provided, returns only product-wide ideas (org_id=NULL).
         """
         conditions = []
 
@@ -56,6 +58,9 @@ class IdeaService:
         if organization_id:
             # Return org-specific items
             conditions.append(Idea.organization_id == organization_id)
+        elif backlog_type == 'work':
+            # Return all work items (any org) - for work backlog without specific org
+            conditions.append(Idea.organization_id.isnot(None))
         else:
             # Return only product-wide ideas (no org)
             conditions.append(Idea.organization_id.is_(None))
