@@ -225,6 +225,7 @@ class TimeEntryCreate(BaseModel):
 class RecurrenceType(str, Enum):
     """Types of recurrence patterns."""
     DAILY = "daily"
+    WEEKDAY = "weekday"  # Monday through Friday
     WEEKLY = "weekly"
     MONTHLY = "monthly"
     CUSTOM = "custom"  # Uses cron expression

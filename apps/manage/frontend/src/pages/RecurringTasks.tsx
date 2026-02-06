@@ -234,6 +234,8 @@ export default function RecurringTasks() {
     switch (task.recurrence_type) {
       case 'daily':
         return `${interval}day${task.interval > 1 ? 's' : ''}`
+      case 'weekday':
+        return 'weekdays (Mon\u2013Fri)'
       case 'weekly':
         const days = task.days_of_week?.map((d) => DAYS_OF_WEEK[d]).join(', ')
         return `${interval}week${task.interval > 1 ? 's' : ''}${days ? ` on ${days}` : ''}`
@@ -471,10 +473,12 @@ export default function RecurringTasks() {
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="daily">Daily</option>
+                  <option value="weekday">Weekday (Mon–Fri)</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
+              {formData.recurrence_type !== 'weekday' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Every
@@ -498,6 +502,7 @@ export default function RecurringTasks() {
                   </span>
                 </div>
               </div>
+              )}
               {formData.recurrence_type === 'weekly' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -636,10 +641,12 @@ export default function RecurringTasks() {
                   className="w-full border border-gray-300 rounded-md px-3 py-2"
                 >
                   <option value="daily">Daily</option>
+                  <option value="weekday">Weekday (Mon–Fri)</option>
                   <option value="weekly">Weekly</option>
                   <option value="monthly">Monthly</option>
                 </select>
               </div>
+              {formData.recurrence_type !== 'weekday' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Every
@@ -663,6 +670,7 @@ export default function RecurringTasks() {
                   </span>
                 </div>
               </div>
+              )}
               {formData.recurrence_type === 'weekly' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
