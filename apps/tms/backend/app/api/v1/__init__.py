@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import customers, carriers, facilities, quote_requests, quotes, shipments, tenders, tracking, documents, invoices, work_items, ai, analytics, emails, customs, loadboards, accounting, carrier_portal, customer_portal, automation, notifications, desks, approvals, automations
+from . import customers, carriers, facilities, quote_requests, quotes, shipments, tenders, tracking, documents, invoices, work_items, ai, analytics, emails, customs, loadboards, accounting, carrier_portal, customer_portal, automation, notifications, desks, approvals, automations, customer_contacts, customer_facilities, pricing_playbooks, carrier_compliance, document_inbox, billing
 
 router = APIRouter()
 
@@ -28,3 +28,9 @@ router.include_router(notifications.router, prefix="/notifications", tags=["noti
 router.include_router(desks.router, prefix="/desks", tags=["desks"])
 router.include_router(approvals.router, prefix="/approvals", tags=["approvals"])
 router.include_router(automations.router, prefix="/automations", tags=["automations"])
+router.include_router(customer_contacts.router, prefix="/customers", tags=["customer-contacts"])
+router.include_router(customer_facilities.router, prefix="/customers", tags=["customer-facilities"])
+router.include_router(pricing_playbooks.router, prefix="/customers", tags=["pricing-playbooks"])
+router.include_router(carrier_compliance.router, prefix="/carriers", tags=["carrier-compliance"])
+router.include_router(document_inbox.router, prefix="/document-inbox", tags=["document-inbox"])
+router.include_router(billing.router, prefix="/billing", tags=["billing"])

@@ -1353,4 +1353,76 @@ export const api = {
     }),
   getAutomationLog: (id: string) =>
     request<any>(`/api/v1/automations/${id}/log`),
+
+  // ============================================================================
+  // Document Inbox
+  // ============================================================================
+
+  getDocumentInboxItems: (params?: { status?: string; classification?: string; source?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.classification) searchParams.set('classification', params.classification)
+    if (params?.source) searchParams.set('source', params.source)
+    const query = searchParams.toString()
+    return request<any[]>(`/api/v1/document-inbox${query ? `?${query}` : ''}`)
+  },
+
+  createDocumentInboxItem: (data: {
+    source?: string
+    source_email?: string
+    filename: string
+    file_type?: string
+    file_size?: number
+    metadata?: Record<string, unknown>
+  }) => request<any>('/api/v1/document-inbox', { method: 'POST', body: JSON.stringify(data) }),
+
+  classifyDocumentInboxItem: (id: string) =>
+    request<any>(`/api/v1/document-inbox/${id}/classify`, { method: 'POST' }),
+
+  linkDocumentInboxItem: (id: string, data: { entity_type: string; entity_id: string }) =>
+    request<any>(`/api/v1/document-inbox/${id}/link`, { method: 'POST', body: JSON.stringify(data) }),
+
+  archiveDocumentInboxItem: (id: string) =>
+    request<any>(`/api/v1/document-inbox/${id}/archive`, { method: 'POST' }),
+
+  getDocumentInboxStats: () =>
+    request<any>('/api/v1/document-inbox/stats'),
+
+  // ============================================================================
+  // Billing
+  // ============================================================================
+
+  getBillingQueue: () =>
+    request<any[]>('/api/v1/billing/queue'),
+
+  generateBillingInvoice: (shipmentId: string) =>
+    request<any>(`/api/v1/billing/generate-invoice/${shipmentId}`, { method: 'POST' }),
+
+  getCarrierBills: (params?: { status?: string; carrier_id?: string; shipment_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    const query = searchParams.toString()
+    return request<any[]>(`/api/v1/billing/carrier-bills${query ? `?${query}` : ''}`)
+  },
+
+  createCarrierBill: (data: {
+    carrier_id: string
+    shipment_id: string
+    bill_number: string
+    amount: number
+    received_date?: string
+    due_date?: string
+    notes?: string
+  }) => request<any>('/api/v1/billing/carrier-bills', { method: 'POST', body: JSON.stringify(data) }),
+
+  matchCarrierBill: (billId: string) =>
+    request<any>(`/api/v1/billing/carrier-bills/${billId}/match`, { method: 'POST' }),
+
+  approveCarrierBill: (billId: string) =>
+    request<any>(`/api/v1/billing/carrier-bills/${billId}/approve`, { method: 'POST' }),
+
+  getBillingSummary: () =>
+    request<any>('/api/v1/billing/summary'),
 }

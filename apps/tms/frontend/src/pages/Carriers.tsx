@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Carrier } from '../types'
 import { Plus, Truck, Mail, Phone, X, AlertTriangle, Shield } from 'lucide-react'
@@ -21,6 +22,7 @@ const equipmentTypes = [
 ]
 
 export default function Carriers() {
+  const navigate = useNavigate()
   const [carriers, setCarriers] = useState<Carrier[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -69,23 +71,6 @@ export default function Carriers() {
     } catch (error) {
       console.error('Failed to save carrier:', error)
     }
-  }
-
-  const handleEdit = (carrier: Carrier) => {
-    setEditingCarrier(carrier)
-    setFormData({
-      name: carrier.name,
-      mc_number: carrier.mc_number || '',
-      dot_number: carrier.dot_number || '',
-      contact_name: carrier.contact_name || '',
-      contact_email: carrier.contact_email || '',
-      contact_phone: carrier.contact_phone || '',
-      equipment_types: carrier.equipment_types || [],
-      insurance_expiration: carrier.insurance_expiration
-        ? new Date(carrier.insurance_expiration).toISOString().split('T')[0]
-        : '',
-    })
-    setShowForm(true)
   }
 
   const handleEquipmentToggle = (type: string) => {
@@ -286,7 +271,7 @@ export default function Carriers() {
             {carriers.map((carrier) => (
               <li
                 key={carrier.id}
-                onClick={() => handleEdit(carrier)}
+                onClick={() => navigate(`/carriers/${carrier.id}`)}
                 className="p-4 hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex items-start justify-between">
