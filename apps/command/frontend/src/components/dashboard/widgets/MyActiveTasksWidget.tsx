@@ -5,7 +5,7 @@ import { Maximize2, Minimize2, Check, Plus, Timer, X, ExternalLink, Star } from 
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
-import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
+import { api, Task, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
 import ProjectTypeahead from '../../../components/ProjectTypeahead'
 import StartTimerModal from '../../../components/StartTimerModal'
@@ -51,7 +51,7 @@ function parseDuration(value: string): number | null {
 }
 
 export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
-  const { user, tasks, queues, loading, fetchTasks, viewingUserId, setViewingUserId } = useAppStore()
+  const { user, tasks, queues, loading, fetchTasks, updateTaskLocally, viewingUserId, setViewingUserId } = useAppStore()
   const [selectedQueueFilter, setSelectedQueueFilter] = useState<string>('all')
   const [users, setUsers] = useState<UserType[]>([])
   const [teams, setTeams] = useState<Team[]>([])
@@ -261,17 +261,18 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       }
     }
 
-    // Update via API
+    // Optimistic local update for reorder
+    updateTaskLocally(draggedTaskId, { sequence: newSequence })
+    setDraggedTaskId(null)
+
+    // Persist via API
     const items: TaskReorderItem[] = [{ id: draggedTaskId, sequence: newSequence }]
     try {
       await api.reorderTasks(items)
-      // Refresh tasks
-      fetchTasks()
     } catch (err) {
       console.error('Failed to reorder tasks:', err)
+      fetchTasks() // Revert on error
     }
-
-    setDraggedTaskId(null)
   }
 
   const handleDragEnd = () => {
@@ -306,11 +307,14 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         await api.reorderTasks([{ id: taskId, sequence: topSequence }])
       }
 
+      // Insert into store directly instead of re-fetching
+      const { tasks: currentTasks, setTasks } = useAppStore.getState()
+      setTasks([{ ...newTask, sequence: topSequence }, ...currentTasks])
+
       setTopTaskTitle('')
       setTopTaskProjectId('')
       setTopTaskProjectQuery('')
       setTopTaskInstructions('')
-      fetchTasks()
       setTimeout(() => topTitleRef.current?.focus(), 0)
     } catch (err) {
       console.error('Failed to create task:', err)
@@ -325,17 +329,20 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
     setIsCreatingBottom(true)
     try {
-      await api.createTask({
+      const newTask = await api.createTask({
         queue_id: defaultQueue._id || defaultQueue.id,
         title: bottomTaskTitle.trim(),
         description: bottomTaskInstructions.trim() || undefined,
         project_id: bottomTaskProjectId || undefined,
       })
+      // Insert into store directly instead of re-fetching
+      const { tasks: currentTasks, setTasks } = useAppStore.getState()
+      setTasks([...currentTasks, newTask])
+
       setBottomTaskTitle('')
       setBottomTaskProjectId('')
       setBottomTaskProjectQuery('')
       setBottomTaskInstructions('')
-      fetchTasks()
       setTimeout(() => bottomTitleRef.current?.focus(), 0)
     } catch (err) {
       console.error('Failed to create task:', err)
@@ -482,6 +489,16 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
     if (!editTitle.trim()) return
 
+    // Optimistic local update
+    const updates: Partial<Task> = {
+      title: editTitle.trim(),
+      project_id: projectIdToSave || undefined,
+      description: editDescription.trim() || undefined,
+      playbook_id: editPlaybookId || undefined,
+      estimated_duration: parsedDuration ?? undefined,
+    }
+    updateTaskLocally(editingTaskId, updates)
+
     setIsSaving(true)
     try {
       await api.updateTask(editingTaskId, {
@@ -491,9 +508,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         playbook_id: editPlaybookId || undefined,
         estimated_duration: parsedDuration,
       })
-      fetchTasks()
     } catch (err) {
       console.error('Failed to update task:', err)
+      fetchTasks() // Revert on error
     } finally {
       setIsSaving(false)
     }
@@ -547,12 +564,16 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const handleUndo = useCallback(async () => {
     if (!undoInfo) return
     try {
-      await api.reopenTask(undoInfo.taskId)
-      fetchTasks()
+      const reopened = await api.reopenTask(undoInfo.taskId)
+      // Insert reopened task back into store
+      const { tasks: currentTasks, setTasks } = useAppStore.getState()
+      if (!currentTasks.find(t => (t._id || t.id) === undoInfo.taskId)) {
+        setTasks([reopened, ...currentTasks])
+      }
     } catch (err) {
       console.error('Failed to reopen task:', err)
     }
-  }, [undoInfo, fetchTasks])
+  }, [undoInfo])
 
   // Toggle star on a task (optimistic update)
   const handleToggleStar = async (e: React.MouseEvent, taskId: string) => {
@@ -589,22 +610,24 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     const task = activeTasks.find(t => (t._id || t.id) === inlineDurationTaskId)
     const originalDuration = task?.estimated_duration || null
 
-    // Only save if changed
-    if (parsed !== originalDuration) {
-      try {
-        await api.updateTask(inlineDurationTaskId, { estimated_duration: parsed })
-        fetchTasks()
-        // Update edit panel if same task is being edited
-        if (editingTaskId === inlineDurationTaskId) {
-          setEditDuration(formatDuration(parsed || undefined))
-        }
-      } catch (err) {
-        console.error('Failed to update duration:', err)
-      }
-    }
-
     setInlineDurationTaskId(null)
     setInlineDurationValue('')
+
+    // Only save if changed
+    if (parsed !== originalDuration) {
+      // Optimistic local update
+      updateTaskLocally(inlineDurationTaskId, { estimated_duration: parsed ?? undefined })
+      // Update edit panel if same task is being edited
+      if (editingTaskId === inlineDurationTaskId) {
+        setEditDuration(formatDuration(parsed || undefined))
+      }
+      try {
+        await api.updateTask(inlineDurationTaskId, { estimated_duration: parsed })
+      } catch (err) {
+        console.error('Failed to update duration:', err)
+        fetchTasks() // Revert on error
+      }
+    }
   }
 
   const handleCreateTopProject = async () => {
@@ -884,6 +907,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       onDrop={(e) => handleDrop(e, taskId)}
                       onDragEnd={handleDragEnd}
                       onClick={() => startEditing(taskId)}
+                      onDoubleClick={() => setSelectedTaskId(taskId)}
                       className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 transition-colors cursor-pointer ${
                         isDragging ? 'opacity-50 bg-gray-100' : ''
                       } ${isDragOver ? 'border-t-2 border-primary-500' : ''} ${isSelected ? 'bg-primary-50 border-l-2 border-primary-500' : ''}`}
