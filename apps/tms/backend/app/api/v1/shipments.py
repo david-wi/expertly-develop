@@ -11,6 +11,7 @@ from app.models.work_item import WorkItem, WorkItemType
 from app.schemas.shipment import ShipmentCreate, ShipmentUpdate, ShipmentResponse
 from app.services.number_generator import NumberGenerator
 from app.services.carrier_matching import CarrierMatchingService
+from app.services.websocket_manager import manager
 
 router = APIRouter()
 
@@ -126,6 +127,7 @@ async def create_shipment(data: ShipmentCreate):
         )
         await db.work_items.insert_one(work_item.model_dump_mongo())
 
+    await manager.broadcast("shipment_created", {"id": str(shipment.id), "shipment_number": shipment.shipment_number})
     return shipment_to_response(shipment)
 
 
@@ -163,6 +165,7 @@ async def update_shipment(shipment_id: str, data: ShipmentUpdate):
         {"$set": shipment.model_dump_mongo()}
     )
 
+    await manager.broadcast("shipment_updated", {"id": shipment_id})
     return shipment_to_response(shipment)
 
 
@@ -211,6 +214,7 @@ async def transition_shipment(shipment_id: str, data: TransitionRequest):
         )
         await db.tracking_events.insert_one(event.model_dump_mongo())
 
+    await manager.broadcast("shipment_status_changed", {"id": shipment_id, "status": data.status})
     return shipment_to_response(shipment)
 
 
@@ -300,6 +304,7 @@ async def add_tracking_event(shipment_id: str, data: CheckCallRequest):
         {"$set": update_data}
     )
 
+    await manager.broadcast("tracking_update", {"shipment_id": shipment_id})
     return {"success": True, "event_id": str(event.id)}
 
 

@@ -8,6 +8,7 @@ from app.database import get_database
 from app.models.tender import Tender, TenderStatus
 from app.models.shipment import ShipmentStatus
 from app.models.work_item import WorkItem, WorkItemType, WorkItemStatus
+from app.services.websocket_manager import manager
 
 router = APIRouter()
 
@@ -129,6 +130,7 @@ async def create_tender(data: TenderCreate):
 
     await db.tenders.insert_one(tender.model_dump_mongo())
 
+    await manager.broadcast("tender_created", {"id": str(tender.id), "shipment_id": data.shipment_id})
     return tender_to_response(tender)
 
 
@@ -171,6 +173,7 @@ async def send_tender(tender_id: str, data: SendTenderRequest):
     )
     await db.work_items.insert_one(work_item.model_dump_mongo())
 
+    await manager.broadcast("tender_created", {"id": str(tender.id)})
     return tender_to_response(tender)
 
 
@@ -235,6 +238,8 @@ async def accept_tender(tender_id: str, data: AcceptTenderRequest):
         {"$set": {"status": WorkItemStatus.DONE}}
     )
 
+    await manager.broadcast("tender_accepted", {"id": str(tender.id), "shipment_id": str(tender.shipment_id)})
+    await manager.broadcast("dashboard_refresh", {})
     return tender_to_response(tender)
 
 
@@ -263,4 +268,5 @@ async def decline_tender(tender_id: str, data: DeclineTenderRequest):
         {"$set": tender.model_dump_mongo()}
     )
 
+    await manager.broadcast("tender_declined", {"id": str(tender.id)})
     return tender_to_response(tender)

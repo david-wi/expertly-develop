@@ -50,6 +50,9 @@ class WorkItem(MongoModel):
     carrier_id: Optional[PyObjectId] = None
     invoice_id: Optional[PyObjectId] = None
 
+    # Desk routing
+    desk_id: Optional[str] = None  # Desk this work item is routed to
+
     # Assignment
     assigned_to: Optional[str] = None  # User ID
     assigned_at: Optional[datetime] = None

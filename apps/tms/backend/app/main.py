@@ -7,6 +7,7 @@ from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection, check_database_connection
 from app.utils.seed import seed_database, ensure_indexes
 from app.api.v1 import router as api_router
+from app.api.v1.websocket import router as ws_router
 
 settings = get_settings()
 
@@ -64,6 +65,9 @@ app.add_middleware(
 
 # API routes
 app.include_router(api_router, prefix="/api/v1")
+
+# WebSocket routes
+app.include_router(ws_router)
 
 
 @app.get("/health")

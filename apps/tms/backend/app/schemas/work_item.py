@@ -17,6 +17,7 @@ class WorkItemCreate(BaseModel):
     customer_id: Optional[str] = None
     carrier_id: Optional[str] = None
     invoice_id: Optional[str] = None
+    desk_id: Optional[str] = None
     assigned_to: Optional[str] = None
     due_at: Optional[datetime] = None
 
@@ -26,6 +27,7 @@ class WorkItemUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[int] = None
+    desk_id: Optional[str] = None
     assigned_to: Optional[str] = None
     due_at: Optional[datetime] = None
     snoozed_until: Optional[datetime] = None
@@ -46,6 +48,7 @@ class WorkItemResponse(BaseModel):
     customer_id: Optional[str] = None
     carrier_id: Optional[str] = None
     invoice_id: Optional[str] = None
+    desk_id: Optional[str] = None
     assigned_to: Optional[str] = None
     assigned_at: Optional[datetime] = None
     due_at: Optional[datetime] = None

@@ -14,6 +14,7 @@ import {
   Trophy,
   FolderSearch,
   Settings,
+  LayoutGrid,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
@@ -32,6 +33,7 @@ const navigation = [
   { name: 'Carrier Performance', href: '/carrier-performance', icon: Trophy },
   { name: 'Document Review', href: '/document-review', icon: FolderSearch },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
+  { name: 'Desks', href: '/desks', icon: LayoutGrid },
 ]
 
 // Local storage key for selected organization

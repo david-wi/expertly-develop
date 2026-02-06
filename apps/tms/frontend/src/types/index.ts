@@ -198,10 +198,66 @@ export interface WorkItem {
   shipment_id?: string
   customer_id?: string
   carrier_id?: string
+  desk_id?: string
   due_at?: string
   is_overdue: boolean
   is_snoozed: boolean
   created_at: string
+}
+
+// Desk types
+export type DeskType = 'lane' | 'mode' | 'customer' | 'general'
+
+export interface RoutingRule {
+  field: string
+  operator: string
+  value: string | string[]
+}
+
+export interface CoverageSchedule {
+  day_of_week: number
+  start_time: string
+  end_time: string
+  timezone: string
+}
+
+export interface Desk {
+  id: string
+  name: string
+  description: string
+  desk_type: DeskType
+  is_active: boolean
+  routing_rules: RoutingRule[]
+  coverage: CoverageSchedule[]
+  members: string[]
+  priority: number
+  member_count: number
+  active_work_items_count: number
+  is_covered: boolean
+  created_at: string
+  updated_at: string
+}
+
+export const DESK_TYPE_LABELS: Record<DeskType, string> = {
+  lane: 'Lane',
+  mode: 'Mode',
+  customer: 'Customer',
+  general: 'General',
+}
+
+export const ROUTING_FIELD_LABELS: Record<string, string> = {
+  origin_state: 'Origin State',
+  destination_state: 'Destination State',
+  equipment_type: 'Equipment Type',
+  customer_id: 'Customer ID',
+  work_type: 'Work Type',
+}
+
+export const ROUTING_OPERATOR_LABELS: Record<string, string> = {
+  equals: 'Equals',
+  in: 'In',
+  contains: 'Contains',
+  regex: 'Regex',
 }
 
 // Invoice types
