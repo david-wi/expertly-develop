@@ -346,6 +346,28 @@ export const api = {
     return response.json() as Promise<TaskAttachment>
   },
 
+  // Task Suggestions
+  getTaskSuggestions: (taskId: string) =>
+    request<TaskSuggestion[]>(`/api/v1/tasks/${taskId}/suggestions`),
+  createTaskSuggestion: (taskId: string, data: CreateTaskSuggestionRequest) =>
+    request<TaskSuggestion>(`/api/v1/tasks/${taskId}/suggestions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateTaskSuggestion: (suggestionId: string, data: UpdateTaskSuggestionRequest) =>
+    request<TaskSuggestion>(`/api/v1/suggestions/${suggestionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  executeTaskSuggestion: (suggestionId: string) =>
+    request<ExecuteSuggestionResponse>(`/api/v1/suggestions/${suggestionId}/execute`, {
+      method: 'POST',
+    }),
+  deleteTaskSuggestion: (suggestionId: string) =>
+    request<void>(`/api/v1/suggestions/${suggestionId}`, {
+      method: 'DELETE',
+    }),
+
   // Task Comments
   getTaskComments: (taskId: string) =>
     request<TaskComment[]>(`/api/v1/tasks/${taskId}/comments`),
@@ -1870,4 +1892,49 @@ export interface UpdateDashboardNoteRequest {
   title?: string
   description?: string
   content?: string
+}
+
+// Task Suggestion types
+export type SuggestionType = 'slack_reply' | 'gmail_reply' | 'calendar_event'
+export type SuggestionStatus = 'pending' | 'accepted' | 'dismissed'
+
+export interface TaskSuggestion {
+  id: string
+  task_id: string
+  organization_id: string
+  suggestion_type: SuggestionType
+  status: SuggestionStatus
+  title: string
+  content: string
+  provider_data: Record<string, unknown>
+  created_by: string
+  executed_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CreateTaskSuggestionRequest {
+  suggestion_type: SuggestionType
+  title: string
+  content: string
+  provider_data?: Record<string, unknown>
+  created_by?: string
+}
+
+export interface UpdateTaskSuggestionRequest {
+  content?: string
+  status?: SuggestionStatus
+}
+
+export interface ExecuteSuggestionResponse {
+  action: 'sent' | 'open_url'
+  suggestion_type: SuggestionType
+  // Slack-specific
+  channel_id?: string
+  thread_ts?: string
+  message_ts?: string
+  permalink?: string
+  // Gmail-specific
+  url?: string
+  copy_content?: string
 }

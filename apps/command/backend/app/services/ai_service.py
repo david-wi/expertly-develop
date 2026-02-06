@@ -489,6 +489,65 @@ Respond with ONLY "yes" or "no"."""
             return fallback_fn()
         return ""
 
+    REPLY_DRAFT_SYSTEM_PROMPT = """You are a professional reply drafter for David's task management system. Given a Slack message where someone mentioned David (and optionally thread context), draft a professional reply from David's perspective.
+
+Guidelines:
+1. Match the conversational tone of the thread (casual channels = casual, formal = formal)
+2. Be helpful, concise, and direct
+3. If the message asks a question, try to answer it or acknowledge it
+4. If the message is a request, confirm what David will do
+5. Keep the reply natural — write as David would write in Slack
+6. Don't include @mentions or Slack markup
+7. Don't be overly formal or stiff — match the channel's energy
+8. If you don't have enough context to give a substantive reply, write a brief acknowledgment with a follow-up question
+
+Respond with ONLY the reply text, nothing else."""
+
+    async def generate_reply_draft(
+        self,
+        message_text: str,
+        context: Optional[str] = None,
+        sender: Optional[str] = None,
+        channel_name: Optional[str] = None,
+    ) -> str:
+        """
+        Generate a draft reply to a Slack message.
+
+        Args:
+            message_text: The message to reply to
+            context: Optional thread context
+            sender: Who sent the message
+            channel_name: Which channel it's in
+
+        Returns:
+            Draft reply text
+        """
+        if not self.is_configured():
+            return self._fallback_reply(message_text)
+
+        prompt = ""
+        if sender:
+            prompt += f"From: {sender}\n"
+        if channel_name:
+            prompt += f"Channel: #{channel_name}\n"
+        prompt += f"Message: {message_text}"
+        if context:
+            prompt += f"\n\nThread context:\n{context}"
+
+        try:
+            reply = await self._call_with_fallback(
+                self.REPLY_DRAFT_SYSTEM_PROMPT, prompt, 300, 0.5,
+                fallback_fn=lambda: self._fallback_reply(message_text)
+            )
+            return reply.strip().strip('"').strip("'")
+        except Exception as e:
+            logger.warning(f"AI reply draft generation failed: {e}")
+            return self._fallback_reply(message_text)
+
+    def _fallback_reply(self, message_text: str) -> str:
+        """Simple fallback reply."""
+        return "Thanks for the heads up — I'll take a look and get back to you."
+
     def _fallback_description(self, message_text: str) -> str:
         """Generate a simple fallback description."""
         import re

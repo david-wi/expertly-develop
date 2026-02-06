@@ -44,6 +44,9 @@ from app.models.task_attachment import (
 from app.models.task_comment import (
     TaskComment, TaskCommentCreate, TaskCommentUpdate, TaskCommentResponse
 )
+from app.models.task_suggestion import (
+    TaskSuggestion, TaskSuggestionCreate, TaskSuggestionUpdate
+)
 from app.models.monitor import (
     Monitor, MonitorCreate, MonitorUpdate, MonitorEvent,
     MonitorProvider, MonitorStatus, SlackConfig, GoogleDriveConfig,
@@ -148,6 +151,9 @@ __all__ = [
     "TaskCommentCreate",
     "TaskCommentUpdate",
     "TaskCommentResponse",
+    "TaskSuggestion",
+    "TaskSuggestionCreate",
+    "TaskSuggestionUpdate",
     "Monitor",
     "MonitorCreate",
     "MonitorUpdate",

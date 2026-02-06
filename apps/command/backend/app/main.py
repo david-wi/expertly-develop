@@ -7,7 +7,7 @@ import logging
 from app.config import get_settings
 from app.database import connect_to_mongo, close_mongo_connection, check_database_connection
 from app.utils.seed import seed_database, ensure_indexes
-from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images, backlog, connections, ai, task_attachments, task_comments, monitors, webhooks, notifications, bots, documents, step_responses, expertise, dashboard_notes, artifacts, tts
+from app.api.v1 import organizations, users, teams, queues, tasks, projects, sops, playbooks, bot, websocket, recurring_tasks, images, backlog, connections, ai, task_attachments, task_comments, task_suggestions, monitors, webhooks, notifications, bots, documents, step_responses, expertise, dashboard_notes, artifacts, tts
 
 settings = get_settings()
 
@@ -165,6 +165,7 @@ app.include_router(connections.router, prefix="/api/v1/connections", tags=["conn
 app.include_router(ai.router, prefix="/api/v1/ai", tags=["ai"])
 app.include_router(task_attachments.router, prefix="/api/v1", tags=["task-attachments"])
 app.include_router(task_comments.router, prefix="/api/v1", tags=["task-comments"])
+app.include_router(task_suggestions.router, prefix="/api/v1", tags=["task-suggestions"])
 app.include_router(step_responses.router, prefix="/api/v1", tags=["step-responses"])
 app.include_router(monitors.router, prefix="/api/v1/monitors", tags=["monitors"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["webhooks"])

@@ -382,6 +382,9 @@ class MonitorService:
         # Create initial context comment with conversation details
         await self._create_context_comment(task_id, monitor, event)
 
+        # Auto-generate reply suggestion for Slack and Gmail monitors
+        await self._create_reply_suggestion(task_id, monitor, event)
+
         return task_id
 
     def _extract_sender_name(self, monitor: dict, event: MonitorAdapterEvent) -> Optional[str]:
@@ -497,6 +500,128 @@ class MonitorService:
             content=content
         )
         await self.db.task_comments.insert_one(comment.model_dump_mongo())
+
+    async def _create_reply_suggestion(
+        self,
+        task_id: ObjectId,
+        monitor: dict,
+        event: MonitorAdapterEvent,
+    ) -> None:
+        """Auto-generate a reply suggestion for Slack or Gmail monitor events."""
+        from app.models.task_suggestion import TaskSuggestion
+
+        provider = monitor.get("provider", "unknown")
+
+        try:
+            if provider == "slack":
+                await self._create_slack_reply_suggestion(task_id, monitor, event)
+            elif provider == "gmail":
+                await self._create_gmail_reply_suggestion(task_id, monitor, event)
+        except Exception as e:
+            logger.warning(f"Failed to create reply suggestion for task {task_id}: {e}")
+
+    async def _create_slack_reply_suggestion(
+        self,
+        task_id: ObjectId,
+        monitor: dict,
+        event: MonitorAdapterEvent,
+    ) -> None:
+        """Create a Slack reply suggestion with AI-generated draft."""
+        from app.models.task_suggestion import TaskSuggestion
+
+        message_text = event.event_data.get("text", "")
+        sender = self._extract_sender_name(monitor, event)
+        channel_name = event.event_data.get("channel_name", "")
+        channel_id = event.event_data.get("channel_id", "")
+        thread_ts = event.event_data.get("thread_ts") or event.event_data.get("ts")
+        permalink = event.event_data.get("permalink")
+
+        # Build thread context for AI
+        context = None
+        if event.context_data and event.context_data.get("thread"):
+            thread_messages = event.context_data["thread"][:5]
+            context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+
+        # Generate AI draft reply
+        slack_title_service = get_slack_title_service()
+        draft_content = await slack_title_service.generate_reply_draft(
+            message_text, context, sender=sender, channel_name=channel_name
+        )
+
+        # Build title
+        title = f"Reply to {sender}" if sender else "Reply"
+        if channel_name:
+            title += f" in #{channel_name}"
+
+        # Get connection_id for execution
+        connection_id = str(monitor.get("connection_id", ""))
+
+        suggestion = TaskSuggestion(
+            task_id=task_id,
+            organization_id=monitor["organization_id"],
+            suggestion_type="slack_reply",
+            title=title,
+            content=draft_content,
+            provider_data={
+                "channel_id": channel_id,
+                "thread_ts": thread_ts,
+                "permalink": permalink,
+                "connection_id": connection_id,
+            },
+            created_by="ai",
+        )
+        await self.db.task_suggestions.insert_one(suggestion.model_dump_mongo())
+        logger.info(f"Created Slack reply suggestion for task {task_id}")
+
+    async def _create_gmail_reply_suggestion(
+        self,
+        task_id: ObjectId,
+        monitor: dict,
+        event: MonitorAdapterEvent,
+    ) -> None:
+        """Create a Gmail reply suggestion with AI-generated draft."""
+        from app.models.task_suggestion import TaskSuggestion
+
+        # Extract Gmail-specific data
+        from_info = event.event_data.get("from", {})
+        sender = from_info.get("name") or from_info.get("email", "")
+        to_email = from_info.get("email", "")
+        subject = event.event_data.get("subject", "")
+        thread_id = event.event_data.get("thread_id", "")
+        message_id = event.event_data.get("message_id", "")
+        snippet = event.event_data.get("snippet", "")
+        permalink = event.event_data.get("permalink", "")
+
+        # Generate AI draft reply using the Slack service (it works for any text)
+        slack_title_service = get_slack_title_service()
+        draft_content = await slack_title_service.generate_reply_draft(
+            snippet or subject, sender=sender
+        )
+
+        title = f"Reply to {sender}" if sender else "Reply to email"
+        if subject:
+            title += f": {subject[:40]}"
+
+        connection_id = str(monitor.get("connection_id", ""))
+
+        suggestion = TaskSuggestion(
+            task_id=task_id,
+            organization_id=monitor["organization_id"],
+            suggestion_type="gmail_reply",
+            title=title,
+            content=draft_content,
+            provider_data={
+                "thread_id": thread_id,
+                "message_id": message_id,
+                "to": to_email,
+                "subject": subject,
+                "permalink": permalink,
+                "connection_id": connection_id,
+            },
+            created_by="ai",
+        )
+        await self.db.task_suggestions.insert_one(suggestion.model_dump_mongo())
+        logger.info(f"Created Gmail reply suggestion for task {task_id}")
 
     def _generate_task_title(self, monitor: dict, event: MonitorAdapterEvent, project_name: Optional[str] = None) -> str:
         """Generate a task title from the event, incorporating project name when available."""
