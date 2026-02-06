@@ -368,6 +368,17 @@ class MonitorService:
         task_id = result.inserted_id
         logger.info(f"Created task {task_id} from monitor {monitor['_id']}")
 
+        # Emit WebSocket event for real-time updates
+        from app.api.v1.websocket import emit_event
+        from app.api.v1.tasks import serialize_task
+        created_task = await self.db.tasks.find_one({"_id": task_id})
+        if created_task:
+            await emit_event(
+                str(monitor["organization_id"]),
+                "task.created",
+                serialize_task(created_task)
+            )
+
         # Create initial context comment with conversation details
         await self._create_context_comment(task_id, monitor, event)
 

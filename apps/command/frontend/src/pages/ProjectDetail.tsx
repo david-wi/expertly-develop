@@ -188,6 +188,15 @@ export default function ProjectDetail() {
     }
   }, [id])
 
+  // Polling fallback: re-fetch project data every 30s for resilience
+  useEffect(() => {
+    if (!id) return
+    const interval = setInterval(() => {
+      loadData()
+    }, 30000)
+    return () => clearInterval(interval)
+  }, [id])
+
   const loadData = async () => {
     if (!id) return
 

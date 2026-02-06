@@ -83,3 +83,4 @@ Warns users before losing changes on modal close or page refresh.
 20250205 - Manage > Assignments: (1) Default status filter to exclude completed/failed items, (2) Add Assigned To column to assignments table
 20260205 - Manage > Monitors: Fix "Direct to inbox" trigger label → "Direct to tasks"
 20260205 - Manage > Monitors: Fix "unknown team member" in AI-generated task descriptions. Root cause: Slack user IDs not resolved to display names, sender identity not passed to AI service. Fix: Added user name resolution via Slack users.info API with caching, passed sender name through monitor service to AI prompt generation. Also added sender extraction for Gmail/Outlook providers. PR #504.
+20250205 - Add real-time WebSocket emit_event calls to all 29 task mutation points across Command app backend (tasks.py, bot.py, recurring_tasks.py, monitor_service.py, dependency_service.py). Add polling fallbacks to Dashboard.tsx (60s) and ProjectDetail.tsx (30s) for resilience.

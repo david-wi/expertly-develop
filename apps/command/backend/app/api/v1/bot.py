@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.database import get_database
 from app.models import Task, TaskStatus, User, UserType
 from app.api.deps import get_current_user
+from app.api.v1.websocket import emit_event
 from app.config import get_settings
 
 router = APIRouter()
@@ -164,7 +165,9 @@ async def claim_task(
     if not result:
         return None
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/heartbeat")
@@ -230,6 +233,14 @@ async def release_stale_checkouts(
 
     cutoff = datetime.now(timezone.utc) - timedelta(minutes=timeout_minutes)
 
+    # Find stale tasks before updating so we can emit events
+    stale_cursor = db.tasks.find({
+        "organization_id": current_user.organization_id,
+        "status": TaskStatus.CHECKED_OUT.value,
+        "checked_out_at": {"$lt": cutoff}
+    }, {"_id": 1})
+    stale_ids = [t["_id"] async for t in stale_cursor]
+
     result = await db.tasks.update_many(
         {
             "organization_id": current_user.organization_id,
@@ -246,6 +257,16 @@ async def release_stale_checkouts(
             }
         }
     )
+
+    # Emit events for each released task
+    if stale_ids:
+        released_cursor = db.tasks.find({"_id": {"$in": stale_ids}})
+        async for task in released_cursor:
+            await emit_event(
+                str(current_user.organization_id),
+                "task.updated",
+                serialize_task(task)
+            )
 
     return {"released": result.modified_count}
 

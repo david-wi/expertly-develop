@@ -8,6 +8,8 @@ from app.models import (
     RecurrenceType, Task, TaskStatus, User
 )
 from app.api.deps import get_current_user
+from app.api.v1.websocket import emit_event
+from app.api.v1.tasks import serialize_task
 
 router = APIRouter()
 
@@ -297,6 +299,10 @@ async def trigger_recurring_task(
 
     await db.tasks.insert_one(task.model_dump_mongo())
 
+    # Emit WebSocket event for real-time updates
+    serialized = serialize_task(task.model_dump_mongo())
+    await emit_event(str(current_user.organization_id), "task.created", serialized)
+
     # Update the recurring task
     rt = RecurringTask(**{**recurring_task, "_id": recurring_task["_id"]})
     next_run = calculate_next_run(rt, now)
@@ -312,16 +318,7 @@ async def trigger_recurring_task(
         }
     )
 
-    return {
-        "_id": str(task.id),
-        "organization_id": str(task.organization_id),
-        "queue_id": str(task.queue_id),
-        "title": task.title,
-        "description": task.description,
-        "status": task.status.value,
-        "priority": task.priority,
-        "created_at": task.created_at.isoformat() if task.created_at else None,
-    }
+    return serialized
 
 
 @router.post("/process-due")
@@ -364,6 +361,13 @@ async def process_due_recurring_tasks(
 
         await db.tasks.insert_one(task.model_dump_mongo())
         created_count += 1
+
+        # Emit WebSocket event for real-time updates
+        await emit_event(
+            str(rt_doc["organization_id"]),
+            "task.created",
+            serialize_task(task.model_dump_mongo())
+        )
 
         # Calculate next run
         rt = RecurringTask(**{**rt_doc, "_id": rt_doc["_id"]})

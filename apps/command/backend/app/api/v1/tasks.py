@@ -352,7 +352,9 @@ async def checkout_task(
                 if step_responses:
                     await db.task_step_responses.insert_many(step_responses)
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/start")
@@ -399,7 +401,9 @@ async def start_task(
         if task.get("checked_out_by_id") != current_user.id:
             raise HTTPException(status_code=403, detail="Task is checked out by another user")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/complete")
@@ -512,7 +516,9 @@ async def fail_task(
         return_document=True
     )
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.failed", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/release")
@@ -549,7 +555,9 @@ async def release_task(
     if not result:
         raise HTTPException(status_code=404, detail="Task not found or not checked out by you")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 # Phase transition endpoints
@@ -591,7 +599,9 @@ async def mark_task_ready(
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot mark as ready")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/submit-for-review")
@@ -632,7 +642,9 @@ async def submit_for_review(
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot submit for review")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/start-review")
@@ -673,7 +685,9 @@ async def start_review(
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot start review")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/request-changes")
@@ -713,7 +727,9 @@ async def request_changes(
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot request changes")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/approve")
@@ -759,7 +775,9 @@ async def approve_task(
     # Add timeline entry to project if task belongs to one
     await add_task_completion_to_project_timeline(result, current_user, db)
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.completed", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/resume-work")
@@ -799,7 +817,9 @@ async def resume_work(
             raise HTTPException(status_code=404, detail="Task not found")
         raise HTTPException(status_code=400, detail=f"Task is in phase '{task.get('phase', 'planning')}', cannot resume work")
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/quick-complete")
@@ -850,7 +870,9 @@ async def quick_complete_task(
     # Add timeline entry to project if task belongs to one
     await add_task_completion_to_project_timeline(result, current_user, db)
 
-    return serialize_task(result)
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.completed", serialized)
+    return serialized
 
 
 @router.post("/{task_id}/reopen")
