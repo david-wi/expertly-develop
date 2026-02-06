@@ -91,6 +91,24 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
     return () => document.removeEventListener('keydown', handleEscape)
   }, [isOpen, onClose])
 
+  // Build hierarchically sorted projects (parent -> children, alphabetical at each level)
+  // NOTE: This useMemo MUST be before the early return to maintain consistent hook count
+  const sortedProjects = useMemo(() => {
+    const buildTree = (parentId: string | null): Project[] => {
+      const children = projects
+        .filter(p => (p.parent_project_id || null) === parentId)
+        .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
+
+      const result: Project[] = []
+      for (const child of children) {
+        result.push(child)
+        result.push(...buildTree(child._id || child.id))
+      }
+      return result
+    }
+    return buildTree(null)
+  }, [projects])
+
   if (!isOpen) return null
 
   const activeWidgetTypes = new Set(widgets.map(w => w.type))
@@ -192,23 +210,6 @@ export function AddWidgetModal({ isOpen, onClose }: AddWidgetModalProps) {
     if (!project || !project.parent_project_id) return 0
     return 1 + getProjectDepth(project.parent_project_id, visited)
   }
-
-  // Build hierarchically sorted projects (parent -> children, alphabetical at each level)
-  const sortedProjects = useMemo(() => {
-    const buildTree = (parentId: string | null): Project[] => {
-      const children = projects
-        .filter(p => (p.parent_project_id || null) === parentId)
-        .sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()))
-
-      const result: Project[] = []
-      for (const child of children) {
-        result.push(child)
-        result.push(...buildTree(child._id || child.id))
-      }
-      return result
-    }
-    return buildTree(null)
-  }, [projects])
 
   // Get user-friendly configure step title based on widget type
   const getConfigureTitle = (): string => {
