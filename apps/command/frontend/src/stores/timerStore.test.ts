@@ -159,6 +159,56 @@ describe('timerStore', () => {
     })
   })
 
+  describe('addTime', () => {
+    it('should add time to a timer', () => {
+      const { startTimer, addTime } = useTimerStore.getState()
+
+      startTimer({
+        id: 'test-1',
+        label: 'Test Timer',
+        duration: 300,
+      })
+
+      addTime('test-1', 300)
+
+      const { timers } = useTimerStore.getState()
+      expect(timers[0].remaining).toBe(600)
+      expect(timers[0].duration).toBe(600)
+    })
+
+    it('should reset lastTick when adding time to an expired timer', () => {
+      const { startTimer, addTime } = useTimerStore.getState()
+
+      startTimer({
+        id: 'test-1',
+        label: 'Test Timer',
+        duration: 300,
+      })
+
+      // Simulate timer expiring with a stale lastTick (5 minutes ago)
+      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+      useTimerStore.setState({
+        timers: useTimerStore.getState().timers.map((t) => ({
+          ...t,
+          remaining: 0,
+          isComplete: true,
+          lastTick: fiveMinutesAgo,
+        })),
+      })
+
+      // Add 5 minutes
+      const beforeAdd = Date.now()
+      addTime('test-1', 5 * 60)
+
+      const { timers } = useTimerStore.getState()
+      expect(timers[0].remaining).toBe(300)
+      expect(timers[0].isComplete).toBe(false)
+      // lastTick should be reset to ~now, not the stale value
+      expect(timers[0].lastTick).toBeGreaterThanOrEqual(beforeAdd)
+      expect(timers[0].lastTick).toBeLessThanOrEqual(Date.now())
+    })
+  })
+
   describe('stopTimer', () => {
     it('should remove a timer from the list', () => {
       const { startTimer, stopTimer } = useTimerStore.getState()

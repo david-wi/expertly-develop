@@ -118,6 +118,7 @@ export const useTimerStore = create<TimerState>()(
                   duration: t.duration + seconds,
                   isComplete: false,
                   acknowledged: false,
+                  lastTick: Date.now(),
                 }
               : t
           ),
