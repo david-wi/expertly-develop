@@ -615,7 +615,7 @@ export default function Tasks() {
                             className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1.5 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                           />
                           {showProjectDropdown && newTaskProjectQuery && (
-                            <div className="absolute z-10 top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto min-w-max">
+                            <div className="absolute z-10 top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto min-w-max">
                               {projects
                                 .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(newTaskProjectQuery.toLowerCase()))
                                 .slice(0, 5)
@@ -773,7 +773,7 @@ export default function Tasks() {
                                     className="w-full text-xs text-gray-600 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                                   />
                                   {showProjectDropdown && newTaskProjectQuery && (
-                                    <div className="absolute z-10 top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-32 overflow-auto min-w-max">
+                                    <div className="absolute z-10 top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg max-h-32 overflow-auto min-w-max">
                                       {projects
                                         .filter(p => getProjectDisplayName(p, projects).toLowerCase().includes(newTaskProjectQuery.toLowerCase()))
                                         .slice(0, 5)

@@ -199,7 +199,7 @@ export function InlineTaskCreator({
               />
               {showProjectDropdown && projectQuery && (
                 <div
-                  className={`absolute z-10 left-0 right-0 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto ${
+                  className={`absolute z-10 right-0 bg-white border border-gray-200 rounded shadow-lg max-h-40 overflow-auto min-w-max ${
                     position === 'bottom' ? 'bottom-full mb-1' : 'top-full mt-1'
                   }`}
                 >
