@@ -4,7 +4,6 @@ import {
   LayoutGrid,
   Plus,
   Users,
-  Clock,
   AlertCircle,
   CheckCircle,
   XCircle,
