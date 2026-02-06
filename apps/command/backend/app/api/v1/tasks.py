@@ -1144,10 +1144,13 @@ async def regenerate_task_description(
         thread_messages = context_data["thread"][:5]
         context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
+    # Extract sender name from event data
+    sender = event_data.get("user_name") or event_data.get("sender_name")
+
     # Generate new description
     slack_title_service = get_slack_title_service()
     try:
-        new_description = await slack_title_service.generate_description(message_text, context)
+        new_description = await slack_title_service.generate_description(message_text, context, sender=sender)
     except Exception as e:
         logger.error(f"Failed to regenerate description for task {task_id}: {e}")
         raise HTTPException(

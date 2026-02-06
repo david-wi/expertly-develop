@@ -490,6 +490,23 @@ class MonitorService:
                 logger.info(f"Skipping duplicate: task already exists for {source_url}")
                 return None
 
+        # Check if the message seems urgent — star the task if so
+        is_urgent = False
+        try:
+            slack_title_svc = get_slack_title_service()
+            event_text = event.event_data.get("text", "") or event.event_data.get("snippet", "")
+            event_subject = event.event_data.get("subject", "")
+            urgency_text = f"{event_subject}\n{event_text}".strip() if event_subject else event_text
+            urgency_context = None
+            if event.context_data and event.context_data.get("thread"):
+                thread_messages = event.context_data["thread"][:5]
+                urgency_context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+            is_urgent = await slack_title_svc.is_urgent(urgency_text, urgency_context)
+            if is_urgent:
+                logger.info(f"Urgent message detected, starring task: {urgency_text[:80]}")
+        except Exception as e:
+            logger.warning(f"Urgency check failed, defaulting to not urgent: {e}")
+
         # Create the task
         from app.models import Task, TaskStatus
         task = Task(
@@ -499,6 +516,7 @@ class MonitorService:
             description=task_description,
             status=TaskStatus.QUEUED,
             priority=5,
+            is_starred=is_urgent,
             project_id=project_id,
             input_data=input_data,
             source_monitor_id=monitor["_id"],
@@ -610,10 +628,18 @@ class MonitorService:
             return  # Only create context comments for Slack for now
 
         # Build comment content
+        import re
+
+        def _clean_slack_text(text: str) -> str:
+            """Clean Slack markup: <@U1X1WMJ82|david> → @david, <@U1X1WMJ82> → @user"""
+            text = re.sub(r'<@[A-Z0-9]+\|([^>]+)>', r'@\1', text)
+            text = re.sub(r'<@[A-Z0-9]+>', '@user', text)
+            return text
+
         lines = ["**Slack Conversation Context**", ""]
 
         # Main message
-        message_text = event.event_data.get("text", "")
+        message_text = _clean_slack_text(event.event_data.get("text", ""))
         timestamp = event.provider_timestamp
         if timestamp:
             lines.append(f"**Message** ({timestamp.strftime('%Y-%m-%d %H:%M UTC')}):")
@@ -628,7 +654,7 @@ class MonitorService:
             if len(thread_messages) > 1:
                 lines.append("**Thread context:**")
                 for msg in thread_messages:
-                    msg_text = msg.get("text", "")[:300]
+                    msg_text = _clean_slack_text(msg.get("text", ""))[:300]
                     if len(msg.get("text", "")) > 300:
                         msg_text += "..."
                     lines.append(f"- {msg_text}")

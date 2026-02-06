@@ -228,6 +228,19 @@ async def _execute_slack_reply(db, suggestion: dict, provider_data: dict, conten
         {"$set": {"status": "accepted", "executed_at": now, "updated_at": now}}
     )
 
+    # Post the sent reply as a comment on the task discussion
+    task_id = suggestion.get("task_id")
+    if task_id:
+        from app.models import TaskComment
+        comment = TaskComment(
+            organization_id=suggestion["organization_id"],
+            task_id=task_id if isinstance(task_id, ObjectId) else ObjectId(task_id),
+            user_id=str(current_user.id),
+            user_name=current_user.name or current_user.email,
+            content=f"**Replied in Slack:**\n> {content}",
+        )
+        await db.task_comments.insert_one(comment.model_dump_mongo())
+
     return {
         "action": "sent",
         "suggestion_type": "slack_reply",
