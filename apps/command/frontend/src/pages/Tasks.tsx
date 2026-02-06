@@ -94,7 +94,7 @@ export default function Tasks() {
   }, [fetchQueues, fetchTasks])
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter((task) => {
+    const filtered = tasks.filter((task) => {
       if (filterQueue && task.queue_id !== filterQueue) return false
       if (filterStatus === 'active' && (task.status === 'completed' || task.status === 'failed')) return false
       if (filterStatus && filterStatus !== 'active' && task.status !== filterStatus) return false
@@ -104,6 +104,13 @@ export default function Tasks() {
       if (filterAssignee && task.assigned_to_id !== filterAssignee) return false
       if (filterApprover && task.approver_id !== filterApprover) return false
       return true
+    })
+    // Sort by sequence (ascending), then by created_at — same as My Active Tasks
+    return [...filtered].sort((a, b) => {
+      const seqA = a.sequence ?? Number.MAX_VALUE
+      const seqB = b.sequence ?? Number.MAX_VALUE
+      if (seqA !== seqB) return seqA - seqB
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     })
   }, [tasks, filterQueue, filterStatus, filterPhase, filterProject, filterPlaybook, filterAssignee, filterApprover])
 
