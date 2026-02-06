@@ -24,6 +24,7 @@ import {
   RotateCcw,
   Check,
   Timer,
+  Wand2,
 } from 'lucide-react'
 import { InlineVoiceTranscription } from '@expertly/ui'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, TaskSuggestion, UpdateTaskRequest, TaskPhase, RecurrenceType } from '../services/api'
@@ -218,6 +219,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
 
   // Timer modal state
   const [showTimerModal, setShowTimerModal] = useState(false)
+
+  // Regenerate description state
+  const [regeneratingDescription, setRegeneratingDescription] = useState(false)
 
   const fetchData = useCallback(async () => {
     if (!taskId) return
@@ -497,6 +501,19 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const handleApprove = () => handlePhaseTransition(() => api.approveTask(taskId))
   const handleResumeWork = () => handlePhaseTransition(() => api.resumeWork(taskId))
 
+  const handleRegenerateDescription = async () => {
+    setRegeneratingDescription(true)
+    try {
+      const result = await api.regenerateTaskDescription(taskId)
+      setEditedDescription(result.description)
+    } catch (err) {
+      console.error('Failed to regenerate description:', err)
+      setError('Failed to rewrite description')
+    } finally {
+      setRegeneratingDescription(false)
+    }
+  }
+
   if (!isOpen) return null
 
   const statusConfig = task ? STATUS_CONFIG[task.status] || STATUS_CONFIG.queued : STATUS_CONFIG.queued
@@ -609,12 +626,23 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                   className="flex-1 px-3 py-2.5 bg-theme-bg-elevated/50 border border-theme-border/50 rounded-xl text-theme-text-primary text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 resize-y placeholder:text-theme-text-secondary/40 transition-all"
                   placeholder="Describe this task..."
                 />
-                <InlineVoiceTranscription
-                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
-                  onTranscribe={(text) => setEditedDescription(editedDescription ? editedDescription + ' ' + text : text)}
-                  size="sm"
-                  className="self-start mt-2"
-                />
+                <div className="flex flex-col gap-1 self-start mt-2">
+                  {task.source_monitor_id && (
+                    <button
+                      onClick={handleRegenerateDescription}
+                      disabled={regeneratingDescription}
+                      className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors group"
+                      title="Rewrite description with AI"
+                    >
+                      <Wand2 className={`w-4 h-4 text-theme-text-secondary/60 group-hover:text-primary-600 transition-colors ${regeneratingDescription ? 'animate-spin' : ''}`} />
+                    </button>
+                  )}
+                  <InlineVoiceTranscription
+                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
+                    onTranscribe={(text) => setEditedDescription(editedDescription ? editedDescription + ' ' + text : text)}
+                    size="sm"
+                  />
+                </div>
               </div>
 
               {/* Compact metadata strip */}
