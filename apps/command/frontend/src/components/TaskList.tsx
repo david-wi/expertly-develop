@@ -148,7 +148,9 @@ export default function TaskList({
             className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 transition-colors cursor-pointer ${
               isDragging ? 'opacity-50 bg-gray-100' : ''
             } ${isDragOver ? 'border-t-2 border-primary-500' : ''} ${isSelected ? 'bg-primary-50 border-l-2 border-primary-500' : ''}`}
-            title={queueName}
+            title={task.originated_at
+              ? `${queueName}${queueName ? ' · ' : ''}Originated: ${new Date(task.originated_at).toLocaleString(undefined, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}`
+              : queueName}
           >
             {/* Drag handle */}
             {draggable && (

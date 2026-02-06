@@ -383,7 +383,7 @@ class MonitorService:
                 context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:5]
-                    context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+                    context = "\n".join([m.get("text", "") for m in thread_messages])
 
                 is_actionable = await slack_title_service.is_actionable(message_text, context)
                 if not is_actionable:
@@ -394,7 +394,7 @@ class MonitorService:
                 handled_context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:20]
-                    handled_context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+                    handled_context = "\n".join([m.get("text", "") for m in thread_messages])
 
                 is_handled = await slack_title_service.is_already_handled(message_text, handled_context)
                 if is_handled:
@@ -500,7 +500,7 @@ class MonitorService:
             urgency_context = None
             if event.context_data and event.context_data.get("thread"):
                 thread_messages = event.context_data["thread"][:5]
-                urgency_context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+                urgency_context = "\n".join([m.get("text", "") for m in thread_messages])
             is_urgent = await slack_title_svc.is_urgent(urgency_text, urgency_context)
             if is_urgent:
                 logger.info(f"Urgent message detected, starring task: {urgency_text[:80]}")
@@ -521,7 +521,8 @@ class MonitorService:
             input_data=input_data,
             source_monitor_id=monitor["_id"],
             source_playbook_id=playbook_id if playbook_id else None,
-            source_url=source_url
+            source_url=source_url,
+            originated_at=event.provider_timestamp or datetime.now(timezone.utc),
         )
 
         # Check if Task model has the required fields, add them if we can
@@ -581,7 +582,7 @@ class MonitorService:
                 context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:5]
-                    context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+                    context = "\n".join([m.get("text", "") for m in thread_messages])
 
                 return await slack_title_service.generate_title(message_text, context, sender=sender, project_name=project_name)
             except Exception as e:
@@ -606,7 +607,7 @@ class MonitorService:
                 context = None
                 if event.context_data and event.context_data.get("thread"):
                     thread_messages = event.context_data["thread"][:5]
-                    context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+                    context = "\n".join([m.get("text", "") for m in thread_messages])
 
                 return await slack_title_service.generate_description(message_text, context, sender=sender)
             except Exception as e:
@@ -716,7 +717,7 @@ class MonitorService:
         context = None
         if event.context_data and event.context_data.get("thread"):
             thread_messages = event.context_data["thread"][:5]
-            context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+            context = "\n".join([m.get("text", "") for m in thread_messages])
 
         # Generate AI draft reply
         slack_title_service = get_slack_title_service()

@@ -502,7 +502,7 @@ Respond with ONLY "yes" or "no"."""
         if context:
             prompt += f"\n\nThread context:\n{context}"
 
-        max_tokens = 500
+        max_tokens = 2000
         temperature = 0.3
 
         # Try providers in order of availability
@@ -621,8 +621,6 @@ Respond with ONLY the reply text, nothing else."""
         """Generate a simple fallback description."""
         import re
         clean_text = re.sub(r'<@[A-Z0-9]+(\|[^>]+)?>', lambda m: m.group(1)[1:] if m.group(1) else '', message_text).strip()
-        if len(clean_text) > 500:
-            clean_text = clean_text[:497] + "..."
         return clean_text
 
     def _fallback_title(self, message_text: str, project_name: Optional[str] = None) -> str:

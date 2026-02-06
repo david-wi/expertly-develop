@@ -204,6 +204,7 @@ async def create_task(
         scheduled_start=data.scheduled_start,
         scheduled_end=data.scheduled_end,
         schedule_timezone=data.schedule_timezone,
+        originated_at=data.originated_at or datetime.now(timezone.utc),
         sequence=generate_initial_sequence(),
     )
 
@@ -1142,7 +1143,7 @@ async def regenerate_task_description(
     context = None
     if context_data and context_data.get("thread"):
         thread_messages = context_data["thread"][:5]
-        context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+        context = "\n".join([m.get("text", "") for m in thread_messages])
 
     # Extract sender name from event data
     sender = event_data.get("user_name") or event_data.get("sender_name")
@@ -1231,7 +1232,7 @@ async def bulk_regenerate_descriptions(
             context = None
             if context_data and context_data.get("thread"):
                 thread_messages = context_data["thread"][:5]
-                context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
+                context = "\n".join([m.get("text", "") for m in thread_messages])
 
             new_description = await slack_title_service.generate_description(message_text, context)
 
