@@ -81,3 +81,5 @@ Warns users before losing changes on modal close or page refresh.
 20260205 - Fix TMS sidebar username not appearing. Root cause: identity API CORS config missing tms.ai.devintensive.com + wrong API path (/api/v1/me instead of /api/v1/auth/me). PRs #486, #488.
 20260205 - Manage > Monitors: Make fetch now/backfill buttons prettier with icons/little buttons
 20250205 - Manage > Assignments: (1) Default status filter to exclude completed/failed items, (2) Add Assigned To column to assignments table
+20260205 - Manage > Monitors: Fix "Direct to inbox" trigger label → "Direct to tasks"
+20260205 - Manage > Monitors: Fix "unknown team member" in AI-generated task descriptions. Root cause: Slack user IDs not resolved to display names, sender identity not passed to AI service. Fix: Added user name resolution via Slack users.info API with caching, passed sender name through monitor service to AI prompt generation. Also added sender extraction for Gmail/Outlook providers. PR #504.
