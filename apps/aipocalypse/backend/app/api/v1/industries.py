@@ -9,8 +9,8 @@ router = APIRouter()
 
 def _to_response(doc: dict) -> dict:
     doc["id"] = str(doc.pop("_id"))
-    if doc.get("parent_id"):
-        doc["parent_id"] = str(doc["parent_id"])
+    parent = doc.get("parent_id")
+    doc["parent_id"] = str(parent) if parent else None
     doc["created_at"] = doc["created_at"].isoformat() if doc.get("created_at") else ""
     doc["updated_at"] = doc["updated_at"].isoformat() if doc.get("updated_at") else ""
     return doc
