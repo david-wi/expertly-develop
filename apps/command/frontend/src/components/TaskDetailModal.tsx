@@ -26,6 +26,7 @@ import {
   Timer,
   Wand2,
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { InlineVoiceTranscription } from '@expertly/ui'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, TaskSuggestion, UpdateTaskRequest, TaskPhase, RecurrenceType } from '../services/api'
 import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
@@ -145,21 +146,29 @@ function CommentContent({ content }: { content: string }) {
   const [expanded, setExpanded] = useState(false)
   const shouldTruncate = content.length > COMMENT_TRUNCATE_LENGTH
 
-  if (!shouldTruncate) {
-    return <div className="text-xs text-theme-text-primary whitespace-pre-wrap leading-relaxed">{content}</div>
-  }
+  const displayContent = shouldTruncate && !expanded
+    ? `${content.slice(0, COMMENT_TRUNCATE_LENGTH)}...`
+    : content
 
   return (
     <div className="text-xs text-theme-text-primary leading-relaxed">
-      <div className="whitespace-pre-wrap">
-        {expanded ? content : `${content.slice(0, COMMENT_TRUNCATE_LENGTH)}...`}
+      <div className="prose prose-xs max-w-none text-theme-text-primary [&_a]:text-primary-600 [&_a]:underline [&_blockquote]:border-l-2 [&_blockquote]:border-theme-border [&_blockquote]:pl-3 [&_blockquote]:text-theme-text-secondary [&_p]:my-1 [&_strong]:text-theme-text-primary">
+        <ReactMarkdown
+          components={{
+            a: ({ href, children }) => (
+              <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
+            ),
+          }}
+        >{displayContent}</ReactMarkdown>
       </div>
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="text-primary-600 hover:text-primary-700 font-medium mt-1"
-      >
-        {expanded ? 'Show less' : 'Show more'}
-      </button>
+      {shouldTruncate && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-primary-600 hover:text-primary-700 font-medium mt-1"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
     </div>
   )
 }
