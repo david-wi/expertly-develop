@@ -90,7 +90,7 @@ async def list_tasks(
     assigned_to_me: bool = False,
     user_id: str | None = None,
     project_id: str | None = None,
-    limit: int = 100,
+    limit: int = 500,
     current_user: User = Depends(get_current_user)
 ) -> list[dict]:
     """List tasks.
