@@ -1285,9 +1285,9 @@ async def auto_assign_projects(
 
     for task in tasks:
         # Extract event data from stored monitor event
-        input_data = task.get("input_data", {})
-        monitor_event = input_data.get("_monitor_event", {})
-        event_data = monitor_event.get("event_data", {})
+        input_data = task.get("input_data") or {}
+        monitor_event = input_data.get("_monitor_event") or {}
+        event_data = monitor_event.get("event_data") or {}
 
         if not event_data:
             continue
