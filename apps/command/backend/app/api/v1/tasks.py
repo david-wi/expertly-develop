@@ -1246,3 +1246,92 @@ async def bulk_regenerate_descriptions(
             result.errors.append(f"Task {task_id}: {str(e)}")
 
     return result
+
+
+# --- Auto-assign projects to tasks ---
+
+class AutoAssignProjectsResponse(BaseModel):
+    total_checked: int = 0
+    assigned: int = 0
+    assignments: list[dict] = []
+
+
+@router.post("/auto-assign-projects", response_model=AutoAssignProjectsResponse)
+async def auto_assign_projects(
+    current_user: User = Depends(get_current_user),
+    db=Depends(get_database),
+):
+    """
+    Auto-assign projects to active tasks that don't have one.
+
+    Matches based on sender email domain against project company domains
+    and sender email against project contact emails. Only assigns when
+    exactly one project matches (high confidence).
+    """
+    from app.services.monitor_service import MonitorService
+    monitor_service = MonitorService()
+
+    # Get active tasks without a project
+    tasks = await db.tasks.find({
+        "organization_id": current_user.organization_id,
+        "status": {"$in": ["queued", "checked_out", "in_progress"]},
+        "$or": [
+            {"project_id": None},
+            {"project_id": {"$exists": False}},
+        ],
+    }).to_list(500)
+
+    result = AutoAssignProjectsResponse(total_checked=len(tasks))
+
+    for task in tasks:
+        # Extract event data from stored monitor event
+        input_data = task.get("input_data", {})
+        monitor_event = input_data.get("_monitor_event", {})
+        event_data = monitor_event.get("event_data", {})
+
+        if not event_data:
+            continue
+
+        # Determine provider from source monitor
+        provider = None
+        source_monitor_id = task.get("source_monitor_id")
+        if source_monitor_id:
+            monitor = await db.monitors.find_one({"_id": source_monitor_id})
+            if monitor:
+                provider = monitor.get("provider")
+
+        # If no monitor found, try to infer provider from event data
+        if not provider:
+            if event_data.get("from") and isinstance(event_data["from"], dict):
+                provider = "gmail"
+            elif event_data.get("channel_id"):
+                provider = "slack"
+
+        matched_project_id = await monitor_service.auto_match_project(
+            organization_id=task["organization_id"],
+            event_data=event_data,
+            provider=provider,
+        )
+
+        if matched_project_id:
+            await db.tasks.update_one(
+                {"_id": task["_id"]},
+                {"$set": {
+                    "project_id": matched_project_id,
+                    "updated_at": datetime.now(timezone.utc),
+                }}
+            )
+
+            # Look up project name for the response
+            project = await db.projects.find_one({"_id": matched_project_id})
+            project_name = project.get("name", "Unknown") if project else "Unknown"
+
+            result.assigned += 1
+            result.assignments.append({
+                "task_id": str(task["_id"]),
+                "task_title": task.get("title", ""),
+                "project_id": str(matched_project_id),
+                "project_name": project_name,
+            })
+
+    return result

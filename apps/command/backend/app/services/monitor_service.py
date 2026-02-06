@@ -233,6 +233,84 @@ class MonitorService:
 
         return False
 
+    async def auto_match_project(
+        self,
+        organization_id: str,
+        event_data: Optional[dict] = None,
+        provider: Optional[str] = None,
+    ) -> Optional[ObjectId]:
+        """
+        Try to auto-match a project based on event data (email sender domain/address).
+
+        Only returns a project if exactly ONE project matches and the match is
+        high-confidence (domain or email match). Returns None otherwise.
+        """
+        if not event_data:
+            return None
+
+        # Extract sender email from event data
+        sender_email = None
+        if provider in ("gmail", "outlook"):
+            from_info = event_data.get("from", {})
+            sender_email = from_info.get("email", "").lower().strip()
+        elif provider == "slack":
+            # Slack doesn't have email-based matching — skip
+            return None
+
+        if not sender_email or "@" not in sender_email:
+            return None
+
+        sender_domain = sender_email.split("@")[1]
+
+        # Skip generic email domains that wouldn't uniquely identify a project
+        generic_domains = {
+            "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
+            "aol.com", "icloud.com", "mail.com", "protonmail.com",
+            "live.com", "msn.com", "me.com", "ymail.com",
+        }
+        if sender_domain in generic_domains:
+            return None
+
+        # Get all active projects in this org that have companies or contacts
+        projects = await self.db.projects.find({
+            "organization_id": organization_id,
+            "status": "active",
+        }).to_list(500)
+
+        matched_projects: list[ObjectId] = []
+
+        for project in projects:
+            # Check company domains
+            for company in project.get("companies", []):
+                for domain in company.get("domains", []):
+                    if domain.lower().strip() == sender_domain:
+                        matched_projects.append(project["_id"])
+                        break
+                if project["_id"] in matched_projects:
+                    break
+
+            if project["_id"] in matched_projects:
+                continue
+
+            # Check contact emails
+            for contact in project.get("contacts", []):
+                for email in contact.get("emails", []):
+                    if email.lower().strip() == sender_email:
+                        matched_projects.append(project["_id"])
+                        break
+                if project["_id"] in matched_projects:
+                    break
+
+        # Only auto-assign if exactly one project matches
+        if len(matched_projects) == 1:
+            logger.info(f"Auto-matched project {matched_projects[0]} for sender {sender_email}")
+            return matched_projects[0]
+
+        if len(matched_projects) > 1:
+            logger.info(f"Multiple projects matched for sender {sender_email}, skipping auto-assign")
+
+        return None
+
     async def trigger_playbook(self, monitor: dict, event: MonitorAdapterEvent) -> Optional[ObjectId]:
         """
         Create a task based on a detected event, optionally triggering a playbook.
@@ -316,12 +394,25 @@ class MonitorService:
             "provider_timestamp": event.provider_timestamp.isoformat() if event.provider_timestamp else None
         }
 
-        # Look up project name if monitor has a project assigned
+        # Determine project: use monitor's project, or try auto-matching
+        project_id = monitor.get("project_id")
         project_name = None
-        if monitor.get("project_id"):
-            project = await self.db.projects.find_one({"_id": monitor["project_id"]})
+        if project_id:
+            project = await self.db.projects.find_one({"_id": project_id})
             if project:
                 project_name = project.get("name")
+        else:
+            # Auto-match project based on event data (e.g., sender email domain)
+            matched_project_id = await self.auto_match_project(
+                organization_id=monitor["organization_id"],
+                event_data=event.event_data,
+                provider=provider,
+            )
+            if matched_project_id:
+                project_id = matched_project_id
+                project = await self.db.projects.find_one({"_id": matched_project_id})
+                if project:
+                    project_name = project.get("name")
 
         # Generate task title and description - use AI for Slack mentions
         task_title = await self._generate_ai_task_title(monitor, event, project_name=project_name)
@@ -349,7 +440,7 @@ class MonitorService:
             description=task_description,
             status=TaskStatus.QUEUED,
             priority=5,
-            project_id=monitor.get("project_id"),
+            project_id=project_id,
             input_data=input_data,
             source_monitor_id=monitor["_id"],
             source_playbook_id=playbook_id if playbook_id else None,
