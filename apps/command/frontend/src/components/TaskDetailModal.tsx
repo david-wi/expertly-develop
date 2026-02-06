@@ -523,6 +523,18 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   // Wrap onClose to check for unsaved changes
   const handleClose = confirmClose(onClose)
 
+  // Close on Escape key
+  useEffect(() => {
+    if (!isOpen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        confirmClose(onClose)()
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [isOpen, confirmClose, onClose])
+
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
