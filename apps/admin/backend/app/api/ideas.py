@@ -66,7 +66,7 @@ async def list_ideas(
     """List ideas with optional filters.
 
     When organization_id is provided, returns org-specific backlog items.
-    When backlog_type='work' (without organization_id), returns all items that have an org_id.
+    When backlog_type='work' (without organization_id), returns all items for the product.
     When neither is provided, returns only product-wide ideas (org_id=NULL).
     """
     ideas = await service.get_ideas(
