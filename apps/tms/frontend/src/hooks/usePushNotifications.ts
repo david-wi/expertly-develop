@@ -101,7 +101,7 @@ export function usePushNotifications() {
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: VAPID_PUBLIC_KEY
-          ? urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          ? urlBase64ToUint8Array(VAPID_PUBLIC_KEY) as unknown as BufferSource
           : undefined,
       })
 

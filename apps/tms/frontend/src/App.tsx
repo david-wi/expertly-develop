@@ -30,6 +30,10 @@ import EDIManager from './pages/EDIManager'
 import RateManagement from './pages/RateManagement'
 import Communications from './pages/Communications'
 import RoleManagement from './pages/RoleManagement'
+import DriverLogin from './pages/DriverLogin'
+import DriverApp from './pages/DriverApp'
+import DriverLoadDetail from './pages/DriverLoadDetail'
+import GlobalSearch from './pages/GlobalSearch'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -39,6 +43,10 @@ function App() {
         {/* Public tracking portal (no auth required) */}
         <Route path="/track/:token" element={<TrackingPortal />} />
         <Route path="/landing" element={<LandingPage />} />
+        {/* Driver mobile app (separate layout, no sidebar) */}
+        <Route path="/driver/login" element={<DriverLogin />} />
+        <Route path="/driver" element={<DriverApp />} />
+        <Route path="/driver/load/:id" element={<DriverLoadDetail />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="inbox" element={<Inbox />} />
@@ -68,6 +76,7 @@ function App() {
           <Route path="rate-tables" element={<RateManagement />} />
           <Route path="communications" element={<Communications />} />
           <Route path="roles" element={<RoleManagement />} />
+          <Route path="search" element={<GlobalSearch />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>
       </Routes>
