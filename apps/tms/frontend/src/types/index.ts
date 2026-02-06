@@ -1335,3 +1335,157 @@ export interface RealtimeDashboard {
     by_type: Record<string, number>
   }
 }
+
+// ============================================================================
+// Approval Types
+// ============================================================================
+
+export type ApprovalType = 'rate_override' | 'credit_extension' | 'high_value_shipment' | 'carrier_exception' | 'discount_approval'
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'auto_approved'
+
+export interface Approval {
+  id: string
+  approval_type: ApprovalType
+  status: ApprovalStatus
+  title: string
+  description?: string
+  requested_by?: string
+  approved_by?: string
+  entity_type: string
+  entity_id: string
+  amount?: number
+  threshold_amount?: number
+  metadata?: Record<string, unknown>
+  approved_at?: string
+  rejected_at?: string
+  rejection_reason?: string
+  expires_at?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface ApprovalThreshold {
+  approval_type: ApprovalType
+  max_auto_approve_amount: number
+  enabled: boolean
+  notify_on_auto_approve: boolean
+}
+
+export interface ApprovalSettings {
+  thresholds: ApprovalThreshold[]
+  created_at: string
+  updated_at: string
+}
+
+export const APPROVAL_TYPE_LABELS: Record<ApprovalType, string> = {
+  rate_override: 'Rate Override',
+  credit_extension: 'Credit Extension',
+  high_value_shipment: 'High Value Shipment',
+  carrier_exception: 'Carrier Exception',
+  discount_approval: 'Discount Approval',
+}
+
+export const APPROVAL_STATUS_LABELS: Record<ApprovalStatus, string> = {
+  pending: 'Pending',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  auto_approved: 'Auto-Approved',
+}
+
+// ============================================================================
+// Analytics Types
+// ============================================================================
+
+export interface OperationsMetrics {
+  work_items: { open: number; avg_completion_hours: number; by_type: Record<string, number>; overdue: number }
+  quotes: { total: number; win_rate: number; avg_response_hours: number }
+  tenders: { acceptance_rate: number; avg_acceptance_hours: number; counter_offer_rate: number }
+  period_days: number
+}
+
+export interface LaneData {
+  origin_state: string
+  destination_state: string
+  volume: number
+  avg_rate: number
+  avg_margin: number
+  avg_margin_percent: number
+  top_carriers: Array<{ carrier_id: string; carrier_name: string; loads: number; on_time_pct: number }>
+}
+
+// ============================================================================
+// Automation Builder Types
+// ============================================================================
+
+export type AutomationTrigger = 'shipment_created' | 'shipment_status_changed' | 'tender_accepted' | 'tender_declined' | 'quote_request_received' | 'work_item_created' | 'invoice_due' | 'check_call_overdue'
+export type AutomationAction = 'create_work_item' | 'send_notification' | 'assign_carrier' | 'update_status' | 'create_tender' | 'auto_approve' | 'escalate' | 'send_email'
+export type RolloutStage = 'disabled' | 'shadow' | 'partial' | 'full'
+
+export interface AutomationCondition {
+  field: string
+  operator: string
+  value: unknown
+}
+
+export interface AutomationRule {
+  id: string
+  name: string
+  description: string
+  trigger: AutomationTrigger
+  conditions: AutomationCondition[]
+  action: AutomationAction
+  action_config: Record<string, unknown>
+  rollout_stage: RolloutStage
+  rollout_percentage: number
+  priority: number
+  enabled: boolean
+  last_triggered_at?: string
+  trigger_count: number
+  shadow_log: Array<Record<string, unknown>>
+  created_at: string
+  updated_at: string
+}
+
+export interface TestAutomationResult {
+  entity_type: string
+  entity_id: string
+  matched_rules: Array<{
+    rule_id: string
+    rule_name: string
+    trigger: AutomationTrigger
+    action: AutomationAction
+    action_config: Record<string, unknown>
+    conditions_met: boolean
+  }>
+  actions_that_would_fire: Array<Record<string, unknown>>
+  simulation_results: Array<Record<string, unknown>>
+}
+
+export const AUTOMATION_TRIGGER_LABELS: Record<AutomationTrigger, string> = {
+  shipment_created: 'Shipment Created',
+  shipment_status_changed: 'Shipment Status Changed',
+  tender_accepted: 'Tender Accepted',
+  tender_declined: 'Tender Declined',
+  quote_request_received: 'Quote Request Received',
+  work_item_created: 'Work Item Created',
+  invoice_due: 'Invoice Due',
+  check_call_overdue: 'Check Call Overdue',
+}
+
+export const AUTOMATION_ACTION_LABELS: Record<AutomationAction, string> = {
+  create_work_item: 'Create Work Item',
+  send_notification: 'Send Notification',
+  assign_carrier: 'Assign Carrier',
+  update_status: 'Update Status',
+  create_tender: 'Create Tender',
+  auto_approve: 'Auto Approve',
+  escalate: 'Escalate',
+  send_email: 'Send Email',
+}
+
+export const ROLLOUT_STAGE_LABELS: Record<RolloutStage, string> = {
+  disabled: 'Disabled',
+  shadow: 'Shadow',
+  partial: 'Partial',
+  full: 'Full',
+}

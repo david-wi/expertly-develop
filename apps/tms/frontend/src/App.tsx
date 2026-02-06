@@ -18,6 +18,10 @@ import LoadBoards from './pages/LoadBoards'
 import LandingPage from './pages/LandingPage'
 import ProductComparison from './pages/ProductComparison'
 import TrackingPortal from './pages/TrackingPortal'
+import ApprovalCenter from './pages/ApprovalCenter'
+import OperationsMetrics from './pages/OperationsMetrics'
+import LaneIntelligence from './pages/LaneIntelligence'
+import AutomationBuilder from './pages/AutomationBuilder'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -44,6 +48,10 @@ function App() {
           <Route path="loadboards" element={<LoadBoards />} />
           <Route path="settings" element={<Settings />} />
           <Route path="desks" element={<DeskManagement />} />
+          <Route path="approvals" element={<ApprovalCenter />} />
+          <Route path="operations-metrics" element={<OperationsMetrics />} />
+          <Route path="lane-intelligence" element={<LaneIntelligence />} />
+          <Route path="automations" element={<AutomationBuilder />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>
       </Routes>
