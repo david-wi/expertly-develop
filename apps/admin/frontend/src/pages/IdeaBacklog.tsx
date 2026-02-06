@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
 import { usersApi } from '@/services/api'
@@ -103,7 +103,7 @@ interface IdeaCreate {
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const ideasApi = {
-  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string }): Promise<Idea[]> {
+  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string; backlog_type?: string }): Promise<Idea[]> {
     const searchParams = new URLSearchParams()
     if (params?.product) searchParams.set('product', params.product)
     if (params?.status) searchParams.set('status', params.status)
@@ -111,6 +111,7 @@ const ideasApi = {
     if (params?.include_archived) searchParams.set('include_archived', 'true')
     if (params?.user_email) searchParams.set('user_email', params.user_email)
     if (params?.organization_id) searchParams.set('organization_id', params.organization_id)
+    if (params?.backlog_type) searchParams.set('backlog_type', params.backlog_type)
     const query = searchParams.toString()
     const res = await fetch(`${API_BASE}/ideas${query ? `?${query}` : ''}`, {
       credentials: 'include',
@@ -819,6 +820,7 @@ function CreateIdeaModal({
 
 export function IdeaBacklog() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
   const queryClient = useQueryClient()
 
   // Get filters from URL
@@ -829,8 +831,8 @@ export function IdeaBacklog() {
   const [includeArchived, setIncludeArchived] = useState(false)
   const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority')
 
-  // Determine if we're in "Work Backlog" mode (org-specific) vs "Idea Backlog" mode (product-wide)
-  const isWorkBacklogMode = !!organizationId
+  // Determine if we're in "Work Backlog" mode based on URL path (not just org_id param)
+  const isWorkBacklogMode = location.pathname === '/work-backlog'
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null)
@@ -849,7 +851,7 @@ export function IdeaBacklog() {
 
   // Fetch ideas - don't wait for user email, it's only needed for vote status
   const { data: ideas = [], isLoading: isIdeasLoading, refetch } = useQuery({
-    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId],
+    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
       status: statusFilter || undefined,
@@ -857,6 +859,7 @@ export function IdeaBacklog() {
       include_archived: includeArchived,
       user_email: userEmail || undefined,
       organization_id: organizationId || undefined,
+      backlog_type: isWorkBacklogMode ? 'work' : undefined,
     }),
   })
 
@@ -1073,7 +1076,7 @@ export function IdeaBacklog() {
             </div>
             <div>
               <p className="text-2xl font-bold text-theme-text-primary">{newCount}</p>
-              <p className="text-sm text-theme-text-secondary">New Ideas</p>
+              <p className="text-sm text-theme-text-secondary">{isWorkBacklogMode ? 'New Items' : 'New Ideas'}</p>
             </div>
           </div>
         </div>
@@ -1244,11 +1247,17 @@ export function IdeaBacklog() {
         ) : sortedIdeas.length === 0 ? (
           <div className="col-span-full bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
             <Lightbulb className="w-8 h-8 mx-auto mb-2" />
-            <p className="text-lg font-medium text-theme-text-primary mb-1">No ideas yet</p>
+            <p className="text-lg font-medium text-theme-text-primary mb-1">
+              {isWorkBacklogMode ? 'No work items yet' : 'No ideas yet'}
+            </p>
             <p className="text-sm">
-              {productFilter
-                ? `No ideas for ${productFilter}. Got a spark of inspiration? Capture it!`
-                : "Got a spark of inspiration? Capture it here!"}
+              {isWorkBacklogMode
+                ? productFilter
+                  ? `No work items for ${getProductDisplayName(productFilter)}.`
+                  : 'No work items found.'
+                : productFilter
+                  ? `No ideas for ${productFilter}. Got a spark of inspiration? Capture it!`
+                  : "Got a spark of inspiration? Capture it here!"}
             </p>
           </div>
         ) : (
