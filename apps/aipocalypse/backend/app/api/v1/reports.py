@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from bson import ObjectId
 from app.database import get_database
 from app.models.base import utc_now
+from app.schemas.research_report import ReportCreate
 import logging
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,51 @@ async def list_reports(company_id: str = None, limit: int = 50):
     async for doc in cursor:
         results.append(_to_list_item(doc))
     return results
+
+
+@router.post("", status_code=201)
+async def create_report(data: ReportCreate):
+    """Create a report directly (for manually-authored reports)."""
+    db = get_database()
+    company = await db.companies.find_one({"_id": ObjectId(data.company_id)})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Determine next version
+    latest_report = await db.research_reports.find_one(
+        {"company_id": data.company_id},
+        sort=[("version", -1)]
+    )
+    next_version = (latest_report["version"] + 1) if latest_report else 1
+
+    now = utc_now()
+    report_doc = {
+        **data.model_dump(),
+        "company_name": company.get("name", ""),
+        "company_ticker": company.get("ticker", ""),
+        "version": next_version,
+        "raw_financial_data": None,
+        "raw_sec_data": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    result = await db.research_reports.insert_one(report_doc)
+    report_doc["_id"] = result.inserted_id
+
+    # Update company with latest report info
+    await db.companies.update_one(
+        {"_id": company["_id"]},
+        {"$set": {
+            "latest_signal": report_doc["signal"],
+            "latest_report_id": str(result.inserted_id),
+            "latest_report_date": now,
+            "updated_at": now,
+        },
+        "$inc": {"report_count": 1}}
+    )
+
+    return _to_response(report_doc)
 
 
 @router.get("/{report_id}")
