@@ -1957,5 +1957,7 @@ export interface GenerateTaskSuggestionsResponse {
     task_title: string
     suggestion_type: SuggestionType
     title: string
+    content: string
+    provider_data: Record<string, unknown>
   }>
 }

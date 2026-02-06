@@ -536,6 +536,8 @@ async def generate_task_suggestions(
                 "task_title": task.get("title", ""),
                 "suggestion_type": suggestion_type,
                 "title": s.get("title", ""),
+                "content": s.get("content", ""),
+                "provider_data": provider_data,
             })
 
     return {

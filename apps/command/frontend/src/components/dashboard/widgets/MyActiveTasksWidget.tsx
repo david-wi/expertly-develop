@@ -188,10 +188,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     try {
       const result = await api.generateTaskSuggestions()
       setSuggestionsResult({ generated: result.generated, tasks_analyzed: result.tasks_analyzed })
-      // If suggestions were generated, open the first task's detail modal to show them
-      if (result.generated > 0 && result.suggestions.length > 0) {
-        setSelectedTaskId(result.suggestions[0].task_id)
-      }
+      // Suggestions are saved to DB; users will see them when opening individual tasks
       setTimeout(() => setSuggestionsResult(null), 5000)
     } catch (err) {
       console.error('Failed to generate suggestions:', err)
