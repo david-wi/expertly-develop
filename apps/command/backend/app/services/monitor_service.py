@@ -316,9 +316,20 @@ class MonitorService:
             "provider_timestamp": event.provider_timestamp.isoformat() if event.provider_timestamp else None
         }
 
+        # Look up project name if monitor has a project assigned
+        project_name = None
+        if monitor.get("project_id"):
+            project = await self.db.projects.find_one({"_id": monitor["project_id"]})
+            if project:
+                project_name = project.get("name")
+
         # Generate task title and description - use AI for Slack mentions
         task_title = await self._generate_ai_task_title(monitor, event)
         task_description = await self._generate_ai_task_description(monitor, event)
+
+        # Prepend project name to title when relevant
+        if project_name:
+            task_title = f"[{project_name}] {task_title}"
 
         # Extract source_url from event (e.g., Slack permalink)
         source_url = event.event_data.get("permalink")
