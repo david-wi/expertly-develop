@@ -234,7 +234,8 @@ Guidelines:
 3. Capture the essence of what David needs to do
 4. Don't include @mentions, Slack markup, or user IDs
 5. Write from David's perspective as a task he needs to complete
-6. If no clear action, use "Review: [brief topic summary]"
+6. If a project name is provided, weave it naturally into the title (e.g. "Review John's Portal deployment request" not "[Portal] Review John's deployment request")
+7. If no clear action, use "Review: [brief topic summary]"
 
 Respond with ONLY the task title, nothing else."""
 
@@ -256,7 +257,7 @@ Respond with ONLY the task title, nothing else."""
         import os
         return bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GROQ_API_KEY"))
 
-    async def generate_title(self, message_text: str, context: Optional[str] = None, sender: Optional[str] = None) -> str:
+    async def generate_title(self, message_text: str, context: Optional[str] = None, sender: Optional[str] = None, project_name: Optional[str] = None) -> str:
         """
         Generate a task title from a Slack message.
 
@@ -264,16 +265,19 @@ Respond with ONLY the task title, nothing else."""
             message_text: The main message text
             context: Optional context (thread messages, etc.)
             sender: Optional sender name (who wrote the message)
+            project_name: Optional project name to incorporate into the title
 
         Returns:
             Generated task title
         """
         if not self.is_configured():
-            return self._fallback_title(message_text)
+            return self._fallback_title(message_text, project_name=project_name)
 
         prompt = ""
         if sender:
             prompt += f"From: {sender}\n"
+        if project_name:
+            prompt += f"Project: {project_name}\n"
         prompt += f"Slack message: {message_text}"
         if context:
             prompt += f"\n\nContext:\n{context}"
@@ -281,7 +285,7 @@ Respond with ONLY the task title, nothing else."""
         try:
             title = await self._call_with_fallback(
                 self.SYSTEM_PROMPT, prompt, 100, 0.3,
-                fallback_fn=lambda: self._fallback_title(message_text)
+                fallback_fn=lambda: self._fallback_title(message_text, project_name=project_name)
             )
             # Clean up response
             title = title.strip().strip('"').strip("'")
@@ -290,7 +294,7 @@ Respond with ONLY the task title, nothing else."""
             return title
         except Exception as e:
             logger.warning(f"AI title generation failed: {e}")
-            return self._fallback_title(message_text)
+            return self._fallback_title(message_text, project_name=project_name)
 
     DESCRIPTION_SYSTEM_PROMPT = """You are a task description writer for David's task management system. Given a Slack message (and optionally thread context of up to 5 messages), write a thorough, actionable task description from David's perspective.
 
@@ -493,16 +497,17 @@ Respond with ONLY "yes" or "no"."""
             clean_text = clean_text[:497] + "..."
         return clean_text
 
-    def _fallback_title(self, message_text: str) -> str:
-        """Generate a simple fallback title."""
+    def _fallback_title(self, message_text: str, project_name: Optional[str] = None) -> str:
+        """Generate a simple fallback title, incorporating project name when available."""
         import re
         clean_text = re.sub(r'<@[A-Z0-9]+(\|[^>]+)?>', '', message_text).strip()
+        prefix = f"{project_name}: " if project_name else ""
 
-        if len(clean_text) > 50:
-            return f"[Slack] {clean_text[:47]}..."
+        if len(clean_text) > 60:
+            return f"{prefix}{clean_text[:57]}..."
         elif clean_text:
-            return f"[Slack] {clean_text}"
-        return "[Slack] New mention"
+            return f"{prefix}{clean_text}"
+        return f"{prefix}New mention"
 
     async def _call_groq(self, model_id: str, prompt: str, max_tokens: int, temperature: float) -> str:
         """Call Groq API."""

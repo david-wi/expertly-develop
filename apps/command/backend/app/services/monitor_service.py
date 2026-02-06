@@ -324,12 +324,8 @@ class MonitorService:
                 project_name = project.get("name")
 
         # Generate task title and description - use AI for Slack mentions
-        task_title = await self._generate_ai_task_title(monitor, event)
+        task_title = await self._generate_ai_task_title(monitor, event, project_name=project_name)
         task_description = await self._generate_ai_task_description(monitor, event)
-
-        # Prepend project name to title when relevant
-        if project_name:
-            task_title = f"[{project_name}] {task_title}"
 
         # Extract source_url from event (e.g., Slack permalink)
         source_url = event.event_data.get("permalink")
@@ -387,7 +383,7 @@ class MonitorService:
             return from_info.get("name") or from_info.get("email")
         return None
 
-    async def _generate_ai_task_title(self, monitor: dict, event: MonitorAdapterEvent) -> str:
+    async def _generate_ai_task_title(self, monitor: dict, event: MonitorAdapterEvent, project_name: Optional[str] = None) -> str:
         """Generate an AI-powered task title for Slack mentions, fallback to simple title."""
         provider = monitor.get("provider", "unknown")
         provider_config = monitor.get("provider_config", {})
@@ -405,12 +401,12 @@ class MonitorService:
                     thread_messages = event.context_data["thread"][:5]
                     context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
-                return await slack_title_service.generate_title(message_text, context, sender=sender)
+                return await slack_title_service.generate_title(message_text, context, sender=sender, project_name=project_name)
             except Exception as e:
                 logger.warning(f"AI title generation failed: {e}")
 
         # Fallback to simple title generation
-        return self._generate_task_title(monitor, event)
+        return self._generate_task_title(monitor, event, project_name=project_name)
 
     async def _generate_ai_task_description(self, monitor: dict, event: MonitorAdapterEvent) -> str:
         """Generate an AI-powered task description for Slack mentions, fallback to simple description."""
@@ -491,30 +487,27 @@ class MonitorService:
         )
         await self.db.task_comments.insert_one(comment.model_dump_mongo())
 
-    def _generate_task_title(self, monitor: dict, event: MonitorAdapterEvent) -> str:
-        """Generate a task title from the event."""
+    def _generate_task_title(self, monitor: dict, event: MonitorAdapterEvent, project_name: Optional[str] = None) -> str:
+        """Generate a task title from the event, incorporating project name when available."""
+        import re
         provider = monitor.get("provider", "unknown")
+        prefix = f"{project_name}: " if project_name else ""
 
         if provider == "slack":
             text = event.event_data.get("text", "")
-            # Truncate long messages
-            if len(text) > 50:
-                text = text[:47] + "..."
-            return f"[Slack] {text}" if text else "[Slack] New message"
+            # Clean up Slack markup
+            text = re.sub(r'<@[A-Z0-9]+(\|[^>]+)?>', '', text).strip()
+            if len(text) > 60:
+                text = text[:57] + "..."
+            return f"{prefix}{text}" if text else f"{prefix}New message"
 
-        if provider == "gmail":
+        if provider in ("gmail", "outlook"):
             subject = event.event_data.get("subject", "")
-            if len(subject) > 50:
-                subject = subject[:47] + "..."
-            return f"[Gmail] {subject}" if subject else "[Gmail] New email"
+            if len(subject) > 60:
+                subject = subject[:57] + "..."
+            return f"{prefix}{subject}" if subject else f"{prefix}New email"
 
-        if provider == "outlook":
-            subject = event.event_data.get("subject", "")
-            if len(subject) > 50:
-                subject = subject[:47] + "..."
-            return f"[Outlook] {subject}" if subject else "[Outlook] New email"
-
-        return f"[{monitor.get('name', 'Monitor')}] Event detected"
+        return f"{prefix}Event detected"
 
     def _generate_task_description(self, monitor: dict, event: MonitorAdapterEvent) -> str:
         """Generate a task description from the event (fallback when AI is unavailable)."""
