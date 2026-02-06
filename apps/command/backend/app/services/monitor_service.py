@@ -251,7 +251,10 @@ class MonitorService:
         is clear. Returns None if zero or multiple projects match.
         """
         # Build search text from all available task info
-        search_text = " ".join([task_title, task_description, sender_name, sender_email]).lower()
+        search_text = " ".join([
+            task_title or "", task_description or "",
+            sender_name or "", sender_email or "",
+        ]).lower()
         if not search_text.strip():
             return None
 
