@@ -21,6 +21,11 @@ def _to_response(doc: dict) -> dict:
     for citation in doc.get("citations", []):
         if citation.get("accessed_at") and hasattr(citation["accessed_at"], "isoformat"):
             citation["accessed_at"] = citation["accessed_at"].isoformat()
+    # Ensure new optional fields are present
+    doc.setdefault("price_history", None)
+    doc.setdefault("analyst_consensus", None)
+    doc.setdefault("key_metrics", None)
+    doc.setdefault("management_strategy_response", None)
     return doc
 
 
@@ -51,6 +56,51 @@ async def list_reports(company_id: str = None, limit: int = 50):
     async for doc in cursor:
         results.append(_to_list_item(doc))
     return results
+
+
+@router.post("/backfill")
+async def backfill_reports():
+    """Backfill existing reports with price_history, analyst_consensus, and key_metrics."""
+    from app.services.financial_data import get_price_history, get_analyst_data, get_key_metrics
+
+    db = get_database()
+    # Find reports missing any of the new fields
+    query = {
+        "$or": [
+            {"price_history": {"$exists": False}},
+            {"analyst_consensus": {"$exists": False}},
+            {"key_metrics": {"$exists": False}},
+            {"price_history": None},
+            {"analyst_consensus": None},
+            {"key_metrics": None},
+        ]
+    }
+    cursor = db.research_reports.find(query)
+    updated = 0
+    errors = []
+    async for doc in cursor:
+        ticker = doc.get("company_ticker", "")
+        if not ticker:
+            continue
+        try:
+            price_history = await get_price_history(ticker)
+            analyst_consensus = await get_analyst_data(ticker)
+            key_metrics = await get_key_metrics(ticker)
+            await db.research_reports.update_one(
+                {"_id": doc["_id"]},
+                {"$set": {
+                    "price_history": price_history,
+                    "analyst_consensus": analyst_consensus,
+                    "key_metrics": key_metrics,
+                    "updated_at": utc_now(),
+                }}
+            )
+            updated += 1
+        except Exception as e:
+            errors.append({"ticker": ticker, "error": str(e)})
+            logger.warning(f"Backfill failed for {ticker}: {e}")
+
+    return {"updated": updated, "errors": errors}
 
 
 @router.post("", status_code=201)
