@@ -236,80 +236,126 @@ class MonitorService:
     async def auto_match_project(
         self,
         organization_id: str,
-        event_data: Optional[dict] = None,
-        provider: Optional[str] = None,
+        task_title: str = "",
+        task_description: str = "",
+        sender_name: str = "",
+        sender_email: str = "",
     ) -> Optional[ObjectId]:
         """
-        Try to auto-match a project based on event data (email sender domain/address).
+        Try to auto-match a project based on task text and sender info.
 
-        Only returns a project if exactly ONE project matches and the match is
-        high-confidence (domain or email match). Returns None otherwise.
+        Compares task title, description, and sender name/email against all
+        active project names, descriptions, contacts, companies, and domains.
+
+        Only returns a project if exactly ONE project matches and the match
+        is clear. Returns None if zero or multiple projects match.
         """
-        if not event_data:
+        # Build search text from all available task info
+        search_text = " ".join([task_title, task_description, sender_name, sender_email]).lower()
+        if not search_text.strip():
             return None
 
-        # Extract sender email from event data
-        sender_email = None
-        if provider in ("gmail", "outlook"):
-            from_info = event_data.get("from", {})
-            sender_email = from_info.get("email", "").lower().strip()
-        elif provider == "slack":
-            # Slack doesn't have email-based matching — skip
-            return None
-
-        if not sender_email or "@" not in sender_email:
-            return None
-
-        sender_domain = sender_email.split("@")[1]
-
-        # Skip generic email domains that wouldn't uniquely identify a project
+        # Extract sender domain for domain matching
+        sender_domain = ""
         generic_domains = {
             "gmail.com", "yahoo.com", "hotmail.com", "outlook.com",
             "aol.com", "icloud.com", "mail.com", "protonmail.com",
             "live.com", "msn.com", "me.com", "ymail.com",
         }
-        if sender_domain in generic_domains:
-            return None
+        if sender_email and "@" in sender_email:
+            sender_domain = sender_email.lower().split("@")[1]
+            if sender_domain in generic_domains:
+                sender_domain = ""  # Don't match on generic domains
 
-        # Get all active projects in this org that have companies or contacts
+        # Get all active projects
         projects = await self.db.projects.find({
             "organization_id": organization_id,
             "status": "active",
         }).to_list(500)
 
-        matched_projects: list[ObjectId] = []
+        matched_project_ids: list[ObjectId] = []
 
         for project in projects:
-            # Check company domains
-            for company in project.get("companies", []):
-                for domain in company.get("domains", []):
-                    if domain.lower().strip() == sender_domain:
-                        matched_projects.append(project["_id"])
-                        break
-                if project["_id"] in matched_projects:
-                    break
-
-            if project["_id"] in matched_projects:
-                continue
-
-            # Check contact emails
-            for contact in project.get("contacts", []):
-                for email in contact.get("emails", []):
-                    if email.lower().strip() == sender_email:
-                        matched_projects.append(project["_id"])
-                        break
-                if project["_id"] in matched_projects:
-                    break
+            pid = project["_id"]
+            if self._project_matches_text(project, search_text, sender_email, sender_domain):
+                matched_project_ids.append(pid)
 
         # Only auto-assign if exactly one project matches
-        if len(matched_projects) == 1:
-            logger.info(f"Auto-matched project {matched_projects[0]} for sender {sender_email}")
-            return matched_projects[0]
+        if len(matched_project_ids) == 1:
+            logger.info(
+                f"Auto-matched project {matched_project_ids[0]} "
+                f"for task '{task_title[:60]}'"
+            )
+            return matched_project_ids[0]
 
-        if len(matched_projects) > 1:
-            logger.info(f"Multiple projects matched for sender {sender_email}, skipping auto-assign")
+        if len(matched_project_ids) > 1:
+            names = []
+            for pid in matched_project_ids:
+                p = next((p for p in projects if p["_id"] == pid), None)
+                if p:
+                    names.append(p.get("name", "?"))
+            logger.info(
+                f"Multiple projects matched ({', '.join(names)}) "
+                f"for task '{task_title[:60]}', skipping auto-assign"
+            )
 
         return None
+
+    @staticmethod
+    def _project_matches_text(
+        project: dict,
+        search_text: str,
+        sender_email: str,
+        sender_domain: str,
+    ) -> bool:
+        """
+        Check if a project matches the given search text / sender info.
+
+        Returns True if any of these match:
+        - Project name (4+ chars) appears in search text
+        - A company name (4+ chars) appears in search text
+        - A company domain matches the sender domain
+        - A contact email matches the sender email
+        - A contact name (4+ chars) appears in search text
+        """
+        # Check project name (skip very short names that match too broadly)
+        proj_name = project.get("name", "").strip()
+        if len(proj_name) >= 4 and proj_name.lower() in search_text:
+            return True
+
+        # Check company names and domains
+        for company in project.get("companies", []):
+            comp_name = company.get("name", "").strip()
+            if len(comp_name) >= 4 and comp_name.lower() in search_text:
+                return True
+            if sender_domain:
+                for domain in company.get("domains", []):
+                    if domain.lower().strip() == sender_domain:
+                        return True
+
+        # Check contact names and emails
+        for contact in project.get("contacts", []):
+            contact_name = contact.get("name", "").strip()
+            if len(contact_name) >= 4 and contact_name.lower() in search_text:
+                return True
+            if sender_email:
+                for email in contact.get("emails", []):
+                    if email.lower().strip() == sender_email.lower():
+                        return True
+
+        # Check project description keywords against sender/title
+        # (only if description has distinctive terms)
+        proj_desc = project.get("description", "") or ""
+        if proj_desc and proj_name:
+            # Check if the search text contains the project name words
+            # (handles cases like project "QR Cargo" matching "qr cargo" in text)
+            name_words = [w for w in proj_name.lower().split() if len(w) >= 3]
+            if len(name_words) >= 2:
+                # Multi-word project name: check if all significant words appear
+                if all(w in search_text for w in name_words):
+                    return True
+
+        return False
 
     async def trigger_playbook(self, monitor: dict, event: MonitorAdapterEvent) -> Optional[ObjectId]:
         """
@@ -402,11 +448,21 @@ class MonitorService:
             if project:
                 project_name = project.get("name")
         else:
-            # Auto-match project based on event data (e.g., sender email domain)
+            # Extract text signals from event for matching
+            event_text = event.event_data.get("text", "") or event.event_data.get("snippet", "")
+            event_subject = event.event_data.get("subject", "")
+            sender_name = self._extract_sender_name(monitor, event) or ""
+            sender_email = ""
+            if provider in ("gmail", "outlook"):
+                from_info = event.event_data.get("from", {})
+                sender_email = from_info.get("email", "") if isinstance(from_info, dict) else ""
+
             matched_project_id = await self.auto_match_project(
                 organization_id=monitor["organization_id"],
-                event_data=event.event_data,
-                provider=provider,
+                task_title=event_subject or event_text[:200],
+                task_description=event_text,
+                sender_name=sender_name,
+                sender_email=sender_email,
             )
             if matched_project_id:
                 project_id = matched_project_id
