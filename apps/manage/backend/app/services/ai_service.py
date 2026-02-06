@@ -256,13 +256,14 @@ Respond with ONLY the task title, nothing else."""
         import os
         return bool(os.getenv("OPENAI_API_KEY") or os.getenv("ANTHROPIC_API_KEY") or os.getenv("GROQ_API_KEY"))
 
-    async def generate_title(self, message_text: str, context: Optional[str] = None) -> str:
+    async def generate_title(self, message_text: str, context: Optional[str] = None, sender: Optional[str] = None) -> str:
         """
         Generate a task title from a Slack message.
 
         Args:
             message_text: The main message text
             context: Optional context (thread messages, etc.)
+            sender: Optional sender name (who wrote the message)
 
         Returns:
             Generated task title
@@ -270,7 +271,10 @@ Respond with ONLY the task title, nothing else."""
         if not self.is_configured():
             return self._fallback_title(message_text)
 
-        prompt = f"Slack message: {message_text}"
+        prompt = ""
+        if sender:
+            prompt += f"From: {sender}\n"
+        prompt += f"Slack message: {message_text}"
         if context:
             prompt += f"\n\nContext:\n{context}"
 
@@ -407,13 +411,14 @@ Respond with ONLY "yes" or "no"."""
 
         return True
 
-    async def generate_description(self, message_text: str, context: Optional[str] = None) -> str:
+    async def generate_description(self, message_text: str, context: Optional[str] = None, sender: Optional[str] = None) -> str:
         """
         Generate a task description from a Slack message.
 
         Args:
             message_text: The main message text
             context: Optional context (thread messages, etc.)
+            sender: Optional sender name (who wrote the message)
 
         Returns:
             Generated task description
@@ -421,7 +426,10 @@ Respond with ONLY "yes" or "no"."""
         if not self.is_configured():
             return self._fallback_description(message_text)
 
-        prompt = f"Slack message: {message_text}"
+        prompt = ""
+        if sender:
+            prompt += f"From: {sender}\n"
+        prompt += f"Slack message: {message_text}"
         if context:
             prompt += f"\n\nThread context:\n{context}"
 

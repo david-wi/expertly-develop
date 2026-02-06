@@ -366,6 +366,16 @@ class MonitorService:
 
         return task_id
 
+    def _extract_sender_name(self, monitor: dict, event: MonitorAdapterEvent) -> Optional[str]:
+        """Extract sender display name from event data across all providers."""
+        provider = monitor.get("provider", "unknown")
+        if provider == "slack":
+            return event.event_data.get("user_name") or event.event_data.get("user")
+        elif provider in ("gmail", "outlook"):
+            from_info = event.event_data.get("from", {})
+            return from_info.get("name") or from_info.get("email")
+        return None
+
     async def _generate_ai_task_title(self, monitor: dict, event: MonitorAdapterEvent) -> str:
         """Generate an AI-powered task title for Slack mentions, fallback to simple title."""
         provider = monitor.get("provider", "unknown")
@@ -376,6 +386,7 @@ class MonitorService:
             try:
                 slack_title_service = get_slack_title_service()
                 message_text = event.event_data.get("text", "")
+                sender = self._extract_sender_name(monitor, event)
 
                 # Build context from thread if available
                 context = None
@@ -383,7 +394,7 @@ class MonitorService:
                     thread_messages = event.context_data["thread"][:5]
                     context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
-                return await slack_title_service.generate_title(message_text, context)
+                return await slack_title_service.generate_title(message_text, context, sender=sender)
             except Exception as e:
                 logger.warning(f"AI title generation failed: {e}")
 
@@ -400,6 +411,7 @@ class MonitorService:
             try:
                 slack_title_service = get_slack_title_service()
                 message_text = event.event_data.get("text", "")
+                sender = self._extract_sender_name(monitor, event)
 
                 # Build context from thread if available
                 context = None
@@ -407,7 +419,7 @@ class MonitorService:
                     thread_messages = event.context_data["thread"][:5]
                     context = "\n".join([m.get("text", "")[:500] for m in thread_messages])
 
-                return await slack_title_service.generate_description(message_text, context)
+                return await slack_title_service.generate_description(message_text, context, sender=sender)
             except Exception as e:
                 logger.warning(f"AI description generation failed: {e}")
 

@@ -35,6 +35,32 @@ class SlackMonitorAdapter(MonitorAdapter):
         self.context_messages: int = provider_config.get("context_messages", 5)
         self.my_mentions: bool = provider_config.get("my_mentions", False)
 
+        # Cache for resolved Slack user IDs -> display names
+        self._user_name_cache: dict[str, str] = {}
+
+    async def _resolve_user_name(self, user_id: Optional[str]) -> Optional[str]:
+        """Resolve a Slack user ID to a display name via users.info API."""
+        if not user_id:
+            return None
+        if user_id in self._user_name_cache:
+            return self._user_name_cache[user_id]
+        try:
+            result = await self._slack_request("users.info", {"user": user_id})
+            user = result.get("user", {})
+            profile = user.get("profile", {})
+            name = (
+                profile.get("display_name")
+                or profile.get("real_name")
+                or user.get("real_name")
+                or user.get("name")
+            )
+            if name:
+                self._user_name_cache[user_id] = name
+            return name
+        except Exception as e:
+            logger.warning(f"Failed to resolve Slack user {user_id}: {e}")
+            return None
+
     async def _slack_request(self, method: str, params: dict = None, data: dict = None) -> dict:
         """Make a request to the Slack API."""
         async with httpx.AsyncClient() as client:
@@ -177,6 +203,10 @@ class SlackMonitorAdapter(MonitorAdapter):
                 if not permalink:
                     permalink = await self._get_message_permalink(channel_id, msg_ts)
 
+                # Resolve sender to display name
+                sender_id = message.get("user") or message.get("username")
+                sender_name = message.get("username") or await self._resolve_user_name(sender_id)
+
                 event = MonitorAdapterEvent(
                     provider_event_id=f"{channel_id}:{msg_ts}",
                     event_type="mention",
@@ -185,7 +215,8 @@ class SlackMonitorAdapter(MonitorAdapter):
                         "channel_name": message.get("channel", {}).get("name"),
                         "message": message,
                         "text": message.get("text", ""),
-                        "user": message.get("user") or message.get("username"),
+                        "user": sender_id,
+                        "user_name": sender_name,
                         "ts": msg_ts,
                         "thread_ts": message.get("thread_ts"),
                         "permalink": permalink,
@@ -277,6 +308,10 @@ class SlackMonitorAdapter(MonitorAdapter):
                 # Fetch permalink for direct link back to Slack
                 permalink = await self._get_message_permalink(channel_id, message.get("ts"))
 
+                # Resolve sender to display name
+                sender_id = message.get("user")
+                sender_name = await self._resolve_user_name(sender_id)
+
                 event = MonitorAdapterEvent(
                     provider_event_id=f"{channel_id}:{message.get('ts')}",
                     event_type="message",
@@ -284,7 +319,8 @@ class SlackMonitorAdapter(MonitorAdapter):
                         "channel_id": channel_id,
                         "message": message,
                         "text": message.get("text", ""),
-                        "user": message.get("user"),
+                        "user": sender_id,
+                        "user_name": sender_name,
                         "ts": message.get("ts"),
                         "thread_ts": message.get("thread_ts"),
                         "permalink": permalink,
@@ -508,6 +544,10 @@ class SlackMonitorAdapter(MonitorAdapter):
                 # Fetch permalink for direct link back to Slack
                 permalink = await self._get_message_permalink(channel_id, event.get("ts"))
 
+                # Resolve sender to display name
+                sender_id = event.get("user")
+                sender_name = await self._resolve_user_name(sender_id)
+
                 adapter_event = MonitorAdapterEvent(
                     provider_event_id=f"{channel_id}:{event.get('ts')}",
                     event_type="app_mention",
@@ -515,7 +555,8 @@ class SlackMonitorAdapter(MonitorAdapter):
                         "channel_id": channel_id,
                         "message": event,
                         "text": event.get("text", ""),
-                        "user": event.get("user"),
+                        "user": sender_id,
+                        "user_name": sender_name,
                         "ts": event.get("ts"),
                         "thread_ts": event.get("thread_ts"),
                         "permalink": permalink,
@@ -555,6 +596,10 @@ class SlackMonitorAdapter(MonitorAdapter):
                     # Fetch permalink for direct link back to Slack
                     permalink = await self._get_message_permalink(channel_id, event.get("ts"))
 
+                    # Resolve sender to display name
+                    sender_id = event.get("user")
+                    sender_name = await self._resolve_user_name(sender_id)
+
                     adapter_event = MonitorAdapterEvent(
                         provider_event_id=f"{channel_id}:{event.get('ts')}",
                         event_type="message",
@@ -562,7 +607,8 @@ class SlackMonitorAdapter(MonitorAdapter):
                             "channel_id": channel_id,
                             "message": event,
                             "text": event.get("text", ""),
-                            "user": event.get("user"),
+                            "user": sender_id,
+                            "user_name": sender_name,
                             "ts": event.get("ts"),
                             "thread_ts": event.get("thread_ts"),
                             "permalink": permalink,
