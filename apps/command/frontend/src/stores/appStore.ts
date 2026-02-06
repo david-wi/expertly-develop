@@ -116,6 +116,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   handleTaskEvent: (event) => {
     const { type, data: task } = event
+    const eventTaskId = task._id || task.id
+    if (!eventTaskId) return // Ignore events with no identifiable task
 
     set((state) => {
       let tasks = [...state.tasks]
@@ -123,7 +125,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       switch (type) {
         case 'task.created':
           // Add if not already present
-          if (!tasks.find((t) => t.id === task.id || t._id === task._id)) {
+          if (!tasks.find((t) => (t._id || t.id) === eventTaskId)) {
             tasks = [task, ...tasks]
           }
           break
@@ -133,12 +135,12 @@ export const useAppStore = create<AppState>((set, get) => ({
         case 'task.completed':
         case 'task.failed':
           // Update existing task
-          tasks = tasks.map((t) => (t.id === task.id || t._id === task._id ? task : t))
+          tasks = tasks.map((t) => ((t._id || t.id) === eventTaskId ? task : t))
           break
 
         case 'task.deleted':
           // Remove deleted task from list
-          tasks = tasks.filter((t) => t.id !== task.id && t._id !== task._id)
+          tasks = tasks.filter((t) => (t._id || t.id) !== eventTaskId)
           break
       }
 
