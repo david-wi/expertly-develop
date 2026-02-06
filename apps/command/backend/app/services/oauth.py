@@ -76,11 +76,19 @@ def get_provider_config(provider: str) -> OAuthProviderConfig:
             scopes=[
                 "channels:read",
                 "channels:history",  # Read public channel messages
+                "groups:read",       # List private channels
                 "groups:history",    # Read private channel messages
+                "im:history",        # Read DM messages
+                "mpim:history",      # Read group DM messages
                 "chat:write",
                 "users:read",
                 "users:read.email",
                 "search:read",       # Efficient @mentions search
+                "reactions:read",    # Read emoji reactions
+                "reactions:write",   # Add reactions to messages
+                "files:read",        # Access file attachments
+                "usergroups:read",   # Resolve user group mentions
+                "team:read",         # Workspace metadata
             ],
             redirect_uri=f"{base_url}/api/v1/connections/oauth/slack/callback",
         ),
@@ -357,7 +365,7 @@ def get_provider_setup_instructions(provider: str) -> dict:
                 "Go to Slack API: https://api.slack.com/apps",
                 "Create a new app or select an existing one",
                 f"Under OAuth & Permissions, add redirect URL: {base_url}/api/v1/connections/oauth/slack/callback",
-                "Add required user token scopes: channels:read, chat:write, users:read, users:read.email",
+                "Add required user token scopes: channels:read, channels:history, groups:read, groups:history, im:history, mpim:history, chat:write, users:read, users:read.email, search:read, reactions:read, reactions:write, files:read, usergroups:read, team:read",
                 "Copy the Client ID and Client Secret from Basic Information",
                 "Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET environment variables",
             ],
