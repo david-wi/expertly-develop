@@ -37,7 +37,7 @@ interface AppState {
   handleTaskEvent: (event: { type: string; data: Task }) => void
 }
 
-export const useAppStore = create<AppState>((set, _get) => ({
+export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   queues: [],
   tasks: [],
@@ -82,7 +82,11 @@ export const useAppStore = create<AppState>((set, _get) => ({
   },
 
   fetchTasks: async (queueId?: string, userId?: string) => {
-    set((state) => ({ loading: { ...state.loading, tasks: true } }))
+    // Only show loading indicator on initial fetch (no existing data).
+    // Background refreshes keep existing tasks visible to avoid flicker.
+    if (get().tasks.length === 0) {
+      set((state) => ({ loading: { ...state.loading, tasks: true } }))
+    }
     try {
       const tasks = await api.getTasks({ queue_id: queueId, user_id: userId })
       set({ tasks })
