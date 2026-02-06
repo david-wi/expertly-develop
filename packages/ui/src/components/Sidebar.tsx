@@ -185,10 +185,10 @@ export function Sidebar({
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [showToolsSubmenu, setShowToolsSubmenu] = useState(false)
-  const [toolsRowPosition, setToolsRowPosition] = useState({ top: 0, left: 0 })
+  const [toolsRowPosition, setToolsRowPosition] = useState<{ top?: number; bottom?: number; left: number }>({ top: 0, left: 0 })
   const toolsRowRef = useRef<HTMLDivElement>(null)
   const [showMoreAppsSubmenu, setShowMoreAppsSubmenu] = useState(false)
-  const [moreAppsRowPosition, setMoreAppsRowPosition] = useState({ top: 0, left: 0 })
+  const [moreAppsRowPosition, setMoreAppsRowPosition] = useState<{ top?: number; bottom?: number; left: number }>({ top: 0, left: 0 })
   const moreAppsRowRef = useRef<HTMLDivElement>(null)
 
   // Use provided renderLink or create one from navigate function
@@ -331,7 +331,12 @@ export function Sidebar({
                   onMouseEnter={() => {
                     if (toolsRowRef.current) {
                       const rect = toolsRowRef.current.getBoundingClientRect()
-                      setToolsRowPosition({ top: rect.top, left: rect.right })
+                      const estimatedHeight = EXPERTLY_TOOLS.length * 48 + 16
+                      if (rect.top + estimatedHeight > window.innerHeight) {
+                        setToolsRowPosition({ bottom: window.innerHeight - rect.bottom, left: rect.right })
+                      } else {
+                        setToolsRowPosition({ top: rect.top, left: rect.right })
+                      }
                     }
                     setShowToolsSubmenu(true)
                   }}
@@ -358,7 +363,12 @@ export function Sidebar({
                   onMouseEnter={() => {
                     if (moreAppsRowRef.current) {
                       const rect = moreAppsRowRef.current.getBoundingClientRect()
-                      setMoreAppsRowPosition({ top: rect.top, left: rect.right })
+                      const estimatedHeight = EXPERTLY_MORE_APPS.length * 48 + 16
+                      if (rect.top + estimatedHeight > window.innerHeight) {
+                        setMoreAppsRowPosition({ bottom: window.innerHeight - rect.bottom, left: rect.right })
+                      } else {
+                        setMoreAppsRowPosition({ top: rect.top, left: rect.right })
+                      }
                     }
                     setShowMoreAppsSubmenu(true)
                   }}
@@ -407,7 +417,7 @@ export function Sidebar({
             {showToolsSubmenu && (
               <div
                 className={`fixed ml-1 w-64 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50`}
-                style={{ top: toolsRowPosition.top, left: toolsRowPosition.left }}
+                style={{ top: toolsRowPosition.top, bottom: toolsRowPosition.bottom, left: toolsRowPosition.left }}
                 onMouseEnter={() => setShowToolsSubmenu(true)}
                 onMouseLeave={() => setShowToolsSubmenu(false)}
               >
@@ -439,7 +449,7 @@ export function Sidebar({
             {showMoreAppsSubmenu && (
               <div
                 className={`fixed ml-1 w-64 ${dropdownBg} border ${borderColor} rounded-lg shadow-lg z-50`}
-                style={{ top: moreAppsRowPosition.top, left: moreAppsRowPosition.left }}
+                style={{ top: moreAppsRowPosition.top, bottom: moreAppsRowPosition.bottom, left: moreAppsRowPosition.left }}
                 onMouseEnter={() => setShowMoreAppsSubmenu(true)}
                 onMouseLeave={() => setShowMoreAppsSubmenu(false)}
               >
