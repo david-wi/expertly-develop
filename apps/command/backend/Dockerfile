@@ -25,6 +25,9 @@ RUN pip install --no-cache-dir /tmp/identity-client && \
 # Copy application code
 COPY apps/command/backend/app/ app/
 
+# Create uploads directory for avatar storage
+RUN mkdir -p /app/uploads/avatars
+
 # Create non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
