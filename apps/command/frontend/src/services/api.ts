@@ -241,6 +241,10 @@ export const api = {
     request<Task>(`/api/v1/tasks/${id}/quick-complete`, {
       method: 'POST',
     }),
+  reopenTask: (id: string) =>
+    request<Task>(`/api/v1/tasks/${id}/reopen`, {
+      method: 'POST',
+    }),
 
   // Task Time Entries
   getTaskTimeEntries: (taskId: string) =>
