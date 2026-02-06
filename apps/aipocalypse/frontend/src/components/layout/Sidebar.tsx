@@ -2,9 +2,9 @@ import { useCallback, useMemo } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
+  Lightbulb,
   Building2,
-  TrendingUp,
-  BookOpen,
+  ListTodo,
   Settings,
 } from 'lucide-react'
 import { Sidebar as SharedSidebar, formatBuildTimestamp, useCurrentUser, createDefaultUserMenu } from '@expertly/ui'
@@ -12,9 +12,9 @@ import { getCurrentUser } from '../../services/api'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Companies', href: '/companies', icon: Building2 },
-  { name: 'Predictions', href: '/predictions', icon: TrendingUp },
-  { name: 'Research', href: '/research', icon: BookOpen },
+  { name: 'Hypotheses', href: '/hypotheses', icon: Lightbulb },
+  { name: 'Industries', href: '/industries', icon: Building2 },
+  { name: 'Research Queue', href: '/queue', icon: ListTodo },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
