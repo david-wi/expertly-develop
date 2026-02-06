@@ -69,9 +69,9 @@ export const widgetRegistry: Record<string, WidgetDefinition> = {
     name: 'Monitors Summary',
     description: 'Monitor status and activity',
     icon: Activity,
-    defaultSize: { w: 12, h: 3 },
-    minSize: { w: 6, h: 2 },
-    maxSize: { w: 12, h: 4 },
+    defaultSize: { w: 12, h: 4 },
+    minSize: { w: 6, h: 3 },
+    maxSize: { w: 12, h: 8 },
     component: MonitorsSummaryWidget,
   },
   'single-queue': {
