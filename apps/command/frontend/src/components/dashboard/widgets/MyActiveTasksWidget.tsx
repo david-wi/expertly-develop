@@ -1393,18 +1393,29 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     <WidgetWrapper widgetId={widgetId} title={widgetTitle} headerAction={
       <div className="flex items-center gap-2">
         {headerAction}
-        {!isPoppedOut && (
-          <button
-            onClick={() => setIsPoppedOut(true)}
-            className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-            title="Pop out to larger view"
-          >
-            <Maximize2 className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          onClick={() => setIsPoppedOut(!isPoppedOut)}
+          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+          title={isPoppedOut ? 'Minimize back to widget' : 'Pop out to larger view'}
+        >
+          {isPoppedOut ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+        </button>
       </div>
     }>
-      {renderContent(false)}
+      {isPoppedOut ? (
+        <div className="flex flex-col items-center justify-center h-full py-8 text-gray-400">
+          <Maximize2 className="w-8 h-8 mb-2 opacity-40" />
+          <p className="text-sm">Expanded view open</p>
+          <button
+            onClick={() => setIsPoppedOut(false)}
+            className="mt-2 text-xs text-primary-600 hover:text-primary-700"
+          >
+            Click to minimize
+          </button>
+        </div>
+      ) : (
+        renderContent(false)
+      )}
     </WidgetWrapper>
 
     {/* Popped-out overlay - rendered via portal to escape CSS transform stacking context */}

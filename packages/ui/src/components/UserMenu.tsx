@@ -385,7 +385,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
   if (currentAppCode) backlogParams.set('product', currentAppCode)
   if (organizations?.currentId) backlogParams.set('organization_id', organizations.currentId)
   const backlogQuery = backlogParams.toString()
-  const backlogUrl = `https://admin.ai.devintensive.com/idea-backlog${backlogQuery ? `?${backlogQuery}` : ''}`
+  const backlogUrl = `https://admin.ai.devintensive.com/work-backlog${backlogQuery ? `?${backlogQuery}` : ''}`
 
   // Idea backlog URL - product filter only, no org (shows cross-org ideas)
   const ideaBacklogUrl = currentAppCode
