@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Clock, Hash, Cpu, FileText } from 'lucide-react'
+import { ArrowLeft, Clock, Cpu, FileText } from 'lucide-react'
 import { reportsApi } from '../services/api'
 import { SignalBadge } from '../components/SignalBadge'
 import { ConfidenceMeter } from '../components/ConfidenceMeter'

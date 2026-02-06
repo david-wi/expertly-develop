@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, RefreshCw, FileText, Plus, X, ListTodo, Loader2 } from 'lucide-react'
+import { ArrowLeft, RefreshCw, FileText, X, ListTodo, Loader2 } from 'lucide-react'
 import { companiesApi, reportsApi, hypothesesApi, queueApi } from '../services/api'
 import { SignalBadge } from '../components/SignalBadge'
 import { ConfidenceMeter } from '../components/ConfidenceMeter'
