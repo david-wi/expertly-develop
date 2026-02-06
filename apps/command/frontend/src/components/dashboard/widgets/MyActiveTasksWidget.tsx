@@ -307,8 +307,11 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       }
 
       // Insert into store directly instead of re-fetching
+      // Filter out any copy that WebSocket may have already added (race condition)
       const { tasks: currentTasks, setTasks } = useAppStore.getState()
-      setTasks([{ ...newTask, sequence: topSequence }, ...currentTasks])
+      const newTaskId = newTask._id || newTask.id
+      const deduped = currentTasks.filter(t => (t._id || t.id) !== newTaskId)
+      setTasks([{ ...newTask, sequence: topSequence }, ...deduped])
 
       setTopTaskTitle('')
       setTopTaskProjectId('')
@@ -335,8 +338,11 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         project_id: bottomTaskProjectId || undefined,
       })
       // Insert into store directly instead of re-fetching
+      // Filter out any copy that WebSocket may have already added (race condition)
       const { tasks: currentTasks, setTasks } = useAppStore.getState()
-      setTasks([...currentTasks, newTask])
+      const newTaskId = newTask._id || newTask.id
+      const deduped = currentTasks.filter(t => (t._id || t.id) !== newTaskId)
+      setTasks([...deduped, newTask])
 
       setBottomTaskTitle('')
       setBottomTaskProjectId('')

@@ -102,7 +102,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   createTask: async (data) => {
     const task = await api.createTask(data)
-    set((state) => ({ tasks: [task, ...state.tasks] }))
+    // Filter out any copy that WebSocket may have already added (race condition)
+    const taskId = task._id || task.id
+    set((state) => ({
+      tasks: [task, ...state.tasks.filter(t => (t._id || t.id) !== taskId)]
+    }))
     return task
   },
 
