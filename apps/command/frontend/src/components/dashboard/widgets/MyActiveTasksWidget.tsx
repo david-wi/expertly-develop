@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Maximize2, Minimize2, Check, Plus, Timer, X, ExternalLink } from 'lucide-react'
+import { Maximize2, Minimize2, Check, Plus, Timer, X, ExternalLink, Star } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -551,6 +551,19 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }, [undoInfo, fetchTasks])
 
+  // Toggle star on a task
+  const handleToggleStar = async (e: React.MouseEvent, taskId: string) => {
+    e.stopPropagation()
+    const task = activeTasks.find(t => (t._id || t.id) === taskId)
+    if (!task) return
+    try {
+      await api.updateTask(taskId, { is_starred: !task.is_starred })
+      fetchTasks()
+    } catch (err) {
+      console.error('Failed to toggle star:', err)
+    }
+  }
+
   // Start inline duration editing
   const startInlineDurationEdit = (e: React.MouseEvent, taskId: string, currentDuration: number | undefined) => {
     e.stopPropagation() // Don't trigger task selection
@@ -888,6 +901,21 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         title="Mark as complete"
                       >
                         <Check className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Priority star */}
+                      <button
+                        onClick={(e) => handleToggleStar(e, taskId)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        draggable={false}
+                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
+                          task.is_starred
+                            ? 'text-amber-400 hover:text-amber-500'
+                            : 'text-gray-300 hover:text-amber-400'
+                        }`}
+                        title={task.is_starred ? 'Remove priority' : 'Mark as priority'}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${task.is_starred ? 'fill-current' : ''}`} />
                       </button>
 
                       {/* Task content */}

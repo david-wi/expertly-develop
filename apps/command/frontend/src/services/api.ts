@@ -853,6 +853,8 @@ export interface Task {
   recurrence_interval?: number
   recurrence_days_of_week?: number[]
   recurrence_day_of_month?: number
+  // Priority star
+  is_starred?: boolean
   // Manual ordering
   sequence?: number
   // Source tracking
@@ -934,6 +936,8 @@ export interface UpdateTaskRequest {
   recurrence_interval?: number | null
   recurrence_days_of_week?: number[] | null
   recurrence_day_of_month?: number | null
+  // Priority star
+  is_starred?: boolean
   // Manual ordering
   sequence?: number
   // Estimated duration in seconds

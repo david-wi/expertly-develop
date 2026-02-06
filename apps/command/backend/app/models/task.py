@@ -65,6 +65,7 @@ class Task(MongoModel):
     status: TaskStatus = TaskStatus.QUEUED
     phase: TaskPhase = TaskPhase.PLANNING
     priority: int = 5  # 1-10, lower is higher priority
+    is_starred: bool = False  # User-toggled priority star
 
     # Assignment - user IDs are UUIDs from Identity
     assigned_to_id: Optional[str] = None
@@ -166,6 +167,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     priority: Optional[int] = None
+    is_starred: Optional[bool] = None
     queue_id: Optional[str] = None
     assigned_to_id: Optional[str] = None
     project_id: Optional[str] = None
