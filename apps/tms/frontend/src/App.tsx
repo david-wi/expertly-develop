@@ -34,6 +34,7 @@ import DriverLogin from './pages/DriverLogin'
 import DriverApp from './pages/DriverApp'
 import DriverLoadDetail from './pages/DriverLoadDetail'
 import GlobalSearch from './pages/GlobalSearch'
+import TenantSettings from './pages/TenantSettings'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -77,6 +78,7 @@ function App() {
           <Route path="communications" element={<Communications />} />
           <Route path="roles" element={<RoleManagement />} />
           <Route path="search" element={<GlobalSearch />} />
+          <Route path="tenant-settings" element={<TenantSettings />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>
       </Routes>

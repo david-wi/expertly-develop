@@ -25,6 +25,7 @@ import {
   Table2,
   MessageSquare,
   Shield,
+  Building,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
@@ -54,6 +55,7 @@ const navigation = [
   { name: 'Desks', href: '/desks', icon: LayoutGrid },
   { name: 'Automations', href: '/automations', icon: Zap },
   { name: 'Roles', href: '/roles', icon: Shield },
+  { name: 'Organization', href: '/tenant-settings', icon: Building },
 ]
 
 // Local storage key for selected organization
