@@ -74,7 +74,7 @@ describe('createDefaultUserMenu', () => {
     const backlog = devTools?.children?.find(item => item.id === 'backlog')
     expect(backlog).toBeDefined()
     expect(backlog?.type).toBe('link')
-    expect(backlog?.href).toContain('manage.ai.devintensive.com/backlog')
+    expect(backlog?.href).toContain('command.ai.devintensive.com/backlog')
     expect(backlog?.external).toBe(true)
   })
 
@@ -88,7 +88,7 @@ describe('createDefaultUserMenu', () => {
     const ideaBacklog = devTools?.children?.find(item => item.id === 'idea-backlog')
     expect(ideaBacklog).toBeDefined()
     expect(ideaBacklog?.type).toBe('link')
-    expect(ideaBacklog?.href).toContain('manage.ai.devintensive.com/idea-backlog')
+    expect(ideaBacklog?.href).toContain('command.ai.devintensive.com/idea-backlog')
     expect(ideaBacklog?.external).toBe(true)
   })
 

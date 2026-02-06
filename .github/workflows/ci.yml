@@ -19,7 +19,7 @@ jobs:
           - { name: discover, path: apps/discover/frontend }
           - { name: hear, path: apps/hear/frontend }
           - { name: identity, path: apps/identity/frontend }
-          - { name: manage, path: apps/manage/frontend }
+          - { name: command, path: apps/command/frontend }
           - { name: salon, path: apps/salon/frontend }
           - { name: today, path: apps/today/frontend }
           - { name: tms, path: apps/tms/frontend }
