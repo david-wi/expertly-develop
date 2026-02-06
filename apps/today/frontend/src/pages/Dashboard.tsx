@@ -6,6 +6,7 @@ import { ClaudeWorkingStatus } from '../components/dashboard/ClaudeWorkingStatus
 import { DraftsToReview } from '../components/dashboard/DraftsToReview';
 import { WaitingOn } from '../components/dashboard/WaitingOn';
 import { ThisWeek } from '../components/dashboard/ThisWeek';
+import { MonitorsSummary } from '../components/dashboard/MonitorsSummary';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Link } from 'react-router-dom';
@@ -85,7 +86,10 @@ export function Dashboard() {
         {/* Panel 7: Waiting On */}
         <WaitingOn maxItems={5} />
 
-        {/* Panel 8: Blocked Tasks (if any) */}
+        {/* Panel 8: Monitors */}
+        <MonitorsSummary />
+
+        {/* Panel 9: Blocked Tasks (if any) */}
         {blockedTasks.length > 0 && (
           <TaskList
             tasks={blockedTasks}
