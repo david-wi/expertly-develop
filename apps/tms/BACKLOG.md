@@ -25,14 +25,18 @@ Features deferred to future phases.
 - [x] Operations metrics
 - [x] Lane intelligence
 
+## Phase 4: Integrations & Communication (COMPLETED - PR #525)
+
+- [x] EDI Integration (204/214/210)
+- [x] SMS/Voice Communication (Twilio)
+- [x] Rate Management & Contract Tables
+- [x] Role-based access control
+
 ## Future Integrations
 
-- [ ] EDI Integration (204/214/210) — IN PROGRESS
-- [ ] SMS/Voice Communication (Twilio) — IN PROGRESS
 - [x] Accounting Integration (QuickBooks)
-- [ ] Rate Management & Contract Tables — IN PROGRESS
 - [x] Load Board Integration (DAT, Truckstop)
-- [ ] Mobile Driver App
+- [ ] Mobile Driver App — IN PROGRESS
 - [x] Customer Self-Service Portal
 - [x] Carrier Portal with onboarding
 
@@ -40,7 +44,6 @@ Features deferred to future phases.
 
 - [ ] Add comprehensive unit tests
 - [ ] Add Playwright E2E tests
-- [ ] Performance optimization for large datasets
-- [ ] Offline support / PWA
+- [ ] Performance optimization for large datasets — IN PROGRESS
+- [ ] Offline support / PWA — IN PROGRESS
 - [ ] Multi-tenant support
-- [ ] Role-based access control — IN PROGRESS

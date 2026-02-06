@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
+  <title>Offline - Expertly TMS</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    .container {
+      text-align: center;
+      max-width: 420px;
+    }
+
+    .icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #e0e7ff;
+      margin-bottom: 1.5rem;
+    }
+
+    .icon svg {
+      width: 40px;
+      height: 40px;
+      color: #3b82f6;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.75rem;
+    }
+
+    p {
+      font-size: 1rem;
+      color: #64748b;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 1.5rem;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .status.offline {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    .status.online {
+      background: #f0fdf4;
+      color: #16a34a;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+
+    .offline .dot { background: #dc2626; }
+    .online .dot { background: #16a34a; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: #2563eb;
+      color: #fff;
+      border: none;
+      border-radius: 0.5rem;
+      font-size: 0.9375rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .brand {
+      margin-top: 2rem;
+      font-size: 0.8125rem;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">
+      <!-- Wi-Fi off icon (inline SVG, no external deps) -->
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="2" y1="2" x2="22" y2="22" />
+        <path d="M8.5 16.5a5 5 0 0 1 7 0" />
+        <path d="M2 8.82a15 15 0 0 1 4.17-2.65" />
+        <path d="M10.66 5c4.01-.36 8.14.9 11.34 3.76" />
+        <path d="M16.85 11.25a10 10 0 0 1 2.22 1.68" />
+        <path d="M5 12.86a10 10 0 0 1 5.17-2.86" />
+        <line x1="12" y1="20" x2="12.01" y2="20" />
+      </svg>
+    </div>
+
+    <h1>You're offline</h1>
+    <p>
+      It looks like your internet connection is unavailable. Some features may
+      not work until you're back online.
+    </p>
+
+    <div id="status" class="status offline">
+      <span class="dot"></span>
+      <span id="status-text">No connection</span>
+    </div>
+
+    <br />
+
+    <button id="retry" class="btn" onclick="attemptRetry()">
+      Try again
+    </button>
+
+    <div class="brand">Expertly TMS</div>
+  </div>
+
+  <script>
+    var retryBtn = document.getElementById('retry');
+    var statusEl = document.getElementById('status');
+    var statusText = document.getElementById('status-text');
+
+    function setOnline(isOnline) {
+      if (isOnline) {
+        statusEl.className = 'status online';
+        statusText.textContent = 'Connected';
+      } else {
+        statusEl.className = 'status offline';
+        statusText.textContent = 'No connection';
+      }
+    }
+
+    function attemptRetry() {
+      retryBtn.disabled = true;
+      retryBtn.innerHTML = '<span class="spinner"></span> Checking...';
+
+      fetch(window.location.origin + '/manifest.json', { cache: 'no-store' })
+        .then(function (res) {
+          if (res.ok) {
+            setOnline(true);
+            window.location.reload();
+          } else {
+            throw new Error('not ok');
+          }
+        })
+        .catch(function () {
+          setOnline(false);
+          retryBtn.disabled = false;
+          retryBtn.textContent = 'Try again';
+        });
+    }
+
+    // Auto-retry when browser fires the online event
+    window.addEventListener('online', function () {
+      setOnline(true);
+      setTimeout(function () {
+        window.location.reload();
+      }, 500);
+    });
+
+    window.addEventListener('offline', function () {
+      setOnline(false);
+    });
+
+    // Reflect current state on load
+    setOnline(navigator.onLine);
+  </script>
+</body>
+</html>
