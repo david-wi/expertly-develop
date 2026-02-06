@@ -26,6 +26,10 @@ import CustomerDetail from './pages/CustomerDetail'
 import CarrierDetail from './pages/CarrierDetail'
 import DocumentInbox from './pages/DocumentInbox'
 import BillingQueue from './pages/BillingQueue'
+import EDIManager from './pages/EDIManager'
+import RateManagement from './pages/RateManagement'
+import Communications from './pages/Communications'
+import RoleManagement from './pages/RoleManagement'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -60,6 +64,10 @@ function App() {
           <Route path="operations-metrics" element={<OperationsMetrics />} />
           <Route path="lane-intelligence" element={<LaneIntelligence />} />
           <Route path="automations" element={<AutomationBuilder />} />
+          <Route path="edi" element={<EDIManager />} />
+          <Route path="rate-tables" element={<RateManagement />} />
+          <Route path="communications" element={<Communications />} />
+          <Route path="roles" element={<RoleManagement />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>
       </Routes>
