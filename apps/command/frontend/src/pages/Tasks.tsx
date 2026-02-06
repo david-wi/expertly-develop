@@ -37,7 +37,23 @@ const PHASE_CONFIG: Record<string, { bg: string; text: string; label: string }> 
   waiting_on_subplaybook: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Waiting' },
 }
 
-type GroupByOption = 'none' | 'project' | 'queue' | 'assignee' | 'status' | 'phase' | 'playbook'
+type GroupByOption = 'none' | 'project' | 'primary_project' | 'queue' | 'assignee' | 'status' | 'phase' | 'playbook'
+
+// Find the root (first-level) project by walking up parent_project_id
+function getRootProjectId(projectId: string, allProjects: Project[]): string {
+  const projectMap = new Map<string, Project>()
+  for (const p of allProjects) {
+    projectMap.set(p._id || p.id, p)
+  }
+
+  let current = projectMap.get(projectId)
+  while (current?.parent_project_id) {
+    const parent = projectMap.get(current.parent_project_id)
+    if (!parent) break
+    current = parent
+  }
+  return current ? (current._id || current.id) : projectId
+}
 
 // Format seconds to H:MM display
 function formatDuration(seconds: number | undefined): string {
@@ -48,7 +64,7 @@ function formatDuration(seconds: number | undefined): string {
 }
 
 export default function Tasks() {
-  const { tasks, queues, loading, fetchTasks, fetchQueues } = useAppStore()
+  const { tasks, queues, loading, fetchTasks, fetchQueues, updateTaskLocally } = useAppStore()
 
   // Filters
   const [filterQueue, setFilterQueue] = useState<string>('')
@@ -85,6 +101,72 @@ export default function Tasks() {
   const newTaskTitleRef = useRef<HTMLInputElement>(null)
   const newTaskProjectRef = useRef<HTMLInputElement>(null)
   const newTaskInstructionsRef = useRef<HTMLTextAreaElement>(null)
+
+  // Drag-to-reorder state
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    setDraggedTaskId(taskId)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', taskId)
+  }
+
+  const handleDragOver = (e: React.DragEvent, taskId: string) => {
+    e.preventDefault()
+    if (taskId !== draggedTaskId) {
+      setDragOverTaskId(taskId)
+    }
+  }
+
+  const handleDragLeave = () => {
+    setDragOverTaskId(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetTaskId: string, taskList: Task[]) => {
+    e.preventDefault()
+    setDragOverTaskId(null)
+
+    if (!draggedTaskId || draggedTaskId === targetTaskId) {
+      setDraggedTaskId(null)
+      return
+    }
+
+    const draggedIndex = taskList.findIndex((t) => (t._id || t.id) === draggedTaskId)
+    const targetIndex = taskList.findIndex((t) => (t._id || t.id) === targetTaskId)
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedTaskId(null)
+      return
+    }
+
+    const targetTask = taskList[targetIndex]
+    const targetSeq = targetTask.sequence ?? 0
+    let newSequence: number
+
+    if (draggedIndex < targetIndex) {
+      const nextTask = taskList[targetIndex + 1]
+      newSequence = nextTask ? (targetSeq + (nextTask.sequence ?? targetSeq + 2)) / 2 : targetSeq + 1
+    } else {
+      const prevTask = taskList[targetIndex - 1]
+      newSequence = prevTask ? ((prevTask.sequence ?? targetSeq - 2) + targetSeq) / 2 : targetSeq - 1
+    }
+
+    updateTaskLocally(draggedTaskId, { sequence: newSequence })
+    setDraggedTaskId(null)
+
+    try {
+      await api.reorderTasks([{ id: draggedTaskId, sequence: newSequence }])
+    } catch (err) {
+      console.error('Failed to reorder tasks:', err)
+      fetchTasks()
+    }
+  }
+
+  const handleDragEnd = () => {
+    setDraggedTaskId(null)
+    setDragOverTaskId(null)
+  }
 
   useEffect(() => {
     fetchQueues()
@@ -133,6 +215,9 @@ export default function Tasks() {
         case 'project':
           groupKey = task.project_id || '_none'
           break
+        case 'primary_project':
+          groupKey = task.project_id ? getRootProjectId(task.project_id, projects) : '_none'
+          break
         case 'queue':
           groupKey = task.queue_id || '_none'
           break
@@ -157,7 +242,7 @@ export default function Tasks() {
     })
 
     return groups
-  }, [filteredTasks, groupBy])
+  }, [filteredTasks, groupBy, projects])
 
   // Helper functions
   const getQueueName = (queueId: string) => {
@@ -187,6 +272,7 @@ export default function Tasks() {
     if (groupKey === '_none') {
       switch (groupBy) {
         case 'project': return 'No Project'
+        case 'primary_project': return 'No Project'
         case 'queue': return 'No Queue'
         case 'assignee': return 'Unassigned'
         case 'playbook': return 'No Playbook'
@@ -196,6 +282,7 @@ export default function Tasks() {
 
     switch (groupBy) {
       case 'project': return getProjectName(groupKey)
+      case 'primary_project': return getProjectName(groupKey)
       case 'queue': return getQueueName(groupKey)
       case 'assignee': return getUserName(groupKey)
       case 'status': return groupKey.replace('_', ' ')
@@ -271,8 +358,8 @@ export default function Tasks() {
     setNewTaskProjectId('')
     setNewTaskProjectQuery('')
     setNewTaskInstructions('')
-    // Pre-fill project if grouped by project
-    if (groupBy === 'project' && groupKey !== '_none') {
+    // Pre-fill project if grouped by project or primary project
+    if ((groupBy === 'project' || groupBy === 'primary_project') && groupKey !== '_none') {
       const project = projects.find((p) => (p._id || p.id) === groupKey)
       if (project) {
         setNewTaskProjectId(groupKey)
@@ -315,6 +402,7 @@ export default function Tasks() {
       if (addingInGroup && addingInGroup !== '_none') {
         switch (groupBy) {
           case 'project':
+          case 'primary_project':
             taskData.project_id = addingInGroup
             break
           case 'queue':
@@ -329,7 +417,7 @@ export default function Tasks() {
       }
 
       // Allow manual project override
-      if (newTaskProjectId && groupBy !== 'project') {
+      if (newTaskProjectId && groupBy !== 'project' && groupBy !== 'primary_project') {
         taskData.project_id = newTaskProjectId
       }
 
@@ -359,7 +447,7 @@ export default function Tasks() {
       }
     } else if (e.key === 'Tab' && !e.shiftKey && newTaskTitle.trim()) {
       // Only show project field if not grouped by project
-      if (groupBy !== 'project') {
+      if (groupBy !== 'project' && groupBy !== 'primary_project') {
         e.preventDefault()
         newTaskProjectRef.current?.focus()
         setShowProjectDropdown(true)
@@ -555,6 +643,7 @@ export default function Tasks() {
             >
               <option value="none">None</option>
               <option value="project">Project</option>
+              <option value="primary_project">Project (Primary)</option>
               <option value="queue">Queue</option>
               <option value="assignee">Assignee</option>
               <option value="status">Status</option>
@@ -692,6 +781,13 @@ export default function Tasks() {
             onTaskClick={setSelectedTaskId}
             onQuickComplete={handleQuickComplete}
             onToggleStar={handleToggleStar}
+            draggedTaskId={draggedTaskId}
+            dragOverTaskId={dragOverTaskId}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
           />
         </div>
       ) : (
@@ -736,6 +832,13 @@ export default function Tasks() {
                       onQuickComplete={handleQuickComplete}
                       onToggleStar={handleToggleStar}
                       compact
+                      draggedTaskId={draggedTaskId}
+                      dragOverTaskId={dragOverTaskId}
+                      onDragStart={handleDragStart}
+                      onDragOver={handleDragOver}
+                      onDragLeave={handleDragLeave}
+                      onDrop={handleDrop}
+                      onDragEnd={handleDragEnd}
                     />
 
                     {/* Inline Add Task */}
@@ -757,7 +860,7 @@ export default function Tasks() {
                                 disabled={isCreatingTask}
                                 className="w-full text-xs font-medium text-gray-900 placeholder-gray-400 bg-white border border-gray-200 rounded px-2 py-1 outline-none focus:border-primary-300 focus:ring-1 focus:ring-primary-200"
                               />
-                              {newTaskTitle && groupBy !== 'project' && (
+                              {newTaskTitle && groupBy !== 'project' && groupBy !== 'primary_project' && (
                                 <div className="relative">
                                   <input
                                     ref={newTaskProjectRef}
@@ -897,6 +1000,14 @@ interface TaskListProps {
   onQuickComplete: (e: React.MouseEvent, taskId: string) => void
   onToggleStar: (e: React.MouseEvent, taskId: string) => void
   compact?: boolean
+  // Drag-to-reorder
+  draggedTaskId?: string | null
+  dragOverTaskId?: string | null
+  onDragStart?: (e: React.DragEvent, taskId: string) => void
+  onDragOver?: (e: React.DragEvent, taskId: string) => void
+  onDragLeave?: () => void
+  onDrop?: (e: React.DragEvent, taskId: string, taskList: Task[]) => void
+  onDragEnd?: () => void
 }
 
 function TaskList({
@@ -909,6 +1020,13 @@ function TaskList({
   onQuickComplete,
   onToggleStar,
   compact = false,
+  draggedTaskId,
+  dragOverTaskId,
+  onDragStart,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onDragEnd,
 }: TaskListProps) {
   if (tasks.length === 0) {
     return <div className="p-3 text-xs text-gray-500">No tasks</div>
@@ -939,13 +1057,33 @@ function TaskList({
         const queueName = getQueueName(task.queue_id)
         const assigneeName = getUserName(task.assigned_to_id)
 
+        const isDragging = draggedTaskId === taskId
+        const isDragOver = dragOverTaskId === taskId
+
         return (
           <div
             key={taskId}
-            className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 cursor-pointer transition-colors"
+            draggable={!!onDragStart}
+            onDragStart={onDragStart ? (e) => onDragStart(e, taskId) : undefined}
+            onDragOver={onDragOver ? (e) => onDragOver(e, taskId) : undefined}
+            onDragLeave={onDragLeave}
+            onDrop={onDrop ? (e) => onDrop(e, taskId, tasks) : undefined}
+            onDragEnd={onDragEnd}
+            className={`flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 cursor-pointer transition-colors ${
+              isDragging ? 'opacity-50 bg-gray-100' : ''
+            } ${isDragOver ? 'border-t-2 border-primary-500' : ''}`}
             onClick={() => onTaskClick(taskId)}
             title={queueName}
           >
+            {/* Drag handle */}
+            {onDragStart && (
+              <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
+                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
+                </svg>
+              </div>
+            )}
+
             {/* Complete checkmark */}
             <button
               onClick={(e) => onQuickComplete(e, taskId)}
