@@ -213,6 +213,16 @@ class DependencyService:
                         f"Unblocked task {blocked_task['_id']} after "
                         f"completion of {completed_task_id}"
                     )
+                    # Emit WebSocket event for real-time updates
+                    from app.api.v1.websocket import emit_event
+                    from app.api.v1.tasks import serialize_task
+                    updated_task = await self.db.tasks.find_one({"_id": blocked_task["_id"]})
+                    if updated_task:
+                        await emit_event(
+                            str(organization_id),
+                            "task.updated",
+                            serialize_task(updated_task)
+                        )
 
         return unblocked_count
 

@@ -16,6 +16,14 @@ export default function Dashboard() {
     fetchTasks()
   }, [fetchUser, fetchQueues, fetchTasks])
 
+  // Polling fallback: re-fetch tasks every 60s for resilience when WebSocket misses events
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTasks()
+    }, 60000)
+    return () => clearInterval(interval)
+  }, [fetchTasks])
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
