@@ -1004,7 +1004,7 @@ export interface UpdateTeamRequest {
   lead_id?: string
 }
 
-export type RecurrenceType = 'daily' | 'weekly' | 'monthly' | 'custom'
+export type RecurrenceType = 'daily' | 'weekday' | 'weekly' | 'monthly' | 'custom'
 
 export interface RecurringTask {
   _id?: string

@@ -21,6 +21,12 @@ def calculate_next_run(recurring_task: RecurringTask, from_time: datetime = None
         # Daily: add interval days
         next_run = from_time + timedelta(days=recurring_task.interval)
 
+    elif recurring_task.recurrence_type == RecurrenceType.WEEKDAY:
+        # Weekday: next Monday-Friday
+        next_run = from_time + timedelta(days=1)
+        while next_run.weekday() >= 5:  # 5=Saturday, 6=Sunday
+            next_run += timedelta(days=1)
+
     elif recurring_task.recurrence_type == RecurrenceType.WEEKLY:
         if recurring_task.days_of_week:
             # Find the next matching day of week
