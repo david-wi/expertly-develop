@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
 
 /**
@@ -7,8 +8,11 @@ import { api } from '../services/api'
  * The Backlog feature has been consolidated into Expertly Admin's unified
  * idea/backlog tracking system. Organization-specific backlog items are
  * preserved via the organization_id parameter.
+ *
+ * Accepts ?product=<code> to pre-filter by the originating app.
  */
 export default function Backlog() {
+  const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,8 +23,11 @@ export default function Backlog() {
         const user = await api.getCurrentUser()
         const orgId = user.organization_id
 
-        // Redirect to Admin with product=manage and organization_id for org-specific backlog
-        const url = `https://admin.ai.devintensive.com/idea-backlog?product=manage&organization_id=${orgId}`
+        // Use product from URL param (passed by the originating app), fallback to 'manage'
+        const product = searchParams.get('product') || 'manage'
+
+        // Redirect to Admin with product filter and organization_id for org-specific backlog
+        const url = `https://admin.ai.devintensive.com/idea-backlog?product=${product}&organization_id=${orgId}`
         window.location.href = url
       } catch (err) {
         console.error('Failed to get user for redirect:', err)
@@ -30,7 +37,7 @@ export default function Backlog() {
     }
 
     redirectToAdmin()
-  }, [])
+  }, [searchParams])
 
   if (error) {
     return (
