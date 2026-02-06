@@ -103,6 +103,95 @@ async def backfill_reports():
     return {"updated": updated, "errors": errors}
 
 
+@router.post("/backfill-strategy")
+async def backfill_management_strategy():
+    """Backfill existing reports with AI-generated management_strategy_response."""
+    from app.config import get_settings
+    import anthropic
+    import json
+
+    db = get_database()
+    settings = get_settings()
+
+    settings_doc = await db.app_settings.find_one({})
+    api_key = (settings_doc or {}).get("anthropic_api_key") or settings.anthropic_api_key
+    model = (settings_doc or {}).get("default_model") or settings.default_model
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No Anthropic API key configured")
+
+    query = {
+        "$or": [
+            {"management_strategy_response": {"$exists": False}},
+            {"management_strategy_response": None},
+            {"management_strategy_response": ""},
+        ]
+    }
+    cursor = db.research_reports.find(query)
+    updated = 0
+    errors = []
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    async for doc in cursor:
+        company_name = doc.get("company_name", "Unknown")
+        ticker = doc.get("company_ticker", "")
+        try:
+            prompt = f"""Based on this existing research report for {company_name} ({ticker}), write a management_strategy_response section.
+
+## Existing Report Context
+- Signal: {doc.get('signal', 'hold')} (confidence: {doc.get('signal_confidence', 50)}%)
+- Moat: {doc.get('moat_rating', 'unknown')}
+- AI Vulnerability Score: {doc.get('ai_vulnerability_score', 50)}/100
+
+### Executive Summary
+{doc.get('executive_summary', '')[:1500]}
+
+### AI Impact Analysis
+{doc.get('ai_impact_analysis', '')[:1500]}
+
+### Competitive Landscape
+{doc.get('competitive_landscape', '')[:1500]}
+
+### Investment Recommendation
+{doc.get('investment_recommendation', '')[:1000]}
+
+## Task
+Write ONLY the management_strategy_response as a markdown string (NOT JSON, just the raw markdown text).
+
+This should be written FROM the perspective of {company_name}'s management team as a strategic memo to the board. Outline the smartest, most creative strategy they could adopt to respond to AI disruption and competitive threats. Include:
+- Specific initiatives with timelines
+- Investment priorities and resource allocation
+- Expected outcomes and KPIs
+- Creative/unconventional moves that could give them an edge
+
+Use ### subheadings and bullet points. Be specific and actionable, not generic. 3-5 paragraphs."""
+
+            response = client.messages.create(
+                model=model,
+                max_tokens=2000,
+                system="You are the executive strategy team of the company described. Write a strategic memo to the board outlining your best response to AI disruption. Be specific, creative, and actionable. Output raw markdown only — no JSON wrapping.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            strategy_text = response.content[0].text.strip()
+
+            await db.research_reports.update_one(
+                {"_id": doc["_id"]},
+                {"$set": {
+                    "management_strategy_response": strategy_text,
+                    "updated_at": utc_now(),
+                }}
+            )
+            updated += 1
+            logger.info(f"Backfilled strategy for {company_name} ({ticker})")
+        except Exception as e:
+            errors.append({"ticker": ticker, "company": company_name, "error": str(e)})
+            logger.warning(f"Strategy backfill failed for {ticker}: {e}")
+
+    return {"updated": updated, "errors": errors}
+
+
 @router.post("", status_code=201)
 async def create_report(data: ReportCreate):
     """Create a report directly (for manually-authored reports)."""
