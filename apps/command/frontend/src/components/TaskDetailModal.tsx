@@ -24,7 +24,6 @@ import {
   RotateCcw,
   Check,
   Timer,
-  RefreshCw,
 } from 'lucide-react'
 import { InlineVoiceTranscription } from '@expertly/ui'
 import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase, RecurrenceType } from '../services/api'
@@ -737,7 +736,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 )
               })()}
 
-              {/* Advanced Settings - Collapsible */}
+              {/* Schedule & Repeat - Side by side */}
+              <div className="grid grid-cols-2 gap-3">
+              {/* Schedule Task - Collapsible */}
               <div className="border border-theme-border rounded-lg overflow-hidden">
                 <button
                   onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
@@ -844,11 +845,33 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               {/* Repeat Settings - Collapsible */}
               <div className="border border-theme-border rounded-lg overflow-hidden">
                 <button
-                  onClick={() => setShowRepeatSettings(!showRepeatSettings)}
+                  onClick={() => {
+                    if (!isRecurring) {
+                      setIsRecurring(true)
+                      setShowRepeatSettings(true)
+                    } else {
+                      setShowRepeatSettings(!showRepeatSettings)
+                    }
+                  }}
                   className="w-full px-3 py-2 flex items-center justify-between bg-theme-bg-elevated hover:bg-theme-bg-surface transition-colors"
                 >
                   <span className="text-xs font-medium text-theme-text-secondary flex items-center gap-2">
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <input
+                      type="checkbox"
+                      checked={isRecurring}
+                      onChange={(e) => {
+                        e.stopPropagation()
+                        if (!e.target.checked) {
+                          setIsRecurring(false)
+                          setShowRepeatSettings(false)
+                        } else {
+                          setIsRecurring(true)
+                          setShowRepeatSettings(true)
+                        }
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-3.5 h-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
                     Repeat
                     {isRecurring && (
                       <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded text-[10px]">
@@ -864,17 +887,23 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 </button>
 
                 {showRepeatSettings && (
-                  <div className="p-3 space-y-3 border-t border-theme-border bg-theme-bg-surface">
-                    {/* Enable Repeat Toggle */}
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={isRecurring}
-                        onChange={(e) => setIsRecurring(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="text-sm text-theme-text-primary">Enable repeat</span>
-                    </label>
+                  <div className="p-3 space-y-3 border-t border-theme-border bg-theme-bg-surface relative">
+                    {isRecurring && (
+                      <button
+                        onClick={() => {
+                          setIsRecurring(false)
+                          setRecurrenceType('daily')
+                          setRecurrenceInterval(1)
+                          setRecurrenceDaysOfWeek([])
+                          setRecurrenceDayOfMonth(1)
+                          setShowRepeatSettings(false)
+                        }}
+                        className="absolute top-2 right-2 text-xs text-theme-text-secondary hover:text-red-600 flex items-center gap-1 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                        Clear
+                      </button>
+                    )}
 
                     {isRecurring && (
                       <>
@@ -975,23 +1004,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       </>
                     )}
 
-                    {/* Clear repeat button */}
-                    {isRecurring && (
-                      <button
-                        onClick={() => {
-                          setIsRecurring(false)
-                          setRecurrenceType('daily')
-                          setRecurrenceInterval(1)
-                          setRecurrenceDaysOfWeek([])
-                          setRecurrenceDayOfMonth(1)
-                        }}
-                        className="text-xs text-red-600 hover:text-red-700"
-                      >
-                        Clear repeat
-                      </button>
-                    )}
                   </div>
                 )}
+              </div>
               </div>
 
               {/* Attachments Section */}
