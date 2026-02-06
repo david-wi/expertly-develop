@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Star } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
-import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
+import { api, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
+import TaskList from '../../../components/TaskList'
 import UndoToast from '../../../components/UndoToast'
 import { useToggleStar } from '../../../hooks/useToggleStar'
 
@@ -17,8 +17,6 @@ interface Playbook {
 
 export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
   const { user, tasks, queues, loading, fetchTasks, updateTaskLocally } = useAppStore()
-  const [users, setUsers] = useState<UserType[]>([])
-  const [teams, setTeams] = useState<Team[]>([])
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
@@ -28,8 +26,6 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
   const [undoInfo, setUndoInfo] = useState<{ taskId: string; title: string } | null>(null)
 
   useEffect(() => {
-    api.getUsers().then(setUsers).catch(console.error)
-    api.getTeams().then(setTeams).catch(console.error)
     api.getPlaybooks({ active_only: true }).then(setPlaybooks).catch(console.error)
     api.getProjects({ status: 'active' }).then(setProjects).catch(console.error)
   }, [])
@@ -40,21 +36,6 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
       fetchTasks(undefined, user.id)
     }
   }, [user?.id, fetchTasks])
-
-  const getQueueDisplayName = (queue: { scope_type: string; scope_id?: string; purpose: string }): string => {
-    if (queue.scope_type === 'user') {
-      if (queue.scope_id === user?.id) {
-        return `${user?.name || 'You'} > ${queue.purpose}`
-      }
-      const owner = users.find((u) => (u._id || u.id) === queue.scope_id)
-      return owner ? `${owner.name} > ${queue.purpose}` : queue.purpose
-    }
-    if (queue.scope_type === 'team') {
-      const team = teams.find((t) => (t._id || t.id) === queue.scope_id)
-      return team ? `${team.name} > ${queue.purpose}` : queue.purpose
-    }
-    return `Everyone > ${queue.purpose}`
-  }
 
   // Get all active tasks
   const allActiveTasks = tasks.filter((t) => ['queued', 'checked_out', 'in_progress'].includes(t.status))
@@ -244,100 +225,29 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
           <div className="flex-1 overflow-auto">
             {loading.tasks ? (
               <div className="p-3 text-xs text-gray-500">Loading...</div>
-            ) : activeTasks.length === 0 ? (
-              <div className="p-3 text-xs text-gray-500">No active tasks</div>
             ) : (
-              <div className="divide-y divide-gray-100">
-                {activeTasks.map((task) => {
-                  const taskId = task._id || task.id
-                  const queue = queues.find((q) => (q._id || q.id) === task.queue_id)
-                  const queueName = queue ? getQueueDisplayName(queue) : 'Unknown'
-                  const isDragging = draggedTaskId === taskId
-                  const isDragOver = dragOverTaskId === taskId
-                  const taskProject = task.project_id ? projects.find(p => (p._id || p.id) === task.project_id) : null
-                  const taskPlaybook = task.playbook_id ? playbooks.find(p => (p._id || p.id) === task.playbook_id) : null
-
-                  return (
-                    <div
-                      key={taskId}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, taskId)}
-                      onDragOver={(e) => handleDragOver(e, taskId)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, taskId)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => setSelectedTaskId(taskId)}
-                      className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        isDragging ? 'opacity-50 bg-gray-100' : ''
-                      } ${isDragOver ? 'border-t-2 border-primary-500' : ''}`}
-                      title={queueName}
-                    >
-                      {/* Drag handle */}
-                      <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
-                        </svg>
-                      </div>
-
-                      {/* Complete checkmark */}
-                      <button
-                        onClick={(e) => handleQuickComplete(e, taskId)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        draggable={false}
-                        disabled={completingTaskId === taskId}
-                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                          completingTaskId === taskId
-                            ? 'text-gray-300 cursor-wait'
-                            : 'text-gray-300 hover:text-green-500 hover:bg-green-50'
-                        }`}
-                        title="Mark as complete"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Priority star */}
-                      <button
-                        onClick={(e) => handleToggleStar(e, taskId)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        draggable={false}
-                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                          task.is_starred
-                            ? 'text-amber-400 hover:text-amber-500'
-                            : 'text-gray-300 hover:text-amber-400'
-                        }`}
-                        title={task.is_starred ? 'Remove priority' : 'Mark as priority'}
-                      >
-                        <Star className={`w-3.5 h-3.5 ${task.is_starred ? 'fill-current' : ''}`} />
-                      </button>
-
-                      {/* Task content */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate text-gray-900">
-                          {task.title}
-                        </p>
-                      </div>
-
-                      {/* Show project when filtering by playbook */}
-                      {config.playbookId && taskProject && (
-                        <div className="flex-shrink-0 w-24">
-                          <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded truncate block">
-                            {taskProject.name}
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Show playbook when filtering by project */}
-                      {config.projectIds && config.projectIds.length > 0 && taskPlaybook && (
-                        <div className="flex-shrink-0 w-24">
-                          <span className="text-[10px] text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded truncate block">
-                            {taskPlaybook.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <TaskList
+                tasks={activeTasks}
+                projects={projects}
+                queues={queues}
+                playbooks={playbooks}
+                columns={{
+                  showProject: !!config.playbookId,
+                  showPlaybook: !!(config.projectIds && config.projectIds.length > 0),
+                }}
+                completingTaskId={completingTaskId}
+                onTaskClick={setSelectedTaskId}
+                onQuickComplete={handleQuickComplete}
+                onToggleStar={handleToggleStar}
+                draggable
+                dragState={{ draggedTaskId, dragOverTaskId }}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={(e, taskId) => handleDrop(e, taskId)}
+                onDragEnd={handleDragEnd}
+                emptyMessage="No active tasks"
+              />
             )}
           </div>
 
