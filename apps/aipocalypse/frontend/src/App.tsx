@@ -2,9 +2,11 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Layout } from './components/layout/Layout'
 import { Dashboard } from './pages/Dashboard'
-import { Companies } from './pages/Companies'
-import { Predictions } from './pages/Predictions'
-import { Research } from './pages/Research'
+import { Hypotheses } from './pages/Hypotheses'
+import { Industries } from './pages/Industries'
+import { CompanyDetail } from './pages/CompanyDetail'
+import { ReportView } from './pages/ReportView'
+import { Queue } from './pages/Queue'
 import { Settings } from './pages/Settings'
 
 const queryClient = new QueryClient({
@@ -23,9 +25,12 @@ function App() {
         <Routes>
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/companies" element={<Companies />} />
-            <Route path="/predictions" element={<Predictions />} />
-            <Route path="/research" element={<Research />} />
+            <Route path="/hypotheses" element={<Hypotheses />} />
+            <Route path="/industries" element={<Industries />} />
+            <Route path="/industries/:id" element={<Industries />} />
+            <Route path="/companies/:id" element={<CompanyDetail />} />
+            <Route path="/reports/:id" element={<ReportView />} />
+            <Route path="/queue" element={<Queue />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>

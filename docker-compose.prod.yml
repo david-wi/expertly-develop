@@ -578,6 +578,7 @@ services:
     environment:
       - MONGODB_URL=mongodb://expertly-shared-mongo:27017
       - MONGODB_DATABASE=aipocalypse_fund
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     networks:
       - traefik
       - default
