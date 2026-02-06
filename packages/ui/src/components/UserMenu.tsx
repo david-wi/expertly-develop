@@ -394,7 +394,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             label: 'Backlog',
             icon: ClipboardList,
             type: 'link',
-            href: 'https://manage.ai.devintensive.com/backlog',
+            href: 'https://command.ai.devintensive.com/backlog',
             external: true,
           },
           {
@@ -418,7 +418,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             label: 'Idea Backlog',
             icon: Lightbulb,
             type: 'link',
-            href: 'https://manage.ai.devintensive.com/idea-backlog',
+            href: 'https://command.ai.devintensive.com/idea-backlog',
             external: true,
           },
           {

@@ -242,12 +242,12 @@ services:
     restart: unless-stopped
 
   # ===================
-  # EXPERTLY MANAGE
+  # EXPERTLY COMMAND
   # ===================
-  manage-backend:
+  command-backend:
     build:
       context: .
-      dockerfile: ./apps/manage/backend/Dockerfile
+      dockerfile: ./apps/command/backend/Dockerfile
     environment:
       - MONGODB_URL=mongodb://expertly-shared-mongo:27017
       - MONGODB_DATABASE=expertly_manage
@@ -270,11 +270,20 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.entrypoints=https"
-      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.rule=Host(`manage-api.ai.devintensive.com`)"
-      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.tls=true"
-      - "traefik.http.routers.manage-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
-      - "traefik.http.services.manage-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
+      - "traefik.http.routers.command-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.command-backend${DEPLOY_COLOR:-}.rule=Host(`command-api.ai.devintensive.com`)"
+      - "traefik.http.routers.command-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.command-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.command-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
+      # Redirect old manage-api URLs to command-api
+      - "traefik.http.routers.manage-api-redirect${DEPLOY_COLOR:-}.rule=Host(`manage-api.ai.devintensive.com`)"
+      - "traefik.http.routers.manage-api-redirect${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.manage-api-redirect${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.manage-api-redirect${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.manage-api-redirect${DEPLOY_COLOR:-}.middlewares=manage-api-to-command-redirect${DEPLOY_COLOR:-}"
+      - "traefik.http.middlewares.manage-api-to-command-redirect${DEPLOY_COLOR:-}.redirectregex.regex=^https://manage-api\\.ai\\.devintensive\\.com(.*)"
+      - "traefik.http.middlewares.manage-api-to-command-redirect${DEPLOY_COLOR:-}.redirectregex.replacement=https://command-api.ai.devintensive.com$${1}"
+      - "traefik.http.middlewares.manage-api-to-command-redirect${DEPLOY_COLOR:-}.redirectregex.permanent=true"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -282,25 +291,34 @@ services:
       retries: 3
     restart: unless-stopped
 
-  manage-frontend:
+  command-frontend:
     build:
       context: .
-      dockerfile: ./apps/manage/frontend/Dockerfile
+      dockerfile: ./apps/command/frontend/Dockerfile
       args:
         VITE_API_URL: ""
     depends_on:
-      - manage-backend
+      - command-backend
     networks:
       - traefik
       - default
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik"
-      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.entrypoints=https"
-      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.rule=Host(`manage.ai.devintensive.com`)"
-      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.tls=true"
-      - "traefik.http.routers.manage-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
-      - "traefik.http.services.manage-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+      - "traefik.http.routers.command-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.command-frontend${DEPLOY_COLOR:-}.rule=Host(`command.ai.devintensive.com`)"
+      - "traefik.http.routers.command-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.command-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.command-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+      # Redirect old manage URLs to command
+      - "traefik.http.routers.manage-redirect${DEPLOY_COLOR:-}.rule=Host(`manage.ai.devintensive.com`)"
+      - "traefik.http.routers.manage-redirect${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.manage-redirect${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.manage-redirect${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.manage-redirect${DEPLOY_COLOR:-}.middlewares=manage-to-command-redirect${DEPLOY_COLOR:-}"
+      - "traefik.http.middlewares.manage-to-command-redirect${DEPLOY_COLOR:-}.redirectregex.regex=^https://manage\\.ai\\.devintensive\\.com(.*)"
+      - "traefik.http.middlewares.manage-to-command-redirect${DEPLOY_COLOR:-}.redirectregex.replacement=https://command.ai.devintensive.com$${1}"
+      - "traefik.http.middlewares.manage-to-command-redirect${DEPLOY_COLOR:-}.redirectregex.permanent=true"
     restart: unless-stopped
 
   # ===================
