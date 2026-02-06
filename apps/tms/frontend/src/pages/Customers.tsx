@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Customer } from '../types'
 import { Plus, Building2, Mail, Phone, X, CheckCircle, AlertCircle, PauseCircle } from 'lucide-react'
@@ -11,6 +12,7 @@ const statusConfig: Record<string, { bg: string; text: string; icon: typeof Chec
 }
 
 export default function Customers() {
+  const navigate = useNavigate()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -54,20 +56,6 @@ export default function Customers() {
     } catch (error) {
       console.error('Failed to save customer:', error)
     }
-  }
-
-  const handleEdit = (customer: Customer) => {
-    setEditingCustomer(customer)
-    setFormData({
-      name: customer.name,
-      billing_email: customer.billing_email || '',
-      phone: customer.phone || '',
-      address_line1: customer.address_line1 || '',
-      city: customer.city || '',
-      state: customer.state || '',
-      zip_code: customer.zip_code || '',
-    })
-    setShowForm(true)
   }
 
   const resetForm = () => {
@@ -230,7 +218,7 @@ export default function Customers() {
             {customers.map((customer) => (
               <li
                 key={customer.id}
-                onClick={() => handleEdit(customer)}
+                onClick={() => navigate(`/customers/${customer.id}`)}
                 className="p-4 hover:bg-gray-50 cursor-pointer"
               >
                 <div className="flex items-start justify-between">

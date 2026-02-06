@@ -19,6 +19,8 @@ import {
   Activity,
   Map,
   Zap,
+  FileInput,
+  DollarSign,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
@@ -39,6 +41,8 @@ const navigation = [
   { name: 'Operations Metrics', href: '/operations-metrics', icon: Activity },
   { name: 'Lane Intelligence', href: '/lane-intelligence', icon: Map },
   { name: 'Document Review', href: '/document-review', icon: FolderSearch },
+  { name: 'Document Inbox', href: '/document-inbox', icon: FileInput },
+  { name: 'Billing', href: '/billing', icon: DollarSign },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
   { name: 'Desks', href: '/desks', icon: LayoutGrid },
   { name: 'Automations', href: '/automations', icon: Zap },

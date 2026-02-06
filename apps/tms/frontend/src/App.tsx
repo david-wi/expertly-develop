@@ -22,6 +22,10 @@ import ApprovalCenter from './pages/ApprovalCenter'
 import OperationsMetrics from './pages/OperationsMetrics'
 import LaneIntelligence from './pages/LaneIntelligence'
 import AutomationBuilder from './pages/AutomationBuilder'
+import CustomerDetail from './pages/CustomerDetail'
+import CarrierDetail from './pages/CarrierDetail'
+import DocumentInbox from './pages/DocumentInbox'
+import BillingQueue from './pages/BillingQueue'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -40,7 +44,11 @@ function App() {
           <Route path="shipments/:id" element={<ShipmentDetail />} />
           <Route path="dispatch" element={<DispatchBoard />} />
           <Route path="customers" element={<Customers />} />
+          <Route path="customers/:id" element={<CustomerDetail />} />
           <Route path="carriers" element={<Carriers />} />
+          <Route path="carriers/:id" element={<CarrierDetail />} />
+          <Route path="document-inbox" element={<DocumentInbox />} />
+          <Route path="billing" element={<BillingQueue />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="margins" element={<MarginDashboard />} />
           <Route path="carrier-performance" element={<CarrierPerformance />} />
