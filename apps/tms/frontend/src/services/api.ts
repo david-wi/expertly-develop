@@ -14,6 +14,7 @@ import type {
   CarrierPerformance,
   Document,
   DocumentType,
+  Desk,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -1169,6 +1170,69 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ auto_create: autoCreate }),
     }),
+
+  // ============================================================================
+  // Desks
+  // ============================================================================
+
+  getDesks: (params?: { is_active?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.is_active !== undefined) searchParams.set('is_active', String(params.is_active))
+    const query = searchParams.toString()
+    return request<Desk[]>(`/api/v1/desks${query ? `?${query}` : ''}`)
+  },
+
+  getDesk: (id: string) => request<Desk>(`/api/v1/desks/${id}`),
+
+  createDesk: (data: {
+    name: string
+    description?: string
+    desk_type?: import('../types').DeskType
+    is_active?: boolean
+    routing_rules?: import('../types').RoutingRule[]
+    coverage?: import('../types').CoverageSchedule[]
+    members?: string[]
+    priority?: number
+  }) => request<Desk>('/api/v1/desks', { method: 'POST', body: JSON.stringify(data) }),
+
+  updateDesk: (id: string, data: {
+    name?: string
+    description?: string
+    desk_type?: import('../types').DeskType
+    is_active?: boolean
+    routing_rules?: import('../types').RoutingRule[]
+    coverage?: import('../types').CoverageSchedule[]
+    members?: string[]
+    priority?: number
+  }) => request<Desk>(`/api/v1/desks/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  deleteDesk: (id: string) =>
+    request<{ status: string; id: string }>(`/api/v1/desks/${id}`, { method: 'DELETE' }),
+
+  addDeskMember: (deskId: string, userId: string) =>
+    request<Desk>(`/api/v1/desks/${deskId}/members`, {
+      method: 'POST',
+      body: JSON.stringify({ user_id: userId }),
+    }),
+
+  removeDeskMember: (deskId: string, userId: string) =>
+    request<Desk>(`/api/v1/desks/${deskId}/members/${userId}`, { method: 'DELETE' }),
+
+  getDeskWorkItems: (deskId: string, status?: string) => {
+    const searchParams = new URLSearchParams()
+    if (status) searchParams.set('status', status)
+    const query = searchParams.toString()
+    return request<import('../types').WorkItem[]>(`/api/v1/desks/${deskId}/work-items${query ? `?${query}` : ''}`)
+  },
+
+  routeWorkItem: (workItemId: string) =>
+    request<{ status: string; desk_id: string | null; work_item_id: string }>('/api/v1/desks/route', {
+      method: 'POST',
+      body: JSON.stringify({ work_item_id: workItemId }),
+    }),
+
+  autoRouteWorkItems: () =>
+    request<{ status: string; routed_count: number }>('/api/v1/desks/auto-route', { method: 'POST' }),
 
   // ============================================================================
   // Real-Time Dashboard

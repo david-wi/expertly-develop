@@ -7,6 +7,7 @@ from bson import ObjectId
 from app.database import get_database
 from app.models.work_item import WorkItem, WorkItemType, WorkItemStatus
 from app.schemas.work_item import WorkItemCreate, WorkItemUpdate, WorkItemResponse
+from app.services.websocket_manager import manager
 
 router = APIRouter()
 
@@ -26,6 +27,7 @@ def work_item_to_response(wi: WorkItem) -> WorkItemResponse:
         customer_id=str(wi.customer_id) if wi.customer_id else None,
         carrier_id=str(wi.carrier_id) if wi.carrier_id else None,
         invoice_id=str(wi.invoice_id) if wi.invoice_id else None,
+        desk_id=wi.desk_id,
         assigned_to=wi.assigned_to,
         assigned_at=wi.assigned_at,
         due_at=wi.due_at,
@@ -149,6 +151,7 @@ async def create_work_item(data: WorkItemCreate):
     work_item = WorkItem(**wi_data)
     await db.work_items.insert_one(work_item.model_dump_mongo())
 
+    await manager.broadcast("work_item_created", {"id": str(work_item.id), "work_type": work_item.work_type})
     return work_item_to_response(work_item)
 
 
@@ -200,6 +203,7 @@ async def complete_work_item(work_item_id: str, data: CompleteWorkItemRequest):
         {"$set": work_item.model_dump_mongo()}
     )
 
+    await manager.broadcast("work_item_completed", {"id": str(work_item.id)})
     return work_item_to_response(work_item)
 
 
@@ -248,4 +252,5 @@ async def assign_work_item(work_item_id: str, data: AssignWorkItemRequest):
         {"$set": work_item.model_dump_mongo()}
     )
 
+    await manager.broadcast("work_item_assigned", {"id": str(work_item.id), "assigned_to": data.user_id})
     return work_item_to_response(work_item)

@@ -10,6 +10,7 @@ import Customers from './pages/Customers'
 import Carriers from './pages/Carriers'
 import Invoices from './pages/Invoices'
 import Settings from './pages/Settings'
+import DeskManagement from './pages/DeskManagement'
 import MarginDashboard from './pages/MarginDashboard'
 import CarrierPerformance from './pages/CarrierPerformance'
 import DocumentReview from './pages/DocumentReview'
@@ -42,6 +43,7 @@ function App() {
           <Route path="document-review" element={<DocumentReview />} />
           <Route path="loadboards" element={<LoadBoards />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="desks" element={<DeskManagement />} />
           <Route path="compare" element={<ProductComparison />} />
         </Route>
       </Routes>
