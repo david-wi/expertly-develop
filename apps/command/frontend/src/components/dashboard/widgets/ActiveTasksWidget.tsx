@@ -15,7 +15,7 @@ interface Playbook {
 }
 
 export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
-  const { user, tasks, queues, loading, fetchTasks } = useAppStore()
+  const { user, tasks, queues, loading, fetchTasks, updateTaskLocally } = useAppStore()
   const [users, setUsers] = useState<UserType[]>([])
   const [teams, setTeams] = useState<Team[]>([])
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
@@ -165,16 +165,18 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
       }
     }
 
-    // Update via API
+    // Optimistic local update for reorder
+    updateTaskLocally(draggedTaskId, { sequence: newSequence })
+    setDraggedTaskId(null)
+
+    // Persist via API
     const items: TaskReorderItem[] = [{ id: draggedTaskId, sequence: newSequence }]
     try {
       await api.reorderTasks(items)
-      fetchTasks()
     } catch (err) {
       console.error('Failed to reorder tasks:', err)
+      fetchTasks() // Revert on error
     }
-
-    setDraggedTaskId(null)
   }
 
   const handleDragEnd = () => {
@@ -193,10 +195,13 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
     setCompletingTaskId(taskId)
     try {
       await api.quickCompleteTask(taskId)
-      fetchTasks()
+      // Optimistically remove from local state
+      const { tasks: currentTasks, setTasks } = useAppStore.getState()
+      setTasks(currentTasks.filter(t => (t._id || t.id) !== taskId))
       setUndoInfo({ taskId, title: taskTitle })
     } catch (err) {
       console.error('Failed to complete task:', err)
+      fetchTasks() // Revert on error
     } finally {
       setCompletingTaskId(null)
     }
@@ -224,12 +229,16 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
   const handleUndo = useCallback(async () => {
     if (!undoInfo) return
     try {
-      await api.reopenTask(undoInfo.taskId)
-      fetchTasks()
+      const reopened = await api.reopenTask(undoInfo.taskId)
+      // Insert reopened task back into store
+      const { tasks: currentTasks, setTasks } = useAppStore.getState()
+      if (!currentTasks.find(t => (t._id || t.id) === undoInfo.taskId)) {
+        setTasks([reopened, ...currentTasks])
+      }
     } catch (err) {
       console.error('Failed to reopen task:', err)
     }
-  }, [undoInfo, fetchTasks])
+  }, [undoInfo])
 
   // Build the "View All" link with appropriate filters
   const getViewAllLink = (): string => {

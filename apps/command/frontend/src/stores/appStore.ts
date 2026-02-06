@@ -33,6 +33,9 @@ interface AppState {
   fetchTasks: (queueId?: string, userId?: string) => Promise<void>
   createTask: (data: { queue_id: string; title: string; description?: string }) => Promise<Task>
 
+  // Local optimistic updates
+  updateTaskLocally: (taskId: string, updates: Partial<Task>) => void
+
   // WebSocket event handlers
   handleTaskEvent: (event: { type: string; data: Task }) => void
 }
@@ -101,6 +104,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     const task = await api.createTask(data)
     set((state) => ({ tasks: [task, ...state.tasks] }))
     return task
+  },
+
+  updateTaskLocally: (taskId, updates) => {
+    set((state) => ({
+      tasks: state.tasks.map((t) =>
+        (t.id === taskId || t._id === taskId) ? { ...t, ...updates } : t
+      ),
+    }))
   },
 
   handleTaskEvent: (event) => {
