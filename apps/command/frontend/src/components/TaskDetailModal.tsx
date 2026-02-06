@@ -26,13 +26,14 @@ import {
   Timer,
 } from 'lucide-react'
 import { InlineVoiceTranscription } from '@expertly/ui'
-import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, UpdateTaskRequest, TaskPhase, RecurrenceType } from '../services/api'
+import { api, Task, Queue, Playbook, TaskAttachment, TaskComment, TaskSuggestion, UpdateTaskRequest, TaskPhase, RecurrenceType } from '../services/api'
 import RichTextEditor, { isRichTextEmpty } from './RichTextEditor'
 import FileUploadZone from './FileUploadZone'
 import ApproverSelector, { ApproverType } from './ApproverSelector'
 import PlaybookStepExecutor from './PlaybookStepExecutor'
 import PlaybookSelector from './PlaybookSelector'
 import StartTimerModal from './StartTimerModal'
+import TaskSuggestions from './TaskSuggestions'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface TaskDetailModalProps {
@@ -168,6 +169,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [attachments, setAttachments] = useState<TaskAttachment[]>([])
   const [comments, setComments] = useState<TaskComment[]>([])
+  const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -224,12 +226,13 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     setError(null)
 
     try {
-      const [taskData, queuesData, playbooksData, attachmentsData, commentsData] = await Promise.all([
+      const [taskData, queuesData, playbooksData, attachmentsData, commentsData, suggestionsData] = await Promise.all([
         api.getTask(taskId),
         api.getQueues(),
         api.getPlaybooks(),
         api.getTaskAttachments(taskId),
         api.getTaskComments(taskId),
+        api.getTaskSuggestions(taskId),
       ])
 
       setTask(taskData)
@@ -237,6 +240,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       setPlaybooks(playbooksData)
       setAttachments(attachmentsData)
       setComments(commentsData)
+      setSuggestions(suggestionsData)
 
       // Initialize edit state
       setEditedTitle(taskData.title)
@@ -1154,6 +1158,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                   </div>
                 </div>
               )}
+
+              {/* AI Suggestions */}
+              <TaskSuggestions suggestions={suggestions} onUpdate={fetchData} />
 
               {/* Timeline and Discussion Section */}
               <div className="border-t border-theme-border pt-4">

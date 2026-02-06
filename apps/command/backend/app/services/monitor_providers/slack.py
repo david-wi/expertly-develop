@@ -9,6 +9,39 @@ from app.services.monitor_providers.base import MonitorAdapter, MonitorAdapterEv
 logger = logging.getLogger(__name__)
 
 
+async def send_slack_message(access_token: str, channel_id: str, text: str, thread_ts: str | None = None) -> dict:
+    """
+    Send a message to a Slack channel via chat.postMessage.
+
+    Args:
+        access_token: OAuth access token with chat:write scope
+        channel_id: Slack channel ID
+        text: Message text
+        thread_ts: Optional thread timestamp to reply in-thread
+
+    Returns:
+        Slack API response dict (includes 'ts' of the sent message)
+    """
+    async with httpx.AsyncClient() as client:
+        headers = {"Authorization": f"Bearer {access_token}"}
+        payload = {"channel": channel_id, "text": text}
+        if thread_ts:
+            payload["thread_ts"] = thread_ts
+
+        response = await client.post(
+            "https://slack.com/api/chat.postMessage",
+            headers=headers,
+            json=payload,
+        )
+        response.raise_for_status()
+        result = response.json()
+
+        if not result.get("ok"):
+            raise Exception(f"Slack API error: {result.get('error', 'Unknown error')}")
+
+        return result
+
+
 class SlackMonitorAdapter(MonitorAdapter):
     """
     Slack monitor adapter for detecting messages and events.
