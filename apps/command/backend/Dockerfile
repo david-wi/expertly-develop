@@ -14,7 +14,7 @@ COPY packages/artifacts /tmp/artifacts
 COPY packages/artifacts-mongo /tmp/artifacts-mongo
 
 # Install Python dependencies
-COPY apps/manage/backend/requirements.txt .
+COPY apps/command/backend/requirements.txt .
 RUN pip install --no-cache-dir /tmp/identity-client && \
     pip install --no-cache-dir /tmp/ai-config && \
     pip install --no-cache-dir /tmp/artifacts && \
@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir /tmp/identity-client && \
     rm -rf /tmp/identity-client /tmp/ai-config /tmp/artifacts /tmp/artifacts-mongo
 
 # Copy application code
-COPY apps/manage/backend/app/ app/
+COPY apps/command/backend/app/ app/
 
 # Create non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
