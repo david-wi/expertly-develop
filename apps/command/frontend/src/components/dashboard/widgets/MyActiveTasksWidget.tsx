@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Maximize2, Check, Plus, Timer, X, ExternalLink, Star } from 'lucide-react'
+import { Maximize2, Check, Plus, Timer, X, ExternalLink, Star, Sparkles, Loader2 } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -98,6 +98,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [showTimerModal, setShowTimerModal] = useState(false)
   // Undo state
   const [undoInfo, setUndoInfo] = useState<{ taskId: string; title: string } | null>(null)
+  // Suggestions state
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false)
+  const [suggestionsResult, setSuggestionsResult] = useState<{ generated: number; tasks_analyzed: number } | null>(null)
   // Refs
   const topTitleRef = useRef<HTMLInputElement>(null)
   const topProjectRef = useRef<HTMLInputElement>(null)
@@ -177,6 +180,28 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     ? `${displayUser?.name || 'User'}'s Active Tasks`
     : 'My Active Tasks'
 
+  // Generate AI suggestions for tasks
+  const handleGenerateSuggestions = async () => {
+    if (isGeneratingSuggestions) return
+    setIsGeneratingSuggestions(true)
+    setSuggestionsResult(null)
+    try {
+      const result = await api.generateTaskSuggestions()
+      setSuggestionsResult({ generated: result.generated, tasks_analyzed: result.tasks_analyzed })
+      // If suggestions were generated, open the first task's detail modal to show them
+      if (result.generated > 0 && result.suggestions.length > 0) {
+        setSelectedTaskId(result.suggestions[0].task_id)
+      }
+      setTimeout(() => setSuggestionsResult(null), 5000)
+    } catch (err) {
+      console.error('Failed to generate suggestions:', err)
+      setSuggestionsResult({ generated: -1, tasks_analyzed: 0 })
+      setTimeout(() => setSuggestionsResult(null), 5000)
+    } finally {
+      setIsGeneratingSuggestions(false)
+    }
+  }
+
   const headerAction = (
     <div className="flex items-center gap-2">
       {isViewingOther && (
@@ -187,6 +212,19 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
           ← Back to mine
         </button>
       )}
+      <button
+        onClick={handleGenerateSuggestions}
+        disabled={isGeneratingSuggestions || activeTasks.length === 0}
+        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-primary-50 text-primary-700 hover:bg-primary-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        title="AI-analyze top tasks and suggest next actions"
+      >
+        {isGeneratingSuggestions ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Sparkles className="w-3.5 h-3.5" />
+        )}
+        {isGeneratingSuggestions ? 'Analyzing...' : 'Suggestions'}
+      </button>
       <span className="text-xs text-gray-500">{activeTasks.length} task{activeTasks.length !== 1 ? 's' : ''}</span>
     </div>
   )
@@ -1384,6 +1422,27 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         onUndo={handleUndo}
         onDismiss={() => setUndoInfo(null)}
       />
+    )}
+
+    {suggestionsResult && (
+      <div className="fixed bottom-4 right-4 z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 flex items-center gap-2 animate-in slide-in-from-bottom-2">
+        {suggestionsResult.generated === -1 ? (
+          <span className="text-sm text-red-600">Failed to generate suggestions. Try again.</span>
+        ) : suggestionsResult.generated === 0 ? (
+          <span className="text-sm text-gray-600">No suggestions found for {suggestionsResult.tasks_analyzed} task{suggestionsResult.tasks_analyzed !== 1 ? 's' : ''}.</span>
+        ) : (
+          <span className="text-sm text-green-700">
+            <Sparkles className="w-4 h-4 inline mr-1" />
+            Generated {suggestionsResult.generated} suggestion{suggestionsResult.generated !== 1 ? 's' : ''} across {suggestionsResult.tasks_analyzed} task{suggestionsResult.tasks_analyzed !== 1 ? 's' : ''}.
+          </span>
+        )}
+        <button
+          onClick={() => setSuggestionsResult(null)}
+          className="p-0.5 text-gray-400 hover:text-gray-600"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
     )}
   </>
   )

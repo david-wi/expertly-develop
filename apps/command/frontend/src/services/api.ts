@@ -372,6 +372,10 @@ export const api = {
     request<void>(`/api/v1/suggestions/${suggestionId}`, {
       method: 'DELETE',
     }),
+  generateTaskSuggestions: () =>
+    request<GenerateTaskSuggestionsResponse>(`/api/v1/tasks/generate-suggestions`, {
+      method: 'POST',
+    }),
 
   // Task Comments
   getTaskComments: (taskId: string) =>
@@ -1942,4 +1946,16 @@ export interface ExecuteSuggestionResponse {
   // Gmail-specific
   url?: string
   copy_content?: string
+}
+
+export interface GenerateTaskSuggestionsResponse {
+  generated: number
+  tasks_analyzed: number
+  suggestions: Array<{
+    id: string
+    task_id: string
+    task_title: string
+    suggestion_type: SuggestionType
+    title: string
+  }>
 }
