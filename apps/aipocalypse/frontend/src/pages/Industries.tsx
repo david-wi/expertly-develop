@@ -9,7 +9,7 @@ import type { IndustryTreeNode, Company } from '../types'
 import * as LucideIcons from 'lucide-react'
 
 function getIcon(iconName: string): React.ComponentType<{ className?: string }> {
-  const icons = LucideIcons as Record<string, React.ComponentType<{ className?: string }>>
+  const icons = LucideIcons as unknown as Record<string, React.ComponentType<{ className?: string }>>
   return icons[iconName] || Building2
 }
 
@@ -35,12 +35,6 @@ export function Industries() {
   if (selectedSector) breadcrumbs.push({ label: selectedSector.name, onClick: () => { setSelectedSector(null); setSelectedIndustry(null); setSelectedSubIndustry(null) } })
   if (selectedIndustry) breadcrumbs.push({ label: selectedIndustry.name, onClick: () => { setSelectedIndustry(null); setSelectedSubIndustry(null) } })
   if (selectedSubIndustry) breadcrumbs.push({ label: selectedSubIndustry.name, onClick: () => setSelectedSubIndustry(null) })
-
-  const showCompanyList = viewingId && (
-    (selectedSubIndustry) ||
-    (selectedIndustry && selectedIndustry.children.length === 0) ||
-    (selectedSector && !selectedIndustry && selectedSector.children.length === 0)
-  )
 
   return (
     <div>

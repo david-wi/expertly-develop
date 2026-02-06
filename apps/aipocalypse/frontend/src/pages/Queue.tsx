@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom'
 import { ListTodo, Play, RotateCcw, Trash2, CheckCircle, XCircle, Clock, Loader2, Search } from 'lucide-react'
 import { queueApi, companiesApi } from '../services/api'
 import { EmptyState } from '../components/EmptyState'
-import type { QueueItem, QueueItemStatus } from '../types'
+import type { QueueItemStatus } from '../types'
 
 const tabs: { label: string; status: QueueItemStatus | 'all' }[] = [
   { label: 'All', status: 'all' },

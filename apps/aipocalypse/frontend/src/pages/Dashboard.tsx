@@ -1,11 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
-import { Building2, FileText, Lightbulb, AlertTriangle, TrendingDown, Minus, TrendingUp } from 'lucide-react'
+import { Building2, FileText, Lightbulb, AlertTriangle } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { dashboardApi, hypothesesApi } from '../services/api'
 import { StatCard } from '../components/StatCard'
 import { SignalBadge } from '../components/SignalBadge'
 import { EmptyState } from '../components/EmptyState'
-import type { SignalRating } from '../types'
 import { useState } from 'react'
 
 export function Dashboard() {
