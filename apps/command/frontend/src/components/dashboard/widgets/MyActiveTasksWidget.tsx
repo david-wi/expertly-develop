@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Maximize2, Minimize2, Check, Plus, Timer, X, ExternalLink } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
@@ -1345,8 +1346,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       {renderContent(false)}
     </WidgetWrapper>
 
-    {/* Popped-out overlay */}
-    {isPoppedOut && (
+    {/* Popped-out overlay - rendered via portal to escape CSS transform stacking context */}
+    {isPoppedOut && createPortal(
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsPoppedOut(false)}>
         <div
           className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
@@ -1389,7 +1390,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             {renderContent(true)}
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     )}
 
     {selectedTaskId && (
