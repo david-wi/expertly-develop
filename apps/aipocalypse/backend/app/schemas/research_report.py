@@ -28,6 +28,8 @@ class ReportResponse(BaseModel):
     generation_time_seconds: Optional[float]
     input_tokens: Optional[int]
     output_tokens: Optional[int]
+    section_insights: Optional[dict] = None
+    forward_valuation: Optional[dict] = None
     price_history: Optional[list] = None
     analyst_consensus: Optional[dict] = None
     key_metrics: Optional[dict] = None

@@ -121,6 +121,23 @@ class TestReportsCRUD:
         response = await client.post("/api/v1/reports", json=sample_report_data)
         assert response.status_code == 404
 
+    async def test_get_report_includes_new_fields(self, client, sample_report_data):
+        """Reports should include section_insights and forward_valuation (defaulting to null)."""
+        company_id = await self._create_company(client)
+        sample_report_data["company_id"] = company_id
+
+        create_resp = await client.post("/api/v1/reports", json=sample_report_data)
+        report_id = create_resp.json()["id"]
+
+        response = await client.get(f"/api/v1/reports/{report_id}")
+        assert response.status_code == 200
+        data = response.json()
+        assert "section_insights" in data
+        assert "forward_valuation" in data
+        # Default to null when not set
+        assert data["section_insights"] is None
+        assert data["forward_valuation"] is None
+
     async def test_create_report_validation(self, client, sample_report_data):
         """Signal confidence must be 0-100."""
         company_id = await self._create_company(client)

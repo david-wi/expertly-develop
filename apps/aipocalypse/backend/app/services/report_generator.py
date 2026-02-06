@@ -133,6 +133,27 @@ Return a JSON object with these fields:
     "valuation_assessment": "<markdown valuation analysis — bold key multiples>",
     "investment_recommendation": "<markdown recommendation with timeframe — start with bold verdict>",
     "management_strategy_response": "<Written FROM the perspective of the company's management team as a strategic memo to the board. Outline the smartest, most creative strategy they could adopt to respond to AI disruption and competitive threats. Include specific initiatives, timeline, investment priorities, and expected outcomes. Use ### subheadings and bullets. 3-5 paragraphs.>",
+    "section_insights": {
+        "Executive Summary": "<1-2 sentence thesis-critical takeaway for this section>",
+        "Business Model": "<1-2 sentence thesis-critical takeaway>",
+        "Revenue Sources": "<1-2 sentence thesis-critical takeaway>",
+        "Margin Analysis": "<1-2 sentence thesis-critical takeaway>",
+        "Moat Assessment": "<1-2 sentence thesis-critical takeaway>",
+        "AI Impact Analysis": "<1-2 sentence thesis-critical takeaway>",
+        "Competitive Landscape": "<1-2 sentence thesis-critical takeaway>",
+        "Valuation Assessment": "<1-2 sentence thesis-critical takeaway>",
+        "Investment Recommendation": "<1-2 sentence thesis-critical takeaway>"
+    },
+    "forward_valuation": {
+        "current_data": {"price": "<current stock price>", "market_cap": "<market cap>", "shares_outstanding": "<shares>", "ttm_revenue": "<trailing 12 month revenue>", "ttm_gaap_eps": "<trailing 12 month GAAP EPS>"},
+        "scenarios": [
+            {"name": "Bull", "probability": 0.30, "description": "<1 sentence bull case>", "revenue_cagr": "<5yr revenue CAGR as decimal>", "year5_revenue": "<projected year 5 revenue>", "year5_eps": "<projected year 5 EPS>", "terminal_pe": "<terminal P/E multiple>", "implied_price": "<implied stock price>"},
+            {"name": "Base", "probability": 0.45, "description": "<1 sentence base case>", "revenue_cagr": "<5yr CAGR>", "year5_revenue": "<rev>", "year5_eps": "<eps>", "terminal_pe": "<pe>", "implied_price": "<price>"},
+            {"name": "Bear", "probability": 0.25, "description": "<1 sentence bear case>", "revenue_cagr": "<5yr CAGR>", "year5_revenue": "<rev>", "year5_eps": "<eps>", "terminal_pe": "<pe>", "implied_price": "<price>"}
+        ],
+        "weighted_fair_value": "<probability-weighted fair value>",
+        "vs_current_pct": "<% difference vs current price, negative means overvalued>"
+    },
     "hypothesis_impacts": [{"hypothesis_id": "<id>", "impact_summary": "<summary>"}],
     "citations": [{"source": "<source name>", "url": "<url if available>", "excerpt": "<relevant excerpt>"}]
 }
@@ -199,6 +220,8 @@ Return a JSON object with these fields:
         "valuation_assessment": report_data.get("valuation_assessment", ""),
         "investment_recommendation": report_data.get("investment_recommendation", ""),
         "management_strategy_response": report_data.get("management_strategy_response", ""),
+        "section_insights": report_data.get("section_insights", None),
+        "forward_valuation": report_data.get("forward_valuation", None),
         "hypothesis_impacts": report_data.get("hypothesis_impacts", []),
         "citations": report_data.get("citations", []),
         "sec_filings_used": sec_filings_used,

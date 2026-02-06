@@ -119,6 +119,32 @@ export interface KeyMetrics {
   earningsGrowth?: number
 }
 
+export interface ForwardValuationScenario {
+  name: string
+  probability: number
+  description: string
+  revenue_cagr: number
+  year5_revenue: number
+  year5_eps: number
+  terminal_pe: number
+  implied_price: number
+}
+
+export interface ForwardValuationCurrentData {
+  price: number
+  market_cap: number
+  shares_outstanding: number
+  ttm_revenue: number
+  ttm_gaap_eps: number
+}
+
+export interface ForwardValuation {
+  current_data: ForwardValuationCurrentData
+  scenarios: ForwardValuationScenario[]
+  weighted_fair_value: number
+  vs_current_pct: number
+}
+
 export interface ResearchReport {
   id: string
   company_id: string
@@ -139,6 +165,8 @@ export interface ResearchReport {
   valuation_assessment: string
   investment_recommendation: string
   management_strategy_response: string | null
+  section_insights: Record<string, string> | null
+  forward_valuation: ForwardValuation | null
   hypothesis_impacts: HypothesisImpact[]
   citations: Citation[]
   sec_filings_used: string[]

@@ -6,7 +6,7 @@ import { reportsApi } from '../services/api'
 import { SignalBadge } from '../components/SignalBadge'
 import { ConfidenceMeter } from '../components/ConfidenceMeter'
 import { MarkdownRenderer } from '../components/MarkdownRenderer'
-import type { KeyMetrics, AnalystConsensus, PricePoint } from '../types'
+import type { KeyMetrics, AnalystConsensus, PricePoint, ForwardValuation } from '../types'
 
 function formatLargeNumber(value: number | undefined): string {
   if (value === undefined || value === null) return '—'
@@ -26,45 +26,177 @@ function formatRatio(value: number | undefined): string {
   return value.toFixed(2)
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, description, warning }: { label: string; value: string; description?: string; warning?: string }) {
   return (
     <div className="bg-gray-50 rounded-lg p-3">
       <div className="text-xs text-gray-500 mb-1">{label}</div>
       <div className="text-sm font-semibold text-gray-900">{value}</div>
+      {warning && (
+        <div className="text-[10px] text-amber-600 mt-0.5">{warning}</div>
+      )}
+      {description && !warning && (
+        <div className="text-[10px] text-gray-400 mt-0.5">{description}</div>
+      )}
     </div>
   )
+}
+
+function MetricGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">{title}</div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function earningsWarning(metrics: KeyMetrics): string | undefined {
+  if (
+    metrics.earningsGrowth !== undefined &&
+    metrics.profitMargins !== undefined &&
+    metrics.earningsGrowth > 1 &&
+    metrics.profitMargins < 0.05
+  ) {
+    return 'From near-zero base — misleading'
+  }
+  return undefined
 }
 
 function KeyMetricsSection({ metrics }: { metrics: KeyMetrics }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-5">
         <BarChart3 className="w-5 h-5 text-violet-600" />
         <h2 className="text-lg font-semibold text-gray-900">Key Financial Metrics</h2>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        <MetricCard label="Trailing P/E" value={formatRatio(metrics.trailingPE)} />
-        <MetricCard label="Forward P/E" value={formatRatio(metrics.forwardPE)} />
-        <MetricCard label="Market Cap" value={formatLargeNumber(metrics.marketCap)} />
-        <MetricCard label="Enterprise Value" value={formatLargeNumber(metrics.enterpriseValue)} />
-        <MetricCard label="Revenue" value={formatLargeNumber(metrics.totalRevenue)} />
-        <MetricCard label="EBITDA" value={formatLargeNumber(metrics.ebitda)} />
-        <MetricCard label="Free Cash Flow" value={formatLargeNumber(metrics.freeCashflow)} />
-        <MetricCard label="Cash" value={formatLargeNumber(metrics.totalCash)} />
-        <MetricCard label="Debt" value={formatLargeNumber(metrics.totalDebt)} />
-        <MetricCard label="P/B Ratio" value={formatRatio(metrics.priceToBook)} />
-        <MetricCard label="P/S Ratio" value={formatRatio(metrics.priceToSalesTrailing12Months)} />
-        <MetricCard label="Beta" value={formatRatio(metrics.beta)} />
-        <MetricCard label="ROE" value={formatPercent(metrics.returnOnEquity)} />
-        <MetricCard label="Gross Margin" value={formatPercent(metrics.grossMargins)} />
-        <MetricCard label="Operating Margin" value={formatPercent(metrics.operatingMargins)} />
-        <MetricCard label="Profit Margin" value={formatPercent(metrics.profitMargins)} />
-        <MetricCard label="Revenue Growth" value={formatPercent(metrics.revenueGrowth)} />
-        <MetricCard label="Earnings Growth" value={formatPercent(metrics.earningsGrowth)} />
-        {metrics.dividendYield !== undefined && (
-          <MetricCard label="Dividend Yield" value={formatPercent(metrics.dividendYield)} />
-        )}
+      <div className="space-y-5">
+        <MetricGroup title="Valuation">
+          <MetricCard label="Trailing P/E" value={formatRatio(metrics.trailingPE)} description="Price / trailing 12mo earnings" />
+          <MetricCard label="Forward P/E" value={formatRatio(metrics.forwardPE)} description="Price / est. next-year earnings" />
+          <MetricCard label="Market Cap" value={formatLargeNumber(metrics.marketCap)} description="Total equity value" />
+          <MetricCard label="Enterprise Value" value={formatLargeNumber(metrics.enterpriseValue)} description="Mkt cap + debt − cash" />
+          <MetricCard label="P/B Ratio" value={formatRatio(metrics.priceToBook)} description="Price / book value per share" />
+          <MetricCard label="P/S Ratio" value={formatRatio(metrics.priceToSalesTrailing12Months)} description="Price / trailing 12mo revenue" />
+        </MetricGroup>
+
+        <MetricGroup title="Profitability">
+          <MetricCard label="Gross Margin" value={formatPercent(metrics.grossMargins)} description="Revenue after cost of goods" />
+          <MetricCard label="Operating Margin" value={formatPercent(metrics.operatingMargins)} description="Revenue after operating costs" />
+          <MetricCard label="Profit Margin" value={formatPercent(metrics.profitMargins)} description="Net income / revenue" />
+          <MetricCard label="ROE" value={formatPercent(metrics.returnOnEquity)} description="Net income / shareholder equity" />
+          <MetricCard label="EBITDA" value={formatLargeNumber(metrics.ebitda)} description="Operating profit + D&A" />
+        </MetricGroup>
+
+        <MetricGroup title="Growth">
+          <MetricCard label="Revenue Growth" value={formatPercent(metrics.revenueGrowth)} description="YoY % change in revenue" />
+          <MetricCard
+            label="Earnings Growth"
+            value={formatPercent(metrics.earningsGrowth)}
+            description="YoY % change in net income"
+            warning={earningsWarning(metrics)}
+          />
+        </MetricGroup>
+
+        <MetricGroup title="Financial Health">
+          <MetricCard label="Revenue" value={formatLargeNumber(metrics.totalRevenue)} description="Trailing 12mo total revenue" />
+          <MetricCard label="Free Cash Flow" value={formatLargeNumber(metrics.freeCashflow)} description="Operating cash flow − capex" />
+          <MetricCard label="Cash" value={formatLargeNumber(metrics.totalCash)} description="Cash & short-term investments" />
+          <MetricCard label="Debt" value={formatLargeNumber(metrics.totalDebt)} description="Total long-term + short-term debt" />
+          <MetricCard label="Beta" value={formatRatio(metrics.beta)} description="Volatility vs S&P 500 (1.0 = market)" />
+          {metrics.dividendYield !== undefined && (
+            <MetricCard label="Dividend Yield" value={formatPercent(metrics.dividendYield)} description="Annual dividend / share price" />
+          )}
+        </MetricGroup>
       </div>
+    </div>
+  )
+}
+
+function ForwardValuationSection({ data }: { data: ForwardValuation }) {
+  const isUpside = data.vs_current_pct >= 0
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <Target className="w-5 h-5 text-violet-600" />
+        <h2 className="text-lg font-semibold text-gray-900">5-Year Forward Valuation</h2>
+      </div>
+
+      {/* Fair Value Summary */}
+      <div className={`rounded-lg p-4 mb-5 ${isUpside ? 'bg-emerald-50 border border-emerald-200' : 'bg-red-50 border border-red-200'}`}>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <div className="text-xs text-gray-500 mb-1">Current Price</div>
+            <div className="text-xl font-bold text-gray-900">${data.current_data.price.toFixed(2)}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-xs text-gray-500 mb-1">Weighted Fair Value</div>
+            <div className={`text-2xl font-bold ${isUpside ? 'text-emerald-700' : 'text-red-700'}`}>
+              ${data.weighted_fair_value.toFixed(2)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-500 mb-1">Implied Return</div>
+            <div className={`text-xl font-bold ${isUpside ? 'text-emerald-700' : 'text-red-700'}`}>
+              {data.vs_current_pct >= 0 ? '+' : ''}{data.vs_current_pct.toFixed(1)}%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Scenario Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left py-2 pr-3 text-xs font-medium text-gray-500">Scenario</th>
+              <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Prob.</th>
+              <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Rev. CAGR</th>
+              <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Yr-5 Rev.</th>
+              <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">Yr-5 EPS</th>
+              <th className="text-right py-2 px-3 text-xs font-medium text-gray-500">P/E</th>
+              <th className="text-right py-2 pl-3 text-xs font-medium text-gray-500">Implied Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.scenarios.map((s) => {
+              const color = s.name === 'Bull' ? 'text-emerald-700' : s.name === 'Bear' ? 'text-red-700' : 'text-gray-900'
+              return (
+                <tr key={s.name} className="border-b border-gray-100">
+                  <td className={`py-2 pr-3 font-medium ${color}`}>
+                    {s.name}
+                    <div className="text-[10px] text-gray-400 font-normal">{s.description}</div>
+                  </td>
+                  <td className="text-right py-2 px-3 text-gray-600">{(s.probability * 100).toFixed(0)}%</td>
+                  <td className="text-right py-2 px-3 text-gray-600">{(s.revenue_cagr * 100).toFixed(0)}%</td>
+                  <td className="text-right py-2 px-3 text-gray-600">{formatLargeNumber(s.year5_revenue)}</td>
+                  <td className="text-right py-2 px-3 text-gray-600">${s.year5_eps.toFixed(2)}</td>
+                  <td className="text-right py-2 px-3 text-gray-600">{s.terminal_pe.toFixed(0)}x</td>
+                  <td className={`text-right py-2 pl-3 font-semibold ${color}`}>${s.implied_price.toFixed(2)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Current Data Context */}
+      <div className="mt-4 pt-3 border-t border-gray-100 flex flex-wrap gap-4 text-xs text-gray-400">
+        <span>Mkt Cap: {formatLargeNumber(data.current_data.market_cap)}</span>
+        <span>TTM Rev: {formatLargeNumber(data.current_data.ttm_revenue)}</span>
+        <span>TTM GAAP EPS: ${data.current_data.ttm_gaap_eps.toFixed(2)}</span>
+        <span>Shares: {(data.current_data.shares_outstanding / 1e6).toFixed(1)}M</span>
+      </div>
+    </div>
+  )
+}
+
+function SectionInsightCallout({ insight }: { insight: string }) {
+  return (
+    <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 mb-4">
+      <div className="text-sm font-semibold text-amber-800">{insight}</div>
     </div>
   )
 }
@@ -306,6 +438,9 @@ export function ReportView() {
               {report.analyst_consensus && (
                 <a href="#analyst-consensus" className="block text-sm text-gray-600 hover:text-violet-700 py-1">Analyst Consensus</a>
               )}
+              {report.forward_valuation && (
+                <a href="#forward-valuation" className="block text-sm text-violet-700 hover:text-violet-900 py-1 font-medium">Forward Valuation</a>
+              )}
               {sections.map(s => (
                 <a
                   key={s.id}
@@ -366,14 +501,23 @@ export function ReportView() {
             </div>
           )}
 
+          {/* Forward Valuation */}
+          {report.forward_valuation && (
+            <div id="forward-valuation">
+              <ForwardValuationSection data={report.forward_valuation} />
+            </div>
+          )}
+
           {sections.map(s => {
             const Icon = s.icon
+            const insight = report.section_insights?.[s.title]
             return (
               <div key={s.id} id={s.id} className="bg-white rounded-lg border border-gray-200 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Icon className="w-5 h-5 text-violet-600 shrink-0" />
                   <h2 className="text-lg font-semibold text-gray-900">{s.title}</h2>
                 </div>
+                {insight && <SectionInsightCallout insight={insight} />}
                 <MarkdownRenderer content={s.content} />
               </div>
             )
