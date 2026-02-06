@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { Check, ChevronDown, ChevronRight, Plus, Star } from 'lucide-react'
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { api, Task, User, Project, Playbook } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
 import UndoToast from '../components/UndoToast'
+import TaskList from '../components/TaskList'
 import { useToggleStar } from '../hooks/useToggleStar'
+import { PHASE_CONFIG } from '../utils/taskDisplay'
 
 // Build a display name with parent hierarchy
 function getProjectDisplayName(project: Project, allProjects: Project[]): string {
@@ -15,26 +17,6 @@ function getProjectDisplayName(project: Project, allProjects: Project[]): string
     return `${getProjectDisplayName(parent, allProjects)} > ${project.name}`
   }
   return project.name
-}
-
-const STATUS_COLORS: Record<string, string> = {
-  queued: 'bg-blue-100 text-blue-800',
-  blocked: 'bg-orange-100 text-orange-800',
-  checked_out: 'bg-primary-100 text-primary-800',
-  in_progress: 'bg-yellow-100 text-yellow-800',
-  completed: 'bg-green-100 text-green-800',
-  failed: 'bg-red-100 text-red-800',
-}
-
-const PHASE_CONFIG: Record<string, { bg: string; text: string; label: string }> = {
-  planning: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'Planning' },
-  ready: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'Ready' },
-  in_progress: { bg: 'bg-yellow-100', text: 'text-yellow-700', label: 'In Progress' },
-  pending_review: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'Pending Review' },
-  in_review: { bg: 'bg-indigo-100', text: 'text-indigo-700', label: 'In Review' },
-  changes_requested: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'Changes Requested' },
-  approved: { bg: 'bg-green-100', text: 'text-green-700', label: 'Approved' },
-  waiting_on_subplaybook: { bg: 'bg-cyan-100', text: 'text-cyan-700', label: 'Waiting' },
 }
 
 type GroupByOption = 'none' | 'project' | 'primary_project' | 'queue' | 'assignee' | 'status' | 'phase' | 'playbook'
@@ -53,14 +35,6 @@ function getRootProjectId(projectId: string, allProjects: Project[]): string {
     current = parent
   }
   return current ? (current._id || current.id) : projectId
-}
-
-// Format seconds to H:MM display
-function formatDuration(seconds: number | undefined): string {
-  if (!seconds) return ''
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  return `${hours}:${minutes.toString().padStart(2, '0')}`
 }
 
 export default function Tasks() {
@@ -777,12 +751,13 @@ export default function Tasks() {
             projects={projects}
             queues={queues}
             users={users}
+            columns={{ showAssignee: true, showDuration: true, showProject: true, showPhase: true, showStatus: true }}
             completingTaskId={completingTaskId}
             onTaskClick={setSelectedTaskId}
             onQuickComplete={handleQuickComplete}
             onToggleStar={handleToggleStar}
-            draggedTaskId={draggedTaskId}
-            dragOverTaskId={dragOverTaskId}
+            draggable
+            dragState={{ draggedTaskId, dragOverTaskId }}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -827,13 +802,14 @@ export default function Tasks() {
                       projects={projects}
                       queues={queues}
                       users={users}
+                      columns={{ showAssignee: true, showDuration: true, showProject: true, showPhase: true, showStatus: true }}
+                      compact
                       completingTaskId={completingTaskId}
                       onTaskClick={setSelectedTaskId}
                       onQuickComplete={handleQuickComplete}
                       onToggleStar={handleToggleStar}
-                      compact
-                      draggedTaskId={draggedTaskId}
-                      dragOverTaskId={dragOverTaskId}
+                      draggable
+                      dragState={{ draggedTaskId, dragOverTaskId }}
                       onDragStart={handleDragStart}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
@@ -985,184 +961,6 @@ export default function Tasks() {
           onDismiss={() => setUndoInfo(null)}
         />
       )}
-    </div>
-  )
-}
-
-// Compact task list component
-interface TaskListProps {
-  tasks: Task[]
-  projects: Project[]
-  queues: { _id?: string; id: string; purpose: string }[]
-  users: User[]
-  completingTaskId: string | null
-  onTaskClick: (taskId: string) => void
-  onQuickComplete: (e: React.MouseEvent, taskId: string) => void
-  onToggleStar: (e: React.MouseEvent, taskId: string) => void
-  compact?: boolean
-  // Drag-to-reorder
-  draggedTaskId?: string | null
-  dragOverTaskId?: string | null
-  onDragStart?: (e: React.DragEvent, taskId: string) => void
-  onDragOver?: (e: React.DragEvent, taskId: string) => void
-  onDragLeave?: () => void
-  onDrop?: (e: React.DragEvent, taskId: string, taskList: Task[]) => void
-  onDragEnd?: () => void
-}
-
-function TaskList({
-  tasks,
-  projects,
-  queues,
-  users,
-  completingTaskId,
-  onTaskClick,
-  onQuickComplete,
-  onToggleStar,
-  compact = false,
-  draggedTaskId,
-  dragOverTaskId,
-  onDragStart,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  onDragEnd,
-}: TaskListProps) {
-  if (tasks.length === 0) {
-    return <div className="p-3 text-xs text-gray-500">No tasks</div>
-  }
-
-  const getProjectName = (projectId: string | undefined) => {
-    if (!projectId) return null
-    const project = projects.find((p) => (p._id || p.id) === projectId)
-    return project?.name
-  }
-
-  const getQueueName = (queueId: string) => {
-    const queue = queues.find((q) => (q._id || q.id) === queueId)
-    return queue?.purpose || ''
-  }
-
-  const getUserName = (userId: string | undefined) => {
-    if (!userId) return null
-    const user = users.find((u) => (u._id || u.id) === userId)
-    return user?.name || null
-  }
-
-  return (
-    <div className={`divide-y divide-gray-100 ${compact ? 'max-h-80 overflow-auto' : ''}`}>
-      {tasks.map((task) => {
-        const taskId = task._id || task.id
-        const projectName = getProjectName(task.project_id)
-        const queueName = getQueueName(task.queue_id)
-        const assigneeName = getUserName(task.assigned_to_id)
-
-        const isDragging = draggedTaskId === taskId
-        const isDragOver = dragOverTaskId === taskId
-
-        return (
-          <div
-            key={taskId}
-            draggable={!!onDragStart}
-            onDragStart={onDragStart ? (e) => onDragStart(e, taskId) : undefined}
-            onDragOver={onDragOver ? (e) => onDragOver(e, taskId) : undefined}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop ? (e) => onDrop(e, taskId, tasks) : undefined}
-            onDragEnd={onDragEnd}
-            className={`flex items-center gap-2 px-2 py-1.5 hover:bg-gray-50 cursor-pointer transition-colors ${
-              isDragging ? 'opacity-50 bg-gray-100' : ''
-            } ${isDragOver ? 'border-t-2 border-primary-500' : ''}`}
-            onClick={() => onTaskClick(taskId)}
-            title={queueName}
-          >
-            {/* Drag handle */}
-            {onDragStart && (
-              <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
-                </svg>
-              </div>
-            )}
-
-            {/* Complete checkmark */}
-            <button
-              onClick={(e) => onQuickComplete(e, taskId)}
-              disabled={completingTaskId === taskId}
-              className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                completingTaskId === taskId
-                  ? 'text-gray-300 cursor-wait'
-                  : 'text-gray-300 hover:text-green-500 hover:bg-green-50'
-              }`}
-              title="Mark as complete"
-            >
-              <Check className="w-3.5 h-3.5" />
-            </button>
-
-            {/* Priority star */}
-            <button
-              onClick={(e) => onToggleStar(e, taskId)}
-              className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                task.is_starred
-                  ? 'text-amber-400 hover:text-amber-500'
-                  : 'text-gray-300 hover:text-amber-400'
-              }`}
-              title={task.is_starred ? 'Remove priority' : 'Mark as priority'}
-            >
-              <Star className={`w-3.5 h-3.5 ${task.is_starred ? 'fill-current' : ''}`} />
-            </button>
-
-            {/* Task title */}
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-900 truncate">{task.title}</p>
-            </div>
-
-            {/* Assigned To */}
-            {assigneeName && (
-              <div className="flex-shrink-0 max-w-24">
-                <span className="text-[10px] text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded truncate block">
-                  {assigneeName}
-                </span>
-              </div>
-            )}
-
-            {/* Duration */}
-            {task.estimated_duration && (
-              <div className="flex-shrink-0 w-10">
-                <span className="text-[10px] text-gray-500 font-mono" title="Estimated duration">
-                  {formatDuration(task.estimated_duration)}
-                </span>
-              </div>
-            )}
-
-            {/* Project badge */}
-            {projectName && (
-              <div className="flex-shrink-0 max-w-20">
-                <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded truncate block">
-                  {projectName}
-                </span>
-              </div>
-            )}
-
-            {/* Phase & Status badges */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              {task.phase && PHASE_CONFIG[task.phase] && (
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded ${PHASE_CONFIG[task.phase].bg} ${PHASE_CONFIG[task.phase].text}`}
-                >
-                  {PHASE_CONFIG[task.phase].label}
-                </span>
-              )}
-              <span
-                className={`text-[10px] px-1.5 py-0.5 rounded ${
-                  STATUS_COLORS[task.status] || 'bg-gray-100 text-gray-800'
-                }`}
-              >
-                {task.status.replace('_', ' ')}
-              </span>
-            </div>
-          </div>
-        )
-      })}
     </div>
   )
 }

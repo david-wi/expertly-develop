@@ -1,16 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Maximize2, Check, Plus, Timer, X, ExternalLink, Star, Sparkles, Loader2 } from 'lucide-react'
+import { Maximize2, Check, Plus, Timer, X, ExternalLink, Sparkles, Loader2 } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
 import { api, Task, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
+import TaskList from '../../../components/TaskList'
 import ProjectTypeahead from '../../../components/ProjectTypeahead'
 import StartTimerModal from '../../../components/StartTimerModal'
 import UndoToast from '../../../components/UndoToast'
 import { useToggleStar } from '../../../hooks/useToggleStar'
+import { formatDuration, parseDuration } from '../../../utils/duration'
 
 interface Playbook {
   _id?: string
@@ -26,29 +28,6 @@ function getProjectDisplayName(project: Project, allProjects: Project[]): string
     return `${getProjectDisplayName(parent, allProjects)} > ${project.name}`
   }
   return project.name
-}
-
-// Format seconds to H:MM or M:SS display (e.g., 600 -> "0:10" for 10 minutes)
-function formatDuration(seconds: number | undefined): string {
-  if (!seconds) return ''
-  const hours = Math.floor(seconds / 3600)
-  const minutes = Math.floor((seconds % 3600) / 60)
-  return `${hours}:${minutes.toString().padStart(2, '0')}`
-}
-
-// Parse H:MM or M:SS string to seconds (e.g., "0:10" -> 600 for 10 minutes)
-function parseDuration(value: string): number | null {
-  if (!value.trim()) return null
-  const parts = value.split(':')
-  if (parts.length === 2) {
-    const hours = parseInt(parts[0], 10) || 0
-    const minutes = parseInt(parts[1], 10) || 0
-    return hours * 3600 + minutes * 60
-  }
-  // If just a number, treat as minutes
-  const mins = parseInt(value, 10)
-  if (!isNaN(mins)) return mins * 60
-  return null
 }
 
 export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
@@ -91,9 +70,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [editDuration, setEditDuration] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
-  // Inline duration editing state
-  const [inlineDurationTaskId, setInlineDurationTaskId] = useState<string | null>(null)
-  const [inlineDurationValue, setInlineDurationValue] = useState('')
   // Timer modal state
   const [showTimerModal, setShowTimerModal] = useState(false)
   // Undo state
@@ -116,7 +92,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const dragRef = useRef<HTMLDivElement>(null)
   const topNewProjectRef = useRef<HTMLInputElement>(null)
   const bottomNewProjectRef = useRef<HTMLInputElement>(null)
-  const inlineDurationRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error)
@@ -601,39 +576,19 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
   const handleToggleStar = useToggleStar()
 
-  // Start inline duration editing
-  const startInlineDurationEdit = (e: React.MouseEvent, taskId: string, currentDuration: number | undefined) => {
-    e.stopPropagation() // Don't trigger task selection
-    setInlineDurationTaskId(taskId)
-    setInlineDurationValue(formatDuration(currentDuration))
-    setTimeout(() => inlineDurationRef.current?.focus(), 0)
-  }
-
-  // Save inline duration
-  const saveInlineDuration = async () => {
-    if (!inlineDurationTaskId) return
-
-    const parsed = parseDuration(inlineDurationValue)
-    const task = activeTasks.find(t => (t._id || t.id) === inlineDurationTaskId)
-    const originalDuration = task?.estimated_duration || null
-
-    setInlineDurationTaskId(null)
-    setInlineDurationValue('')
-
-    // Only save if changed
-    if (parsed !== originalDuration) {
-      // Optimistic local update
-      updateTaskLocally(inlineDurationTaskId, { estimated_duration: parsed ?? undefined })
-      // Update edit panel if same task is being edited
-      if (editingTaskId === inlineDurationTaskId) {
-        setEditDuration(formatDuration(parsed || undefined))
-      }
-      try {
-        await api.updateTask(inlineDurationTaskId, { estimated_duration: parsed })
-      } catch (err) {
-        console.error('Failed to update duration:', err)
-        fetchTasks() // Revert on error
-      }
+  // Handle inline duration save from TaskList component
+  const handleDurationSave = async (taskId: string, newSeconds: number | null) => {
+    // Optimistic local update
+    updateTaskLocally(taskId, { estimated_duration: newSeconds ?? undefined })
+    // Update edit panel if same task is being edited
+    if (editingTaskId === taskId) {
+      setEditDuration(formatDuration(newSeconds || undefined))
+    }
+    try {
+      await api.updateTask(taskId, { estimated_duration: newSeconds })
+    } catch (err) {
+      console.error('Failed to update duration:', err)
+      fetchTasks() // Revert on error
     }
   }
 
@@ -895,129 +850,27 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             ) : activeTasks.length === 0 && !topTaskTitle && !bottomTaskTitle ? (
               <div className="p-3 text-xs text-gray-500">No active tasks</div>
             ) : (
-              <div className="divide-y divide-gray-100">
-                {activeTasks.map((task) => {
-                  const taskId = task._id || task.id
-                  const queue = queues.find((q) => (q._id || q.id) === task.queue_id)
-                  const queueName = queue ? getQueueDisplayName(queue) : 'Unknown'
-                  const isDragging = draggedTaskId === taskId
-                  const isDragOver = dragOverTaskId === taskId
-                  const isSelected = editingTaskId === taskId
-                  const taskProject = task.project_id ? projects.find(p => (p._id || p.id) === task.project_id) : null
-
-                  return (
-                    <div
-                      key={taskId}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, taskId)}
-                      onDragOver={(e) => handleDragOver(e, taskId)}
-                      onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, taskId)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => startEditing(taskId)}
-                      onDoubleClick={() => setSelectedTaskId(taskId)}
-                      className={`flex items-center gap-1.5 px-2 py-1 hover:bg-gray-50 transition-colors cursor-pointer ${
-                        isDragging ? 'opacity-50 bg-gray-100' : ''
-                      } ${isDragOver ? 'border-t-2 border-primary-500' : ''} ${isSelected ? 'bg-primary-50 border-l-2 border-primary-500' : ''}`}
-                      title={queueName}
-                    >
-                      {/* Drag handle */}
-                      <div className="flex-shrink-0 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600">
-                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
-                        </svg>
-                      </div>
-
-                      {/* Complete checkmark */}
-                      <button
-                        onClick={(e) => handleQuickComplete(e, taskId)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        draggable={false}
-                        disabled={completingTaskId === taskId}
-                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                          completingTaskId === taskId
-                            ? 'text-gray-300 cursor-wait'
-                            : 'text-gray-300 hover:text-green-500 hover:bg-green-50'
-                        }`}
-                        title="Mark as complete"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-
-                      {/* Priority star */}
-                      <button
-                        onClick={(e) => handleToggleStar(e, taskId)}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        draggable={false}
-                        className={`flex-shrink-0 p-0.5 rounded transition-colors ${
-                          task.is_starred
-                            ? 'text-amber-400 hover:text-amber-500'
-                            : 'text-gray-300 hover:text-amber-400'
-                        }`}
-                        title={task.is_starred ? 'Remove priority' : 'Mark as priority'}
-                      >
-                        <Star className={`w-3.5 h-3.5 ${task.is_starred ? 'fill-current' : ''}`} />
-                      </button>
-
-                      {/* Task content */}
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-medium truncate ${isSelected ? 'text-primary-700' : 'text-gray-900'}`}>
-                          {task.title}
-                        </p>
-                      </div>
-
-                      {/* Duration column - editable */}
-                      <div className="flex-shrink-0 w-12" onClick={(e) => e.stopPropagation()}>
-                        {inlineDurationTaskId === taskId ? (
-                          <input
-                            ref={inlineDurationRef}
-                            type="text"
-                            value={inlineDurationValue}
-                            onChange={(e) => setInlineDurationValue(e.target.value)}
-                            onBlur={saveInlineDuration}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault()
-                                saveInlineDuration()
-                              } else if (e.key === 'Escape') {
-                                setInlineDurationTaskId(null)
-                                setInlineDurationValue('')
-                              }
-                            }}
-                            placeholder="0:10"
-                            className="w-full text-[10px] text-gray-700 font-mono bg-white border border-primary-300 rounded px-1 py-0.5 outline-none focus:ring-1 focus:ring-primary-200"
-                          />
-                        ) : (
-                          <button
-                            onClick={(e) => startInlineDurationEdit(e, taskId, task.estimated_duration)}
-                            className="w-full text-left px-1 py-0.5 rounded hover:bg-gray-100 transition-colors group"
-                            title="Click to set duration"
-                          >
-                            {task.estimated_duration ? (
-                              <span className="text-[10px] text-gray-500 font-mono">
-                                {formatDuration(task.estimated_duration)}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] text-gray-300 group-hover:text-gray-400 font-mono">
-                                --:--
-                              </span>
-                            )}
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Project column */}
-                      {taskProject && (
-                        <div className="flex-shrink-0 w-24">
-                          <span className="text-[10px] text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded truncate block">
-                            {taskProject.name}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+              <TaskList
+                tasks={activeTasks}
+                projects={projects}
+                queues={queues}
+                columns={{ showDuration: true, showProject: true, editableDuration: true }}
+                selectedTaskId={editingTaskId}
+                completingTaskId={completingTaskId}
+                onTaskClick={startEditing}
+                onQuickComplete={handleQuickComplete}
+                onToggleStar={handleToggleStar}
+                onTaskDoubleClick={setSelectedTaskId}
+                draggable
+                dragState={{ draggedTaskId, dragOverTaskId }}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={(e, taskId) => handleDrop(e, taskId)}
+                onDragEnd={handleDragEnd}
+                onDurationSave={handleDurationSave}
+                emptyMessage="No active tasks"
+              />
             )}
 
             {/* Bottom quick task creation (adds to bottom of list) */}
