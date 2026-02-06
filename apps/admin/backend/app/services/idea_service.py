@@ -49,7 +49,7 @@ class IdeaService:
         """List ideas with filters.
 
         When organization_id is provided, returns org-specific backlog items.
-        When backlog_type='work' (without organization_id), returns all items that have an org_id.
+        When backlog_type='work' (without organization_id), returns all items for the product.
         When neither is provided, returns only product-wide ideas (org_id=NULL).
         """
         conditions = []
@@ -59,10 +59,10 @@ class IdeaService:
             # Return org-specific items
             conditions.append(Idea.organization_id == organization_id)
         elif backlog_type == 'work':
-            # Return all work items (any org) - for work backlog without specific org
-            conditions.append(Idea.organization_id.isnot(None))
+            # Work backlog: return ALL items for the product (no org_id filter)
+            pass
         else:
-            # Return only product-wide ideas (no org)
+            # Idea backlog: return only product-wide ideas (no org)
             conditions.append(Idea.organization_id.is_(None))
 
         if product:
