@@ -311,10 +311,21 @@ async def generate_task_suggestions(
             detail="AI service is not configured"
         )
 
+    # Get user's queues (matches how frontend fetches "My Active Tasks")
+    user_queues = await db.queues.find({
+        "organization_id": current_user.organization_id,
+        "scope_type": "user",
+        "scope_id": current_user.id,
+    }).to_list(100)
+    user_queue_ids = [q["_id"] for q in user_queues]
+
+    if not user_queue_ids:
+        return {"generated": 0, "tasks_analyzed": 0, "suggestions": []}
+
     # Get user's active tasks (sorted by starred first, then sequence)
     active_tasks = await db.tasks.find({
         "organization_id": current_user.organization_id,
-        "assigned_to_id": current_user.id,
+        "queue_id": {"$in": user_queue_ids},
         "status": {"$in": ["queued", "checked_out", "in_progress"]},
     }).sort([("is_starred", -1), ("sequence", 1), ("created_at", 1)]).to_list(50)
 
