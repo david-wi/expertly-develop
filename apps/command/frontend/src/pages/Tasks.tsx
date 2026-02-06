@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
-import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight, Plus, Star } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { api, Task, User, Project, Playbook } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
 import UndoToast from '../components/UndoToast'
+import { useToggleStar } from '../hooks/useToggleStar'
 
 // Build a display name with parent hierarchy
 function getProjectDisplayName(project: Project, allProjects: Project[]): string {
@@ -105,8 +106,11 @@ export default function Tasks() {
       if (filterApprover && task.approver_id !== filterApprover) return false
       return true
     })
-    // Sort by sequence (ascending), then by created_at — same as My Active Tasks
+    // Sort: starred first, then by sequence (ascending), then by created_at — same as dashboard widgets
     return [...filtered].sort((a, b) => {
+      const starA = a.is_starred ? 0 : 1
+      const starB = b.is_starred ? 0 : 1
+      if (starA !== starB) return starA - starB
       const seqA = a.sequence ?? Number.MAX_VALUE
       const seqB = b.sequence ?? Number.MAX_VALUE
       if (seqA !== seqB) return seqA - seqB
@@ -212,6 +216,8 @@ export default function Tasks() {
       return newSet
     })
   }
+
+  const handleToggleStar = useToggleStar()
 
   const handleQuickComplete = async (e: React.MouseEvent, taskId: string) => {
     e.stopPropagation()
@@ -685,6 +691,7 @@ export default function Tasks() {
             completingTaskId={completingTaskId}
             onTaskClick={setSelectedTaskId}
             onQuickComplete={handleQuickComplete}
+            onToggleStar={handleToggleStar}
           />
         </div>
       ) : (
@@ -727,6 +734,7 @@ export default function Tasks() {
                       completingTaskId={completingTaskId}
                       onTaskClick={setSelectedTaskId}
                       onQuickComplete={handleQuickComplete}
+                      onToggleStar={handleToggleStar}
                       compact
                     />
 
@@ -887,6 +895,7 @@ interface TaskListProps {
   completingTaskId: string | null
   onTaskClick: (taskId: string) => void
   onQuickComplete: (e: React.MouseEvent, taskId: string) => void
+  onToggleStar: (e: React.MouseEvent, taskId: string) => void
   compact?: boolean
 }
 
@@ -898,6 +907,7 @@ function TaskList({
   completingTaskId,
   onTaskClick,
   onQuickComplete,
+  onToggleStar,
   compact = false,
 }: TaskListProps) {
   if (tasks.length === 0) {
@@ -948,6 +958,19 @@ function TaskList({
               title="Mark as complete"
             >
               <Check className="w-3.5 h-3.5" />
+            </button>
+
+            {/* Priority star */}
+            <button
+              onClick={(e) => onToggleStar(e, taskId)}
+              className={`flex-shrink-0 p-0.5 rounded transition-colors ${
+                task.is_starred
+                  ? 'text-amber-400 hover:text-amber-500'
+                  : 'text-gray-300 hover:text-amber-400'
+              }`}
+              title={task.is_starred ? 'Remove priority' : 'Mark as priority'}
+            >
+              <Star className={`w-3.5 h-3.5 ${task.is_starred ? 'fill-current' : ''}`} />
             </button>
 
             {/* Task title */}

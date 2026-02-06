@@ -2,10 +2,12 @@ import { Link } from 'react-router-dom'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
-import { Inbox } from 'lucide-react'
+import { Star } from 'lucide-react'
+import { useToggleStar } from '../../../hooks/useToggleStar'
 
 export function SingleQueueWidget({ widgetId, config }: WidgetProps) {
   const { tasks, queues, loading } = useAppStore()
+  const handleToggleStar = useToggleStar()
 
   const queue = queues.find(q => (q._id || q.id) === config.queueId)
 
@@ -18,7 +20,15 @@ export function SingleQueueWidget({ widgetId, config }: WidgetProps) {
 
   const activeTasks = queueTasks.filter(t =>
     ['queued', 'checked_out', 'in_progress'].includes(t.status)
-  ).slice(0, 5)
+  ).sort((a, b) => {
+    const starA = a.is_starred ? 0 : 1
+    const starB = b.is_starred ? 0 : 1
+    if (starA !== starB) return starA - starB
+    const seqA = a.sequence ?? Number.MAX_VALUE
+    const seqB = b.sequence ?? Number.MAX_VALUE
+    if (seqA !== seqB) return seqA - seqB
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  }).slice(0, 5)
 
   if (!config.queueId) {
     return (
@@ -62,22 +72,35 @@ export function SingleQueueWidget({ widgetId, config }: WidgetProps) {
 
           {activeTasks.length > 0 ? (
             <ul className="space-y-2">
-              {activeTasks.map(task => (
-                <li
-                  key={task._id || task.id}
-                  className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
-                >
-                  <Inbox className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                  <span className="text-sm text-gray-900 truncate">{task.title}</span>
-                  <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
-                    task.status === 'queued'
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {task.status === 'queued' ? 'Queued' : 'Active'}
-                  </span>
-                </li>
-              ))}
+              {activeTasks.map(task => {
+                const taskId = task._id || task.id
+                return (
+                  <li
+                    key={taskId}
+                    className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg"
+                  >
+                    <button
+                      onClick={(e) => handleToggleStar(e, taskId)}
+                      className={`flex-shrink-0 p-0.5 rounded transition-colors ${
+                        task.is_starred
+                          ? 'text-amber-400 hover:text-amber-500'
+                          : 'text-gray-300 hover:text-amber-400'
+                      }`}
+                      title={task.is_starred ? 'Remove priority' : 'Mark as priority'}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${task.is_starred ? 'fill-current' : ''}`} />
+                    </button>
+                    <span className="text-sm text-gray-900 truncate">{task.title}</span>
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded ${
+                      task.status === 'queued'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {task.status === 'queued' ? 'Queued' : 'Active'}
+                    </span>
+                  </li>
+                )
+              })}
             </ul>
           ) : (
             <p className="text-gray-500 text-sm">No active tasks in this queue</p>

@@ -7,6 +7,7 @@ import { useAppStore } from '../../../stores/appStore'
 import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
 import UndoToast from '../../../components/UndoToast'
+import { useToggleStar } from '../../../hooks/useToggleStar'
 
 interface Playbook {
   _id?: string
@@ -207,24 +208,7 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
     }
   }
 
-  // Toggle star on a task (optimistic update)
-  const handleToggleStar = async (e: React.MouseEvent, taskId: string) => {
-    e.stopPropagation()
-    const task = activeTasks.find(t => (t._id || t.id) === taskId)
-    if (!task) return
-    const newStarred = !task.is_starred
-    // Optimistically update local state
-    const { tasks: currentTasks, setTasks } = useAppStore.getState()
-    setTasks(currentTasks.map(t => (t._id || t.id) === taskId ? { ...t, is_starred: newStarred } : t))
-    try {
-      await api.updateTask(taskId, { is_starred: newStarred })
-    } catch (err) {
-      console.error('Failed to toggle star:', err)
-      // Revert on error
-      const { tasks: latest, setTasks: set } = useAppStore.getState()
-      set(latest.map(t => (t._id || t.id) === taskId ? { ...t, is_starred: !newStarred } : t))
-    }
-  }
+  const handleToggleStar = useToggleStar()
 
   const handleUndo = useCallback(async () => {
     if (!undoInfo) return
