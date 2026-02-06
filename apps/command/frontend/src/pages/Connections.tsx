@@ -636,151 +636,134 @@ export default function Connections() {
         size="sm"
       >
         <div className="space-y-4">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-            <div className="flex items-start space-x-2">
-              <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm text-blue-800">
-                {multiAccountTipProvider === 'slack'
-                  ? 'Slack may auto-select your first workspace. Follow these tips to connect a different one.'
-                  : multiAccountTipProvider === 'google'
-                    ? 'Google may auto-sign in with your current account. Follow these tips to connect a different one.'
-                    : multiAccountTipProvider === 'microsoft'
-                      ? 'Microsoft may auto-sign in with your current account. Follow these tips to connect a different one.'
-                      : 'Follow these tips to connect a different account.'}
+          {multiAccountTipProvider === 'slack' ? (
+            <div className="text-center space-y-3">
+              <p className="text-sm text-gray-600">
+                Click the button below to add Expertly to another Slack workspace. You can choose which workspace during authorization.
               </p>
+              <a
+                href="https://slack.com/oauth/v2/authorize?client_id=65064732034.10451817019781&scope=&user_scope=channels:history,channels:read,chat:write,groups:history,search:read,users:read,users:read.email,groups:read,im:history,mpim:history,reactions:read,reactions:write,files:read,usergroups:read,team:read"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <img
+                  alt="Add to Slack"
+                  height="40"
+                  width="139"
+                  src="https://platform.slack-edge.com/img/add_to_slack.png"
+                  srcSet="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x"
+                  className="inline-block"
+                />
+              </a>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <svg className="w-5 h-5 text-blue-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-blue-800">
+                    {multiAccountTipProvider === 'google'
+                      ? 'Google may auto-sign in with your current account. Follow these tips to connect a different one.'
+                      : multiAccountTipProvider === 'microsoft'
+                        ? 'Microsoft may auto-sign in with your current account. Follow these tips to connect a different one.'
+                        : 'Follow these tips to connect a different account.'}
+                  </p>
+                </div>
+              </div>
 
-          <ol className="space-y-3 text-sm text-gray-700">
-            {multiAccountTipProvider === 'slack' && (
-              <>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">1.</span>
-                  <span>
-                    <strong>One-time setup:</strong> Ensure your Slack app has "Distribute App" enabled at{' '}
-                    <a
-                      href="https://api.slack.com/apps"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      api.slack.com/apps
-                    </a>{' '}
-                    &rarr; Manage Distribution.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">2.</span>
-                  <span>
-                    <strong>During authorization:</strong> Use the <strong>"Workspace"</strong> dropdown at the top-right of the Slack consent page to select a different workspace.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">3.</span>
-                  <span>
-                    <strong>If workspace not listed:</strong> Sign into it at{' '}
-                    <a
-                      href="https://slack.com/signin"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      slack.com
-                    </a>{' '}
-                    in this browser first, then retry.
-                  </span>
-                </li>
-              </>
-            )}
-            {multiAccountTipProvider === 'google' && (
-              <>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">1.</span>
-                  <span>
-                    <strong>Choose account:</strong> On the Google sign-in page, click <strong>"Use another account"</strong> to add a different Google account.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">2.</span>
-                  <span>
-                    <strong>If it auto-signs in:</strong> Google may skip the account picker. If so, visit{' '}
-                    <a
-                      href="https://accounts.google.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      accounts.google.com
-                    </a>
-                    , click your profile picture, and add the other account first.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">3.</span>
-                  <span>
-                    <strong>Workspace accounts:</strong> If connecting a Google Workspace (organization) account, make sure your admin hasn't restricted third-party app access.
-                  </span>
-                </li>
-              </>
-            )}
-            {multiAccountTipProvider === 'microsoft' && (
-              <>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">1.</span>
-                  <span>
-                    <strong>Choose account:</strong> On the Microsoft sign-in page, click <strong>"Use a different account"</strong> or enter the email for the account you want to connect.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">2.</span>
-                  <span>
-                    <strong>If it auto-signs in:</strong> Visit{' '}
-                    <a
-                      href="https://account.microsoft.com"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 underline"
-                    >
-                      account.microsoft.com
-                    </a>{' '}
-                    and sign into the desired account in this browser first.
-                  </span>
-                </li>
-                <li className="flex gap-2">
-                  <span className="font-semibold text-gray-900 flex-shrink-0">3.</span>
-                  <span>
-                    <strong>Organization accounts:</strong> If connecting a work or school account, your IT admin may need to grant consent for the app in the Azure AD admin portal.
-                  </span>
-                </li>
-              </>
-            )}
-          </ol>
+              <ol className="space-y-3 text-sm text-gray-700">
+                {multiAccountTipProvider === 'google' && (
+                  <>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-gray-900 flex-shrink-0">1.</span>
+                      <span>
+                        <strong>Choose account:</strong> On the Google sign-in page, click <strong>"Use another account"</strong> to add a different Google account.
+                      </span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-gray-900 flex-shrink-0">2.</span>
+                      <span>
+                        <strong>If it auto-signs in:</strong> Google may skip the account picker. If so, visit{' '}
+                        <a
+                          href="https://accounts.google.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          accounts.google.com
+                        </a>
+                        , click your profile picture, and add the other account first.
+                      </span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-gray-900 flex-shrink-0">3.</span>
+                      <span>
+                        <strong>Workspace accounts:</strong> If connecting a Google Workspace (organization) account, make sure your admin hasn't restricted third-party app access.
+                      </span>
+                    </li>
+                  </>
+                )}
+                {multiAccountTipProvider === 'microsoft' && (
+                  <>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-gray-900 flex-shrink-0">1.</span>
+                      <span>
+                        <strong>Choose account:</strong> On the Microsoft sign-in page, click <strong>"Use a different account"</strong> or enter the email for the account you want to connect.
+                      </span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-gray-900 flex-shrink-0">2.</span>
+                      <span>
+                        <strong>If it auto-signs in:</strong> Visit{' '}
+                        <a
+                          href="https://account.microsoft.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800 underline"
+                        >
+                          account.microsoft.com
+                        </a>{' '}
+                        and sign into the desired account in this browser first.
+                      </span>
+                    </li>
+                    <li className="flex gap-2">
+                      <span className="font-semibold text-gray-900 flex-shrink-0">3.</span>
+                      <span>
+                        <strong>Organization accounts:</strong> If connecting a work or school account, your IT admin may need to grant consent for the app in the Azure AD admin portal.
+                      </span>
+                    </li>
+                  </>
+                )}
+              </ol>
+            </>
+          )}
         </div>
         <ModalFooter>
           <button
             onClick={() => setMultiAccountTipProvider(null)}
             className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
           >
-            Cancel
+            {multiAccountTipProvider === 'slack' ? 'Close' : 'Cancel'}
           </button>
-          <button
-            onClick={() => {
-              const provider = multiAccountTipProvider!
-              setMultiAccountTipProvider(null)
-              handleConnect(provider)
-            }}
-            disabled={connecting}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-          >
-            {connecting ? 'Connecting...' : `Continue to ${
-              multiAccountTipProvider === 'google' ? 'Google'
-                : multiAccountTipProvider === 'microsoft' ? 'Microsoft'
-                : multiAccountTipProvider === 'slack' ? 'Slack'
-                : 'Provider'
-            }`}
-          </button>
+          {multiAccountTipProvider !== 'slack' && (
+            <button
+              onClick={() => {
+                const provider = multiAccountTipProvider!
+                setMultiAccountTipProvider(null)
+                handleConnect(provider)
+              }}
+              disabled={connecting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+            >
+              {connecting ? 'Connecting...' : `Continue to ${
+                multiAccountTipProvider === 'google' ? 'Google'
+                  : multiAccountTipProvider === 'microsoft' ? 'Microsoft'
+                  : 'Provider'
+              }`}
+            </button>
+          )}
         </ModalFooter>
       </Modal>
 
