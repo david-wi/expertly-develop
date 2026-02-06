@@ -107,6 +107,24 @@ describe('dashboardStore', () => {
       expect(tasks?.layout.x).toBe(6)
     })
 
+    it('skips store update when layout values have not changed', () => {
+      const widgetsBefore = useDashboardStore.getState().widgets
+      localStorageMock.setItem.mockClear()
+
+      // Call updateAllLayouts with the exact same layout values
+      useDashboardStore.getState().updateAllLayouts([
+        { i: 'stats-overview', x: 0, y: 0, w: 12, h: 2 },
+        { i: 'my-active-tasks', x: 0, y: 2, w: 8, h: 5 },
+        { i: 'my-queues', x: 8, y: 2, w: 4, h: 5 },
+        { i: 'monitors-summary', x: 0, y: 7, w: 12, h: 3 },
+      ])
+
+      // Widgets reference should be the exact same object (no re-render triggered)
+      expect(useDashboardStore.getState().widgets).toBe(widgetsBefore)
+      // localStorage should not have been called
+      expect(localStorageMock.setItem).not.toHaveBeenCalled()
+    })
+
     it('ignores updates before loadFromStorage is called (prevents race condition)', () => {
       // Simulate initial state before loadFromStorage
       useDashboardStore.setState({ isLoaded: false })

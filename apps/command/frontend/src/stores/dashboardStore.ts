@@ -93,6 +93,7 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
 
   addWidget: (type, config = {}) => {
     const { widgets } = get()
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { widgetRegistry } = require('../components/dashboard/widgets/registry')
     const definition = widgetRegistry[type]
 
@@ -149,6 +150,18 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     if (!isLoaded) {
       return
     }
+    // Bail out if no layout values actually changed to prevent infinite re-render loop
+    // when react-grid-layout fires onLayoutChange with the same values on every render
+    let hasChanges = false
+    for (const w of widgets) {
+      const lu = layouts.find(l => l.i === w.id)
+      if (lu && (w.layout.x !== lu.x || w.layout.y !== lu.y || w.layout.w !== lu.w || w.layout.h !== lu.h)) {
+        hasChanges = true
+        break
+      }
+    }
+    if (!hasChanges) return
+
     const newWidgets = widgets.map(w => {
       const layoutUpdate = layouts.find(l => l.i === w.id)
       if (layoutUpdate) {
