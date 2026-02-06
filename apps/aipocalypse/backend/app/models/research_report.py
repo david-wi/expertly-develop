@@ -45,6 +45,9 @@ class ResearchReport(MongoModel):
     output_tokens: Optional[int] = None
     raw_financial_data: Optional[dict] = None
     raw_sec_data: Optional[dict] = None
+    # AI-generated structured data
+    section_insights: Optional[dict] = None  # section_name -> 1-2 sentence thesis-critical insight
+    forward_valuation: Optional[dict] = None  # 5-year forward valuation with scenarios
     # Market data (fetched from yfinance, not AI-generated)
     price_history: Optional[list] = None
     analyst_consensus: Optional[dict] = None

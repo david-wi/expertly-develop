@@ -22,6 +22,8 @@ def _to_response(doc: dict) -> dict:
         if citation.get("accessed_at") and hasattr(citation["accessed_at"], "isoformat"):
             citation["accessed_at"] = citation["accessed_at"].isoformat()
     # Ensure new optional fields are present
+    doc.setdefault("section_insights", None)
+    doc.setdefault("forward_valuation", None)
     doc.setdefault("price_history", None)
     doc.setdefault("analyst_consensus", None)
     doc.setdefault("key_metrics", None)
@@ -188,6 +190,142 @@ Use ### subheadings and bullet points. Be specific and actionable, not generic. 
         except Exception as e:
             errors.append({"ticker": ticker, "company": company_name, "error": str(e)})
             logger.warning(f"Strategy backfill failed for {ticker}: {e}")
+
+    return {"updated": updated, "errors": errors}
+
+
+@router.post("/backfill-insights-valuation")
+async def backfill_insights_and_valuation():
+    """Backfill existing reports with AI-generated section_insights and forward_valuation."""
+    from app.config import get_settings
+    import anthropic
+    import json
+
+    db = get_database()
+    settings = get_settings()
+
+    settings_doc = await db.app_settings.find_one({})
+    api_key = (settings_doc or {}).get("anthropic_api_key") or settings.anthropic_api_key
+    model = (settings_doc or {}).get("default_model") or settings.default_model
+
+    if not api_key:
+        raise HTTPException(status_code=400, detail="No Anthropic API key configured")
+
+    query = {
+        "$or": [
+            {"section_insights": {"$exists": False}},
+            {"section_insights": None},
+            {"forward_valuation": {"$exists": False}},
+            {"forward_valuation": None},
+        ]
+    }
+    cursor = db.research_reports.find(query)
+    updated = 0
+    errors = []
+
+    client = anthropic.Anthropic(api_key=api_key)
+
+    async for doc in cursor:
+        company_name = doc.get("company_name", "Unknown")
+        ticker = doc.get("company_ticker", "")
+        try:
+            # Get current financial data for valuation
+            key_metrics = doc.get("key_metrics", {}) or {}
+            analyst_consensus = doc.get("analyst_consensus", {}) or {}
+
+            prompt = f"""Based on this existing research report for {company_name} ({ticker}), generate two things:
+
+## Existing Report Context
+- Signal: {doc.get('signal', 'hold')} (confidence: {doc.get('signal_confidence', 50)}%)
+- Moat: {doc.get('moat_rating', 'unknown')}
+- AI Vulnerability Score: {doc.get('ai_vulnerability_score', 50)}/100
+
+### Key Financial Metrics
+{json.dumps(key_metrics, indent=2, default=str)}
+
+### Analyst Consensus
+{json.dumps(analyst_consensus, indent=2, default=str)}
+
+### Executive Summary
+{doc.get('executive_summary', '')[:1000]}
+
+### Business Model
+{doc.get('business_model_analysis', '')[:800]}
+
+### Revenue Sources
+{doc.get('revenue_sources', '')[:800]}
+
+### Margin Analysis
+{doc.get('margin_analysis', '')[:800]}
+
+### Moat Assessment
+{doc.get('moat_assessment', '')[:800]}
+
+### AI Impact Analysis
+{doc.get('ai_impact_analysis', '')[:800]}
+
+### Competitive Landscape
+{doc.get('competitive_landscape', '')[:800]}
+
+### Valuation Assessment
+{doc.get('valuation_assessment', '')[:800]}
+
+### Investment Recommendation
+{doc.get('investment_recommendation', '')[:800]}
+
+## Task
+Return valid JSON with exactly two keys:
+
+1. "section_insights" — a dict mapping section name to a 1-2 sentence thesis-critical takeaway. The keys MUST be exactly: "Executive Summary", "Business Model", "Revenue Sources", "Margin Analysis", "Moat Assessment", "AI Impact Analysis", "Competitive Landscape", "Valuation Assessment", "Investment Recommendation". Each insight should highlight what matters most for the investment thesis — the thing a skimming reader must not miss.
+
+2. "forward_valuation" — a 5-year forward valuation with this structure:
+{{
+  "current_data": {{"price": <current price from metrics>, "market_cap": <from metrics>, "shares_outstanding": <calc from mktcap/price>, "ttm_revenue": <from metrics>, "ttm_gaap_eps": <calc or estimate>}},
+  "scenarios": [
+    {{"name": "Bull", "probability": 0.30, "description": "<1 sentence>", "revenue_cagr": <decimal>, "year5_revenue": <number>, "year5_eps": <number>, "terminal_pe": <number>, "implied_price": <number>}},
+    {{"name": "Base", "probability": 0.45, "description": "<1 sentence>", "revenue_cagr": <decimal>, "year5_revenue": <number>, "year5_eps": <number>, "terminal_pe": <number>, "implied_price": <number>}},
+    {{"name": "Bear", "probability": 0.25, "description": "<1 sentence>", "revenue_cagr": <decimal>, "year5_revenue": <number>, "year5_eps": <number>, "terminal_pe": <number>, "implied_price": <number>}}
+  ],
+  "weighted_fair_value": <probability-weighted price>,
+  "vs_current_pct": <% vs current, negative = overvalued>
+}}
+
+Use the financial data provided. All numbers must be actual numbers (not strings). Return ONLY the JSON object."""
+
+            response = client.messages.create(
+                model=model,
+                max_tokens=3000,
+                system="You are a senior equity research analyst. Return only valid JSON with the requested structure. All values must be numbers, not strings. Do not wrap in markdown code fences.",
+                messages=[{"role": "user", "content": prompt}],
+            )
+
+            response_text = response.content[0].text.strip()
+            # Parse JSON
+            import re
+            try:
+                result_data = json.loads(response_text)
+            except json.JSONDecodeError:
+                json_match = re.search(r'\{[\s\S]*\}', response_text)
+                if json_match:
+                    result_data = json.loads(json_match.group())
+                else:
+                    raise ValueError("Failed to parse JSON from response")
+
+            update_fields = {"updated_at": utc_now()}
+            if result_data.get("section_insights"):
+                update_fields["section_insights"] = result_data["section_insights"]
+            if result_data.get("forward_valuation"):
+                update_fields["forward_valuation"] = result_data["forward_valuation"]
+
+            await db.research_reports.update_one(
+                {"_id": doc["_id"]},
+                {"$set": update_fields}
+            )
+            updated += 1
+            logger.info(f"Backfilled insights+valuation for {company_name} ({ticker})")
+        except Exception as e:
+            errors.append({"ticker": ticker, "company": company_name, "error": str(e)})
+            logger.warning(f"Insights+valuation backfill failed for {ticker}: {e}")
 
     return {"updated": updated, "errors": errors}
 
