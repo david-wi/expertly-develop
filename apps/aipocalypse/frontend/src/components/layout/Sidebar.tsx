@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   Building2,
+  FileText,
   ListTodo,
   Settings,
 } from 'lucide-react'
@@ -14,6 +15,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Hypotheses', href: '/hypotheses', icon: Lightbulb },
   { name: 'Industries', href: '/industries', icon: Building2 },
+  { name: 'Research Reports', href: '/reports', icon: FileText },
   { name: 'Research Queue', href: '/queue', icon: ListTodo },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]

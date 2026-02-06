@@ -40,9 +40,15 @@ export function ReportView() {
 
   return (
     <div>
-      <Link to={`/companies/${report.company_id}`} className="text-sm text-violet-600 hover:text-violet-800 flex items-center gap-1 mb-4">
-        <ArrowLeft className="w-3 h-3" /> Back to {report.company_name}
-      </Link>
+      <div className="flex items-center gap-4 mb-4">
+        <Link to="/reports" className="text-sm text-violet-600 hover:text-violet-800 flex items-center gap-1">
+          <ArrowLeft className="w-3 h-3" /> All Reports
+        </Link>
+        <span className="text-gray-300">|</span>
+        <Link to={`/companies/${report.company_id}`} className="text-sm text-violet-600 hover:text-violet-800">
+          {report.company_name}
+        </Link>
+      </div>
 
       {/* Report Header */}
       <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">

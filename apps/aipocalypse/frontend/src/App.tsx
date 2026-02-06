@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Hypotheses } from './pages/Hypotheses'
 import { Industries } from './pages/Industries'
 import { CompanyDetail } from './pages/CompanyDetail'
+import { ResearchReports } from './pages/ResearchReports'
 import { ReportView } from './pages/ReportView'
 import { Queue } from './pages/Queue'
 import { Settings } from './pages/Settings'
@@ -29,6 +30,7 @@ function App() {
             <Route path="/industries" element={<Industries />} />
             <Route path="/industries/:id" element={<Industries />} />
             <Route path="/companies/:id" element={<CompanyDetail />} />
+            <Route path="/reports" element={<ResearchReports />} />
             <Route path="/reports/:id" element={<ReportView />} />
             <Route path="/queue" element={<Queue />} />
             <Route path="/settings" element={<Settings />} />
