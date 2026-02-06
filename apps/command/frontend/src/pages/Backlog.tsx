@@ -26,8 +26,8 @@ export default function Backlog() {
         // Use product from URL param (passed by the originating app), fallback to 'manage'
         const product = searchParams.get('product') || 'manage'
 
-        // Redirect to Admin with product filter and organization_id for org-specific backlog
-        const url = `https://admin.ai.devintensive.com/idea-backlog?product=${product}&organization_id=${orgId}`
+        // Redirect to Admin work-backlog with product filter and organization_id
+        const url = `https://admin.ai.devintensive.com/work-backlog?product=${product}&organization_id=${orgId}`
         window.location.href = url
       } catch (err) {
         console.error('Failed to get user for redirect:', err)

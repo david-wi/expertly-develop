@@ -20,6 +20,7 @@ const pageTitles: Record<string, string> = {
   '/themes': 'Themes',
   '/ai-config': 'AI Config',
   '/idea-backlog': 'Idea Backlog',
+  '/work-backlog': 'Work Backlog',
   '/error-logs': 'Error Logs',
   '/monitoring': 'Monitoring',
   '/monitor': 'Live Monitor',
