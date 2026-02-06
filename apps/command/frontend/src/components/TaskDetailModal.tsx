@@ -36,6 +36,7 @@ import PlaybookStepExecutor from './PlaybookStepExecutor'
 import PlaybookSelector from './PlaybookSelector'
 import StartTimerModal from './StartTimerModal'
 import TaskSuggestions from './TaskSuggestions'
+import ProjectTypeahead, { ProjectOption } from './ProjectTypeahead'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
 interface TaskDetailModalProps {
@@ -177,6 +178,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const [task, setTask] = useState<Task | null>(null)
   const [queues, setQueues] = useState<Queue[]>([])
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+  const [projects, setProjects] = useState<ProjectOption[]>([])
   const [attachments, setAttachments] = useState<TaskAttachment[]>([])
   const [comments, setComments] = useState<TaskComment[]>([])
   const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([])
@@ -190,6 +192,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   const [editedQueueId, setEditedQueueId] = useState('')
   const [editedPriority, setEditedPriority] = useState(5)
   const [editedPlaybookId, setEditedPlaybookId] = useState<string | null>(null)
+  const [editedProjectId, setEditedProjectId] = useState<string | null>(null)
   const [editedApproverType, setEditedApproverType] = useState<ApproverType | null>(null)
   const [editedApproverId, setEditedApproverId] = useState<string | null>(null)
   const [editedApproverQueueId, setEditedApproverQueueId] = useState<string | null>(null)
@@ -239,10 +242,11 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
     setError(null)
 
     try {
-      const [taskData, queuesData, playbooksData, attachmentsData, commentsData, suggestionsData] = await Promise.all([
+      const [taskData, queuesData, playbooksData, projectsData, attachmentsData, commentsData, suggestionsData] = await Promise.all([
         api.getTask(taskId),
         api.getQueues(),
         api.getPlaybooks(),
+        api.getProjects(),
         api.getTaskAttachments(taskId),
         api.getTaskComments(taskId),
         api.getTaskSuggestions(taskId),
@@ -251,6 +255,11 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       setTask(taskData)
       setQueues(queuesData)
       setPlaybooks(playbooksData)
+      setProjects(projectsData.map((p: { _id?: string; id: string; name: string; parent_project_id?: string | null }) => ({
+        id: p._id || p.id,
+        name: p.name,
+        parent_project_id: p.parent_project_id,
+      })))
       setAttachments(attachmentsData)
       setComments(commentsData)
       setSuggestions(suggestionsData)
@@ -261,6 +270,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       setEditedQueueId(taskData.queue_id)
       setEditedPriority(taskData.priority)
       setEditedPlaybookId(taskData.sop_id || null)
+      setEditedProjectId(taskData.project_id || null)
       setEditedApproverType(taskData.approver_type as ApproverType || null)
       setEditedApproverId(taskData.approver_id || null)
       setEditedApproverQueueId(taskData.approver_queue_id || null)
@@ -349,6 +359,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       editedQueueId !== task.queue_id ||
       editedPriority !== task.priority ||
       editedPlaybookId !== (task.sop_id || null) ||
+      editedProjectId !== (task.project_id || null) ||
       editedApproverType !== (task.approver_type as ApproverType || null) ||
       editedApproverId !== (task.approver_id || null) ||
       newScheduledStart !== originalScheduledStart ||
@@ -361,7 +372,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       daysOfWeekChanged ||
       recurrenceDayOfMonth !== (task.recurrence_day_of_month || 1)
     setHasChanges(changed)
-  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone, editedDuration, isRecurring, recurrenceType, recurrenceInterval, recurrenceDaysOfWeek, recurrenceDayOfMonth])
+  }, [task, editedTitle, editedDescription, editedQueueId, editedPriority, editedPlaybookId, editedProjectId, editedApproverType, editedApproverId, scheduledStartDate, scheduledStartTime, scheduledEndDate, scheduledEndTime, scheduleTimezone, editedDuration, isRecurring, recurrenceType, recurrenceInterval, recurrenceDaysOfWeek, recurrenceDayOfMonth])
 
   // Hook for unsaved changes warning
   const { confirmClose } = useUnsavedChanges(hasChanges)
@@ -377,6 +388,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         queue_id: editedQueueId,
         priority: editedPriority,
         sop_id: editedPlaybookId || undefined,
+        project_id: editedProjectId || undefined,
         approver_type: editedApproverType || undefined,
         approver_id: editedApproverId || undefined,
         approver_queue_id: editedApproverQueueId || undefined,
@@ -733,6 +745,21 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     onSelect={(playbook) => setEditedPlaybookId(playbook?.id || null)}
                     placeholder="None"
                     className="text-xs"
+                  />
+                </div>
+                <div className="w-px h-4 bg-theme-border/50" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-theme-text-secondary/70 uppercase tracking-wider font-medium">Project</span>
+                  <ProjectTypeahead
+                    projects={projects}
+                    selectedProjectId={editedProjectId}
+                    onChange={(projectId) => setEditedProjectId(projectId)}
+                    placeholder="None"
+                    className="text-xs"
+                    onProjectCreated={(newProject) => {
+                      setProjects((prev) => [...prev, newProject])
+                      setEditedProjectId(newProject.id)
+                    }}
                   />
                 </div>
               </div>
