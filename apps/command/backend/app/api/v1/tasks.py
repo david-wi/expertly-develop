@@ -1284,33 +1284,33 @@ async def auto_assign_projects(
     result = AutoAssignProjectsResponse(total_checked=len(tasks))
 
     for task in tasks:
-        # Extract event data from stored monitor event
+        # Extract text signals from the task
+        task_title = task.get("title", "")
+        task_description = task.get("description", "")
+
+        # Also extract sender info from stored monitor event if available
         input_data = task.get("input_data") or {}
         monitor_event = input_data.get("_monitor_event") or {}
         event_data = monitor_event.get("event_data") or {}
 
-        if not event_data:
-            continue
-
-        # Determine provider from source monitor
-        provider = None
-        source_monitor_id = task.get("source_monitor_id")
-        if source_monitor_id:
-            monitor = await db.monitors.find_one({"_id": source_monitor_id})
-            if monitor:
-                provider = monitor.get("provider")
-
-        # If no monitor found, try to infer provider from event data
-        if not provider:
-            if event_data.get("from") and isinstance(event_data["from"], dict):
-                provider = "gmail"
-            elif event_data.get("channel_id"):
-                provider = "slack"
+        sender_name = ""
+        sender_email = ""
+        if event_data:
+            # Gmail/Outlook: from.email and from.name
+            from_info = event_data.get("from", {})
+            if isinstance(from_info, dict):
+                sender_email = from_info.get("email", "")
+                sender_name = from_info.get("name", "")
+            # Slack: user_name
+            if not sender_name:
+                sender_name = event_data.get("user_name", "")
 
         matched_project_id = await monitor_service.auto_match_project(
             organization_id=task["organization_id"],
-            event_data=event_data,
-            provider=provider,
+            task_title=task_title,
+            task_description=task_description,
+            sender_name=sender_name,
+            sender_email=sender_email,
         )
 
         if matched_project_id:
