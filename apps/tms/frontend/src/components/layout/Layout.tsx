@@ -15,6 +15,10 @@ import {
   FolderSearch,
   Settings,
   LayoutGrid,
+  CheckSquare,
+  Activity,
+  Map,
+  Zap,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
@@ -29,11 +33,15 @@ const navigation = [
   { name: 'Carriers', href: '/carriers', icon: Building2 },
   { name: 'Load Boards', href: '/loadboards', icon: Radio },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
+  { name: 'Approvals', href: '/approvals', icon: CheckSquare },
   { name: 'Margins', href: '/margins', icon: BarChart3, spacerBefore: true },
   { name: 'Carrier Performance', href: '/carrier-performance', icon: Trophy },
+  { name: 'Operations Metrics', href: '/operations-metrics', icon: Activity },
+  { name: 'Lane Intelligence', href: '/lane-intelligence', icon: Map },
   { name: 'Document Review', href: '/document-review', icon: FolderSearch },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
   { name: 'Desks', href: '/desks', icon: LayoutGrid },
+  { name: 'Automations', href: '/automations', icon: Zap },
 ]
 
 // Local storage key for selected organization

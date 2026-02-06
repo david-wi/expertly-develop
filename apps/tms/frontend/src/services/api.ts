@@ -1295,4 +1295,62 @@ export const api = {
         by_type: Record<string, number>
       }
     }>('/api/v1/analytics/realtime'),
+
+  // Approval Center
+  getApprovals: (params?: { status?: string }) => {
+    const query = params?.status ? `?status=${params.status}` : ''
+    return request<any[]>(`/api/v1/approvals${query}`)
+  },
+  getApprovalSettings: () =>
+    request<any>('/api/v1/approvals/settings'),
+  approveApproval: (id: string) =>
+    request<any>(`/api/v1/approvals/${id}/approve`, { method: 'POST' }),
+  rejectApproval: (id: string, reason?: string) =>
+    request<any>(`/api/v1/approvals/${id}/reject`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    }),
+  updateApprovalThresholds: (thresholds: any[]) =>
+    request<any>('/api/v1/approvals/settings/thresholds', {
+      method: 'PATCH',
+      body: JSON.stringify({ thresholds }),
+    }),
+
+  // Analytics
+  getOperationsMetrics: (days: number = 30) =>
+    request<any>(`/api/v1/analytics/operations?days=${days}`),
+  getLaneIntelligence: (days: number = 90, limit: number = 20) =>
+    request<any[]>(`/api/v1/analytics/lanes?days=${days}&limit=${limit}`),
+
+  // Automation Builder
+  listAutomations: (params?: { trigger?: string; enabled?: boolean }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.trigger) searchParams.set('trigger', params.trigger)
+    if (params?.enabled !== undefined) searchParams.set('enabled', String(params.enabled))
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : ''
+    return request<any[]>(`/api/v1/automations${query}`)
+  },
+  getAutomation: (id: string) =>
+    request<any>(`/api/v1/automations/${id}`),
+  createAutomation: (data: any) =>
+    request<any>('/api/v1/automations', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  updateAutomation: (id: string, data: any) =>
+    request<any>(`/api/v1/automations/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+  deleteAutomation: (id: string) =>
+    request<any>(`/api/v1/automations/${id}`, { method: 'DELETE' }),
+  toggleAutomation: (id: string) =>
+    request<any>(`/api/v1/automations/${id}/toggle`, { method: 'POST' }),
+  testAutomation: (data: { entity_type: string; entity_id: string }) =>
+    request<any>('/api/v1/automations/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  getAutomationLog: (id: string) =>
+    request<any>(`/api/v1/automations/${id}/log`),
 }
