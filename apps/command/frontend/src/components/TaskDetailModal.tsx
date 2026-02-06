@@ -512,37 +512,35 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
       {/* Slide-over panel */}
-      <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-theme-bg-surface shadow-xl flex flex-col">
-        {/* Header with status accent */}
-        <div className={`px-4 py-3 border-b border-theme-border flex items-center justify-between border-l-4 ${statusConfig.border}`}>
+      <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-theme-bg-surface shadow-2xl flex flex-col">
+        {/* Header */}
+        <div className="px-5 py-3 border-b border-theme-border/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {task && (
               <>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${phaseConfig.bg} ${phaseConfig.text}`}>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full ${phaseConfig.bg} ${phaseConfig.text}`}>
                   {phaseConfig.label}
                 </span>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-semibold rounded-full ${statusConfig.bg} ${statusConfig.text}`}>
                   <StatusIcon className="w-3 h-3" />
                   {task.status.replace('_', ' ')}
                 </span>
               </>
             )}
-            <h2 className="text-base font-semibold text-theme-text-primary">Assignment Details</h2>
           </div>
           <div className="flex items-center gap-1">
-            {/* Timer button */}
             <button
               onClick={() => setShowTimerModal(true)}
-              className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors group"
+              className="p-2 rounded-lg hover:bg-theme-bg-elevated transition-colors group"
               title="Start timeboxed work session"
             >
-              <Timer className="w-5 h-5 text-theme-text-secondary group-hover:text-primary-600" />
+              <Timer className="w-4 h-4 text-theme-text-secondary/60 group-hover:text-primary-600 transition-colors" />
             </button>
             <button
               onClick={handleClose}
-              className="p-1.5 rounded-lg hover:bg-theme-bg-elevated transition-colors"
+              className="p-2 rounded-lg hover:bg-theme-bg-elevated transition-colors"
             >
-              <X className="w-5 h-5 text-theme-text-secondary" />
+              <X className="w-4 h-4 text-theme-text-secondary/60" />
             </button>
           </div>
         </div>
@@ -556,7 +554,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
           ) : error ? (
             <div className="p-4 text-red-600">{error}</div>
           ) : task ? (
-            <div className="p-4 space-y-4">
+            <div className="p-5 space-y-5">
               {/* Playbook Step Executor - shown when task has playbook and is being worked on */}
               {(() => {
                 const activePlaybook = task.sop_id ? playbooks.find(p => p.id === task.sop_id) : null
@@ -564,7 +562,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
 
                 if (activePlaybook && isWorkingOnTask && activePlaybook.steps?.length > 0) {
                   return (
-                    <div className="mb-4">
+                    <div className="mb-2">
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-xs font-medium text-theme-text-secondary">Playbook:</span>
                         <span className="text-sm font-medium text-theme-text-primary">{activePlaybook.name}</span>
@@ -586,30 +584,48 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 return null
               })()}
 
-              {/* Title and Priority */}
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Title</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={editedTitle}
-                      onChange={(e) => setEditedTitle(e.target.value)}
-                      className="flex-1 px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                    />
-                    <InlineVoiceTranscription
-                      tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
-                      onTranscribe={(text) => setEditedTitle(editedTitle ? editedTitle + ' ' + text : text)}
-                      size="sm"
-                    />
-                  </div>
-                </div>
-                <div className="w-20">
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Priority</label>
+              {/* Title - hero element */}
+              <div className="flex gap-2 items-start">
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  className="flex-1 text-xl font-semibold px-1 py-1.5 bg-transparent text-theme-text-primary border-b-2 border-transparent focus:border-primary-500 focus:outline-none transition-colors placeholder:text-theme-text-secondary/40"
+                  placeholder="Task title..."
+                />
+                <InlineVoiceTranscription
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
+                  onTranscribe={(text) => setEditedTitle(editedTitle ? editedTitle + ' ' + text : text)}
+                  size="sm"
+                />
+              </div>
+
+              {/* Description - prominent content area */}
+              <div className="flex gap-2 items-start">
+                <textarea
+                  value={editedDescription}
+                  onChange={(e) => setEditedDescription(e.target.value)}
+                  rows={5}
+                  className="flex-1 px-3 py-2.5 bg-theme-bg-elevated/50 border border-theme-border/50 rounded-xl text-theme-text-primary text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500/30 focus:border-primary-400 resize-y placeholder:text-theme-text-secondary/40 transition-all"
+                  placeholder="Describe this task..."
+                />
+                <InlineVoiceTranscription
+                  tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
+                  onTranscribe={(text) => setEditedDescription(editedDescription ? editedDescription + ' ' + text : text)}
+                  size="sm"
+                  className="self-start mt-2"
+                />
+              </div>
+
+              {/* Compact metadata strip */}
+              <div className="flex items-center gap-3 flex-wrap py-2">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-theme-text-secondary/70 uppercase tracking-wider font-medium">Priority</span>
                   <select
                     value={editedPriority}
                     onChange={(e) => setEditedPriority(Number(e.target.value))}
-                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    className="text-xs border-0 bg-theme-bg-elevated rounded-full px-2.5 py-1 text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/30 cursor-pointer appearance-none font-medium"
+                    style={{ backgroundImage: 'none', paddingRight: '0.625rem' }}
                   >
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((p) => (
                       <option key={p} value={p}>
@@ -618,70 +634,39 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     ))}
                   </select>
                 </div>
-                <div className="w-28">
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Est. Time</label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="text"
-                      value={editedDuration}
-                      onChange={(e) => setEditedDuration(e.target.value)}
-                      placeholder="0:10"
-                      className="w-16 px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                      title="Estimated duration (H:MM)"
-                    />
-                  </div>
+                <div className="w-px h-4 bg-theme-border/50" />
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-theme-text-secondary/70" />
+                  <input
+                    type="text"
+                    value={editedDuration}
+                    onChange={(e) => setEditedDuration(e.target.value)}
+                    placeholder="0:00"
+                    className="w-12 text-xs border-0 bg-theme-bg-elevated rounded-full px-2.5 py-1 text-theme-text-primary font-mono focus:outline-none focus:ring-2 focus:ring-primary-500/30 text-center"
+                    title="Estimated duration (H:MM)"
+                  />
                 </div>
-                {/* Total logged time - read-only display */}
                 {getTotalLoggedTime(task) > 0 && (
-                  <div className="w-20">
-                    <label className="block text-xs font-medium text-theme-text-secondary mb-1">Logged</label>
+                  <>
+                    <div className="w-px h-4 bg-theme-border/50" />
                     <div
-                      className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-elevated text-theme-text-secondary font-mono text-sm cursor-default"
+                      className="flex items-center gap-1.5 cursor-default"
                       title={`Total time logged: ${task?.time_entries?.length || 0} entries`}
                     >
-                      {formatDuration(getTotalLoggedTime(task))}
+                      <span className="text-[11px] text-theme-text-secondary/70 uppercase tracking-wider font-medium">Logged</span>
+                      <span className="text-xs font-mono bg-green-100 text-green-700 rounded-full px-2.5 py-1 font-medium">
+                        {formatDuration(getTotalLoggedTime(task))}
+                      </span>
                     </div>
-                  </div>
+                  </>
                 )}
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block text-xs font-medium text-theme-text-secondary mb-1">Description</label>
-                <div className="flex gap-2">
-                  <textarea
-                    value={editedDescription}
-                    onChange={(e) => setEditedDescription(e.target.value)}
-                    rows={2}
-                    className="flex-1 px-3 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none text-sm"
-                    placeholder="Add a description..."
-                  />
-                  <InlineVoiceTranscription
-                    tokenUrl="https://identity-api.ai.devintensive.com/api/v1/transcription/token"
-                    onTranscribe={(text) => setEditedDescription(editedDescription ? editedDescription + ' ' + text : text)}
-                    size="sm"
-                    className="self-start mt-1"
-                  />
-                </div>
-              </div>
-
-              {/* Playbook and Queue - 2 column */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Playbook</label>
-                  <PlaybookSelector
-                    playbooks={playbooks}
-                    selectedPlaybookId={editedPlaybookId}
-                    onSelect={(playbook) => setEditedPlaybookId(playbook?.id || null)}
-                    placeholder="None"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-theme-text-secondary mb-1">Queue</label>
+                <div className="w-px h-4 bg-theme-border/50" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-theme-text-secondary/70 uppercase tracking-wider font-medium">Queue</span>
                   <select
                     value={editedQueueId}
                     onChange={(e) => setEditedQueueId(e.target.value)}
-                    className="w-full px-2 py-1.5 border border-theme-border rounded-lg bg-theme-bg-surface text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+                    className="text-xs border-0 bg-theme-bg-elevated rounded-full px-2.5 py-1 text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500/30 cursor-pointer font-medium"
                   >
                     {queues.map((queue) => (
                       <option key={queue.id || queue._id} value={queue.id || queue._id}>
@@ -689,6 +674,17 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="w-px h-4 bg-theme-border/50" />
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-theme-text-secondary/70 uppercase tracking-wider font-medium">Playbook</span>
+                  <PlaybookSelector
+                    playbooks={playbooks}
+                    selectedPlaybookId={editedPlaybookId}
+                    onSelect={(playbook) => setEditedPlaybookId(playbook?.id || null)}
+                    placeholder="None"
+                    className="text-xs"
+                  />
                 </div>
               </div>
 
@@ -743,24 +739,24 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               {/* Schedule & Repeat - Side by side */}
               <div className="grid grid-cols-2 gap-3">
               {/* Schedule Task - Collapsible */}
-              <div className="border border-theme-border rounded-lg overflow-hidden">
+              <div className="border border-theme-border/50 rounded-xl overflow-hidden">
                 <button
                   onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                  className="w-full px-3 py-2 flex items-center justify-between bg-theme-bg-elevated hover:bg-theme-bg-surface transition-colors"
+                  className="w-full px-3 py-2 flex items-center justify-between hover:bg-theme-bg-elevated/50 transition-colors"
                 >
-                  <span className="text-xs font-medium text-theme-text-secondary flex items-center gap-2">
+                  <span className="text-xs font-medium text-theme-text-secondary/80 flex items-center gap-2">
                     <Clock className="w-3.5 h-3.5" />
-                    Schedule Task
+                    Schedule
                     {(scheduledStartDate || scheduledEndDate) && (
-                      <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded text-[10px]">
-                        Scheduled
+                      <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded-full text-[10px] font-medium">
+                        Active
                       </span>
                     )}
                   </span>
                   {showAdvancedSettings ? (
-                    <ChevronDown className="w-4 h-4 text-theme-text-secondary" />
+                    <ChevronDown className="w-3.5 h-3.5 text-theme-text-secondary/50" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-theme-text-secondary" />
+                    <ChevronRight className="w-3.5 h-3.5 text-theme-text-secondary/50" />
                   )}
                 </button>
 
@@ -847,7 +843,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               </div>
 
               {/* Repeat Settings - Collapsible */}
-              <div className="border border-theme-border rounded-lg overflow-hidden">
+              <div className="border border-theme-border/50 rounded-xl overflow-hidden">
                 <button
                   onClick={() => {
                     if (!isRecurring) {
@@ -857,9 +853,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                       setShowRepeatSettings(!showRepeatSettings)
                     }
                   }}
-                  className="w-full px-3 py-2 flex items-center justify-between bg-theme-bg-elevated hover:bg-theme-bg-surface transition-colors"
+                  className="w-full px-3 py-2 flex items-center justify-between hover:bg-theme-bg-elevated/50 transition-colors"
                 >
-                  <span className="text-xs font-medium text-theme-text-secondary flex items-center gap-2">
+                  <span className="text-xs font-medium text-theme-text-secondary/80 flex items-center gap-2">
                     <input
                       type="checkbox"
                       checked={isRecurring}
@@ -878,15 +874,15 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     />
                     Repeat
                     {isRecurring && (
-                      <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded text-[10px]">
+                      <span className="px-1.5 py-0.5 bg-primary-100 text-primary-700 rounded-full text-[10px] font-medium">
                         {recurrenceType === 'daily' ? 'Daily' : recurrenceType === 'weekly' ? 'Weekly' : 'Monthly'}
                       </span>
                     )}
                   </span>
                   {showRepeatSettings ? (
-                    <ChevronDown className="w-4 h-4 text-theme-text-secondary" />
+                    <ChevronDown className="w-3.5 h-3.5 text-theme-text-secondary/50" />
                   ) : (
-                    <ChevronRight className="w-4 h-4 text-theme-text-secondary" />
+                    <ChevronRight className="w-3.5 h-3.5 text-theme-text-secondary/50" />
                   )}
                 </button>
 
@@ -1014,11 +1010,11 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               </div>
 
               {/* Attachments Section */}
-              <div className="border-t border-theme-border pt-4">
+              <div className="border-t border-theme-border/30 pt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-theme-text-secondary flex items-center gap-1.5">
+                  <label className="text-xs font-medium text-theme-text-secondary/80 flex items-center gap-1.5">
                     <Paperclip className="w-3.5 h-3.5" />
-                    Attachments ({attachments.length})
+                    Attachments {attachments.length > 0 && <span className="text-[10px] bg-theme-bg-elevated rounded-full px-1.5 py-0.5">{attachments.length}</span>}
                   </label>
                   <button
                     onClick={() => setShowAddAttachment(!showAddAttachment)}
@@ -1141,8 +1137,8 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
 
               {/* Source URL - Link back to originating source (e.g., Slack message) */}
               {task?.source_url && (
-                <div className="border-t border-theme-border pt-4">
-                  <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="border-t border-theme-border/30 pt-4">
+                  <div className="flex items-center gap-2 p-3 bg-blue-50/60 rounded-xl border border-blue-200/50">
                     <ExternalLink className="w-4 h-4 text-blue-600 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium text-blue-800">Source</p>
@@ -1163,11 +1159,11 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               <TaskSuggestions suggestions={suggestions} onUpdate={fetchData} />
 
               {/* Timeline and Discussion Section */}
-              <div className="border-t border-theme-border pt-4">
+              <div className="border-t border-theme-border/30 pt-4">
                 <div className="flex items-center gap-1.5 mb-3">
-                  <MessageSquare className="w-3.5 h-3.5 text-theme-text-secondary" />
-                  <label className="text-xs font-medium text-theme-text-secondary">
-                    Timeline and Discussion ({comments.length})
+                  <MessageSquare className="w-3.5 h-3.5 text-theme-text-secondary/80" />
+                  <label className="text-xs font-medium text-theme-text-secondary/80">
+                    Discussion {comments.length > 0 && <span className="text-[10px] bg-theme-bg-elevated rounded-full px-1.5 py-0.5 ml-1">{comments.length}</span>}
                   </label>
                 </div>
 
@@ -1237,10 +1233,10 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-theme-border flex items-center justify-between bg-theme-bg-elevated">
+        <div className="px-5 py-3 border-t border-theme-border/50 flex items-center justify-between bg-theme-bg-surface">
           <button
             onClick={handleDelete}
-            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium"
+            className="px-3 py-1.5 text-red-500/70 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all text-xs font-medium"
           >
             Delete
           </button>
