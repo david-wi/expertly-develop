@@ -43,7 +43,7 @@ async def save_avatar_to_storage(b64_data: str, prefix: str = "avatar") -> str:
 
     # Return the absolute URL so it works from all apps
     # Use the Command backend URL since that's where avatars are stored
-    return f"https://command.ai.devintensive.com/api/v1/images/avatars/{filename}"
+    return f"https://command-api.ai.devintensive.com/api/v1/images/avatars/{filename}"
 
 
 class GenerateAvatarRequest(BaseModel):
@@ -114,7 +114,7 @@ def _generate_avatar_sync(
         with open(filepath, 'wb') as f:
             f.write(image_data)
 
-        avatar_url = f"https://command.ai.devintensive.com/api/v1/images/avatars/{filename}"
+        avatar_url = f"https://command-api.ai.devintensive.com/api/v1/images/avatars/{filename}"
 
         avatar_jobs[job_id]["status"] = "completed"
         avatar_jobs[job_id]["url"] = avatar_url
