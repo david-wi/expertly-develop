@@ -71,8 +71,11 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
     filteredTasks = filteredTasks.filter(t => t.playbook_id === config.playbookId)
   }
 
-  // Sort by sequence (ascending), then by created_at for tasks without sequence
+  // Sort: starred first, then by sequence (ascending), then by created_at
   const activeTasks = [...filteredTasks].sort((a, b) => {
+    const starA = a.is_starred ? 0 : 1
+    const starB = b.is_starred ? 0 : 1
+    if (starA !== starB) return starA - starB
     const seqA = a.sequence ?? Number.MAX_VALUE
     const seqB = b.sequence ?? Number.MAX_VALUE
     if (seqA !== seqB) return seqA - seqB
@@ -199,16 +202,22 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
     }
   }
 
-  // Toggle star on a task
+  // Toggle star on a task (optimistic update)
   const handleToggleStar = async (e: React.MouseEvent, taskId: string) => {
     e.stopPropagation()
     const task = activeTasks.find(t => (t._id || t.id) === taskId)
     if (!task) return
+    const newStarred = !task.is_starred
+    // Optimistically update local state
+    const { tasks: currentTasks, setTasks } = useAppStore.getState()
+    setTasks(currentTasks.map(t => (t._id || t.id) === taskId ? { ...t, is_starred: newStarred } : t))
     try {
-      await api.updateTask(taskId, { is_starred: !task.is_starred })
-      fetchTasks()
+      await api.updateTask(taskId, { is_starred: newStarred })
     } catch (err) {
       console.error('Failed to toggle star:', err)
+      // Revert on error
+      const { tasks: latest, setTasks: set } = useAppStore.getState()
+      set(latest.map(t => (t._id || t.id) === taskId ? { ...t, is_starred: !newStarred } : t))
     }
   }
 
