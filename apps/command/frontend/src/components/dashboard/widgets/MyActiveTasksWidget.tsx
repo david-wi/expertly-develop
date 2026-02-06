@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { Maximize2, Minimize2, Check, Plus, Timer, X, ExternalLink, Star } from 'lucide-react'
+import { Maximize2, Check, Plus, Timer, X, ExternalLink, Star } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
 import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
@@ -10,6 +9,7 @@ import TaskDetailModal from '../../../components/TaskDetailModal'
 import ProjectTypeahead from '../../../components/ProjectTypeahead'
 import StartTimerModal from '../../../components/StartTimerModal'
 import UndoToast from '../../../components/UndoToast'
+import { useToggleStar } from '../../../hooks/useToggleStar'
 
 interface Playbook {
   _id?: string
@@ -97,8 +97,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [showTimerModal, setShowTimerModal] = useState(false)
   // Undo state
   const [undoInfo, setUndoInfo] = useState<{ taskId: string; title: string } | null>(null)
-  // Pop-out state
-  const [isPoppedOut, setIsPoppedOut] = useState(false)
   // Refs
   const topTitleRef = useRef<HTMLInputElement>(null)
   const topProjectRef = useRef<HTMLInputElement>(null)
@@ -122,16 +120,6 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     api.getPlaybooks({ active_only: true }).then(setPlaybooks).catch(console.error)
     api.getProjects({ status: 'active' }).then(setProjects).catch(console.error)
   }, [])
-
-  // Close pop-out on Escape key
-  useEffect(() => {
-    if (!isPoppedOut) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsPoppedOut(false)
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isPoppedOut])
 
   // Re-fetch tasks when viewing user changes
   useEffect(() => {
@@ -575,24 +563,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }, [undoInfo])
 
-  // Toggle star on a task (optimistic update)
-  const handleToggleStar = async (e: React.MouseEvent, taskId: string) => {
-    e.stopPropagation()
-    const task = activeTasks.find(t => (t._id || t.id) === taskId)
-    if (!task) return
-    const newStarred = !task.is_starred
-    // Optimistically update local state
-    const { tasks: currentTasks, setTasks } = useAppStore.getState()
-    setTasks(currentTasks.map(t => (t._id || t.id) === taskId ? { ...t, is_starred: newStarred } : t))
-    try {
-      await api.updateTask(taskId, { is_starred: newStarred })
-    } catch (err) {
-      console.error('Failed to toggle star:', err)
-      // Revert on error
-      const { tasks: latest, setTasks: set } = useAppStore.getState()
-      set(latest.map(t => (t._id || t.id) === taskId ? { ...t, is_starred: !newStarred } : t))
-    }
-  }
+  const handleToggleStar = useToggleStar()
 
   // Start inline duration editing
   const startInlineDurationEdit = (e: React.MouseEvent, taskId: string, currentDuration: number | undefined) => {
@@ -670,8 +641,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }
 
-  // The inner widget content - rendered either in the widget or popped-out overlay
-  const renderContent = (isPopout: boolean) => (
+  return (
+  <>
+    <WidgetWrapper widgetId={widgetId} title={widgetTitle} headerAction={headerAction}>
       <div className="flex flex-col h-full">
         <div className="px-3 py-2 flex flex-wrap gap-1.5 border-b border-gray-100">
           <button
@@ -736,7 +708,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
 
         <div className="flex-1 flex overflow-hidden">
           {/* Task list (left side) */}
-          <div className={`${editingTaskId ? (isPopout ? 'w-1/2 lg:w-3/5' : 'w-1/2') : 'flex-1'} overflow-auto border-r border-gray-100 transition-all`} ref={dragRef}>
+          <div className={`${editingTaskId ? 'w-1/2' : 'flex-1'} overflow-auto border-r border-gray-100 transition-all`} ref={dragRef}>
             {/* Top quick task creation (adds to top of list) */}
             {defaultQueue && (
               <div className="flex items-start gap-2 px-2 py-1.5 border-b border-gray-100 bg-blue-50/30">
@@ -1163,7 +1135,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
             const editingTask = activeTasks.find(t => (t._id || t.id) === editingTaskId)
             if (!editingTask) return null
             return (
-              <div className={`${isPopout ? 'w-1/2 lg:w-2/5' : 'w-1/2'} p-3 overflow-auto bg-gray-50/50 border-l border-gray-200`}>
+              <div className="w-1/2 p-3 overflow-auto bg-gray-50/50 border-l border-gray-200">
                 <div className="space-y-3">
                   {/* Start Timer button and action icons */}
                   <div className="flex items-center gap-2">
@@ -1190,23 +1162,13 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       >
                         <Timer className="w-4 h-4" />
                       </button>
-                      {isPopout ? (
-                        <button
-                          onClick={() => setSelectedTaskId(editingTaskId)}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          title="Open full details"
-                        >
-                          <Maximize2 className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => setIsPoppedOut(true)}
-                          className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          title="Pop out to larger view"
-                        >
-                          <Maximize2 className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        onClick={() => setSelectedTaskId(editingTaskId)}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        title="Open full details"
+                      >
+                        <Maximize2 className="w-4 h-4" />
+                      </button>
                       <button
                         ref={editDoneRef}
                         onClick={closeEditPanel}
@@ -1378,7 +1340,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
           })()}
         </div>
 
-        {activeTasks.length > 10 && !isPopout && (
+        {activeTasks.length > 10 && (
           <div className="px-3 py-2 border-t border-gray-200 flex-shrink-0">
             <Link to="/tasks" className="text-primary-600 hover:text-primary-700 text-xs font-medium">
               View all tasks
@@ -1386,85 +1348,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
           </div>
         )}
       </div>
-  )
-
-  return (
-  <>
-    <WidgetWrapper widgetId={widgetId} title={widgetTitle} headerAction={
-      <div className="flex items-center gap-2">
-        {headerAction}
-        <button
-          onClick={() => setIsPoppedOut(!isPoppedOut)}
-          className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-          title={isPoppedOut ? 'Minimize back to widget' : 'Pop out to larger view'}
-        >
-          {isPoppedOut ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-        </button>
-      </div>
-    }>
-      {isPoppedOut ? (
-        <div className="flex flex-col items-center justify-center h-full py-8 text-gray-400">
-          <Maximize2 className="w-8 h-8 mb-2 opacity-40" />
-          <p className="text-sm">Expanded view open</p>
-          <button
-            onClick={() => setIsPoppedOut(false)}
-            className="mt-2 text-xs text-primary-600 hover:text-primary-700"
-          >
-            Click to minimize
-          </button>
-        </div>
-      ) : (
-        renderContent(false)
-      )}
     </WidgetWrapper>
-
-    {/* Popped-out overlay - rendered via portal to escape CSS transform stacking context */}
-    {isPoppedOut && createPortal(
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setIsPoppedOut(false)}>
-        <div
-          className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
-          style={{ width: '90vw', height: '85vh', maxWidth: '1400px' }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Pop-out header */}
-          <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between flex-shrink-0">
-            <div className="flex items-center gap-3">
-              <h2 className="text-lg font-semibold text-gray-900">{widgetTitle}</h2>
-              <span className="text-xs text-gray-500">{activeTasks.length} task{activeTasks.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {isViewingOther && (
-                <button
-                  onClick={() => setViewingUserId(null)}
-                  className="text-xs text-primary-600 hover:text-primary-700"
-                >
-                  ← Back to mine
-                </button>
-              )}
-              <button
-                onClick={() => setIsPoppedOut(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                title="Minimize back to widget"
-              >
-                <Minimize2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => setIsPoppedOut(false)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                title="Close"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          {/* Pop-out content */}
-          <div className="flex-1 overflow-hidden">
-            {renderContent(true)}
-          </div>
-        </div>
-      </div>,
-      document.body
-    )}
 
     {selectedTaskId && (
       <TaskDetailModal
