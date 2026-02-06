@@ -380,6 +380,18 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
     })
   }
 
+  // Build backlog URL - go directly to Admin instead of routing through Command
+  const backlogParams = new URLSearchParams()
+  if (currentAppCode) backlogParams.set('product', currentAppCode)
+  if (organizations?.currentId) backlogParams.set('organization_id', organizations.currentId)
+  const backlogQuery = backlogParams.toString()
+  const backlogUrl = `https://admin.ai.devintensive.com/idea-backlog${backlogQuery ? `?${backlogQuery}` : ''}`
+
+  // Idea backlog URL - product filter only, no org (shows cross-org ideas)
+  const ideaBacklogUrl = currentAppCode
+    ? `https://admin.ai.devintensive.com/idea-backlog?product=${currentAppCode}`
+    : 'https://admin.ai.devintensive.com/idea-backlog'
+
   // Developer Tools section (as expandable submenu) - alphabetized
   sections.push({
     items: [
@@ -394,9 +406,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             label: 'Backlog',
             icon: ClipboardList,
             type: 'link',
-            href: currentAppCode
-              ? `https://command.ai.devintensive.com/backlog?product=${currentAppCode}`
-              : 'https://command.ai.devintensive.com/backlog',
+            href: backlogUrl,
             external: true,
           },
           {
@@ -420,9 +430,7 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             label: 'Idea Backlog',
             icon: Lightbulb,
             type: 'link',
-            href: currentAppCode
-              ? `https://command.ai.devintensive.com/idea-backlog?product=${currentAppCode}`
-              : 'https://command.ai.devintensive.com/idea-backlog',
+            href: ideaBacklogUrl,
             external: true,
           },
           {
