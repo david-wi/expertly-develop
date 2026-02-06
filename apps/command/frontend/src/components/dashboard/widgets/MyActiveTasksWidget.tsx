@@ -1200,9 +1200,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                         </button>
                       ) : (
                         <button
-                          onClick={() => setSelectedTaskId(editingTaskId)}
+                          onClick={() => setIsPoppedOut(true)}
                           className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                          title="Open full details"
+                          title="Pop out to larger view"
                         >
                           <Maximize2 className="w-4 h-4" />
                         </button>

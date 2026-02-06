@@ -15,3 +15,6 @@
 20260205 - Improve Manage task writeups: show source_url in active tasks edit panel, improve AI description prompt to be more actionable/self-contained (include ~5 messages of context), expand context truncation in monitor_service, regenerate descriptions for existing Slack-sourced tasks.
 20250205 - Add provider icon (Slack, Gmail, etc) to the left of monitor entries in the Monitors table
 20260205 - Add multi-workspace Slack connection instructions: Show info tip modal when adding another Slack workspace, with instructions about enabling distribution, using workspace dropdown, and signing into other workspace first.
+20260205 - Dashboard > My Active Tasks > popout task: should show only the single task (TaskDetailModal), not the whole widget. Also ensure all fields are present in the popout.
+20250205 - Command: Fix project dropdown in task rows to widen to the LEFT instead of right, so long project names aren't cut off at screen edge
+20260205 - Command > Dashboard > MyActiveTasksWidget: Fix Expand button regression - restore setIsPoppedOut(true) for non-popout mode (was incorrectly changed to setSelectedTaskId in previous correction)
