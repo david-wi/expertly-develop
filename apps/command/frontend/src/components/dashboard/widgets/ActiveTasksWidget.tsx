@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Check } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
@@ -6,6 +6,7 @@ import { WidgetProps } from './types'
 import { useAppStore } from '../../../stores/appStore'
 import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../services/api'
 import TaskDetailModal from '../../../components/TaskDetailModal'
+import UndoToast from '../../../components/UndoToast'
 
 interface Playbook {
   _id?: string
@@ -23,6 +24,7 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  const [undoInfo, setUndoInfo] = useState<{ taskId: string; title: string } | null>(null)
 
   useEffect(() => {
     api.getUsers().then(setUsers).catch(console.error)
@@ -182,16 +184,30 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
     e.stopPropagation()
     if (completingTaskId) return
 
+    const task = activeTasks.find(t => (t._id || t.id) === taskId)
+    const taskTitle = task?.title || 'Task'
+
     setCompletingTaskId(taskId)
     try {
       await api.quickCompleteTask(taskId)
       fetchTasks()
+      setUndoInfo({ taskId, title: taskTitle })
     } catch (err) {
       console.error('Failed to complete task:', err)
     } finally {
       setCompletingTaskId(null)
     }
   }
+
+  const handleUndo = useCallback(async () => {
+    if (!undoInfo) return
+    try {
+      await api.reopenTask(undoInfo.taskId)
+      fetchTasks()
+    } catch (err) {
+      console.error('Failed to reopen task:', err)
+    }
+  }, [undoInfo, fetchTasks])
 
   // Build the "View All" link with appropriate filters
   const getViewAllLink = (): string => {
@@ -251,6 +267,8 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
                       {/* Complete checkmark */}
                       <button
                         onClick={(e) => handleQuickComplete(e, taskId)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        draggable={false}
                         disabled={completingTaskId === taskId}
                         className={`flex-shrink-0 p-0.5 rounded transition-colors ${
                           completingTaskId === taskId
@@ -309,6 +327,14 @@ export function ActiveTasksWidget({ widgetId, config }: WidgetProps) {
           isOpen={!!selectedTaskId}
           onClose={() => setSelectedTaskId(null)}
           onUpdate={() => fetchTasks()}
+        />
+      )}
+
+      {undoInfo && (
+        <UndoToast
+          message={`"${undoInfo.title}" completed`}
+          onUndo={handleUndo}
+          onDismiss={() => setUndoInfo(null)}
         />
       )}
     </>

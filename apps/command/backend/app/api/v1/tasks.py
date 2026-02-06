@@ -853,6 +853,51 @@ async def quick_complete_task(
     return serialize_task(result)
 
 
+@router.post("/{task_id}/reopen")
+async def reopen_task(
+    task_id: str,
+    current_user: User = Depends(get_current_user)
+) -> dict:
+    """Reopen a completed task back to queued/planning state. Used for undo."""
+    db = get_database()
+
+    if not ObjectId.is_valid(task_id):
+        raise HTTPException(status_code=400, detail="Invalid task ID")
+
+    now = datetime.now(timezone.utc)
+
+    result = await db.tasks.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id,
+            "status": TaskStatus.COMPLETED.value
+        },
+        {
+            "$set": {
+                "status": TaskStatus.QUEUED.value,
+                "phase": TaskPhase.PLANNING.value,
+                "completed_at": None,
+                "updated_at": now
+            }
+        },
+        return_document=True
+    )
+
+    if not result:
+        task = await db.tasks.find_one({
+            "_id": ObjectId(task_id),
+            "organization_id": current_user.organization_id
+        })
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=400, detail=f"Task is not completed (status: {task.get('status', 'unknown')})")
+
+    serialized = serialize_task(result)
+    await emit_event(str(current_user.organization_id), "task.updated", serialized)
+
+    return serialized
+
+
 # Task progress updates
 
 @router.get("/{task_id}/updates")

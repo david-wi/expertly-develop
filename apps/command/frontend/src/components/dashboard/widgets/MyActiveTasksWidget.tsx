@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { Maximize2, Minimize2, Check, Plus, Timer, X, ExternalLink } from 'lucide-react'
 import { WidgetWrapper } from '../WidgetWrapper'
@@ -8,6 +8,7 @@ import { api, User as UserType, Team, TaskReorderItem, Project } from '../../../
 import TaskDetailModal from '../../../components/TaskDetailModal'
 import ProjectTypeahead from '../../../components/ProjectTypeahead'
 import StartTimerModal from '../../../components/StartTimerModal'
+import UndoToast from '../../../components/UndoToast'
 
 interface Playbook {
   _id?: string
@@ -93,6 +94,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [inlineDurationValue, setInlineDurationValue] = useState('')
   // Timer modal state
   const [showTimerModal, setShowTimerModal] = useState(false)
+  // Undo state
+  const [undoInfo, setUndoInfo] = useState<{ taskId: string; title: string } | null>(null)
   // Pop-out state
   const [isPoppedOut, setIsPoppedOut] = useState(false)
   // Refs
@@ -510,6 +513,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     e.stopPropagation() // Don't trigger task selection
     if (completingTaskId) return
 
+    const task = activeTasks.find(t => (t._id || t.id) === taskId)
+    const taskTitle = task?.title || 'Task'
+
     setCompletingTaskId(taskId)
     try {
       await api.quickCompleteTask(taskId)
@@ -525,6 +531,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         setEditPlaybookId('')
         setEditDuration('')
       }
+      setUndoInfo({ taskId, title: taskTitle })
     } catch (err) {
       console.error('Failed to complete task:', err)
       fetchTasks() // Refetch on error to restore correct state
@@ -532,6 +539,16 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       setCompletingTaskId(null)
     }
   }
+
+  const handleUndo = useCallback(async () => {
+    if (!undoInfo) return
+    try {
+      await api.reopenTask(undoInfo.taskId)
+      fetchTasks()
+    } catch (err) {
+      console.error('Failed to reopen task:', err)
+    }
+  }, [undoInfo, fetchTasks])
 
   // Start inline duration editing
   const startInlineDurationEdit = (e: React.MouseEvent, taskId: string, currentDuration: number | undefined) => {
@@ -859,6 +876,8 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
                       {/* Complete checkmark */}
                       <button
                         onClick={(e) => handleQuickComplete(e, taskId)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        draggable={false}
                         disabled={completingTaskId === taskId}
                         className={`flex-shrink-0 p-0.5 rounded transition-colors ${
                           completingTaskId === taskId
@@ -1398,6 +1417,14 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         />
       )
     })()}
+
+    {undoInfo && (
+      <UndoToast
+        message={`"${undoInfo.title}" completed`}
+        onUndo={handleUndo}
+        onDismiss={() => setUndoInfo(null)}
+      />
+    )}
   </>
   )
 }

@@ -1,9 +1,10 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { Check, ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { useAppStore } from '../stores/appStore'
 import { api, Task, User, Project, Playbook } from '../services/api'
 import TaskDetailModal from '../components/TaskDetailModal'
 import CreateAssignmentModal from '../components/CreateAssignmentModal'
+import UndoToast from '../components/UndoToast'
 
 // Build a display name with parent hierarchy
 function getProjectDisplayName(project: Project, allProjects: Project[]): string {
@@ -70,6 +71,7 @@ export default function Tasks() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [completingTaskId, setCompletingTaskId] = useState<string | null>(null)
+  const [undoInfo, setUndoInfo] = useState<{ taskId: string; title: string } | null>(null)
 
   // Inline add task state
   const [addingInGroup, setAddingInGroup] = useState<string | null>(null)
@@ -208,16 +210,30 @@ export default function Tasks() {
     e.stopPropagation()
     if (completingTaskId) return
 
+    const task = tasks.find(t => (t._id || t.id) === taskId)
+    const taskTitle = task?.title || 'Task'
+
     setCompletingTaskId(taskId)
     try {
       await api.quickCompleteTask(taskId)
       fetchTasks()
+      setUndoInfo({ taskId, title: taskTitle })
     } catch (err) {
       console.error('Failed to complete task:', err)
     } finally {
       setCompletingTaskId(null)
     }
   }
+
+  const handleUndo = useCallback(async () => {
+    if (!undoInfo) return
+    try {
+      await api.reopenTask(undoInfo.taskId)
+      fetchTasks()
+    } catch (err) {
+      console.error('Failed to reopen task:', err)
+    }
+  }, [undoInfo, fetchTasks])
 
   const clearFilters = () => {
     setFilterQueue('')
@@ -843,6 +859,14 @@ export default function Tasks() {
         onClose={() => setShowCreateModal(false)}
         onCreated={() => fetchTasks()}
       />
+
+      {undoInfo && (
+        <UndoToast
+          message={`"${undoInfo.title}" completed`}
+          onUndo={handleUndo}
+          onDismiss={() => setUndoInfo(null)}
+        />
+      )}
     </div>
   )
 }
