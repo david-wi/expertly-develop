@@ -92,6 +92,7 @@ class Task(MongoModel):
     source_url: Optional[str] = None  # Direct link to source (e.g., Slack message permalink)
 
     # Timing
+    originated_at: Optional[datetime] = None  # When the request originally came in (message/email send time or creation time)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     failed_at: Optional[datetime] = None
@@ -158,6 +159,8 @@ class TaskCreate(BaseModel):
     recurrence_day_of_month: Optional[int] = None
     # Source tracking
     source_url: Optional[str] = None
+    # Timing
+    originated_at: Optional[datetime] = None
     # Estimated duration in seconds
     estimated_duration: Optional[int] = None
 
@@ -192,6 +195,8 @@ class TaskUpdate(BaseModel):
     sequence: Optional[float] = None
     # Source tracking
     source_url: Optional[str] = None
+    # Timing
+    originated_at: Optional[datetime] = None
     # Estimated duration in seconds
     estimated_duration: Optional[int] = None
 

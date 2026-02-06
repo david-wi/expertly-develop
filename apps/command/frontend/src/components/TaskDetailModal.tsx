@@ -36,6 +36,7 @@ import PlaybookStepExecutor from './PlaybookStepExecutor'
 import PlaybookSelector from './PlaybookSelector'
 import StartTimerModal from './StartTimerModal'
 import TaskSuggestions from './TaskSuggestions'
+import MessageReviewTab from './MessageReviewTab'
 import ProjectTypeahead, { ProjectOption } from './ProjectTypeahead'
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges'
 
@@ -235,6 +236,9 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
   // Regenerate description state
   const [regeneratingDescription, setRegeneratingDescription] = useState(false)
 
+  // Tab state for monitor-imported tasks
+  const [activeTab, setActiveTab] = useState<'details' | 'message'>('details')
+
   const fetchData = useCallback(async () => {
     if (!taskId) return
 
@@ -308,6 +312,13 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       }
 
       setHasChanges(false)
+
+      // Auto-select message tab for monitor-imported tasks
+      if (taskData.source_monitor_id) {
+        setActiveTab('message')
+      } else {
+        setActiveTab('details')
+      }
     } catch (err) {
       console.error('Failed to fetch task details:', err)
       setError('Failed to load task details')
@@ -562,7 +573,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} />
 
       {/* Slide-over panel */}
-      <div className="absolute inset-y-0 right-0 w-full max-w-2xl bg-theme-bg-surface shadow-2xl flex flex-col">
+      <div className={`absolute inset-y-0 right-0 w-full bg-theme-bg-surface shadow-2xl flex flex-col transition-all duration-200 ${task?.source_monitor_id && activeTab === 'message' ? 'max-w-4xl' : 'max-w-2xl'}`}>
         {/* Header */}
         <div className="px-5 py-3 border-b border-theme-border/50 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -595,6 +606,32 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
           </div>
         </div>
 
+        {/* Tab bar - only for monitor-imported tasks */}
+        {task?.source_monitor_id && (
+          <div className="px-5 border-b border-theme-border/50 flex gap-0">
+            <button
+              onClick={() => setActiveTab('message')}
+              className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
+                activeTab === 'message'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary hover:border-theme-border'
+              }`}
+            >
+              Message Review
+            </button>
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
+                activeTab === 'details'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-theme-text-secondary hover:text-theme-text-primary hover:border-theme-border'
+              }`}
+            >
+              Details
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -604,6 +641,15 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
           ) : error ? (
             <div className="p-4 text-red-600">{error}</div>
           ) : task ? (
+            activeTab === 'message' && task.source_monitor_id ? (
+              <MessageReviewTab
+                task={task}
+                suggestions={suggestions}
+                onUpdate={fetchData}
+                onRegenerateDescription={handleRegenerateDescription}
+                regenerating={regeneratingDescription}
+              />
+            ) : (
             <div className="p-5 space-y-5">
               {/* Playbook Step Executor - shown when task has playbook and is being worked on */}
               {(() => {
@@ -762,40 +808,36 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                     }}
                   />
                 </div>
-              </div>
+                {/* Approval - hidden if playbook defines approval */}
+                {(() => {
+                  const selectedPlaybook = editedPlaybookId
+                    ? playbooks.find(p => p.id === editedPlaybookId)
+                    : null
+                  const playbookHasApproval = selectedPlaybook?.steps?.some(s => s.approval_required)
 
-              {/* Approval Section - hidden if playbook defines approval */}
-              {(() => {
-                const selectedPlaybook = editedPlaybookId
-                  ? playbooks.find(p => p.id === editedPlaybookId)
-                  : null
-                const playbookHasApproval = selectedPlaybook?.steps?.some(s => s.approval_required)
+                  if (playbookHasApproval) return null
 
-                if (playbookHasApproval) {
-                  return null // Approval managed by playbook
-                }
-
-                return (
-                  <div className="flex items-start gap-3">
-                    <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap pt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={editedApproverType !== null}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setEditedApproverType('anyone')
-                          } else {
-                            setEditedApproverType(null)
-                            setEditedApproverId(null)
-                            setEditedApproverQueueId(null)
-                          }
-                        }}
-                        className="rounded border-theme-border text-primary-600"
-                      />
-                      <span className="text-xs font-medium text-theme-text-secondary">Requires approval</span>
-                    </label>
-                    {editedApproverType !== null && (
-                      <div className="flex-1">
+                  return (
+                    <>
+                      <div className="w-px h-4 bg-theme-border/50" />
+                      <label className="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={editedApproverType !== null}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setEditedApproverType('anyone')
+                            } else {
+                              setEditedApproverType(null)
+                              setEditedApproverId(null)
+                              setEditedApproverQueueId(null)
+                            }
+                          }}
+                          className="rounded border-theme-border text-primary-600"
+                        />
+                        <span className="text-[11px] text-theme-text-secondary/70 uppercase tracking-wider font-medium">Approval</span>
+                      </label>
+                      {editedApproverType !== null && (
                         <ApproverSelector
                           approverType={editedApproverType}
                           approverId={editedApproverId}
@@ -806,11 +848,11 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                             setEditedApproverQueueId(queueId)
                           }}
                         />
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+                      )}
+                    </>
+                  )
+                })()}
+              </div>
 
               {/* Schedule & Repeat - Side by side */}
               <div className="grid grid-cols-2 gap-3">
@@ -1085,13 +1127,29 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
               </div>
               </div>
 
-              {/* Attachments Section */}
+              {/* Attachments & Source Section */}
               <div className="border-t border-theme-border/30 pt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-medium text-theme-text-secondary/80 flex items-center gap-1.5">
-                    <Paperclip className="w-3.5 h-3.5" />
-                    Attachments {attachments.length > 0 && <span className="text-[10px] bg-theme-bg-elevated rounded-full px-1.5 py-0.5">{attachments.length}</span>}
-                  </label>
+                  <div className="flex items-center gap-3">
+                    <label className="text-xs font-medium text-theme-text-secondary/80 flex items-center gap-1.5">
+                      <Paperclip className="w-3.5 h-3.5" />
+                      Attachments {attachments.length > 0 && <span className="text-[10px] bg-theme-bg-elevated rounded-full px-1.5 py-0.5">{attachments.length}</span>}
+                    </label>
+                    {task?.source_url && (
+                      <>
+                        <div className="w-px h-4 bg-theme-border/50" />
+                        <a
+                          href={task.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          <ExternalLink className="w-3.5 h-3.5" />
+                          Source
+                        </a>
+                      </>
+                    )}
+                  </div>
                   <button
                     onClick={() => setShowAddAttachment(!showAddAttachment)}
                     className="text-xs text-primary-600 hover:text-primary-700 font-medium"
@@ -1211,26 +1269,6 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 )}
               </div>
 
-              {/* Source URL - Link back to originating source (e.g., Slack message) */}
-              {task?.source_url && (
-                <div className="border-t border-theme-border/30 pt-4">
-                  <div className="flex items-center gap-2 p-3 bg-blue-50/60 rounded-xl border border-blue-200/50">
-                    <ExternalLink className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-blue-800">Source</p>
-                      <a
-                        href={task.source_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:text-blue-800 hover:underline truncate block"
-                      >
-                        View original message
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* AI Suggestions */}
               <TaskSuggestions suggestions={suggestions} onUpdate={fetchData} />
 
@@ -1305,6 +1343,7 @@ export default function TaskDetailModal({ taskId, isOpen, onClose, onUpdate }: T
                 )}
               </div>
             </div>
+            )
           ) : null}
         </div>
 

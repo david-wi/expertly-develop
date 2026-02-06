@@ -896,10 +896,25 @@ export interface Task {
   sequence?: number
   // Source tracking
   source_url?: string
+  // Monitor input data
+  input_data?: {
+    _monitor_event?: {
+      event_id: string
+      event_type: string
+      event_data: Record<string, unknown>
+      context_data?: {
+        thread?: Array<Record<string, unknown>>
+      }
+      provider_timestamp?: string
+    }
+    [key: string]: unknown
+  }
   // Estimated duration in seconds
   estimated_duration?: number
   // Time tracking
   time_entries?: TimeEntry[]
+  // Origin tracking
+  originated_at?: string
   created_at: string
   updated_at: string
 }
