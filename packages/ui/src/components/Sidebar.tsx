@@ -55,7 +55,7 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
   { name: 'Expertly Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: ClipboardList, description: 'Requirements management' },
   { name: 'Expertly Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: MousePointerClick, description: 'Visual walkthroughs' },
   { name: 'Expertly Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: Lock, description: 'Users & authentication' },
-  { name: 'Expertly Manage', code: 'manage', href: 'https://manage.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
+  { name: 'Expertly Command', code: 'command', href: 'https://command.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
   { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: Scissors, description: 'Salon management' },
   { name: 'Expertly TMS', code: 'tms', href: 'https://tms.ai.devintensive.com', icon: Truck, description: 'Transportation management' },
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },

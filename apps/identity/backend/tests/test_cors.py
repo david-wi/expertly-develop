@@ -25,6 +25,7 @@ class TestCORSConfiguration:
         "https://define.ai.devintensive.com",
         "https://develop.ai.devintensive.com",
         "https://identity.ai.devintensive.com",
+        "https://command.ai.devintensive.com",
         "https://manage.ai.devintensive.com",
         "https://today.ai.devintensive.com",
         "https://admin.ai.devintensive.com",

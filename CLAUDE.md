@@ -60,7 +60,7 @@ curl -s -o /dev/null -w "define: %{http_code}\n" https://define.ai.devintensive.
 curl -s -o /dev/null -w "develop: %{http_code}\n" https://develop.ai.devintensive.com/
 curl -s -o /dev/null -w "identity: %{http_code}\n" https://identity.ai.devintensive.com/
 curl -s -o /dev/null -w "admin: %{http_code}\n" https://admin.ai.devintensive.com/
-curl -s -o /dev/null -w "manage: %{http_code}\n" https://manage.ai.devintensive.com/
+curl -s -o /dev/null -w "command: %{http_code}\n" https://command.ai.devintensive.com/
 curl -s -o /dev/null -w "salon: %{http_code}\n" https://salon.ai.devintensive.com/
 curl -s -o /dev/null -w "today: %{http_code}\n" https://today.ai.devintensive.com/
 curl -s -o /dev/null -w "vibetest: %{http_code}\n" https://vibetest.ai.devintensive.com/
@@ -80,7 +80,7 @@ curl -s -o /dev/null -w "demos: %{http_code}\n" https://demos.ai.devintensive.co
 | Develop | `apps/develop` | https://develop.ai.devintensive.com | Automated visual walkthroughs |
 | Identity | `apps/identity` | https://identity.ai.devintensive.com | Identity/Auth service |
 | Admin | `apps/admin` | https://admin.ai.devintensive.com | Theme management admin |
-| Manage | `apps/manage` | https://manage.ai.devintensive.com | Queue-driven task management |
+| Command | `apps/command` | https://command.ai.devintensive.com | Queue-driven task management |
 | Salon | `apps/salon` | https://salon.ai.devintensive.com | Salon management |
 | Today | `apps/today` | https://today.ai.devintensive.com | Task/workflow management |
 | Vibetest | `apps/vibetest` | https://vibetest.ai.devintensive.com | Vibe testing platform |
