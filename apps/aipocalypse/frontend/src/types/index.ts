@@ -82,6 +82,43 @@ export interface Citation {
   excerpt?: string
 }
 
+export interface PricePoint {
+  date: string
+  close: number
+}
+
+export interface AnalystConsensus {
+  targetMeanPrice: number | null
+  targetHighPrice: number | null
+  targetLowPrice: number | null
+  recommendationKey: string | null
+  recommendationMean: number | null
+  numberOfAnalystOpinions: number | null
+  currentPrice: number | null
+}
+
+export interface KeyMetrics {
+  trailingPE?: number
+  forwardPE?: number
+  marketCap?: number
+  totalRevenue?: number
+  ebitda?: number
+  totalCash?: number
+  totalDebt?: number
+  freeCashflow?: number
+  returnOnEquity?: number
+  dividendYield?: number
+  beta?: number
+  enterpriseValue?: number
+  priceToBook?: number
+  priceToSalesTrailing12Months?: number
+  grossMargins?: number
+  operatingMargins?: number
+  profitMargins?: number
+  revenueGrowth?: number
+  earningsGrowth?: number
+}
+
 export interface ResearchReport {
   id: string
   company_id: string
@@ -101,6 +138,7 @@ export interface ResearchReport {
   competitive_landscape: string
   valuation_assessment: string
   investment_recommendation: string
+  management_strategy_response: string | null
   hypothesis_impacts: HypothesisImpact[]
   citations: Citation[]
   sec_filings_used: string[]
@@ -108,6 +146,9 @@ export interface ResearchReport {
   generation_time_seconds: number | null
   input_tokens: number | null
   output_tokens: number | null
+  price_history: PricePoint[] | null
+  analyst_consensus: AnalystConsensus | null
+  key_metrics: KeyMetrics | null
   created_at: string
   updated_at: string
 }

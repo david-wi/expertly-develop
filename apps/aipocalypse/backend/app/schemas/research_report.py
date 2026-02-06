@@ -20,6 +20,7 @@ class ReportResponse(BaseModel):
     competitive_landscape: str
     valuation_assessment: str
     investment_recommendation: str
+    management_strategy_response: Optional[str] = None
     hypothesis_impacts: list[dict]
     citations: list[dict]
     sec_filings_used: list[str]
@@ -27,6 +28,9 @@ class ReportResponse(BaseModel):
     generation_time_seconds: Optional[float]
     input_tokens: Optional[int]
     output_tokens: Optional[int]
+    price_history: Optional[list] = None
+    analyst_consensus: Optional[dict] = None
+    key_metrics: Optional[dict] = None
     created_at: str
     updated_at: str
 
@@ -45,6 +49,7 @@ class ReportCreate(BaseModel):
     competitive_landscape: str
     valuation_assessment: str
     investment_recommendation: str
+    management_strategy_response: str = ""
     hypothesis_impacts: list[dict] = []
     citations: list[dict] = []
     sec_filings_used: list[str] = []

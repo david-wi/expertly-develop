@@ -17,6 +17,15 @@ Your reports should:
 - Assess competitive moats rigorously
 - Evaluate AI disruption risk/opportunity specifically
 
+FORMATTING RULES — Every markdown section MUST be highly scannable:
+- Start each section with a **bold 1-2 sentence TL;DR** as the first line
+- Use bullet points and short paragraphs (3 sentences max per paragraph)
+- Use **bold** for key numbers, company names, and critical takeaways
+- Use markdown tables when comparing data points (e.g., margins, competitors)
+- Use ### subheadings within sections to break up long analyses
+- Avoid dense walls of text — break every 3-4 lines with a heading or bullet list
+- For the management_strategy_response section, write as if you ARE the company's executive team crafting a strategic memo to the board
+
 Always respond with valid JSON matching the requested schema. Never include markdown code fences around the JSON."""
 
 
@@ -112,17 +121,18 @@ Return a JSON object with these fields:
 {
     "signal": "strong_sell|sell|hold|buy|strong_buy",
     "signal_confidence": <0-100>,
-    "executive_summary": "<2-3 paragraph markdown summary>",
-    "business_model_analysis": "<markdown analysis of business model>",
-    "revenue_sources": "<markdown breakdown of revenue sources>",
-    "margin_analysis": "<markdown analysis of margins and trends>",
-    "moat_assessment": "<markdown assessment of competitive moat>",
+    "executive_summary": "<2-3 paragraph markdown summary — start with bold TL;DR>",
+    "business_model_analysis": "<markdown analysis of business model — use bullets and subheadings>",
+    "revenue_sources": "<markdown breakdown of revenue sources — use a table if possible>",
+    "margin_analysis": "<markdown analysis of margins and trends — use a table for key figures>",
+    "moat_assessment": "<markdown assessment of competitive moat — bullets for each moat factor>",
     "moat_rating": "strong|moderate|weak|none",
-    "ai_impact_analysis": "<markdown analysis of AI disruption risk/opportunity>",
+    "ai_impact_analysis": "<markdown analysis of AI disruption risk/opportunity — use ### subheadings for threats vs opportunities>",
     "ai_vulnerability_score": <0-100 where 100 is most vulnerable>,
-    "competitive_landscape": "<markdown competitive analysis>",
-    "valuation_assessment": "<markdown valuation analysis>",
-    "investment_recommendation": "<markdown recommendation with timeframe>",
+    "competitive_landscape": "<markdown competitive analysis — use a comparison table>",
+    "valuation_assessment": "<markdown valuation analysis — bold key multiples>",
+    "investment_recommendation": "<markdown recommendation with timeframe — start with bold verdict>",
+    "management_strategy_response": "<Written FROM the perspective of the company's management team as a strategic memo to the board. Outline the smartest, most creative strategy they could adopt to respond to AI disruption and competitive threats. Include specific initiatives, timeline, investment priorities, and expected outcomes. Use ### subheadings and bullets. 3-5 paragraphs.>",
     "hypothesis_impacts": [{"hypothesis_id": "<id>", "impact_summary": "<summary>"}],
     "citations": [{"source": "<source name>", "url": "<url if available>", "excerpt": "<relevant excerpt>"}]
 }
@@ -136,7 +146,7 @@ Return a JSON object with these fields:
 
     response = client.messages.create(
         model=model,
-        max_tokens=8000,
+        max_tokens=10000,
         system=SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_prompt}],
     )
@@ -155,6 +165,18 @@ Return a JSON object with these fields:
             report_data = json.loads(json_match.group())
         else:
             raise ValueError("Failed to parse report JSON from Claude response")
+
+    # Fetch market data (independent of AI generation)
+    price_history = []
+    analyst_consensus = None
+    key_metrics = None
+    try:
+        from app.services.financial_data import get_price_history, get_analyst_data, get_key_metrics
+        price_history = await get_price_history(ticker)
+        analyst_consensus = await get_analyst_data(ticker)
+        key_metrics = await get_key_metrics(ticker)
+    except Exception as e:
+        logger.warning(f"Could not fetch market data for {ticker}: {e}")
 
     # Build report document
     now = utc_now()
@@ -176,6 +198,7 @@ Return a JSON object with these fields:
         "competitive_landscape": report_data.get("competitive_landscape", ""),
         "valuation_assessment": report_data.get("valuation_assessment", ""),
         "investment_recommendation": report_data.get("investment_recommendation", ""),
+        "management_strategy_response": report_data.get("management_strategy_response", ""),
         "hypothesis_impacts": report_data.get("hypothesis_impacts", []),
         "citations": report_data.get("citations", []),
         "sec_filings_used": sec_filings_used,
@@ -185,6 +208,9 @@ Return a JSON object with these fields:
         "output_tokens": response.usage.output_tokens,
         "raw_financial_data": fin_data,
         "raw_sec_data": sec_sections if sec_sections else None,
+        "price_history": price_history,
+        "analyst_consensus": analyst_consensus,
+        "key_metrics": key_metrics,
         "created_at": now,
         "updated_at": now,
     }

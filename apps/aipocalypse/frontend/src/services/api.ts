@@ -102,6 +102,8 @@ export const reportsApi = {
     api.delete(`/v1/reports/${id}`).then(r => r.data),
   generate: (companyId: string) =>
     api.post<ResearchReport>(`/v1/reports/generate/${companyId}`).then(r => r.data),
+  backfill: () =>
+    api.post<{ updated: number; errors: Array<{ ticker: string; error: string }> }>('/v1/reports/backfill').then(r => r.data),
 }
 
 // Queue

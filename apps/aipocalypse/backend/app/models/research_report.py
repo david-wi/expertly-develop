@@ -33,6 +33,7 @@ class ResearchReport(MongoModel):
     competitive_landscape: str = ""
     valuation_assessment: str = ""
     investment_recommendation: str = ""
+    management_strategy_response: str = ""
     # References
     hypothesis_impacts: list[HypothesisImpact] = Field(default_factory=list)
     citations: list[Citation] = Field(default_factory=list)
@@ -44,3 +45,7 @@ class ResearchReport(MongoModel):
     output_tokens: Optional[int] = None
     raw_financial_data: Optional[dict] = None
     raw_sec_data: Optional[dict] = None
+    # Market data (fetched from yfinance, not AI-generated)
+    price_history: Optional[list] = None
+    analyst_consensus: Optional[dict] = None
+    key_metrics: Optional[dict] = None
