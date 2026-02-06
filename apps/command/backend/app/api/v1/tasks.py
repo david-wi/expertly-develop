@@ -1119,10 +1119,10 @@ async def regenerate_task_description(
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Get the stored monitor event data
-    input_data = task.get("input_data", {})
-    monitor_event = input_data.get("_monitor_event", {})
-    event_data = monitor_event.get("event_data", {})
-    context_data = monitor_event.get("context_data", {})
+    input_data = task.get("input_data") or {}
+    monitor_event = input_data.get("_monitor_event") or {}
+    event_data = monitor_event.get("event_data") or {}
+    context_data = monitor_event.get("context_data") or {}
 
     if not event_data:
         raise HTTPException(
@@ -1130,7 +1130,8 @@ async def regenerate_task_description(
             detail="Task has no stored monitor event data to regenerate from"
         )
 
-    message_text = event_data.get("text", "")
+    # Support both Slack (text) and email (snippet/subject) sources
+    message_text = event_data.get("text", "") or event_data.get("snippet", "") or event_data.get("subject", "")
     if not message_text:
         raise HTTPException(
             status_code=400,

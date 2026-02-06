@@ -377,6 +377,12 @@ export const api = {
       method: 'POST',
     }),
 
+  // Task Description Regeneration
+  regenerateTaskDescription: (taskId: string) =>
+    request<{ description: string; task_id: string }>(`/api/v1/tasks/${taskId}/regenerate-description`, {
+      method: 'POST',
+    }),
+
   // Task Comments
   getTaskComments: (taskId: string) =>
     request<TaskComment[]>(`/api/v1/tasks/${taskId}/comments`),
