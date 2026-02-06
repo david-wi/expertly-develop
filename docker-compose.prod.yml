@@ -248,6 +248,8 @@ services:
     build:
       context: .
       dockerfile: ./apps/command/backend/Dockerfile
+    volumes:
+      - command_avatars:/app/uploads/avatars
     environment:
       - MONGODB_URL=mongodb://expertly-shared-mongo:27017
       - MONGODB_DATABASE=expertly_manage
@@ -697,3 +699,6 @@ volumes:
   define_uploads:
     external: true
     name: shared_define_uploads
+  command_avatars:
+    external: true
+    name: shared_command_avatars

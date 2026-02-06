@@ -20,7 +20,7 @@ settings = get_settings()
 logger = logging.getLogger(__name__)
 
 # Base directory for avatar storage
-AVATARS_BASE_DIR = "/opt/expertly-develop/uploads/manage/avatars"
+AVATARS_BASE_DIR = "/app/uploads/avatars"
 
 # In-memory job store for async avatar generation
 # In production, consider using Redis for persistence across restarts
