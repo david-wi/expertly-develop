@@ -34,6 +34,7 @@ function App() {
         <Route path="/ai-config" element={<AIConfig />} />
         <Route path="/changelog" element={<Changelog />} />
         <Route path="/idea-backlog" element={<IdeaBacklog />} />
+        <Route path="/work-backlog" element={<IdeaBacklog />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
