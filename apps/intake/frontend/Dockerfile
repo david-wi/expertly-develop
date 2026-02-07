@@ -5,6 +5,7 @@ WORKDIR /app
 
 # Build arguments
 ARG VITE_API_URL=http://localhost:8000/api/v1
+ARG VITE_IDENTITY_URL=https://identity.ai.devintensive.com
 ARG VITE_BUILD_TIMESTAMP
 ARG VITE_UI_REMOTE_URL=https://ui.ai.devintensive.com
 
@@ -25,6 +26,7 @@ RUN npm install "@vitejs/plugin-react@^4.3.4" "autoprefixer@^10.4.20" "postcss@^
 
 # Set environment variables for Vite build
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_IDENTITY_URL=$VITE_IDENTITY_URL
 ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 
 # Build the application

@@ -15,12 +15,7 @@ class Settings(BaseSettings):
     mongodb_database: str = "expertly_intake"
 
     # ── Identity Service (centralized auth) ──────────────────────────────
-    identity_api_url: str = "https://identity.ai.devintensive.com"
-
-    # ── JWT ───────────────────────────────────────────────────────────────
-    jwt_secret_key: str = "change-me-in-production"
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 1440  # 24 hours
+    identity_api_url: str = "https://identity-api.ai.devintensive.com"
 
     # ── Intake portal ────────────────────────────────────────────────────
     intake_portal_base_url: str = "https://intake.ai.devintensive.com/portal"

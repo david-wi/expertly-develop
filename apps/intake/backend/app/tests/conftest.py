@@ -3,27 +3,19 @@
 Provides:
 - Mock MongoDB collections via AsyncMock
 - Patched ``get_collection`` so services/routes never touch a real DB
-- An authenticated httpx.AsyncClient backed by a test JWT token
+- Mock Identity service authentication
+- An authenticated httpx.AsyncClient
 - Common test data factories
-
-The key design decision here is that the ``_MOCK_REGISTRY`` is a module-level
-mutable dict. A single ``unittest.mock.patch`` is applied once at session scope
-so that every import of ``get_collection`` (including cached route-module refs)
-always resolves to the same function that looks up mocks from this registry.
-Per-test fixtures then swap out MockCollection instances in the registry so
-each test starts clean.
 """
 
 import asyncio
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from bson import ObjectId
 from httpx import ASGITransport, AsyncClient
-
-from app.core.security import create_access_token
 
 
 # ---------------------------------------------------------------------------
@@ -45,69 +37,107 @@ CONTRIBUTOR_ID = str(ObjectId())
 
 
 # ---------------------------------------------------------------------------
-# JWT token fixtures
+# Mock Identity User
 # ---------------------------------------------------------------------------
 
-@pytest.fixture
-def admin_token_data() -> dict:
-    return {
-        "sub": USER_ID,
-        "accountId": ACCOUNT_ID,
-        "email": "admin@test.com",
-        "role": "admin",
-        "name": "Test Admin",
-    }
+class MockIdentityUser:
+    """Mimics identity_client.models.User for testing."""
+
+    def __init__(
+        self,
+        *,
+        id: str = USER_ID,
+        organization_id: str = ACCOUNT_ID,
+        email: str = "admin@test.com",
+        name: str = "Test Admin",
+        role: str = "owner",
+        is_active: bool = True,
+    ):
+        self.id = id
+        self.organization_id = organization_id
+        self.email = email
+        self.name = name
+        self.role = role
+        self.is_active = is_active
+
+
+# ---------------------------------------------------------------------------
+# Identity auth mock fixtures
+# ---------------------------------------------------------------------------
+
+# Module-level reference to the mock identity user, set by fixtures
+_current_identity_user: Optional[MockIdentityUser] = None
+
+
+def _make_mock_get_current_user():
+    """Create a mock get_current_user that returns a compat dict from the mock identity user."""
+    from app.core.security import _map_role
+
+    async def mock_get_current_user(request=None):
+        if _current_identity_user is None:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        user = _current_identity_user
+        if not user.is_active:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=403, detail="User account is disabled")
+        return {
+            "userId": str(user.id),
+            "accountId": str(user.organization_id),
+            "email": user.email,
+            "role": _map_role(user.role),
+            "name": user.name,
+        }
+    return mock_get_current_user
 
 
 @pytest.fixture
-def editor_token_data() -> dict:
-    return {
-        "sub": USER_ID,
-        "accountId": ACCOUNT_ID,
-        "email": "editor@test.com",
-        "role": "editor",
-        "name": "Test Editor",
-    }
+def admin_identity_user():
+    return MockIdentityUser(role="owner", email="admin@test.com", name="Test Admin")
 
 
 @pytest.fixture
-def viewer_token_data() -> dict:
-    return {
-        "sub": USER_ID,
-        "accountId": ACCOUNT_ID,
-        "email": "viewer@test.com",
-        "role": "viewer",
-        "name": "Test Viewer",
-    }
+def editor_identity_user():
+    return MockIdentityUser(role="member", email="editor@test.com", name="Test Editor")
 
 
 @pytest.fixture
-def admin_token(admin_token_data: dict) -> str:
-    return create_access_token(admin_token_data)
+def viewer_identity_user():
+    return MockIdentityUser(role="viewer", email="viewer@test.com", name="Test Viewer")
 
 
 @pytest.fixture
-def editor_token(editor_token_data: dict) -> str:
-    return create_access_token(editor_token_data)
+def set_identity_user():
+    """Returns a callable that sets the mock identity user for the current test."""
+    def _set(user: Optional[MockIdentityUser]):
+        global _current_identity_user
+        _current_identity_user = user
+    return _set
+
+
+# Legacy fixtures for backward compatibility with existing route tests
+@pytest.fixture
+def admin_token(admin_identity_user, set_identity_user) -> str:
+    set_identity_user(admin_identity_user)
+    return "mock-admin-session-token"
 
 
 @pytest.fixture
-def viewer_token(viewer_token_data: dict) -> str:
-    return create_access_token(viewer_token_data)
+def editor_token(editor_identity_user, set_identity_user) -> str:
+    set_identity_user(editor_identity_user)
+    return "mock-editor-session-token"
 
 
 @pytest.fixture
-def expired_token() -> str:
-    return create_access_token(
-        {
-            "sub": USER_ID,
-            "accountId": ACCOUNT_ID,
-            "email": "expired@test.com",
-            "role": "admin",
-            "name": "Expired User",
-        },
-        expires_delta=timedelta(seconds=-10),
-    )
+def viewer_token(viewer_identity_user, set_identity_user) -> str:
+    set_identity_user(viewer_identity_user)
+    return "mock-viewer-session-token"
+
+
+@pytest.fixture
+def expired_token(set_identity_user) -> str:
+    set_identity_user(None)
+    return "mock-expired-session-token"
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +145,8 @@ def expired_token() -> str:
 # ---------------------------------------------------------------------------
 
 def auth_headers(token: str) -> dict[str, str]:
-    return {"Authorization": f"Bearer {token}"}
+    """Return headers that simulate an Identity session cookie or header."""
+    return {"Cookie": f"expertly_session={token}"}
 
 
 # ---------------------------------------------------------------------------
@@ -223,8 +254,6 @@ class MockCursor:
 # Module-level mock registry + monkey-patch
 # ---------------------------------------------------------------------------
 
-# This dict is the single source of truth for mock collections. The
-# ``_patched_get_collection`` function always reads from here.
 _MOCK_REGISTRY: dict[str, MockCollection] = {}
 
 
@@ -235,12 +264,6 @@ def _patched_get_collection(name: str) -> MockCollection:
     return _MOCK_REGISTRY[name]
 
 
-# Monkey-patch ``get_collection`` on the module BEFORE any route / service
-# module imports it. This is done at conftest load time, which runs before
-# any test module (and therefore before ``from app.main import app``).
-# Because we replace the function object on the ``app.core.database``
-# module, any ``from app.core.database import get_collection`` that
-# happens later will pick up our replacement.
 import app.core.database as _db_mod  # noqa: E402
 
 _original_get_collection = _db_mod.get_collection
@@ -249,12 +272,13 @@ _db_mod.get_collection = _patched_get_collection
 
 @pytest.fixture(autouse=True)
 def _reset_mock_registry():
-    """Reset all mock collections before each test for isolation."""
+    """Reset all mock collections and identity user before each test."""
+    global _current_identity_user
+    _current_identity_user = None
     _MOCK_REGISTRY.clear()
     for name in _COLLECTION_NAMES:
         _MOCK_REGISTRY[name] = MockCollection(name)
     yield
-    # (cleanup not strictly needed since we clear on next test)
 
 
 @pytest.fixture
@@ -271,12 +295,12 @@ def mock_collections() -> dict[str, MockCollection]:
 async def client():
     """Provide an httpx.AsyncClient wired to the FastAPI app.
 
-    The ``lifespan`` events (init_db / close_db) are patched out so the app
-    never attempts to connect to a real MongoDB instance.
+    The identity auth is mocked so requests use the session set via fixtures.
     """
     with (
         patch("app.core.database.init_db", new_callable=AsyncMock),
         patch("app.core.database.close_db", new_callable=AsyncMock),
+        patch("app.core.security.get_current_user", new=_make_mock_get_current_user()),
     ):
         from app.main import app
 

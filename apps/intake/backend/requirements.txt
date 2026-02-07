@@ -15,8 +15,7 @@ email-validator>=2.1.0,<3.0
 # HTTP client
 httpx>=0.26.0,<1.0
 
-# Authentication and security
-python-jose[cryptography]>=3.3.0,<4.0
+# Security (bcrypt used for intake code hashing)
 passlib[bcrypt]>=1.7.4,<2.0
 bcrypt>=4.1.2,<5.0
 

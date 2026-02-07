@@ -22,10 +22,6 @@ from app.schemas.common import (
     TimestampMixin,
 )
 from app.schemas.auth import (
-    AccountResponse,
-    CreateUserRequest,
-    LoginRequest,
-    LoginResponse,
     UserResponse,
 )
 from app.schemas.voice_profile import (
@@ -226,20 +222,6 @@ class TestErrorDetail:
 # =========================================================================
 
 
-class TestLoginRequest:
-    def test_valid(self):
-        req = LoginRequest(email="user@example.com", password="secret")
-        assert req.email == "user@example.com"
-
-    def test_invalid_email(self):
-        with pytest.raises(ValidationError):
-            LoginRequest(email="not-an-email", password="secret")
-
-    def test_password_required(self):
-        with pytest.raises(ValidationError):
-            LoginRequest(email="user@example.com", password="")
-
-
 class TestUserResponse:
     def test_valid(self):
         u = UserResponse(
@@ -248,47 +230,12 @@ class TestUserResponse:
             email="u@t.com",
             name="User",
             role="admin",
-            createdAt=NOW,
         )
         assert u.user_id == "abc"
 
     def test_missing_required(self):
         with pytest.raises(ValidationError):
-            UserResponse(userId="abc", email="u@t.com", name="User")
-
-
-class TestAccountResponse:
-    def test_valid(self):
-        a = AccountResponse(
-            accountId="abc",
-            accountName="Acme",
-            isActive=True,
-            createdAt=NOW,
-            updatedAt=NOW,
-        )
-        assert a.account_id == "abc"
-        assert a.account_name == "Acme"
-
-
-class TestCreateUserRequest:
-    def test_valid(self):
-        req = CreateUserRequest(email="new@test.com", name="New User")
-        assert req.role == "member"  # default
-
-    def test_empty_name_rejected(self):
-        with pytest.raises(ValidationError):
-            CreateUserRequest(email="new@test.com", name="")
-
-
-class TestLoginResponse:
-    def test_valid(self):
-        user = UserResponse(
-            userId="u1", accountId="a1", email="u@t.com", name="U", role="admin", createdAt=NOW
-        )
-        resp = LoginResponse(
-            token="jwt.token.here", tokenType="bearer", expiresAt=NOW, user=user
-        )
-        assert resp.token_type == "bearer"
+            UserResponse(userId="abc", email="u@t.com")  # missing name
 
 
 # =========================================================================

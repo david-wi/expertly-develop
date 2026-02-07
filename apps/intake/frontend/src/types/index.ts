@@ -86,12 +86,9 @@ export type AssignmentPolicy =
 export interface User {
   userId: string;
   accountId: string;
-  email: string;
+  email: string | null;
   name: string;
-  phone?: string | null;
   role: string;
-  createdAt: string;
-  lastLoginAt?: string | null;
 }
 
 export interface Account {
