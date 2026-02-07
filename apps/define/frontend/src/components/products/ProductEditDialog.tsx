@@ -52,7 +52,7 @@ export function ProductEditDialog({
     try {
       const updated = await productsApi.update(product.id, {
         name: name.trim(),
-        description: description.trim() || null,
+        description: description.trim(),
       })
       onProductUpdate(updated)
       onOpenChange(false)
