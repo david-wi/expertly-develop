@@ -13,6 +13,7 @@ import {
   Loader2,
   Search,
   X,
+  ScanLine,
 } from 'lucide-react'
 
 export default function DocumentReview() {
@@ -22,6 +23,8 @@ export default function DocumentReview() {
   const [shipmentSearch, setShipmentSearch] = useState('')
   const [searchResults, setSearchResults] = useState<{ id: string; shipment_number: string }[]>([])
   const [linking, setLinking] = useState(false)
+  const [ocrProcessing, setOcrProcessing] = useState(false)
+  const [classifying, setClassifying] = useState(false)
 
   useEffect(() => {
     fetchPendingDocuments()
@@ -90,6 +93,37 @@ export default function DocumentReview() {
       })))
     } catch (error) {
       console.error('Search failed:', error)
+    }
+  }
+
+  const handleRunOCR = async (docId: string) => {
+    setOcrProcessing(true)
+    try {
+      await api.extractOCR(docId)
+      // Refresh documents to get updated OCR text
+      await fetchPendingDocuments()
+    } catch (error) {
+      console.error('OCR failed:', error)
+    } finally {
+      setOcrProcessing(false)
+    }
+  }
+
+  const handleClassifyAI = async (docId: string) => {
+    setClassifying(true)
+    try {
+      await api.classifyDocumentAI(docId)
+      // Refresh documents to reflect new classification
+      await fetchPendingDocuments()
+      if (selectedDoc?.id === docId) {
+        const updatedDocs = await api.getDocumentsPendingReview()
+        const updated = updatedDocs.find(d => d.id === docId)
+        if (updated) setSelectedDoc(updated)
+      }
+    } catch (error) {
+      console.error('Classification failed:', error)
+    } finally {
+      setClassifying(false)
     }
   }
 
@@ -316,6 +350,50 @@ export default function DocumentReview() {
                       <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 max-h-32 overflow-y-auto whitespace-pre-wrap font-mono">
                         {selectedDoc.ocr_text.slice(0, 400)}
                         {selectedDoc.ocr_text.length > 400 && '...'}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* AI Tools */}
+                  <div className="flex gap-2 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => handleClassifyAI(selectedDoc.id)}
+                      disabled={classifying}
+                      className="flex items-center gap-1 px-3 py-2 text-sm bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded disabled:opacity-50"
+                    >
+                      {classifying ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      AI Classify
+                    </button>
+                    <button
+                      onClick={() => handleRunOCR(selectedDoc.id)}
+                      disabled={ocrProcessing}
+                      className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 rounded disabled:opacity-50"
+                    >
+                      {ocrProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanLine className="h-4 w-4" />}
+                      Run OCR
+                    </button>
+                  </div>
+
+                  {/* Classification Confidence */}
+                  {selectedDoc.match_confidence != null && selectedDoc.match_confidence > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-600">Classification Confidence</span>
+                        <span className="text-xs font-bold text-gray-900">
+                          {Math.round(selectedDoc.match_confidence * 100)}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full transition-all ${
+                            selectedDoc.match_confidence > 0.8
+                              ? 'bg-green-500'
+                              : selectedDoc.match_confidence > 0.5
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
+                          }`}
+                          style={{ width: `${Math.round(selectedDoc.match_confidence * 100)}%` }}
+                        />
                       </div>
                     </div>
                   )}

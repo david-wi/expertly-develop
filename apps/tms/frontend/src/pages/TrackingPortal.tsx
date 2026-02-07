@@ -193,9 +193,32 @@ export default function TrackingPortal() {
                 </div>
               )}
               {tracking.eta && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-start gap-2">
                   <span className="text-gray-500">⏰ ETA:</span>
-                  <span className="font-medium">{formatDate(tracking.eta)}</span>
+                  <div>
+                    <span className="font-medium">{formatDate(tracking.eta)}</span>
+                    {(tracking as any).eta_confidence != null && (
+                      <div className="mt-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                (tracking as any).eta_confidence > 0.8
+                                  ? 'bg-green-500'
+                                  : (tracking as any).eta_confidence > 0.5
+                                  ? 'bg-yellow-500'
+                                  : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.round((tracking as any).eta_confidence * 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {Math.round((tracking as any).eta_confidence * 100)}% confidence
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {tracking.last_update && (
@@ -213,6 +236,22 @@ export default function TrackingPortal() {
             </div>
           </div>
         </div>
+
+        {/* Map Placeholder */}
+        {tracking.status !== 'delivered' && tracking.status !== 'cancelled' && (
+          <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">Live Map</h2>
+            <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center text-gray-400">
+              <div className="text-center">
+                <div className="text-4xl mb-2">🗺️</div>
+                <p className="text-sm">Map visualization</p>
+                {tracking.last_location && (
+                  <p className="text-xs mt-1">Last known: {tracking.last_location}</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* POD */}
         {tracking.pod && (

@@ -347,3 +347,507 @@ async def delete_document(document_id: str):
     await db.documents.delete_one({"_id": ObjectId(document_id)})
 
     return {"success": True}
+
+
+# ============================================================================
+# BOL Generation
+# ============================================================================
+
+class BOLGenerateRequest(BaseModel):
+    template_id: Optional[str] = None
+    custom_fields: Optional[dict] = None
+    send_to_emails: Optional[list] = None
+
+
+@router.post("/generate-bol/{shipment_id}")
+async def generate_bol(shipment_id: str, data: Optional[BOLGenerateRequest] = None):
+    """Auto-generate BOL from shipment data."""
+    db = get_database()
+    shipment_oid = ObjectId(shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Get customer
+    customer = None
+    if shipment.get("customer_id"):
+        customer = await db.customers.find_one({"_id": shipment["customer_id"]})
+
+    # Get carrier
+    carrier = None
+    if shipment.get("carrier_id"):
+        carrier = await db.carriers.find_one({"_id": shipment["carrier_id"]})
+
+    stops = shipment.get("stops", [])
+    pickup_stop = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+    delivery_stop = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+
+    # Check for custom template
+    template = None
+    if data and data.template_id:
+        template = await db.bol_templates.find_one({"_id": ObjectId(data.template_id)})
+    elif customer:
+        template = await db.bol_templates.find_one({"customer_id": customer["_id"], "is_default": True})
+
+    # Build BOL data
+    bol_data = {
+        "shipment_number": shipment.get("shipment_number"),
+        "bol_number": shipment.get("bol_number") or f"BOL-{shipment.get('shipment_number', '')}",
+        "date": datetime.utcnow().strftime("%Y-%m-%d"),
+        "shipper": {
+            "name": pickup_stop.get("name") or (customer.get("name") if customer else ""),
+            "address": pickup_stop.get("address", ""),
+            "city": pickup_stop.get("city", ""),
+            "state": pickup_stop.get("state", ""),
+            "zip": pickup_stop.get("zip_code", ""),
+            "contact": pickup_stop.get("contact_name", ""),
+            "phone": pickup_stop.get("contact_phone", ""),
+        },
+        "consignee": {
+            "name": delivery_stop.get("name", ""),
+            "address": delivery_stop.get("address", ""),
+            "city": delivery_stop.get("city", ""),
+            "state": delivery_stop.get("state", ""),
+            "zip": delivery_stop.get("zip_code", ""),
+            "contact": delivery_stop.get("contact_name", ""),
+            "phone": delivery_stop.get("contact_phone", ""),
+        },
+        "carrier": {
+            "name": carrier.get("name") if carrier else "",
+            "mc_number": carrier.get("mc_number") if carrier else "",
+        },
+        "commodity": shipment.get("commodity", ""),
+        "weight_lbs": shipment.get("weight_lbs"),
+        "equipment_type": shipment.get("equipment_type", ""),
+        "pickup_date": str(shipment.get("pickup_date", "")),
+        "delivery_date": str(shipment.get("delivery_date", "")),
+        "special_instructions": shipment.get("special_instructions", ""),
+        "reference_numbers": shipment.get("reference_numbers", []),
+        "pieces": shipment.get("pieces"),
+        "template_name": template.get("name") if template else "Standard BOL",
+    }
+
+    # Merge custom fields
+    if data and data.custom_fields:
+        bol_data.update(data.custom_fields)
+
+    # Store BOL record
+    bol_record = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "customer_id": shipment.get("customer_id"),
+        "bol_data": bol_data,
+        "template_id": ObjectId(data.template_id) if data and data.template_id else None,
+        "generated_at": datetime.utcnow(),
+        "sent_to": data.send_to_emails if data else None,
+        "created_at": datetime.utcnow(),
+    }
+    await db.generated_bols.insert_one(bol_record)
+
+    return {
+        "status": "generated",
+        "bol_id": str(bol_record["_id"]),
+        "bol_number": bol_data["bol_number"],
+        "bol_data": bol_data,
+        "download_url": f"/api/v1/documents/bol/{bol_record['_id']}/download",
+    }
+
+
+@router.get("/bol-templates")
+async def list_bol_templates(customer_id: Optional[str] = None):
+    """List available BOL templates."""
+    db = get_database()
+    query = {}
+    if customer_id:
+        query["$or"] = [{"customer_id": ObjectId(customer_id)}, {"is_global": True}]
+    else:
+        query["is_global"] = True
+
+    templates = await db.bol_templates.find(query).to_list(50)
+
+    # If no templates exist, return default
+    if not templates:
+        return [{
+            "id": "default",
+            "name": "Standard BOL",
+            "description": "Default Bill of Lading template",
+            "is_default": True,
+            "is_global": True,
+            "fields": ["shipper", "consignee", "carrier", "commodity", "weight", "pieces", "instructions"],
+        }]
+
+    return [
+        {
+            "id": str(t["_id"]),
+            "name": t.get("name", ""),
+            "description": t.get("description", ""),
+            "customer_id": str(t["customer_id"]) if t.get("customer_id") else None,
+            "is_default": t.get("is_default", False),
+            "is_global": t.get("is_global", False),
+            "fields": t.get("fields", []),
+            "created_at": t.get("created_at"),
+        }
+        for t in templates
+    ]
+
+
+@router.post("/bol-templates")
+async def create_bol_template(data: dict):
+    """Create a custom BOL template."""
+    db = get_database()
+
+    template = {
+        "_id": ObjectId(),
+        "name": data.get("name", "Custom Template"),
+        "description": data.get("description", ""),
+        "customer_id": ObjectId(data["customer_id"]) if data.get("customer_id") else None,
+        "is_default": data.get("is_default", False),
+        "is_global": data.get("is_global", False),
+        "fields": data.get("fields", []),
+        "header_text": data.get("header_text"),
+        "footer_text": data.get("footer_text"),
+        "logo_url": data.get("logo_url"),
+        "created_at": datetime.utcnow(),
+    }
+
+    await db.bol_templates.insert_one(template)
+
+    return {
+        "id": str(template["_id"]),
+        "name": template["name"],
+        "status": "created",
+    }
+
+
+# ============================================================================
+# AI Document Classification
+# ============================================================================
+
+class ClassificationResult(BaseModel):
+    document_id: str
+    original_type: Optional[str] = None
+    ai_classified_type: str
+    confidence: float
+    suggested_workflow: Optional[str] = None
+    extracted_fields: Optional[List[dict]] = None
+
+
+@router.post("/classify", response_model=ClassificationResult)
+async def classify_document_ai(data: dict):
+    """AI-powered document classification and field extraction."""
+    db = get_database()
+
+    document_id = data.get("document_id")
+    if not document_id:
+        raise HTTPException(status_code=400, detail="document_id required")
+
+    doc = await db.documents.find_one({"_id": ObjectId(document_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Use document processing service for AI classification
+    try:
+        processor = get_document_processor()
+        processed = await processor.process_document(document_id)
+
+        # Determine workflow routing
+        workflow_map = {
+            "bol": "operations",
+            "pod": "operations",
+            "rate_confirmation": "operations",
+            "invoice": "billing",
+            "carrier_invoice": "billing",
+            "insurance_certificate": "compliance",
+            "commercial_invoice": "customs",
+            "certificate_of_origin": "customs",
+            "customs_entry": "customs",
+        }
+
+        classified_type = doc.get("ai_classified_type") or doc.get("document_type")
+
+        # Re-fetch the document after processing
+        updated_doc = await db.documents.find_one({"_id": ObjectId(document_id)})
+
+        return ClassificationResult(
+            document_id=document_id,
+            original_type=doc.get("document_type"),
+            ai_classified_type=updated_doc.get("ai_classified_type") or updated_doc.get("document_type"),
+            confidence=updated_doc.get("classification_confidence") or updated_doc.get("ocr_confidence") or 0.5,
+            suggested_workflow=workflow_map.get(updated_doc.get("ai_classified_type") or updated_doc.get("document_type")),
+            extracted_fields=updated_doc.get("extracted_fields"),
+        )
+    except Exception as e:
+        # Fallback to pattern-based classification
+        from app.services.document_classification import classify_document as classify_by_pattern
+
+        classification, confidence, extracted_data = classify_by_pattern(
+            filename=doc.get("original_filename", ""),
+            file_type=doc.get("mime_type", ""),
+        )
+
+        await db.documents.update_one(
+            {"_id": ObjectId(document_id)},
+            {"$set": {
+                "ai_classified_type": classification,
+                "classification_confidence": confidence,
+                "extraction_status": "complete",
+            }}
+        )
+
+        return ClassificationResult(
+            document_id=document_id,
+            original_type=doc.get("document_type"),
+            ai_classified_type=classification,
+            confidence=confidence,
+            suggested_workflow=None,
+        )
+
+
+# ============================================================================
+# Batch Document Upload
+# ============================================================================
+
+@router.post("/batch-upload")
+async def batch_upload_documents(
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    document_type: DocumentType = Form(DocumentType.OTHER),
+    shipment_id: Optional[str] = Form(None),
+    auto_classify: bool = Form(True),
+    source: str = Form("batch_upload"),
+):
+    """Upload multiple documents at once with optional AI classification."""
+    db = get_database()
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    results = []
+    for file in files:
+        ext = os.path.splitext(file.filename)[1] if file.filename else ""
+        filename = f"{uuid.uuid4()}{ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+
+        async with aiofiles.open(filepath, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+
+        doc_data = {
+            "document_type": document_type.value,
+            "filename": filename,
+            "original_filename": file.filename or "unknown",
+            "mime_type": file.content_type or "application/octet-stream",
+            "size_bytes": len(content),
+            "storage_path": filepath,
+            "storage_provider": "local",
+            "shipment_id": ObjectId(shipment_id) if shipment_id else None,
+            "source": source,
+            "extraction_status": "pending" if auto_classify else "skipped",
+            "is_verified": False,
+            "needs_review": auto_classify,
+            "auto_matched": False,
+            "created_at": datetime.utcnow(),
+        }
+
+        result = await db.documents.insert_one(doc_data)
+        doc_data["_id"] = result.inserted_id
+
+        if auto_classify:
+            background_tasks.add_task(process_document_background, str(result.inserted_id))
+
+        results.append({
+            "id": str(result.inserted_id),
+            "filename": file.filename,
+            "status": "uploaded",
+            "auto_classify": auto_classify,
+        })
+
+    return {
+        "status": "uploaded",
+        "total_files": len(results),
+        "files": results,
+    }
+
+
+# ============================================================================
+# Photo/Document Capture for Shipments
+# ============================================================================
+
+class PhotoCategory(str, __import__("enum").Enum):
+    DELIVERY = "delivery"
+    DAMAGE = "damage"
+    BOL = "bol"
+    LOADING = "loading"
+    UNLOADING = "unloading"
+    OTHER = "other"
+
+
+@router.post("/photos/{shipment_id}")
+async def upload_shipment_photos(
+    shipment_id: str,
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),
+    category: str = Form("delivery"),
+    notes: Optional[str] = Form(None),
+):
+    """Upload photos for a shipment (delivery, damage, BOL, etc.)."""
+    db = get_database()
+    shipment_oid = ObjectId(shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    uploaded_photos = []
+
+    for file in files:
+        ext = os.path.splitext(file.filename)[1] if file.filename else ".jpg"
+        filename = f"photo_{uuid.uuid4()}{ext}"
+        filepath = os.path.join(UPLOAD_DIR, filename)
+
+        async with aiofiles.open(filepath, 'wb') as f:
+            content = await file.read()
+            await f.write(content)
+
+        photo_doc = {
+            "_id": ObjectId(),
+            "shipment_id": shipment_oid,
+            "category": category,
+            "filename": filename,
+            "original_filename": file.filename or "photo",
+            "mime_type": file.content_type or "image/jpeg",
+            "size_bytes": len(content),
+            "storage_path": filepath,
+            "notes": notes,
+            "annotations": [],
+            "ai_analysis": None,
+            "created_at": datetime.utcnow(),
+        }
+
+        await db.shipment_photos.insert_one(photo_doc)
+        uploaded_photos.append({
+            "id": str(photo_doc["_id"]),
+            "filename": file.filename,
+            "category": category,
+            "size_bytes": len(content),
+        })
+
+    return {
+        "status": "uploaded",
+        "shipment_id": shipment_id,
+        "photo_count": len(uploaded_photos),
+        "photos": uploaded_photos,
+    }
+
+
+@router.get("/photos/{shipment_id}")
+async def get_shipment_photos(shipment_id: str, category: Optional[str] = None):
+    """Get photos for a shipment."""
+    db = get_database()
+    query = {"shipment_id": ObjectId(shipment_id)}
+    if category:
+        query["category"] = category
+
+    photos = await db.shipment_photos.find(query).sort("created_at", -1).to_list(100)
+
+    return [
+        {
+            "id": str(p["_id"]),
+            "category": p.get("category"),
+            "filename": p.get("original_filename"),
+            "size_bytes": p.get("size_bytes"),
+            "notes": p.get("notes"),
+            "annotations": p.get("annotations", []),
+            "created_at": p.get("created_at"),
+        }
+        for p in photos
+    ]
+
+
+@router.post("/photos/{photo_id}/annotate")
+async def annotate_photo(photo_id: str, data: dict):
+    """Add annotation to a photo (for marking damage, etc.)."""
+    db = get_database()
+
+    photo = await db.shipment_photos.find_one({"_id": ObjectId(photo_id)})
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+
+    annotation = {
+        "type": data.get("type", "text"),  # text, circle, arrow, rectangle
+        "x": data.get("x", 0),
+        "y": data.get("y", 0),
+        "width": data.get("width"),
+        "height": data.get("height"),
+        "text": data.get("text", ""),
+        "color": data.get("color", "#FF0000"),
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+    await db.shipment_photos.update_one(
+        {"_id": ObjectId(photo_id)},
+        {"$push": {"annotations": annotation}}
+    )
+
+    return {"status": "annotated", "photo_id": photo_id, "annotation": annotation}
+
+
+# ============================================================================
+# Document Image Enhancement
+# ============================================================================
+
+@router.post("/enhance-image/{document_id}")
+async def enhance_document_image(document_id: str, data: dict):
+    """Apply image enhancements: rotation, crop, brightness adjustments."""
+    db = get_database()
+
+    doc = await db.documents.find_one({"_id": ObjectId(document_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Store enhancement parameters (actual image processing happens on retrieval)
+    enhancements = {
+        "rotation_degrees": data.get("rotation_degrees", 0),
+        "crop": data.get("crop"),  # {x, y, width, height}
+        "brightness": data.get("brightness", 1.0),
+        "contrast": data.get("contrast", 1.0),
+        "auto_deskew": data.get("auto_deskew", False),
+    }
+
+    await db.documents.update_one(
+        {"_id": ObjectId(document_id)},
+        {"$set": {
+            "image_enhancements": enhancements,
+            "updated_at": datetime.utcnow(),
+        }}
+    )
+
+    return {
+        "status": "enhanced",
+        "document_id": document_id,
+        "enhancements_applied": enhancements,
+    }
+
+
+@router.post("/{document_id}/ocr")
+async def extract_ocr_text(document_id: str, background_tasks: BackgroundTasks):
+    """Run OCR text extraction on a document."""
+    db = get_database()
+
+    doc = await db.documents.find_one({"_id": ObjectId(document_id)})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Queue AI processing
+    background_tasks.add_task(process_document_background, document_id)
+
+    await db.documents.update_one(
+        {"_id": ObjectId(document_id)},
+        {"$set": {"extraction_status": "pending"}}
+    )
+
+    return {
+        "status": "processing",
+        "document_id": document_id,
+        "message": "OCR extraction queued",
+    }

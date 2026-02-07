@@ -2353,4 +2353,168 @@ export const api = {
     request<import('../types').CustomerShipmentTrackingDetail>(`/api/v1/customer-portal/shipments/${shipmentId}/tracking-detail`, {
       headers: { Authorization: `Bearer ${token}` },
     }),
+
+  // ============================================================================
+  // Bulk Load Import
+  // ============================================================================
+
+  bulkImportPreview: async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    const response = await fetch(`${API_BASE}/api/v1/shipments/bulk-import/preview`, {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
+      throw new Error(error.detail || `HTTP ${response.status}`)
+    }
+    return response.json() as Promise<import('../types').BulkImportPreview>
+  },
+
+  bulkImportExecute: (data: {
+    filename: string
+    column_mappings: import('../types').ColumnMapping[]
+    skip_errors?: boolean
+  }) =>
+    request<import('../types').BulkImportResult>('/api/v1/shipments/bulk-import', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getImportTemplate: () =>
+    request<{ columns: string[]; sample_row: Record<string, string> }>('/api/v1/shipments/import-template'),
+
+  // ============================================================================
+  // Split Shipments
+  // ============================================================================
+
+  splitShipment: (shipmentId: string, data: import('../types').SplitShipmentRequest) =>
+    request<import('../types').SplitShipmentResult>(`/api/v1/shipments/${shipmentId}/split`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // ============================================================================
+  // LTL Consolidation
+  // ============================================================================
+
+  consolidateShipments: (data: { shipment_ids: string[] }) =>
+    request<{ consolidated_shipment_id: string; shipment_number: string }>('/api/v1/shipments/consolidate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getConsolidationSuggestions: () =>
+    request<import('../types').ConsolidationSuggestion[]>('/api/v1/shipments/consolidation-suggestions'),
+
+  // ============================================================================
+  // Recurring Load Templates
+  // ============================================================================
+
+  getLoadTemplates: () =>
+    request<import('../types').LoadTemplate[]>('/api/v1/shipments/templates'),
+
+  createLoadTemplate: (data: Partial<import('../types').LoadTemplate>) =>
+    request<import('../types').LoadTemplate>('/api/v1/shipments/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  bookFromTemplate: (templateId: string, data?: { pickup_date?: string }) =>
+    request<{ shipment_id: string; shipment_number: string }>(`/api/v1/shipments/templates/${templateId}/book`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  deleteLoadTemplate: (templateId: string) =>
+    request<{ status: string }>(`/api/v1/shipments/templates/${templateId}`, { method: 'DELETE' }),
+
+  // ============================================================================
+  // Equipment Assignment
+  // ============================================================================
+
+  assignEquipment: (shipmentId: string, data: import('../types').EquipmentAssignment) =>
+    request<Shipment>(`/api/v1/shipments/${shipmentId}/assign-equipment`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
+  getEquipmentAvailability: (params?: { equipment_type?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.equipment_type) searchParams.set('equipment_type', params.equipment_type)
+    const query = searchParams.toString()
+    return request<import('../types').EquipmentItem[]>(`/api/v1/shipments/equipment-availability${query ? `?${query}` : ''}`)
+  },
+
+  // ============================================================================
+  // Fuel Surcharge
+  // ============================================================================
+
+  calculateFuelSurcharge: (params: { line_haul_cents: number; customer_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    searchParams.set('line_haul_cents', String(params.line_haul_cents))
+    if (params.customer_id) searchParams.set('customer_id', params.customer_id)
+    return request<import('../types').FuelSurchargeResult>(`/api/v1/shipments/fuel-surcharge/calculate?${searchParams}`)
+  },
+
+  getFuelSurchargeSchedules: () =>
+    request<import('../types').FuelSurchargeSchedule[]>('/api/v1/shipments/fuel-surcharge/schedules'),
+
+  saveFuelSurchargeSchedule: (data: Partial<import('../types').FuelSurchargeSchedule>) =>
+    request<import('../types').FuelSurchargeSchedule>('/api/v1/shipments/fuel-surcharge/schedules', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+
+  // ============================================================================
+  // Route Optimization
+  // ============================================================================
+
+  optimizeRoute: (data: { stops: import('../types').RouteStop[] }) =>
+    request<import('../types').OptimizedRoute>('/api/v1/shipments/optimize-route', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // ============================================================================
+  // Driver Locations
+  // ============================================================================
+
+  getDriverLocations: () =>
+    request<import('../types').DriverLocation[]>('/api/v1/tracking/driver-locations'),
+
+  // ============================================================================
+  // EDI 204 Load Tender Acceptance
+  // ============================================================================
+
+  getEDI204Tenders: (params?: { status?: string; trading_partner_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.trading_partner_id) searchParams.set('trading_partner_id', params.trading_partner_id)
+    const query = searchParams.toString()
+    return request<import('../types').EDI204Tender[]>(`/api/v1/edi/204-tenders${query ? `?${query}` : ''}`)
+  },
+
+  acceptEDI204Tender: (tenderId: string, data?: { carrier_id?: string; notes?: string }) =>
+    request<import('../types').EDI204Tender>(`/api/v1/edi/204/${tenderId}/accept`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  rejectEDI204Tender: (tenderId: string, data?: { reason?: string }) =>
+    request<import('../types').EDI204Tender>(`/api/v1/edi/204/${tenderId}/reject`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  getAutoAcceptRules: () =>
+    request<import('../types').AutoAcceptRule[]>('/api/v1/edi/auto-accept-rules'),
+
+  createAutoAcceptRule: (data: Partial<import('../types').AutoAcceptRule>) =>
+    request<import('../types').AutoAcceptRule>('/api/v1/edi/auto-accept-rules', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 }

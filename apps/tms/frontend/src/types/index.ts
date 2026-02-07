@@ -2647,3 +2647,257 @@ export interface OCRExtractionResult {
   document_id: string
   message: string
 }
+
+// ============================================================================
+// Bulk Load Import Types
+// ============================================================================
+
+export interface ColumnMapping {
+  csv_column: string
+  mapped_field: string
+  confidence: number
+}
+
+export interface BulkImportPreview {
+  filename: string
+  total_rows: number
+  column_mappings: ColumnMapping[]
+  sample_rows: Record<string, string>[]
+  unmapped_columns: string[]
+  warnings: string[]
+}
+
+export interface BulkImportResult {
+  total_rows: number
+  imported: number
+  skipped: number
+  errors: { row: number; error: string }[]
+  shipment_ids: string[]
+}
+
+// ============================================================================
+// Split Shipment Types
+// ============================================================================
+
+export interface SplitShipmentRequest {
+  split_type: 'manual' | 'by_weight' | 'by_stops'
+  child_shipments?: {
+    stops: Stop[]
+    weight_lbs?: number
+    commodity?: string
+    customer_price?: number
+  }[]
+  max_weight_per_child?: number
+}
+
+export interface SplitShipmentResult {
+  parent_shipment_id: string
+  child_shipments: {
+    id: string
+    shipment_number: string
+    weight_lbs?: number
+    stops: Stop[]
+  }[]
+}
+
+// ============================================================================
+// LTL Consolidation Types
+// ============================================================================
+
+export interface ConsolidationSuggestion {
+  shipment_ids: string[]
+  shipment_numbers: string[]
+  shared_origin: string
+  shared_destination: string
+  total_weight_lbs: number
+  combined_price: number
+  estimated_savings: number
+  confidence: number
+}
+
+// ============================================================================
+// Recurring Load Template Types
+// ============================================================================
+
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'biweekly' | 'monthly'
+
+export interface LoadTemplate {
+  id: string
+  name: string
+  customer_id: string
+  customer_name?: string
+  stops: Stop[]
+  equipment_type: string
+  weight_lbs?: number
+  commodity?: string
+  piece_count?: number
+  special_instructions?: string
+  customer_price?: number
+  carrier_cost?: number
+  recurrence_frequency?: RecurrenceFrequency
+  recurrence_day?: number
+  is_active: boolean
+  last_booked_at?: string
+  total_bookings: number
+  created_at: string
+}
+
+// ============================================================================
+// Equipment Assignment Types
+// ============================================================================
+
+export interface EquipmentItem {
+  id: string
+  equipment_number: string
+  equipment_type: string
+  status: 'available' | 'assigned' | 'maintenance' | 'out_of_service'
+  carrier_id?: string
+  carrier_name?: string
+  current_location?: string
+  last_inspection_date?: string
+  notes?: string
+}
+
+export interface EquipmentAssignment {
+  shipment_id: string
+  trailer_number?: string
+  chassis_number?: string
+  equipment_type: string
+}
+
+// ============================================================================
+// Fuel Surcharge Types
+// ============================================================================
+
+export interface FuelSurchargeBracket {
+  min_price: number
+  max_price: number
+  surcharge_percent: number
+}
+
+export interface FuelSurchargeSchedule {
+  id: string
+  name: string
+  customer_id?: string
+  customer_name?: string
+  base_fuel_price: number
+  brackets: FuelSurchargeBracket[]
+  effective_date: string
+  is_active: boolean
+  created_at: string
+}
+
+export interface FuelSurchargeResult {
+  current_fuel_price: number
+  base_fuel_price: number
+  surcharge_percent: number
+  surcharge_amount: number
+  line_haul: number
+  total_with_surcharge: number
+  schedule_name?: string
+}
+
+// ============================================================================
+// Route Optimization Types
+// ============================================================================
+
+export interface RouteStop {
+  city: string
+  state: string
+  latitude?: number
+  longitude?: number
+  stop_type: 'pickup' | 'delivery' | 'stop'
+}
+
+export interface OptimizedRoute {
+  stops: (RouteStop & {
+    sequence: number
+    distance_from_previous_miles?: number
+    cumulative_distance_miles: number
+  })[]
+  total_distance_miles: number
+  estimated_transit_hours: number
+  total_deadhead_miles: number
+  optimization_savings_miles: number
+}
+
+// ============================================================================
+// Driver Location Types
+// ============================================================================
+
+export interface DriverLocation {
+  driver_id?: string
+  driver_name: string
+  carrier_id?: string
+  carrier_name?: string
+  latitude: number
+  longitude: number
+  city?: string
+  state?: string
+  heading?: number
+  speed_mph?: number
+  last_updated: string
+  shipment_id?: string
+  shipment_number?: string
+  shipment_status?: string
+  origin?: string
+  destination?: string
+  eta?: string
+  source: string
+}
+
+// ============================================================================
+// EDI 204 Tender Types
+// ============================================================================
+
+export type EDI204TenderStatus = 'received' | 'pending_review' | 'auto_accepted' | 'accepted' | 'rejected' | 'countered'
+
+export interface EDI204Tender {
+  id: string
+  edi_message_id: string
+  trading_partner_id?: string
+  trading_partner_name?: string
+  status: EDI204TenderStatus
+  shipper_name?: string
+  origin_city?: string
+  origin_state?: string
+  destination_city?: string
+  destination_state?: string
+  pickup_date?: string
+  delivery_date?: string
+  equipment_type?: string
+  weight_lbs?: number
+  rate_cents?: number
+  reference_numbers: Record<string, string>
+  shipment_id?: string
+  shipment_number?: string
+  rejection_reason?: string
+  auto_accept_rule_id?: string
+  received_at: string
+  responded_at?: string
+  created_at: string
+}
+
+export interface AutoAcceptRule {
+  id: string
+  name: string
+  trading_partner_id?: string
+  origin_states?: string[]
+  destination_states?: string[]
+  equipment_types?: string[]
+  max_weight_lbs?: number
+  min_rate_cents?: number
+  max_rate_cents?: number
+  is_active: boolean
+  matches_count: number
+  created_at: string
+}
+
+export const EDI_204_STATUS_LABELS: Record<EDI204TenderStatus, string> = {
+  received: 'Received',
+  pending_review: 'Pending Review',
+  auto_accepted: 'Auto-Accepted',
+  accepted: 'Accepted',
+  rejected: 'Rejected',
+  countered: 'Countered',
+}
