@@ -298,6 +298,14 @@ export const aiApi = {
     target_parent_id?: string
     product_name: string
   }) => api.post<{ requirements: ParsedRequirement[] }>('/ai/parse-requirements', data).then((r) => r.data),
+
+  generateFromArtifacts: (data: {
+    product_id: string
+    artifact_ids?: string[]
+    target_parent_id?: string
+  }) => api.post<{ requirements: ParsedRequirement[] }>(
+    '/ai/generate-from-artifacts', data
+  ).then((r) => r.data),
 }
 
 // Artifacts API

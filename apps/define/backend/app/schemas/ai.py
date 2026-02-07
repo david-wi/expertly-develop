@@ -31,6 +31,12 @@ class ParseRequirementsRequest(BaseModel):
     related_requirement_ids: Optional[List[str]] = None
 
 
+class GenerateFromArtifactsRequest(BaseModel):
+    product_id: str
+    artifact_ids: Optional[List[str]] = None  # None = all artifacts
+    target_parent_id: Optional[str] = None
+
+
 class ParsedRequirement(BaseModel):
     temp_id: str
     title: str
