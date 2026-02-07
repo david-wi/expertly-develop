@@ -9,7 +9,6 @@ import {
   Trash2,
   Mail,
   FileText,
-  Play,
   CheckCircle,
   AlertTriangle,
   Sparkles,
