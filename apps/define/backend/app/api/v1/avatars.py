@@ -57,23 +57,33 @@ async def generate_avatar(
             detail="AI avatar generation is unavailable: OpenAI API key not configured. Please contact support."
         )
 
-    # Build prompt for DALL-E
+    # Build prompt for DALL-E - white icon on black background style
     if data.image_description:
-        # User provided a custom description - use it as the main prompt
+        # User provided a custom description
         prompt = (
-            f"{data.image_description}. "
-            "Modern, minimal icon style. Clean, professional design. "
-            "Simple geometric shapes, vibrant colors on a clean background. "
-            "No text or letters. Icon style, not a photograph."
+            f"Simple, minimalist white icon or logo design on a solid black background. "
+            f"User's description: {data.image_description}. "
+            "Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000). "
+            "IMPORTANT: The icon must be LARGE, filling approximately 85-90% of the image area. "
+            "Leave only a small 5-8% margin/buffer around the edges. "
+            "Keep the design simple - it needs to be recognizable at small sizes. "
+            "Do NOT include any border, frame, decorative outline, or box around the icon. "
+            "Square format, solid black background, white icon only."
         )
     else:
         # Fall back to auto-generated prompt from product name/description
-        description_part = f" {data.product_description}." if data.product_description else ""
+        description_part = f"Description: {data.product_description}" if data.product_description else ""
         prompt = (
-            f"A modern, minimal app icon for '{data.product_name}'.{description_part} "
-            "Clean, professional design suitable for a software product logo. "
-            "Simple geometric shapes, vibrant colors on a clean background. "
-            "No text or letters. Icon style, not a photograph."
+            f"Simple, minimalist white icon or logo design on a solid black background. "
+            f'Product name: "{data.product_name}". '
+            f"{description_part} "
+            "Create a simple icon or symbol that represents this product's theme or purpose. "
+            "Style: Clean white silhouette or outline, no gradients, no colors other than pure white (#FFFFFF) on pure black (#000000). "
+            "IMPORTANT: The icon must be LARGE, filling approximately 85-90% of the image area. "
+            "Leave only a small 5-8% margin/buffer around the edges. "
+            "Keep the design simple - it needs to be recognizable at small sizes. "
+            "Do NOT include any border, frame, decorative outline, or box around the icon. "
+            "Square format, solid black background, white icon only."
         )
 
     try:
