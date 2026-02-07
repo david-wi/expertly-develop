@@ -1,23 +1,35 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus, Loader2, FileText, Link2 } from 'lucide-react'
+import { Plus, Loader2, FileText, Link2, Sparkles } from 'lucide-react'
 import { Artifact, ArtifactWithVersions, artifactsApi } from '@/api/client'
 import { ArtifactCard } from './ArtifactCard'
 import { ArtifactUploadDialog } from './ArtifactUploadDialog'
 import { ArtifactLinkDialog } from './ArtifactLinkDialog'
 import { ArtifactDetailDialog } from './ArtifactDetailDialog'
+import { GenerateFromArtifactsDialog } from './GenerateFromArtifactsDialog'
+
+interface ExistingRequirement {
+  id: string
+  stable_key: string
+  title: string
+  parent_id: string | null
+}
 
 interface ArtifactListProps {
   productId: string
+  productName?: string
+  existingRequirements?: ExistingRequirement[]
+  onRequirementsGenerated?: () => void
 }
 
-export function ArtifactList({ productId }: ArtifactListProps) {
+export function ArtifactList({ productId, productName, existingRequirements, onRequirementsGenerated }: ArtifactListProps) {
   const [artifacts, setArtifacts] = useState<Artifact[]>([])
   const [loading, setLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [linkDialogOpen, setLinkDialogOpen] = useState(false)
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null)
   const [detailDialogOpen, setDetailDialogOpen] = useState(false)
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false)
   const [artifactDetails, setArtifactDetails] = useState<Map<string, ArtifactWithVersions>>(new Map())
 
   useEffect(() => {
@@ -49,6 +61,17 @@ export function ArtifactList({ productId }: ArtifactListProps) {
     }
   }
 
+  // Build list of artifacts with their version details for the generate dialog
+  const artifactsWithVersions: ArtifactWithVersions[] = artifacts.map((a) => {
+    const detail = artifactDetails.get(a.id)
+    return detail || { ...a, versions: [] }
+  })
+
+  const hasReadyArtifacts = artifactsWithVersions.some((a) => {
+    const latestVersion = a.versions?.[0]
+    return latestVersion?.conversion_status === 'completed'
+  })
+
   function handleArtifactClick(artifactId: string) {
     setSelectedArtifactId(artifactId)
     setDetailDialogOpen(true)
@@ -69,6 +92,17 @@ export function ArtifactList({ productId }: ArtifactListProps) {
           Artifacts ({artifacts.length})
         </h3>
         <div className="flex items-center gap-2">
+          {productName && (
+            <Button
+              variant="outline"
+              onClick={() => setGenerateDialogOpen(true)}
+              disabled={hasReadyArtifacts === false}
+              title={hasReadyArtifacts ? 'Generate requirements from artifacts' : 'No artifacts with completed conversion'}
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              Generate Requirements
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setLinkDialogOpen(true)}>
             <Link2 className="h-4 w-4 mr-2" />
             Add Link
@@ -133,6 +167,20 @@ export function ArtifactList({ productId }: ArtifactListProps) {
         onUpdate={fetchArtifacts}
         onDelete={fetchArtifacts}
       />
+
+      {productName && (
+        <GenerateFromArtifactsDialog
+          open={generateDialogOpen}
+          onOpenChange={setGenerateDialogOpen}
+          productId={productId}
+          productName={productName}
+          existingRequirements={existingRequirements || []}
+          artifacts={artifactsWithVersions}
+          onSuccess={() => {
+            if (onRequirementsGenerated) onRequirementsGenerated()
+          }}
+        />
+      )}
     </div>
   )
 }

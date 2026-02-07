@@ -613,7 +613,17 @@ export default function ProductDetail() {
           </TabsContent>
 
           <TabsContent value="artifacts">
-            <ArtifactList productId={id!} />
+            <ArtifactList
+              productId={id!}
+              productName={product.name}
+              existingRequirements={requirements.map((r) => ({
+                id: r.id,
+                stable_key: r.stable_key,
+                title: r.title,
+                parent_id: r.parent_id,
+              }))}
+              onRequirementsGenerated={fetchProduct}
+            />
           </TabsContent>
         </Tabs>
       </div>
