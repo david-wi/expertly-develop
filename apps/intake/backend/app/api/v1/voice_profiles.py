@@ -41,7 +41,7 @@ def _serialize_voice_profile(doc: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/voiceProfiles", response_model=list[VoiceProfileResponse])
+@router.get("/voice-profiles", response_model=list[VoiceProfileResponse])
 async def list_voice_profiles(
     current_user: dict = Depends(get_current_user),
     isEnabled: Optional[bool] = Query(default=None),
@@ -74,7 +74,7 @@ async def list_voice_profiles(
 
 
 @router.post(
-    "/voiceProfiles",
+    "/voice-profiles",
     response_model=VoiceProfileResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -103,7 +103,7 @@ async def create_voice_profile(
     return VoiceProfileResponse(**_serialize_voice_profile(doc))
 
 
-@router.get("/voiceProfiles/{voiceProfileId}", response_model=VoiceProfileResponse)
+@router.get("/voice-profiles/{voiceProfileId}", response_model=VoiceProfileResponse)
 async def get_voice_profile(
     voiceProfileId: str,
     current_user: dict = Depends(get_current_user),
@@ -131,7 +131,7 @@ async def get_voice_profile(
     return VoiceProfileResponse(**_serialize_voice_profile(doc))
 
 
-@router.patch("/voiceProfiles/{voiceProfileId}", response_model=VoiceProfileResponse)
+@router.patch("/voice-profiles/{voiceProfileId}", response_model=VoiceProfileResponse)
 async def update_voice_profile(
     voiceProfileId: str,
     body: VoiceProfileUpdate,

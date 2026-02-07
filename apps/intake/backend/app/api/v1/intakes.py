@@ -359,7 +359,7 @@ async def update_intake(
     return _serialize_intake(updated)
 
 
-@router.post("/intakes/{intakeId}/rotateCode")
+@router.post("/intakes/{intakeId}/rotate-code")
 async def rotate_intake_code(
     intakeId: str,
     current_user: dict = Depends(get_current_user),
