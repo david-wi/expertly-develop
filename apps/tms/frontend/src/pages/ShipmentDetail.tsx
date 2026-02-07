@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Shipment, Tender, TrackingEvent, ShipmentPhoto, BOLGenerationResult, EquipmentItem, FuelSurchargeResult, SplitShipmentResult } from '../types'
+import type { Shipment, Tender, TrackingEvent, ShipmentPhoto, BOLGenerationResult, FuelSurchargeResult, SplitShipmentResult } from '../types'
 import ShipmentDocuments from '../components/ShipmentDocuments'
 import ShipmentConversation from '../components/ShipmentConversation'
 import {
@@ -85,7 +85,6 @@ export default function ShipmentDetail() {
 
   // Equipment assignment state
   const [showEquipmentPanel, setShowEquipmentPanel] = useState(false)
-  const [_equipmentList, _setEquipmentList] = useState<EquipmentItem[]>([])
   const [trailerNumber, setTrailerNumber] = useState('')
   const [assigningEquipment, setAssigningEquipment] = useState(false)
 

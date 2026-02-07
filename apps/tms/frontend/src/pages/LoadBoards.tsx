@@ -19,9 +19,6 @@ import {
   Star,
   MapPin,
   BarChart3,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
 } from 'lucide-react'
 import { api } from '../services/api'
 import {
@@ -33,7 +30,6 @@ import {
   PostingStatus,
   SpotRateComparison,
   RateTrends,
-  RateTrendPoint,
   LOADBOARD_PROVIDER_LABELS,
   POSTING_STATUS_LABELS,
 } from '../types'
