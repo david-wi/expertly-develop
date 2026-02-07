@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   User,
   Bell,
+  BellRing,
   Building2,
   Save,
   Truck,
@@ -20,9 +21,24 @@ import {
   Clock,
   Search,
   Users,
+  Smartphone,
+  Mail,
+  Monitor,
+  Moon,
+  TestTube,
+  Loader2,
 } from 'lucide-react'
 import { api } from '../services/api'
 import { SYNC_STATUS_LABELS } from '../types'
+import { usePushNotifications } from '../hooks/usePushNotifications'
+
+interface NotificationRule {
+  event_type: string
+  label: string
+  description: string
+  channels: { in_app: boolean; push: boolean; email: boolean }
+  enabled: boolean
+}
 
 type TabType = 'profile' | 'notifications' | 'company' | 'defaults' | 'integrations'
 
@@ -82,9 +98,33 @@ export default function Settings() {
         <p className="text-gray-500">Manage your account and brokerage preferences</p>
       </div>
 
+      {/* Mobile tab bar */}
+      <div className="flex gap-1 overflow-x-auto pb-1 sm:hidden scrollbar-hide -mx-1 px-1">
+        {[
+          { id: 'profile', label: 'Profile', icon: User },
+          { id: 'notifications', label: 'Notifications', icon: Bell },
+          { id: 'company', label: 'Company', icon: Building2 },
+          { id: 'defaults', label: 'Defaults', icon: Truck },
+          { id: 'integrations', label: 'Integrations', icon: Link2 },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors min-h-[40px] ${
+              activeTab === tab.id
+                ? 'bg-emerald-50 text-emerald-700'
+                : 'text-gray-600 bg-gray-50'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="flex gap-6">
-        {/* Sidebar */}
-        <div className="w-52 space-y-1">
+        {/* Desktop Sidebar */}
+        <div className="hidden sm:block w-52 space-y-1 flex-shrink-0">
           {[
             { id: 'profile', label: 'Profile', icon: User },
             { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -108,7 +148,7 @@ export default function Settings() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex-1 min-w-0 bg-white rounded-lg border border-gray-200 p-4 sm:p-6">
           {activeTab === 'profile' && (
             <div className="space-y-6">
               <h2 className="text-lg font-semibold">Profile Settings</h2>
@@ -151,65 +191,7 @@ export default function Settings() {
           )}
 
           {activeTab === 'notifications' && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold">Notification Preferences</h2>
-              <div className="space-y-4 max-w-md">
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={notifications.emailNewQuoteRequest}
-                    onChange={(e) => setNotifications({ ...notifications, emailNewQuoteRequest: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Email me for new quote requests</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={notifications.emailShipmentUpdate}
-                    onChange={(e) => setNotifications({ ...notifications, emailShipmentUpdate: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Email me for shipment status updates</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={notifications.emailExceptions}
-                    onChange={(e) => setNotifications({ ...notifications, emailExceptions: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Email me for shipment exceptions</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={notifications.emailCarrierTenderResponse}
-                    onChange={(e) => setNotifications({ ...notifications, emailCarrierTenderResponse: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Email me when carriers respond to tenders</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={notifications.emailInvoicePaid}
-                    onChange={(e) => setNotifications({ ...notifications, emailInvoicePaid: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Email me when invoices are paid</span>
-                </label>
-                <label className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={notifications.emailDailyDigest}
-                    onChange={(e) => setNotifications({ ...notifications, emailDailyDigest: e.target.checked })}
-                    className="h-4 w-4 text-emerald-600 rounded border-gray-300 focus:ring-emerald-500"
-                  />
-                  <span className="text-sm text-gray-700">Send daily digest email</span>
-                </label>
-              </div>
-            </div>
+            <NotificationsSettingsTab />
           )}
 
           {activeTab === 'company' && (
@@ -495,6 +477,254 @@ export default function Settings() {
               </button>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Notifications Settings Tab Component
+function NotificationsSettingsTab() {
+  const queryClient = useQueryClient()
+  const userId = 'current-user' // TODO: Replace with actual user ID from auth context
+
+  const {
+    isSupported: pushSupported,
+    isSubscribed: pushSubscribed,
+    permission: pushPermission,
+    loading: pushLoading,
+    subscribe: pushSubscribe,
+    unsubscribe: pushUnsubscribe,
+  } = usePushNotifications()
+
+  const { data: prefsData, isLoading } = useQuery({
+    queryKey: ['notification-preferences', userId],
+    queryFn: () => api.getNotificationPreferences(userId),
+  })
+
+  const prefsMutation = useMutation({
+    mutationFn: (prefs: Record<string, unknown>) =>
+      api.updateNotificationPreferences(userId, prefs),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notification-preferences', userId] })
+    },
+  })
+
+  const testNotificationMutation = useMutation({
+    mutationFn: () => api.sendTestNotification(),
+  })
+
+  const handleToggleRule = useCallback((eventType: string, field: 'enabled' | 'in_app' | 'push' | 'email', value: boolean) => {
+    if (!prefsData?.notification_rules) return
+    const updatedRules = prefsData.notification_rules.map((rule: NotificationRule) => {
+      if (rule.event_type !== eventType) return rule
+      if (field === 'enabled') {
+        return { ...rule, enabled: value }
+      }
+      return { ...rule, channels: { ...rule.channels, [field]: value } }
+    })
+    prefsMutation.mutate({
+      ...prefsData,
+      notification_rules: updatedRules,
+    })
+  }, [prefsData, prefsMutation])
+
+  if (isLoading) {
+    return <div className="text-center py-12 text-gray-500">Loading...</div>
+  }
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Notification Preferences</h2>
+
+      {/* Push Notifications Section */}
+      <div className="bg-blue-50 rounded-xl p-5 border border-blue-200">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+              <BellRing className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Push Notifications</h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {pushPermission === 'denied'
+                  ? 'Push notifications are blocked by your browser. Update your browser settings to enable them.'
+                  : pushSubscribed
+                  ? 'Push notifications are active. You will receive instant alerts on this device.'
+                  : 'Enable push notifications to receive instant alerts for important TMS events like load accepted, delivery complete, and shipment at risk.'}
+              </p>
+            </div>
+          </div>
+          {pushSupported && pushPermission !== 'denied' && (
+            <button
+              onClick={async () => {
+                if (pushSubscribed) {
+                  await pushUnsubscribe()
+                } else {
+                  await pushSubscribe()
+                }
+              }}
+              disabled={pushLoading}
+              className={`flex-shrink-0 px-4 py-2 rounded-lg text-sm font-medium transition-colors min-h-[44px] ${
+                pushSubscribed
+                  ? 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {pushLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : pushSubscribed ? (
+                'Disable'
+              ) : (
+                'Enable Push'
+              )}
+            </button>
+          )}
+        </div>
+        {pushSubscribed && (
+          <div className="mt-3 pt-3 border-t border-blue-200 flex items-center gap-3">
+            <button
+              onClick={() => testNotificationMutation.mutate()}
+              disabled={testNotificationMutation.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 bg-white rounded-lg hover:bg-blue-50 transition-colors border border-blue-200 min-h-[36px]"
+            >
+              {testNotificationMutation.isPending ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <TestTube className="w-3.5 h-3.5" />
+              )}
+              Send test notification
+            </button>
+            {testNotificationMutation.isSuccess && (
+              <span className="text-sm text-emerald-600 flex items-center gap-1">
+                <CheckCircle className="w-4 h-4" />
+                Test sent!
+              </span>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Quiet Hours */}
+      <div className="bg-white rounded-xl p-5 border border-gray-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center">
+              <Moon className="w-5 h-5 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-medium text-gray-900">Quiet Hours</h3>
+              <p className="text-sm text-gray-500">
+                Mute push notifications during {prefsData?.quiet_hours_start || '22:00'} - {prefsData?.quiet_hours_end || '07:00'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              prefsMutation.mutate({
+                ...prefsData,
+                quiet_hours_enabled: !prefsData?.quiet_hours_enabled,
+              })
+            }}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+              prefsData?.quiet_hours_enabled ? 'bg-indigo-600' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={prefsData?.quiet_hours_enabled || false}
+            aria-label="Toggle quiet hours"
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                prefsData?.quiet_hours_enabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Notification Rules Table */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <div className="px-5 py-4 border-b border-gray-200">
+          <h3 className="font-semibold text-gray-900">Event Notifications</h3>
+          <p className="text-sm text-gray-500 mt-1">
+            Configure which events trigger notifications and through which channels.
+          </p>
+        </div>
+
+        {/* Column headers */}
+        <div className="hidden sm:grid sm:grid-cols-[1fr_80px_80px_80px] gap-2 px-5 py-2 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-100">
+          <div>Event</div>
+          <div className="text-center flex items-center justify-center gap-1">
+            <Monitor className="w-3.5 h-3.5" /> In-App
+          </div>
+          <div className="text-center flex items-center justify-center gap-1">
+            <Smartphone className="w-3.5 h-3.5" /> Push
+          </div>
+          <div className="text-center flex items-center justify-center gap-1">
+            <Mail className="w-3.5 h-3.5" /> Email
+          </div>
+        </div>
+
+        <div className="divide-y divide-gray-50">
+          {(prefsData?.notification_rules || []).map((rule: NotificationRule) => (
+            <div
+              key={rule.event_type}
+              className={`grid grid-cols-1 sm:grid-cols-[1fr_80px_80px_80px] gap-2 px-5 py-3 items-center ${
+                rule.enabled ? '' : 'opacity-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => handleToggleRule(rule.event_type, 'enabled', !rule.enabled)}
+                  className="flex-shrink-0"
+                  aria-label={`${rule.enabled ? 'Disable' : 'Enable'} ${rule.label}`}
+                >
+                  <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                    rule.enabled
+                      ? 'bg-emerald-600 border-emerald-600'
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}>
+                    {rule.enabled && (
+                      <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                        <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    )}
+                  </div>
+                </button>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{rule.label}</p>
+                  <p className="text-xs text-gray-500 hidden sm:block">{rule.description}</p>
+                </div>
+              </div>
+              {/* Channel toggles - inline on mobile */}
+              <div className="flex sm:contents items-center gap-2 ml-8 sm:ml-0">
+                <span className="text-xs text-gray-400 sm:hidden mr-1">Channels:</span>
+                {(['in_app', 'push', 'email'] as const).map((channel) => (
+                  <button
+                    key={channel}
+                    onClick={() => handleToggleRule(rule.event_type, channel, !rule.channels[channel])}
+                    disabled={!rule.enabled}
+                    className={`sm:mx-auto flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors min-h-[32px] ${
+                      rule.channels[channel] && rule.enabled
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                    }`}
+                    aria-label={`${rule.channels[channel] ? 'Disable' : 'Enable'} ${channel} for ${rule.label}`}
+                  >
+                    {channel === 'in_app' && <Monitor className="w-3 h-3 sm:hidden" />}
+                    {channel === 'push' && <Smartphone className="w-3 h-3 sm:hidden" />}
+                    {channel === 'email' && <Mail className="w-3 h-3 sm:hidden" />}
+                    <span className="sm:hidden">{channel === 'in_app' ? 'App' : channel === 'push' ? 'Push' : 'Email'}</span>
+                    <div className={`hidden sm:block w-4 h-4 rounded-full border-2 ${
+                      rule.channels[channel] && rule.enabled
+                        ? 'bg-blue-600 border-blue-600'
+                        : 'border-gray-300'
+                    }`} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

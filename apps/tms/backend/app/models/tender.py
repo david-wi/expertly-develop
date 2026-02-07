@@ -1,6 +1,8 @@
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import List, Optional
+
+from pydantic import BaseModel, Field
 
 from .base import MongoModel, PyObjectId, utc_now
 
@@ -13,16 +15,28 @@ class TenderStatus(str, Enum):
     DECLINED = "declined"
     EXPIRED = "expired"
     CANCELLED = "cancelled"
+    COUNTER_OFFERED = "counter_offered"
 
 
 TENDER_STATUS_TRANSITIONS: dict[TenderStatus, list[TenderStatus]] = {
     TenderStatus.DRAFT: [TenderStatus.SENT, TenderStatus.CANCELLED],
-    TenderStatus.SENT: [TenderStatus.ACCEPTED, TenderStatus.DECLINED, TenderStatus.EXPIRED, TenderStatus.CANCELLED],
+    TenderStatus.SENT: [TenderStatus.ACCEPTED, TenderStatus.DECLINED, TenderStatus.EXPIRED, TenderStatus.CANCELLED, TenderStatus.COUNTER_OFFERED],
+    TenderStatus.COUNTER_OFFERED: [TenderStatus.ACCEPTED, TenderStatus.DECLINED, TenderStatus.CANCELLED, TenderStatus.COUNTER_OFFERED],
     TenderStatus.ACCEPTED: [],
     TenderStatus.DECLINED: [],
     TenderStatus.EXPIRED: [],
     TenderStatus.CANCELLED: [],
 }
+
+
+class NegotiationEvent(BaseModel):
+    """A single event in the negotiation thread for a tender."""
+    timestamp: datetime = Field(default_factory=utc_now)
+    action: str  # "tender_sent", "counter_offer", "counter_accepted", "counter_rejected", "accepted", "declined", "expired"
+    amount: int  # Rate in cents at this point
+    party: str  # "broker" or "carrier"
+    notes: Optional[str] = None
+    auto_action: bool = False  # True if auto-approved/auto-escalated
 
 
 class Tender(MongoModel):
@@ -54,10 +68,18 @@ class Tender(MongoModel):
     # Response
     response_notes: Optional[str] = None
     counter_offer_rate: Optional[int] = None  # If they counter
+    counter_offer_notes: Optional[str] = None
+
+    # Negotiation thread - embedded array of all offers/counter-offers
+    negotiation_history: List[dict] = Field(default_factory=list)
 
     # Internal
     notes: Optional[str] = None
     created_by: Optional[str] = None
+
+    # Waterfall reference
+    waterfall_id: Optional[PyObjectId] = None
+    waterfall_step: Optional[int] = None
 
     def can_transition_to(self, new_status: TenderStatus) -> bool:
         """Check if status transition is valid."""
@@ -72,4 +94,16 @@ class Tender(MongoModel):
             self.sent_at = utc_now()
         elif new_status in [TenderStatus.ACCEPTED, TenderStatus.DECLINED]:
             self.responded_at = utc_now()
+        self.mark_updated()
+
+    def add_negotiation_event(self, action: str, amount: int, party: str, notes: Optional[str] = None, auto_action: bool = False) -> None:
+        """Add a negotiation event to the history thread."""
+        event = NegotiationEvent(
+            action=action,
+            amount=amount,
+            party=party,
+            notes=notes,
+            auto_action=auto_action,
+        )
+        self.negotiation_history.append(event.model_dump())
         self.mark_updated()

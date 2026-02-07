@@ -97,6 +97,11 @@ class Shipment(MongoModel):
     # Pricing
     customer_price: int = 0  # What customer pays (cents)
     carrier_cost: int = 0  # What we pay carrier (cents)
+    fuel_surcharge: int = 0  # Fuel surcharge amount (cents)
+    fuel_surcharge_schedule_id: Optional[str] = None  # Reference to fuel schedule used
+
+    # Equipment assignment
+    assigned_equipment: Optional[dict] = None  # {equipment_number, equipment_type, trailer_number, chassis_number}
 
     @property
     def margin(self) -> int:
@@ -128,6 +133,11 @@ class Shipment(MongoModel):
     # Assignment
     assigned_to: Optional[str] = None
     created_by: Optional[str] = None
+
+    # Split shipment parent-child relationship
+    split_parent_id: Optional[str] = None  # Parent shipment ID if this is a child
+    split_children: list[str] = []  # Child shipment IDs if this was split
+    consolidated_into: Optional[str] = None  # ID of consolidated shipment
 
     @property
     def is_at_risk(self) -> bool:

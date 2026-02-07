@@ -270,19 +270,31 @@ async def respond_to_tender(data: TenderResponseRequest, authorization: str = He
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
 
-    if tender.get("status") != TenderStatus.SENT.value:
+    if tender.get("status") not in [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]:
         raise HTTPException(status_code=400, detail="Tender already responded to")
+
+    now = utc_now()
 
     if data.accept:
         # Accept tender
+        negotiation_event = {
+            "timestamp": now,
+            "action": "accepted",
+            "amount": tender.get("offered_rate", 0),
+            "party": "carrier",
+            "notes": None,
+            "auto_action": False,
+        }
+
         await db.tenders.update_one(
             {"_id": ObjectId(data.tender_id)},
             {
                 "$set": {
                     "status": TenderStatus.ACCEPTED.value,
-                    "responded_at": utc_now(),
-                    "updated_at": utc_now()
-                }
+                    "responded_at": now,
+                    "updated_at": now,
+                },
+                "$push": {"negotiation_history": negotiation_event},
             }
         )
 
@@ -293,7 +305,7 @@ async def respond_to_tender(data: TenderResponseRequest, authorization: str = He
                 "$set": {
                     "carrier_id": carrier["_id"],
                     "carrier_cost": tender.get("offered_rate", 0),
-                    "updated_at": utc_now()
+                    "updated_at": now,
                 }
             }
         )
@@ -303,29 +315,418 @@ async def respond_to_tender(data: TenderResponseRequest, authorization: str = He
             {
                 "shipment_id": tender["shipment_id"],
                 "_id": {"$ne": ObjectId(data.tender_id)},
-                "status": TenderStatus.SENT.value
+                "status": {"$in": [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]},
             },
-            {"$set": {"status": TenderStatus.CANCELLED.value, "updated_at": utc_now()}}
+            {"$set": {"status": TenderStatus.CANCELLED.value, "updated_at": now}}
+        )
+
+        # Auto-remove load board postings for this shipment
+        await db.loadboard_postings.update_many(
+            {
+                "shipment_id": tender["shipment_id"],
+                "status": {"$in": ["draft", "posted"]},
+            },
+            {"$set": {"status": "cancelled", "updated_at": now}}
         )
 
         return {"status": "accepted", "message": "Tender accepted successfully"}
     else:
         # Decline tender
+        negotiation_event = {
+            "timestamp": now,
+            "action": "declined",
+            "amount": tender.get("offered_rate", 0),
+            "party": "carrier",
+            "notes": data.decline_reason,
+            "auto_action": False,
+        }
+
         update = {
             "status": TenderStatus.DECLINED.value,
-            "responded_at": utc_now(),
-            "decline_reason": data.decline_reason,
-            "updated_at": utc_now()
+            "responded_at": now,
+            "response_notes": data.decline_reason,
+            "updated_at": now,
         }
         if data.counter_rate:
-            update["counter_rate"] = data.counter_rate
+            update["counter_offer_rate"] = data.counter_rate
 
         await db.tenders.update_one(
             {"_id": ObjectId(data.tender_id)},
-            {"$set": update}
+            {
+                "$set": update,
+                "$push": {"negotiation_history": negotiation_event},
+            }
         )
 
         return {"status": "declined", "message": "Tender declined"}
+
+
+# ============================================================================
+# Carrier Portal - Tender-Specific Endpoints
+# ============================================================================
+
+@router.get("/tenders")
+async def get_carrier_tenders(
+    status: Optional[str] = None,
+    authorization: str = Header(None),
+):
+    """List all tenders for this carrier (available, pending, history)."""
+    carrier = await get_current_carrier(authorization)
+    db = get_database()
+
+    query = {"carrier_id": carrier["_id"]}
+    if status:
+        query["status"] = status
+    else:
+        # Show active tenders by default (sent, counter_offered)
+        query["status"] = {"$in": [
+            TenderStatus.SENT.value,
+            TenderStatus.COUNTER_OFFERED.value,
+        ]}
+
+    tenders = await db.tenders.find(query).sort("created_at", -1).to_list(100)
+
+    results = []
+    for tender in tenders:
+        shipment = await db.shipments.find_one({"_id": tender["shipment_id"]})
+        stops = shipment.get("stops", []) if shipment else []
+        origin = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+        dest = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+
+        results.append({
+            "id": str(tender["_id"]),
+            "shipment_id": str(tender["shipment_id"]),
+            "shipment_number": shipment.get("shipment_number", "") if shipment else "",
+            "status": tender.get("status"),
+            "offered_rate": tender.get("offered_rate", 0),
+            "counter_offer_rate": tender.get("counter_offer_rate"),
+            "origin_city": origin.get("city", ""),
+            "origin_state": origin.get("state", ""),
+            "destination_city": dest.get("city", ""),
+            "destination_state": dest.get("state", ""),
+            "equipment_type": shipment.get("equipment_type", "van") if shipment else "van",
+            "weight_lbs": shipment.get("weight_lbs") if shipment else None,
+            "pickup_date": shipment.get("pickup_date") if shipment else None,
+            "delivery_date": shipment.get("delivery_date") if shipment else None,
+            "expires_at": tender.get("expires_at"),
+            "negotiation_history": tender.get("negotiation_history", []),
+            "created_at": tender.get("created_at"),
+        })
+
+    return results
+
+
+class CarrierAcceptTenderRequest(BaseModel):
+    notes: Optional[str] = None
+
+
+@router.post("/tenders/{tender_id}/accept")
+async def carrier_accept_tender(tender_id: str, data: CarrierAcceptTenderRequest, authorization: str = Header(None)):
+    """Carrier accepts a specific tender."""
+    carrier = await get_current_carrier(authorization)
+    db = get_database()
+
+    tender = await db.tenders.find_one({
+        "_id": ObjectId(tender_id),
+        "carrier_id": carrier["_id"],
+    })
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    if tender.get("status") not in [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]:
+        raise HTTPException(status_code=400, detail="Tender cannot be accepted in current state")
+
+    now = utc_now()
+    negotiation_event = {
+        "timestamp": now,
+        "action": "accepted",
+        "amount": tender.get("offered_rate", 0),
+        "party": "carrier",
+        "notes": data.notes,
+        "auto_action": False,
+    }
+
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {
+            "$set": {
+                "status": TenderStatus.ACCEPTED.value,
+                "responded_at": now,
+                "response_notes": data.notes,
+                "updated_at": now,
+            },
+            "$push": {"negotiation_history": negotiation_event},
+        }
+    )
+
+    # Update shipment
+    await db.shipments.update_one(
+        {"_id": tender["shipment_id"]},
+        {"$set": {
+            "carrier_id": carrier["_id"],
+            "carrier_cost": tender.get("offered_rate", 0),
+            "updated_at": now,
+        }}
+    )
+
+    # Cancel other tenders
+    await db.tenders.update_many(
+        {
+            "shipment_id": tender["shipment_id"],
+            "_id": {"$ne": ObjectId(tender_id)},
+            "status": {"$in": [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]},
+        },
+        {"$set": {"status": TenderStatus.CANCELLED.value, "updated_at": now}}
+    )
+
+    # Auto-remove load board postings
+    await db.loadboard_postings.update_many(
+        {"shipment_id": tender["shipment_id"], "status": {"$in": ["draft", "posted"]}},
+        {"$set": {"status": "cancelled", "updated_at": now}}
+    )
+
+    return {"status": "accepted", "message": "Tender accepted"}
+
+
+class CarrierDeclineTenderRequest(BaseModel):
+    reason: Optional[str] = None
+
+
+@router.post("/tenders/{tender_id}/decline")
+async def carrier_decline_tender(tender_id: str, data: CarrierDeclineTenderRequest, authorization: str = Header(None)):
+    """Carrier declines a specific tender."""
+    carrier = await get_current_carrier(authorization)
+    db = get_database()
+
+    tender = await db.tenders.find_one({
+        "_id": ObjectId(tender_id),
+        "carrier_id": carrier["_id"],
+    })
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    if tender.get("status") not in [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]:
+        raise HTTPException(status_code=400, detail="Tender cannot be declined in current state")
+
+    now = utc_now()
+    negotiation_event = {
+        "timestamp": now,
+        "action": "declined",
+        "amount": tender.get("offered_rate", 0),
+        "party": "carrier",
+        "notes": data.reason,
+        "auto_action": False,
+    }
+
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {
+            "$set": {
+                "status": TenderStatus.DECLINED.value,
+                "responded_at": now,
+                "response_notes": data.reason,
+                "updated_at": now,
+            },
+            "$push": {"negotiation_history": negotiation_event},
+        }
+    )
+
+    return {"status": "declined", "message": "Tender declined"}
+
+
+class CarrierCounterOfferRequest(BaseModel):
+    counter_rate: int  # in cents
+    notes: Optional[str] = None
+
+
+@router.post("/tenders/{tender_id}/counter-offer")
+async def carrier_counter_offer(tender_id: str, data: CarrierCounterOfferRequest, authorization: str = Header(None)):
+    """Carrier submits a counter-offer on a tender."""
+    carrier = await get_current_carrier(authorization)
+    db = get_database()
+
+    tender = await db.tenders.find_one({
+        "_id": ObjectId(tender_id),
+        "carrier_id": carrier["_id"],
+    })
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    if tender.get("status") not in [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]:
+        raise HTTPException(status_code=400, detail="Cannot counter-offer on this tender")
+
+    now = utc_now()
+    original_rate = tender.get("offered_rate", 0)
+
+    # Check auto-accept threshold
+    config = await db.tender_waterfall_config.find_one({"is_default": True})
+    auto_accept_range = 5
+    if config:
+        auto_accept_range = config.get("auto_accept_counter_range_percent", 5)
+
+    diff_percent = ((data.counter_rate - original_rate) / original_rate * 100) if original_rate > 0 else 100
+    auto_accepted = diff_percent <= auto_accept_range
+
+    negotiation_event = {
+        "timestamp": now,
+        "action": "counter_offer",
+        "amount": data.counter_rate,
+        "party": "carrier",
+        "notes": data.notes,
+        "auto_action": False,
+    }
+
+    if auto_accepted:
+        # Auto-accept: within threshold
+        accept_event = {
+            "timestamp": now,
+            "action": "counter_accepted",
+            "amount": data.counter_rate,
+            "party": "broker",
+            "notes": f"Auto-accepted (within {auto_accept_range}% threshold)",
+            "auto_action": True,
+        }
+
+        await db.tenders.update_one(
+            {"_id": ObjectId(tender_id)},
+            {
+                "$set": {
+                    "status": TenderStatus.ACCEPTED.value,
+                    "offered_rate": data.counter_rate,
+                    "counter_offer_rate": data.counter_rate,
+                    "counter_offer_notes": data.notes,
+                    "responded_at": now,
+                    "response_notes": f"Auto-accepted counter-offer (within {auto_accept_range}% range)",
+                    "updated_at": now,
+                },
+                "$push": {"negotiation_history": {"$each": [negotiation_event, accept_event]}},
+            }
+        )
+
+        # Update shipment
+        await db.shipments.update_one(
+            {"_id": tender["shipment_id"]},
+            {"$set": {
+                "carrier_id": carrier["_id"],
+                "carrier_cost": data.counter_rate,
+                "updated_at": now,
+            }}
+        )
+
+        # Cancel other tenders
+        await db.tenders.update_many(
+            {
+                "shipment_id": tender["shipment_id"],
+                "_id": {"$ne": ObjectId(tender_id)},
+                "status": {"$in": [TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]},
+            },
+            {"$set": {"status": TenderStatus.CANCELLED.value, "updated_at": now}}
+        )
+
+        # Auto-remove load board postings
+        await db.loadboard_postings.update_many(
+            {"shipment_id": tender["shipment_id"], "status": {"$in": ["draft", "posted"]}},
+            {"$set": {"status": "cancelled", "updated_at": now}}
+        )
+
+        return {
+            "status": "auto_accepted",
+            "message": f"Counter-offer auto-accepted (within {auto_accept_range}% of offered rate)",
+            "new_rate": data.counter_rate,
+        }
+    else:
+        # Pending broker review
+        await db.tenders.update_one(
+            {"_id": ObjectId(tender_id)},
+            {
+                "$set": {
+                    "status": TenderStatus.COUNTER_OFFERED.value,
+                    "counter_offer_rate": data.counter_rate,
+                    "counter_offer_notes": data.notes,
+                    "updated_at": now,
+                },
+                "$push": {"negotiation_history": negotiation_event},
+            }
+        )
+
+        # Also save to counter_offers collection for tracking
+        await db.counter_offers.insert_one({
+            "_id": ObjectId(),
+            "tender_id": ObjectId(tender_id),
+            "round_number": len(tender.get("negotiation_history", [])) + 1,
+            "offered_by": "carrier",
+            "original_rate": original_rate,
+            "counter_rate": data.counter_rate,
+            "notes": data.notes,
+            "status": "pending",
+            "auto_accepted": False,
+            "created_at": now,
+            "updated_at": now,
+        })
+
+        return {
+            "status": "counter_offered",
+            "message": "Counter-offer submitted for broker review",
+            "counter_rate": data.counter_rate,
+        }
+
+
+class DocumentUploadRequest(BaseModel):
+    shipment_id: str
+    document_type: str  # "bol", "pod", "rate_confirmation", "insurance", "w9", "other"
+    filename: str
+    notes: Optional[str] = None
+
+
+@router.post("/documents/upload")
+async def upload_carrier_document(data: DocumentUploadRequest, authorization: str = Header(None)):
+    """Upload paperwork for a load (BOL, POD, rate confirmation, etc.)."""
+    carrier = await get_current_carrier(authorization)
+    db = get_database()
+
+    # Verify carrier owns this shipment
+    shipment = await db.shipments.find_one({
+        "_id": ObjectId(data.shipment_id),
+        "carrier_id": carrier["_id"],
+    })
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found or not assigned to you")
+
+    now = utc_now()
+    doc = {
+        "_id": ObjectId(),
+        "shipment_id": ObjectId(data.shipment_id),
+        "carrier_id": carrier["_id"],
+        "document_type": data.document_type,
+        "original_filename": data.filename,
+        "uploaded_by": f"carrier_portal:{carrier['_id']}",
+        "status": "uploaded",
+        "notes": data.notes,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.documents.insert_one(doc)
+
+    # Create notification for broker
+    await db.portal_notifications.insert_one({
+        "portal_type": "broker",
+        "entity_id": None,
+        "title": f"Document uploaded by {carrier.get('name', 'carrier')}",
+        "message": f"{data.document_type.upper()} uploaded for shipment {shipment.get('shipment_number', '')}",
+        "notification_type": "document",
+        "shipment_id": ObjectId(data.shipment_id),
+        "is_read": False,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    return {
+        "status": "uploaded",
+        "document_id": str(doc["_id"]),
+        "document_type": data.document_type,
+        "filename": data.filename,
+    }
 
 
 # ============================================================================
@@ -839,3 +1240,448 @@ async def submit_onboarding(token: str):
     )
 
     return {"status": "submitted", "message": "Onboarding submitted for review"}
+
+
+# ============================================================================
+# FMCSA Lookup
+# ============================================================================
+
+class FMCSALookupResponse(BaseModel):
+    mc_number: Optional[str] = None
+    dot_number: Optional[str] = None
+    legal_name: Optional[str] = None
+    dba_name: Optional[str] = None
+    entity_type: Optional[str] = None
+    operating_status: Optional[str] = None
+    out_of_service: bool = False
+    phone: Optional[str] = None
+    physical_address: Optional[str] = None
+    physical_city: Optional[str] = None
+    physical_state: Optional[str] = None
+    physical_zip: Optional[str] = None
+    power_units: int = 0
+    drivers: int = 0
+    safety_rating: Optional[str] = None
+    cargo_carried: List[str] = []
+    insurance_bipd_on_file: Optional[int] = None
+    insurance_cargo_on_file: Optional[int] = None
+    authority_status: Optional[str] = None
+    common_authority: bool = False
+    contract_authority: bool = False
+    lookup_status: str = "success"
+
+
+@router.get("/onboarding/fmcsa-lookup")
+async def fmcsa_lookup(mc_number: Optional[str] = None, dot_number: Optional[str] = None):
+    """
+    Lookup FMCSA data for a carrier by MC# or DOT#.
+    In production this would call the FMCSA SAFER API. For now returns simulated data.
+    """
+    if not mc_number and not dot_number:
+        raise HTTPException(status_code=400, detail="Provide mc_number or dot_number")
+
+    import hashlib
+    import random
+
+    seed_str = (mc_number or "") + (dot_number or "")
+    seed = int(hashlib.md5(seed_str.encode()).hexdigest()[:8], 16)
+    random.seed(seed)
+
+    statuses = ["AUTHORIZED", "AUTHORIZED", "AUTHORIZED", "NOT AUTHORIZED", "OUT OF SERVICE"]
+    safety_ratings = ["Satisfactory", "Satisfactory", "Satisfactory", "Conditional", None]
+    cargo_options = [
+        ["General Freight", "Household Goods"],
+        ["General Freight", "Metal/Sheets/Coils"],
+        ["Refrigerated Food", "Fresh Produce"],
+        ["General Freight"],
+    ]
+
+    operating_status = random.choice(statuses)
+    power_units = random.randint(1, 50)
+    drivers = max(power_units, random.randint(power_units, power_units + 10))
+
+    cities = ["Chicago", "Dallas", "Atlanta", "Jacksonville", "Memphis", "Indianapolis"]
+    states = ["IL", "TX", "GA", "FL", "TN", "IN"]
+    city_idx = random.randint(0, len(cities) - 1)
+
+    return FMCSALookupResponse(
+        mc_number=mc_number or f"MC-{random.randint(100000, 999999)}",
+        dot_number=dot_number or str(random.randint(1000000, 9999999)),
+        legal_name=f"{''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=3))} Trucking LLC",
+        dba_name=None if random.random() > 0.3 else f"{''.join(random.choices('ABCDEFGHIJKLMNOPQRSTUVWXYZ', k=3))} Transport",
+        entity_type=random.choice(["CARRIER", "CARRIER", "BROKER"]),
+        operating_status=operating_status,
+        out_of_service=operating_status == "OUT OF SERVICE",
+        phone=f"({random.randint(200, 999)}) {random.randint(200, 999)}-{random.randint(1000, 9999)}",
+        physical_address=f"{random.randint(100, 9999)} {random.choice(['Warehouse', 'Freight', 'Terminal'])} Dr",
+        physical_city=cities[city_idx],
+        physical_state=states[city_idx],
+        physical_zip=str(random.randint(10000, 99999)),
+        power_units=power_units,
+        drivers=drivers,
+        safety_rating=random.choice(safety_ratings),
+        cargo_carried=random.choice(cargo_options),
+        insurance_bipd_on_file=random.choice([750000, 1000000, 1500000, 5000000]),
+        insurance_cargo_on_file=random.choice([100000, 250000, 500000, 1000000]),
+        authority_status="ACTIVE" if operating_status == "AUTHORIZED" else "INACTIVE",
+        common_authority=operating_status == "AUTHORIZED",
+        contract_authority=random.random() > 0.5,
+        lookup_status="success",
+    )
+
+
+# ============================================================================
+# Onboarding Document Upload
+# ============================================================================
+
+class OnboardingDocumentUploadRequest(BaseModel):
+    document_type: str  # "w9", "insurance_certificate", "signed_agreement", etc.
+    filename: str
+    file_url: Optional[str] = None
+    mime_type: str = "application/pdf"
+    file_size_bytes: int = 0
+
+
+class OnboardingDocumentResponse(BaseModel):
+    id: str
+    onboarding_id: str
+    document_type: str
+    filename: str
+    file_url: str
+    is_verified: bool
+    verification_notes: Optional[str] = None
+    expiration_date: Optional[str] = None
+    created_at: str
+
+
+@router.post("/onboarding/{onboarding_id}/documents", response_model=OnboardingDocumentResponse)
+async def upload_onboarding_document(onboarding_id: str, data: OnboardingDocumentUploadRequest):
+    """Upload a document for an onboarding carrier (W9, insurance, etc.)."""
+    db = get_database()
+
+    onboarding = await db.carrier_onboardings.find_one({"_id": ObjectId(onboarding_id)})
+    if not onboarding:
+        raise HTTPException(status_code=404, detail="Onboarding not found")
+
+    if onboarding.get("status") == OnboardingStatus.APPROVED.value:
+        raise HTTPException(status_code=400, detail="Onboarding already approved")
+
+    now = utc_now()
+    file_url = data.file_url or f"/uploads/onboarding/{onboarding_id}/{data.filename}"
+
+    doc = {
+        "_id": ObjectId(),
+        "onboarding_id": ObjectId(onboarding_id),
+        "carrier_id": onboarding.get("carrier_id"),
+        "document_type": data.document_type,
+        "filename": data.filename,
+        "file_url": file_url,
+        "mime_type": data.mime_type,
+        "file_size_bytes": data.file_size_bytes,
+        "is_verified": False,
+        "verified_by": None,
+        "verified_at": None,
+        "verification_notes": None,
+        "expiration_date": None,
+        "is_expired": False,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.onboarding_documents.insert_one(doc)
+
+    # Add document ID to onboarding record
+    await db.carrier_onboardings.update_one(
+        {"_id": ObjectId(onboarding_id)},
+        {
+            "$addToSet": {"uploaded_document_ids": doc["_id"]},
+            "$set": {"updated_at": now}
+        }
+    )
+
+    return OnboardingDocumentResponse(
+        id=str(doc["_id"]),
+        onboarding_id=onboarding_id,
+        document_type=data.document_type,
+        filename=data.filename,
+        file_url=file_url,
+        is_verified=False,
+        verification_notes=None,
+        expiration_date=None,
+        created_at=now.isoformat(),
+    )
+
+
+@router.get("/onboarding/{onboarding_id}/documents")
+async def list_onboarding_documents(onboarding_id: str):
+    """List all documents uploaded for an onboarding."""
+    db = get_database()
+
+    onboarding = await db.carrier_onboardings.find_one({"_id": ObjectId(onboarding_id)})
+    if not onboarding:
+        raise HTTPException(status_code=404, detail="Onboarding not found")
+
+    cursor = db.onboarding_documents.find(
+        {"onboarding_id": ObjectId(onboarding_id)}
+    ).sort("created_at", -1)
+    docs = await cursor.to_list(50)
+
+    return [
+        {
+            "id": str(d["_id"]),
+            "onboarding_id": str(d["onboarding_id"]),
+            "document_type": d.get("document_type"),
+            "filename": d.get("filename"),
+            "file_url": d.get("file_url"),
+            "mime_type": d.get("mime_type"),
+            "file_size_bytes": d.get("file_size_bytes", 0),
+            "is_verified": d.get("is_verified", False),
+            "verified_by": d.get("verified_by"),
+            "verification_notes": d.get("verification_notes"),
+            "expiration_date": d.get("expiration_date").isoformat() if d.get("expiration_date") and hasattr(d.get("expiration_date"), "isoformat") else None,
+            "created_at": d["created_at"].isoformat() if d.get("created_at") else "",
+        }
+        for d in docs
+    ]
+
+
+# ============================================================================
+# Onboarding Status / Checklist
+# ============================================================================
+
+class OnboardingChecklistItem(BaseModel):
+    key: str
+    label: str
+    required: bool
+    completed: bool
+    details: Optional[str] = None
+
+
+class OnboardingStatusDetailResponse(BaseModel):
+    id: str
+    company_name: str
+    mc_number: Optional[str] = None
+    dot_number: Optional[str] = None
+    status: str
+    current_step: int
+    total_steps: int
+    progress_percent: int
+    checklist: List[OnboardingChecklistItem]
+    fmcsa_verified: bool
+    insurance_verified: bool
+    documents_uploaded: int
+    documents_required: int
+    agreement_accepted: bool
+    completed_steps: List[str]
+    created_at: str
+    updated_at: str
+
+
+@router.get("/onboarding/{onboarding_id}/status", response_model=OnboardingStatusDetailResponse)
+async def get_onboarding_checklist_status(onboarding_id: str):
+    """Get the full onboarding checklist status for a carrier."""
+    db = get_database()
+
+    onboarding = await db.carrier_onboardings.find_one({"_id": ObjectId(onboarding_id)})
+    if not onboarding:
+        raise HTTPException(status_code=404, detail="Onboarding not found")
+
+    doc_count = await db.onboarding_documents.count_documents(
+        {"onboarding_id": ObjectId(onboarding_id)}
+    )
+
+    completed_steps = onboarding.get("completed_steps", [])
+    fmcsa_verified = onboarding.get("fmcsa_verified", False)
+    insurance_verified = onboarding.get("insurance_verified", False)
+    agreement_accepted = onboarding.get("agreement_accepted", False)
+    required_docs = onboarding.get("required_documents", ["w9", "insurance_certificate", "signed_agreement"])
+
+    verified_docs_cursor = db.onboarding_documents.find(
+        {"onboarding_id": ObjectId(onboarding_id)}
+    )
+    uploaded_docs = await verified_docs_cursor.to_list(50)
+    uploaded_doc_types = set(d.get("document_type") for d in uploaded_docs)
+
+    checklist = [
+        OnboardingChecklistItem(
+            key="company_info", label="Company Information", required=True,
+            completed="company_info" in completed_steps,
+            details="MC#, DOT#, company name, address" if "company_info" not in completed_steps else "Completed",
+        ),
+        OnboardingChecklistItem(
+            key="fmcsa_verification", label="FMCSA Verification", required=True,
+            completed=fmcsa_verified,
+            details="Verify authority status with FMCSA" if not fmcsa_verified else "FMCSA verified",
+        ),
+        OnboardingChecklistItem(
+            key="w9", label="W-9 Form", required=True,
+            completed="w9" in uploaded_doc_types or "w9" in completed_steps,
+            details="Upload W-9 form" if "w9" not in uploaded_doc_types else "W-9 uploaded",
+        ),
+        OnboardingChecklistItem(
+            key="insurance", label="Insurance Certificate", required=True,
+            completed="insurance_certificate" in uploaded_doc_types or insurance_verified or "insurance" in completed_steps,
+            details="Upload certificate of insurance" if not insurance_verified else "Insurance verified",
+        ),
+        OnboardingChecklistItem(
+            key="agreement", label="Carrier Agreement Signed", required=True,
+            completed=agreement_accepted or "agreement" in completed_steps,
+            details="Sign carrier agreement" if not agreement_accepted else "Agreement signed",
+        ),
+        OnboardingChecklistItem(
+            key="equipment", label="Equipment Details", required=False,
+            completed="equipment" in completed_steps,
+            details="Truck count, equipment types, lanes" if "equipment" not in completed_steps else "Completed",
+        ),
+        OnboardingChecklistItem(
+            key="compliance", label="Compliance Review", required=False,
+            completed="compliance" in completed_steps,
+            details="Safety rating, authority status" if "compliance" not in completed_steps else "Completed",
+        ),
+    ]
+
+    total_steps = onboarding.get("total_steps", 6)
+    current_step = onboarding.get("current_step", 1)
+
+    return OnboardingStatusDetailResponse(
+        id=onboarding_id,
+        company_name=onboarding.get("company_name", ""),
+        mc_number=onboarding.get("mc_number"),
+        dot_number=onboarding.get("dot_number"),
+        status=onboarding.get("status", "not_started"),
+        current_step=current_step,
+        total_steps=total_steps,
+        progress_percent=int((current_step / total_steps) * 100) if total_steps > 0 else 0,
+        checklist=checklist,
+        fmcsa_verified=fmcsa_verified,
+        insurance_verified=insurance_verified,
+        documents_uploaded=doc_count,
+        documents_required=len(required_docs),
+        agreement_accepted=agreement_accepted,
+        completed_steps=completed_steps,
+        created_at=onboarding.get("created_at", utc_now()).isoformat() if hasattr(onboarding.get("created_at", ""), "isoformat") else str(onboarding.get("created_at", "")),
+        updated_at=onboarding.get("updated_at", utc_now()).isoformat() if hasattr(onboarding.get("updated_at", ""), "isoformat") else str(onboarding.get("updated_at", "")),
+    )
+
+
+# ============================================================================
+# Approve / Reject Carrier Onboarding
+# ============================================================================
+
+class ApproveOnboardingRequest(BaseModel):
+    notes: Optional[str] = None
+    approved_by: Optional[str] = None
+
+
+@router.post("/onboarding/{onboarding_id}/approve")
+async def approve_onboarding(onboarding_id: str, data: ApproveOnboardingRequest = ApproveOnboardingRequest()):
+    """
+    Approve a carrier onboarding and create a new carrier record from the onboarding data.
+    """
+    db = get_database()
+
+    onboarding = await db.carrier_onboardings.find_one({"_id": ObjectId(onboarding_id)})
+    if not onboarding:
+        raise HTTPException(status_code=404, detail="Onboarding not found")
+
+    if onboarding.get("status") == OnboardingStatus.APPROVED.value:
+        raise HTTPException(status_code=400, detail="Onboarding already approved")
+
+    if onboarding.get("status") not in [OnboardingStatus.PENDING_REVIEW.value, OnboardingStatus.IN_PROGRESS.value]:
+        raise HTTPException(status_code=400, detail="Onboarding must be in pending_review or in_progress status to approve")
+
+    now = utc_now()
+
+    from app.models.carrier import Carrier, CarrierStatus, CarrierContact
+
+    contacts = []
+    if onboarding.get("contact_name"):
+        contacts.append(CarrierContact(
+            name=onboarding["contact_name"],
+            email=onboarding.get("contact_email"),
+            phone=onboarding.get("contact_phone"),
+            role="Primary",
+            is_primary=True,
+        ))
+
+    carrier = Carrier(
+        name=onboarding.get("company_name", "Unknown"),
+        mc_number=onboarding.get("mc_number"),
+        dot_number=onboarding.get("dot_number"),
+        status=CarrierStatus.ACTIVE,
+        contacts=contacts,
+        dispatch_email=onboarding.get("dispatch_email"),
+        dispatch_phone=onboarding.get("dispatch_phone"),
+        equipment_types=onboarding.get("equipment_types", []),
+        address_line1=onboarding.get("address_line1"),
+        city=onboarding.get("city"),
+        state=onboarding.get("state"),
+        zip_code=onboarding.get("zip_code"),
+        insurance_expiration=onboarding.get("insurance_expiration"),
+        authority_active=True,
+        safety_rating=onboarding.get("safety_rating"),
+        payment_terms=30,
+        factoring_company=onboarding.get("factoring_company"),
+        notes=f"Onboarded via carrier portal. {data.notes or ''}".strip(),
+    )
+
+    await db.carriers.insert_one(carrier.model_dump_mongo())
+
+    await db.carrier_onboardings.update_one(
+        {"_id": ObjectId(onboarding_id)},
+        {
+            "$set": {
+                "status": OnboardingStatus.APPROVED.value,
+                "carrier_id": carrier.id,
+                "reviewed_by": data.approved_by,
+                "reviewed_at": now,
+                "updated_at": now,
+            }
+        }
+    )
+
+    return {
+        "status": "approved",
+        "carrier_id": str(carrier.id),
+        "carrier_name": carrier.name,
+        "message": f"Carrier '{carrier.name}' has been approved and created.",
+    }
+
+
+class RejectOnboardingRequest(BaseModel):
+    reason: str
+    rejected_by: Optional[str] = None
+
+
+@router.post("/onboarding/{onboarding_id}/reject")
+async def reject_onboarding(onboarding_id: str, data: RejectOnboardingRequest):
+    """Reject a carrier onboarding application."""
+    db = get_database()
+
+    onboarding = await db.carrier_onboardings.find_one({"_id": ObjectId(onboarding_id)})
+    if not onboarding:
+        raise HTTPException(status_code=404, detail="Onboarding not found")
+
+    if onboarding.get("status") == OnboardingStatus.APPROVED.value:
+        raise HTTPException(status_code=400, detail="Cannot reject an already approved onboarding")
+
+    now = utc_now()
+
+    await db.carrier_onboardings.update_one(
+        {"_id": ObjectId(onboarding_id)},
+        {
+            "$set": {
+                "status": OnboardingStatus.REJECTED.value,
+                "rejection_reason": data.reason,
+                "reviewed_by": data.rejected_by,
+                "reviewed_at": now,
+                "updated_at": now,
+            }
+        }
+    )
+
+    return {
+        "status": "rejected",
+        "reason": data.reason,
+        "message": "Onboarding has been rejected.",
+    }

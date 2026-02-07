@@ -1044,12 +1044,27 @@ export const api = {
       invoice_due: boolean
       check_call_due: boolean
       document_uploaded: boolean
+      notification_rules?: Array<{
+        event_type: string
+        label: string
+        description: string
+        channels: { in_app: boolean; push: boolean; email: boolean }
+        enabled: boolean
+      }>
+      quiet_hours_enabled: boolean
+      quiet_hours_start?: string
+      quiet_hours_end?: string
     }>(`/api/v1/notifications/preferences/${userId}`),
 
-  updateNotificationPreferences: (userId: string, prefs: Record<string, boolean>) =>
-    request<Record<string, boolean>>(`/api/v1/notifications/preferences/${userId}`, {
+  updateNotificationPreferences: (userId: string, prefs: Record<string, unknown>) =>
+    request<Record<string, unknown>>(`/api/v1/notifications/preferences/${userId}`, {
       method: 'PUT',
       body: JSON.stringify(prefs),
+    }),
+
+  sendTestNotification: () =>
+    request<{ status: string; message: string; subscribers: number }>('/api/v1/notifications/test', {
+      method: 'POST',
     }),
 
   // ============================================================================
@@ -1689,6 +1704,146 @@ export const api = {
   },
 
   // ============================================================================
+  // Carrier Payables (dedicated endpoints)
+  // ============================================================================
+
+  // Payables Dashboard
+  getCarrierPayablesDashboard: () =>
+    request<{
+      total_outstanding: number
+      total_bill_count: number
+      approved_pending_payment: number
+      approved_pending_count: number
+      quick_pay_savings_ytd: number
+      factored_carrier_count: number
+      unmatched_invoices: number
+      disputed_bills: number
+      avg_days_to_pay: number | null
+    }>('/api/v1/carrier-payables/dashboard'),
+
+  // Payables Aging Report
+  getCarrierPayablesAgingReport: (carrierId?: string) => {
+    const params = carrierId ? `?carrier_id=${carrierId}` : ''
+    return request<import('../types').PayablesAgingResponse>(`/api/v1/carrier-payables/aging-report${params}`)
+  },
+
+  // Carrier Payable Bills
+  getCarrierPayableBills: (params?: { status?: string; carrier_id?: string; shipment_id?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.status) searchParams.set('status', params.status)
+    if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
+    if (params?.shipment_id) searchParams.set('shipment_id', params.shipment_id)
+    const query = searchParams.toString()
+    return request<import('../types').CarrierPayableBill[]>(`/api/v1/carrier-payables/bills${query ? `?${query}` : ''}`)
+  },
+
+  createCarrierPayableBill: (data: {
+    carrier_id: string
+    shipment_id?: string
+    bill_number: string
+    amount: number
+    received_date?: string
+    due_date?: string
+    invoice_number?: string
+    reference_numbers?: string[]
+    raw_text?: string
+    notes?: string
+  }) =>
+    request<import('../types').CarrierPayableBill>('/api/v1/carrier-payables/bills', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  approveCarrierPayableBill: (billId: string) =>
+    request<import('../types').CarrierPayableBill>(`/api/v1/carrier-payables/bills/${billId}/approve`, {
+      method: 'POST',
+    }),
+
+  // Quick Pay
+  createQuickPayForBill: (billId: string, data?: { custom_tiers?: any[] }) =>
+    request<import('../types').CarrierPayablesQuickPayOffer>(`/api/v1/carrier-payables/bills/${billId}/quick-pay`, {
+      method: 'POST',
+      body: JSON.stringify(data || {}),
+    }),
+
+  acceptCarrierPayablesQuickPay: (offerId: string, tierName: string) =>
+    request<{ status: string; offer_id: string; selected_tier: string; net_payment: number; savings: number; payment_due_date: string }>(
+      `/api/v1/carrier-payables/quick-pay/${offerId}/accept?tier_name=${encodeURIComponent(tierName)}`,
+      { method: 'PATCH' }
+    ),
+
+  getCarrierPayablesQuickPayOffers: (params?: { carrier_id?: string; status?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
+    if (params?.status) searchParams.set('status', params.status)
+    const query = searchParams.toString()
+    return request<import('../types').CarrierPayablesQuickPayOffer[]>(`/api/v1/carrier-payables/quick-pay-offers${query ? `?${query}` : ''}`)
+  },
+
+  // Factoring
+  getCarrierPayablesFactoring: (carrierId?: string) => {
+    const params = carrierId ? `?carrier_id=${carrierId}` : ''
+    return request<import('../types').CarrierPayablesFactoringAssignment[]>(`/api/v1/carrier-payables/factoring${params}`)
+  },
+
+  createCarrierPayablesFactoring: (data: {
+    carrier_id: string
+    factoring_company_name: string
+    factoring_company_id?: string
+    noa_reference?: string
+    noa_date?: string
+    payment_email?: string
+    payment_address?: string
+    fee_percent?: number
+    notes?: string
+  }) =>
+    request<import('../types').CarrierPayablesFactoringAssignment>('/api/v1/carrier-payables/factoring', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  updateCarrierPayablesFactoring: (id: string, data: { noa_status?: string; notes?: string }) => {
+    const params = new URLSearchParams()
+    if (data.noa_status) params.set('noa_status', data.noa_status)
+    if (data.notes) params.set('notes', data.notes)
+    return request<{ status: string; id: string }>(`/api/v1/carrier-payables/factoring/${id}?${params}`, {
+      method: 'PATCH',
+    })
+  },
+
+  // Carrier Invoice Upload
+  uploadCarrierPayablesInvoice: (data: {
+    carrier_id: string
+    shipment_id?: string
+    invoice_number?: string
+    amount?: number
+    reference_numbers?: string[]
+    raw_text?: string
+    notes?: string
+  }) =>
+    request<import('../types').CarrierInvoiceRecord>('/api/v1/carrier-payables/invoices/upload', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getCarrierPayablesInvoices: (params?: { carrier_id?: string; status?: string }) => {
+    const searchParams = new URLSearchParams()
+    if (params?.carrier_id) searchParams.set('carrier_id', params.carrier_id)
+    if (params?.status) searchParams.set('status', params.status)
+    const query = searchParams.toString()
+    return request<import('../types').CarrierInvoiceRecord[]>(`/api/v1/carrier-payables/invoices${query ? `?${query}` : ''}`)
+  },
+
+  // Rate Confirmation Matching
+  matchRateConfirmation: (billId: string, toleranceCents?: number) => {
+    const params = toleranceCents ? `?tolerance_cents=${toleranceCents}` : ''
+    return request<import('../types').CarrierPayablesRateConMatch>(
+      `/api/v1/carrier-payables/bills/${billId}/match-rate-con${params}`,
+      { method: 'POST' }
+    )
+  },
+
+  // ============================================================================
   // Carrier Capacity Tracking
   // ============================================================================
 
@@ -1861,11 +2016,35 @@ export const api = {
   getScheduledReports: () =>
     request<import('../types').ScheduledReport[]>('/api/v1/analytics/scheduled-reports'),
 
+  updateScheduledReport: (id: string, data: {
+    report_name?: string
+    recipients?: string[]
+    frequency?: string
+    format?: string
+    filters?: Record<string, unknown>
+    day_of_week?: number
+    day_of_month?: number
+    time_of_day?: string
+    timezone?: string
+    is_active?: boolean
+  }) => request<import('../types').ScheduledReport>(`/api/v1/analytics/scheduled-reports/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
+
   deleteScheduledReport: (id: string) =>
     request<{ status: string }>(`/api/v1/analytics/scheduled-reports/${id}`, { method: 'DELETE' }),
 
+  runScheduledReportNow: (id: string) =>
+    request<{ status: string; history_id: string; report_name: string; recipients: string[]; generated_at: string }>(
+      `/api/v1/analytics/scheduled-reports/${id}/run-now`, { method: 'POST' }
+    ),
+
   getReportHistory: (limit: number = 50) =>
     request<import('../types').ReportHistoryEntry[]>(`/api/v1/analytics/scheduled-reports/history?limit=${limit}`),
+
+  getReportFields: () =>
+    request<import('../types').ReportFieldsResponse>('/api/v1/analytics/report-fields'),
 
   // ============================================================================
   // Custom Report Builder
@@ -2386,6 +2565,27 @@ export const api = {
   getImportTemplate: () =>
     request<{ columns: string[]; sample_row: Record<string, string> }>('/api/v1/shipments/import-template'),
 
+  // Saved Column Mapping Templates
+  getImportMappings: (customerId?: string) => {
+    const params = customerId ? `?customer_id=${customerId}` : ''
+    return request<import('../types').ImportMappingTemplate[]>(`/api/v1/shipments/import-mappings${params}`)
+  },
+
+  saveImportMapping: (data: { name: string; customer_id: string; column_mapping: Record<string, string>; notes?: string }) =>
+    request<import('../types').ImportMappingTemplate>('/api/v1/shipments/import-mappings', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  deleteImportMapping: (templateId: string) =>
+    request<{ status: string }>(`/api/v1/shipments/import-mappings/${templateId}`, { method: 'DELETE' }),
+
+  validateBulkImport: (data: { rows: Record<string, string>[]; customer_id: string; column_mapping: Record<string, string> }) =>
+    request<{ total_rows: number; valid_rows: number; error_rows: number; validation_errors: { row: number; errors: string[] }[] }>('/api/v1/shipments/bulk-import/validate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // ============================================================================
   // Split Shipments
   // ============================================================================
@@ -2517,4 +2717,38 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+
+  // ============================================================================
+  // QuickBooks Per-Entity Sync
+  // ============================================================================
+
+  quickbooksSyncCustomers: () =>
+    request<import('../types').EntitySyncResponse>('/api/v1/accounting/sync/customers', {
+      method: 'POST',
+    }),
+
+  quickbooksSyncInvoices: () =>
+    request<import('../types').EntitySyncResponse>('/api/v1/accounting/sync/invoices', {
+      method: 'POST',
+    }),
+
+  quickbooksSyncPayments: () =>
+    request<import('../types').EntitySyncResponse>('/api/v1/accounting/sync/payments', {
+      method: 'POST',
+    }),
+
+  quickbooksSyncVendors: () =>
+    request<import('../types').EntitySyncResponse>('/api/v1/accounting/sync/vendors', {
+      method: 'POST',
+    }),
+
+  // ============================================================================
+  // Integration Dashboards
+  // ============================================================================
+
+  getQuickBooksDashboard: () =>
+    request<import('../types').IntegrationDashboard>('/api/v1/accounting/dashboard'),
+
+  getIntegrationsDashboard: () =>
+    request<import('../types').IntegrationsDashboardSummary>('/api/v1/edi/integrations-dashboard'),
 }

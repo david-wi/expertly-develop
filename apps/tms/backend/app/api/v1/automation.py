@@ -111,6 +111,60 @@ async def get_assignment_rules():
     return await AutoAssignmentService.get_assignment_rules()
 
 
+# ============================================================================
+# Auto-Assign Rules Configuration
+# ============================================================================
+
+class AutoAssignConfigUpdate(BaseModel):
+    enabled: Optional[bool] = None
+    rate_threshold_percent: Optional[float] = None
+    min_confidence_score: Optional[float] = None
+    auto_tender_enabled: Optional[bool] = None
+    max_rate_cents: Optional[int] = None
+    prefer_lane_experience: Optional[bool] = None
+    min_on_time_percent: Optional[float] = None
+    require_active_insurance: Optional[bool] = None
+    preferred_carrier_ids: Optional[List[str]] = None
+    excluded_carrier_ids: Optional[List[str]] = None
+    max_carriers_to_consider: Optional[int] = None
+    waterfall_timeout_minutes: Optional[int] = None
+
+
+@router.post("/auto-assign-rules")
+async def save_auto_assign_rules(data: AutoAssignConfigUpdate):
+    """Configure auto-assignment rules.
+
+    Controls how loads are automatically matched to carriers:
+    - rate_threshold_percent: Max margin to give up (e.g., 15% = offer at 85% of customer price)
+    - min_confidence_score: Min AI confidence to auto-assign (0-100)
+    - auto_tender_enabled: If true, automatically send tender when confidence is high
+    - min_on_time_percent: Only consider carriers above this on-time threshold
+    - require_active_insurance: Require valid insurance
+    """
+    config_data = data.model_dump(exclude_none=True)
+    result = await AutoAssignmentService.save_auto_assign_config(config_data)
+    return result
+
+
+@router.get("/auto-assign-rules")
+async def get_auto_assign_rules():
+    """Get current auto-assignment rules configuration."""
+    return await AutoAssignmentService.get_auto_assign_config()
+
+
+@router.post("/auto-assign-with-config/{shipment_id}")
+async def auto_assign_with_config(shipment_id: str):
+    """Auto-assign a shipment using the saved rules configuration.
+
+    Uses the configured rate thresholds, carrier preferences, and
+    auto-tender settings to assign the best carrier.
+    """
+    try:
+        return await AutoAssignmentService.auto_assign_with_config(shipment_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.delete("/rules/{rule_id}")
 async def delete_assignment_rule(rule_id: str):
     """Delete an assignment rule."""

@@ -32,6 +32,7 @@ import {
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
 import NotificationCenter from '../NotificationCenter'
+import MobileBottomNav from './MobileBottomNav'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -174,10 +175,13 @@ export default function Layout() {
             </div>
           </div>
         </div>
-        <main className="p-4 sm:p-6 lg:p-8">
+        <main className="p-4 sm:p-6 lg:p-8 pb-20 lg:pb-8">
           <Outlet context={{ selectedOrgId: currentOrg?.id ?? null }} />
         </main>
       </div>
+
+      {/* Mobile bottom navigation */}
+      <MobileBottomNav />
     </div>
   )
 }

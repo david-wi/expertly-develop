@@ -570,3 +570,246 @@ def generate_997_acknowledgment(original_message: dict,
     lines.append(f"SE{sep}{len(lines) + 1}{sep}0001{term}")
 
     return "\n".join(lines)
+
+
+def generate_edi_210(
+    invoice_data: dict,
+    sender_id: str = "SENDER",
+    receiver_id: str = "RECEIVER",
+    control_number: str = "000000001",
+    element_separator: str = "*",
+    segment_terminator: str = "~",
+) -> str:
+    """Generate an EDI 210 (Motor Carrier Freight Details and Invoice).
+
+    Builds a properly formatted EDI 210 message from invoice data for
+    electronic invoicing to trading partners.
+
+    Args:
+        invoice_data: Dictionary with invoice details:
+            - invoice_number: Invoice number
+            - total_amount: Total in dollars
+            - invoice_date: Date string (YYYYMMDD or datetime)
+            - payment_method: PP (prepaid), CC (collect), etc.
+            - payment_terms: NET30, NET60, etc.
+            - shipper_name: Shipper company name
+            - consignee_name: Consignee company name
+            - bol_number: Bill of lading reference
+            - line_items: List of line item dicts with description, amount, rate
+            - remit_to_name: Remit-to party name
+            - remit_to_address: Remit-to address
+            - remit_to_city, remit_to_state, remit_to_zip
+        sender_id: ISA sender ID (padded to 15 chars)
+        receiver_id: ISA receiver ID (padded to 15 chars)
+        control_number: ISA/GS/ST control number
+        element_separator: Element separator character
+        segment_terminator: Segment terminator character
+
+    Returns:
+        Raw EDI 210 content string
+    """
+    sep = element_separator
+    term = segment_terminator
+
+    from datetime import datetime as _dt
+    now = _dt.utcnow()
+
+    inv_number = invoice_data.get("invoice_number", "INV-000")
+    total_amount = invoice_data.get("total_amount", 0)
+    inv_date = invoice_data.get("invoice_date", now.strftime("%Y%m%d"))
+    if isinstance(inv_date, _dt):
+        inv_date = inv_date.strftime("%Y%m%d")
+    elif len(str(inv_date)) > 8:
+        # Try to parse ISO format
+        try:
+            inv_date = _dt.fromisoformat(str(inv_date).replace("Z", "+00:00")).strftime("%Y%m%d")
+        except (ValueError, TypeError):
+            inv_date = now.strftime("%Y%m%d")
+
+    payment_method = invoice_data.get("payment_method", "PP")
+    payment_terms = invoice_data.get("payment_terms", "NET30")
+    shipper_name = invoice_data.get("shipper_name", "Shipper")
+    consignee_name = invoice_data.get("consignee_name", "Consignee")
+    bol_number = invoice_data.get("bol_number", "")
+    line_items = invoice_data.get("line_items", [])
+    remit_to_name = invoice_data.get("remit_to_name", "")
+
+    sender_padded = sender_id.ljust(15)[:15]
+    receiver_padded = receiver_id.ljust(15)[:15]
+    ctrl = str(control_number).zfill(9)[:9]
+
+    segments = []
+
+    # ISA - Interchange Control Header
+    segments.append(
+        f"ISA{sep}00{sep}{'':10}{sep}00{sep}{'':10}"
+        f"{sep}ZZ{sep}{sender_padded}{sep}ZZ{sep}{receiver_padded}"
+        f"{sep}{now.strftime('%y%m%d')}{sep}{now.strftime('%H%M')}"
+        f"{sep}U{sep}00401{sep}{ctrl}{sep}0{sep}P{sep}:"
+    )
+
+    # GS - Functional Group Header (IM = Invoice Information)
+    segments.append(
+        f"GS{sep}IM{sep}{sender_id}{sep}{receiver_id}"
+        f"{sep}{now.strftime('%Y%m%d')}{sep}{now.strftime('%H%M')}"
+        f"{sep}{ctrl}{sep}X{sep}004010"
+    )
+
+    # ST - Transaction Set Header
+    segments.append(f"ST{sep}210{sep}{ctrl}")
+
+    # B3 - Beginning Segment for Carrier's Invoice
+    segments.append(
+        f"B3{sep}{sep}{inv_number}{sep}{payment_method}"
+        f"{sep}{total_amount:.2f}{sep}{inv_date}"
+        f"{sep}{payment_terms}{sep}COLLECT"
+    )
+
+    # N9 - Reference Identification (BOL)
+    if bol_number:
+        segments.append(f"N9{sep}BM{sep}{bol_number}")
+
+    # N1 - Remit-to Party
+    if remit_to_name:
+        segments.append(f"N1{sep}RE{sep}{remit_to_name}")
+        if invoice_data.get("remit_to_address"):
+            segments.append(f"N3{sep}{invoice_data['remit_to_address']}")
+        if invoice_data.get("remit_to_city"):
+            segments.append(
+                f"N4{sep}{invoice_data.get('remit_to_city', '')}"
+                f"{sep}{invoice_data.get('remit_to_state', '')}"
+                f"{sep}{invoice_data.get('remit_to_zip', '')}"
+            )
+
+    # N1 - Shipper
+    segments.append(f"N1{sep}SH{sep}{shipper_name}")
+
+    # N1 - Consignee
+    segments.append(f"N1{sep}CN{sep}{consignee_name}")
+
+    # Line items
+    if line_items:
+        for idx, item in enumerate(line_items, 1):
+            segments.append(f"LX{sep}{idx}")
+            desc = item.get("description", "Freight charges")
+            if desc:
+                segments.append(f"L5{sep}{idx}{sep}{desc[:50]}")
+            amount = item.get("amount", 0)
+            rate = item.get("rate", amount)
+            charge_code = item.get("charge_code", "FR")
+            segments.append(f"L1{sep}{idx}{sep}{rate:.2f}{sep}{charge_code}")
+    else:
+        # Single line item for total
+        segments.append(f"LX{sep}1")
+        segments.append(f"L1{sep}1{sep}{total_amount:.2f}{sep}FR")
+
+    # L3 - Total Weight and Charges
+    total_weight = invoice_data.get("total_weight", "")
+    segments.append(
+        f"L3{sep}{total_weight}{sep}{'L' if total_weight else ''}"
+        f"{sep}{sep}{sep}{total_amount:.2f}"
+    )
+
+    # SE - Transaction Set Trailer (count includes ST and SE)
+    segment_count = len(segments) - 2 + 1  # segments after ST, plus SE itself
+    segments.append(f"SE{sep}{segment_count}{sep}{ctrl}")
+
+    # GE - Functional Group Trailer
+    segments.append(f"GE{sep}1{sep}{ctrl}")
+
+    # IEA - Interchange Control Trailer
+    segments.append(f"IEA{sep}1{sep}{ctrl}")
+
+    return term.join(segments) + term
+
+
+def generate_edi_990(
+    response_code: str = "A",
+    shipment_reference: str = "",
+    scac: str = "CARR",
+    counter_rate: Optional[float] = None,
+    decline_reason: Optional[str] = None,
+    sender_id: str = "CARRIER",
+    receiver_id: str = "BROKER",
+    control_number: str = "000000001",
+    element_separator: str = "*",
+    segment_terminator: str = "~",
+) -> str:
+    """Generate an EDI 990 (Response to a Load Tender).
+
+    Builds a properly formatted EDI 990 message for accepting, declining,
+    or countering a load tender (EDI 204).
+
+    Args:
+        response_code: A (accepted), D (declined), C (conditional/counter)
+        shipment_reference: Reference number from the original 204
+        scac: Standard carrier alpha code
+        counter_rate: Counter offer rate (used when response_code is C)
+        decline_reason: Reason for decline (used when response_code is D)
+        sender_id: ISA sender ID
+        receiver_id: ISA receiver ID
+        control_number: Control number for envelope
+        element_separator: Element separator character
+        segment_terminator: Segment terminator character
+
+    Returns:
+        Raw EDI 990 content string
+    """
+    sep = element_separator
+    term = segment_terminator
+
+    from datetime import datetime as _dt
+    now = _dt.utcnow()
+
+    sender_padded = sender_id.ljust(15)[:15]
+    receiver_padded = receiver_id.ljust(15)[:15]
+    ctrl = str(control_number).zfill(9)[:9]
+
+    segments = []
+
+    # ISA - Interchange Control Header
+    segments.append(
+        f"ISA{sep}00{sep}{'':10}{sep}00{sep}{'':10}"
+        f"{sep}ZZ{sep}{sender_padded}{sep}ZZ{sep}{receiver_padded}"
+        f"{sep}{now.strftime('%y%m%d')}{sep}{now.strftime('%H%M')}"
+        f"{sep}U{sep}00401{sep}{ctrl}{sep}0{sep}P{sep}:"
+    )
+
+    # GS - Functional Group Header (GF = Response to a Load Tender)
+    segments.append(
+        f"GS{sep}GF{sep}{sender_id}{sep}{receiver_id}"
+        f"{sep}{now.strftime('%Y%m%d')}{sep}{now.strftime('%H%M')}"
+        f"{sep}{ctrl}{sep}X{sep}004010"
+    )
+
+    # ST - Transaction Set Header
+    segments.append(f"ST{sep}990{sep}{ctrl}")
+
+    # B1 - Beginning segment (SCAC, shipment reference, response code, date)
+    segments.append(
+        f"B1{sep}{scac}{sep}{shipment_reference}"
+        f"{sep}{response_code}{sep}{now.strftime('%Y%m%d')}"
+    )
+
+    # N9 - Reference with response code
+    segments.append(f"N9{sep}2I{sep}{response_code}")
+
+    # L1 - Counter rate (if applicable)
+    if response_code == "C" and counter_rate is not None:
+        segments.append(f"L1{sep}1{sep}{counter_rate:.2f}{sep}FR")
+
+    # K1 - Decline reason (if applicable)
+    if decline_reason:
+        segments.append(f"K1{sep}{decline_reason[:80]}")
+
+    # SE - Transaction Set Trailer
+    segment_count = len(segments) - 2 + 1  # segments after ST, plus SE
+    segments.append(f"SE{sep}{segment_count}{sep}{ctrl}")
+
+    # GE - Functional Group Trailer
+    segments.append(f"GE{sep}1{sep}{ctrl}")
+
+    # IEA - Interchange Control Trailer
+    segments.append(f"IEA{sep}1{sep}{ctrl}")
+
+    return term.join(segments) + term

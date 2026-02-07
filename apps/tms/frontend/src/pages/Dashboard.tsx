@@ -58,42 +58,42 @@ export default function Dashboard() {
     .slice(0, 5)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500">Welcome back. Here's what needs your attention.</p>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+        <p className="text-sm sm:text-base text-gray-500">Welcome back. Here's what needs your attention.</p>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats Grid - 2 cols on mobile for compact view */}
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map((stat) => (
           <Link
             key={stat.name}
             to={stat.href}
-            className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-all hover:border-gray-300 group"
+            className="bg-white rounded-xl border border-gray-200 p-4 sm:p-6 hover:shadow-md transition-all hover:border-gray-300 group active:scale-[0.98]"
           >
             <div className="flex items-center justify-between">
-              <div className={`${stat.color} p-3 rounded-xl`}>
-                <stat.icon className="h-6 w-6 text-white" />
+              <div className={`${stat.color} p-2 sm:p-3 rounded-xl`}>
+                <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
-              <ArrowUpRight className="h-5 w-5 text-gray-300 group-hover:text-gray-400 transition-colors" />
+              <ArrowUpRight className="h-4 w-4 sm:h-5 sm:w-5 text-gray-300 group-hover:text-gray-400 transition-colors" />
             </div>
-            <div className="mt-4">
-              <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-              <p className="text-sm font-medium text-gray-500 mt-1">{stat.name}</p>
+            <div className="mt-3 sm:mt-4">
+              <p className="text-2xl sm:text-3xl font-bold text-gray-900">{stat.value}</p>
+              <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5 sm:mt-1">{stat.name}</p>
             </div>
           </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Urgent Items - Takes 2 columns */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Urgent Items</h2>
-            <Link to="/inbox" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-              View all →
+          <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 className="text-base sm:text-lg font-semibold text-gray-900">Urgent Items</h2>
+            <Link to="/inbox" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium min-h-[36px] flex items-center">
+              View all
             </Link>
           </div>
           {loading.workItems ? (

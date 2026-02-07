@@ -48,6 +48,8 @@ class TenderResponse(BaseModel):
     sent_to_phone: Optional[str] = None
     response_notes: Optional[str] = None
     counter_offer_rate: Optional[int] = None
+    counter_offer_notes: Optional[str] = None
+    negotiation_history: list = []
     notes: Optional[str] = None
     created_at: datetime
     updated_at: datetime
@@ -71,6 +73,8 @@ def tender_to_response(tender: Tender) -> TenderResponse:
         sent_to_phone=tender.sent_to_phone,
         response_notes=tender.response_notes,
         counter_offer_rate=tender.counter_offer_rate,
+        counter_offer_notes=tender.counter_offer_notes,
+        negotiation_history=tender.negotiation_history,
         notes=tender.notes,
         created_at=tender.created_at,
         updated_at=tender.updated_at,
@@ -156,6 +160,14 @@ async def send_tender(tender_id: str, data: SendTenderRequest):
     tender.sent_to_email = data.email
     tender.sent_to_phone = data.phone
 
+    # Track negotiation event
+    tender.add_negotiation_event(
+        action="tender_sent",
+        amount=tender.offered_rate,
+        party="broker",
+        notes=f"Sent via {data.via}",
+    )
+
     await db.tenders.update_one(
         {"_id": ObjectId(tender_id)},
         {"$set": tender.model_dump_mongo()}
@@ -193,11 +205,19 @@ async def accept_tender(tender_id: str, data: AcceptTenderRequest):
 
     tender = Tender(**tender_doc)
 
-    if tender.status != TenderStatus.SENT:
-        raise HTTPException(status_code=400, detail="Tender must be sent to accept")
+    if tender.status not in [TenderStatus.SENT, TenderStatus.COUNTER_OFFERED]:
+        raise HTTPException(status_code=400, detail="Tender must be sent or counter-offered to accept")
 
     tender.transition_to(TenderStatus.ACCEPTED)
     tender.response_notes = data.notes
+
+    # Track negotiation event
+    tender.add_negotiation_event(
+        action="accepted",
+        amount=tender.offered_rate,
+        party="carrier",
+        notes=data.notes,
+    )
 
     await db.tenders.update_one(
         {"_id": ObjectId(tender_id)},
@@ -223,7 +243,7 @@ async def accept_tender(tender_id: str, data: AcceptTenderRequest):
         {
             "shipment_id": tender.shipment_id,
             "_id": {"$ne": tender.id},
-            "status": {"$in": [TenderStatus.DRAFT, TenderStatus.SENT]},
+            "status": {"$in": [TenderStatus.DRAFT, TenderStatus.SENT, TenderStatus.COUNTER_OFFERED]},
         },
         {"$set": {"status": TenderStatus.CANCELLED}}
     )
@@ -236,6 +256,15 @@ async def accept_tender(tender_id: str, data: AcceptTenderRequest):
             "status": {"$ne": WorkItemStatus.DONE},
         },
         {"$set": {"status": WorkItemStatus.DONE}}
+    )
+
+    # Auto-remove load board postings when load is covered (Spot Market Integration)
+    await db.loadboard_postings.update_many(
+        {
+            "shipment_id": tender.shipment_id,
+            "status": {"$in": ["draft", "posted"]},
+        },
+        {"$set": {"status": "cancelled", "updated_at": datetime.utcnow()}}
     )
 
     await manager.broadcast("tender_accepted", {"id": str(tender.id), "shipment_id": str(tender.shipment_id)})
@@ -262,6 +291,14 @@ async def decline_tender(tender_id: str, data: DeclineTenderRequest):
     tender.transition_to(TenderStatus.DECLINED)
     tender.response_notes = data.reason
     tender.counter_offer_rate = data.counter_offer_rate
+
+    # Track negotiation event
+    tender.add_negotiation_event(
+        action="declined",
+        amount=tender.offered_rate,
+        party="carrier",
+        notes=data.reason,
+    )
 
     await db.tenders.update_one(
         {"_id": ObjectId(tender_id)},
@@ -435,18 +472,178 @@ async def accept_counter_offer(tender_id: str, data: AcceptCounterRequest):
         }}
     )
 
+    # Track negotiation event
+    negotiation_event = {
+        "timestamp": now,
+        "action": "counter_accepted",
+        "amount": new_rate,
+        "party": "broker",
+        "notes": data.notes or "Counter-offer accepted",
+        "auto_action": False,
+    }
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {"$push": {"negotiation_history": negotiation_event}}
+    )
+
     # Cancel other tenders for this shipment
     await db.tenders.update_many(
         {
             "shipment_id": tender_doc["shipment_id"],
             "_id": {"$ne": ObjectId(tender_id)},
-            "status": {"$in": [TenderStatus.DRAFT.value, TenderStatus.SENT.value]},
+            "status": {"$in": [TenderStatus.DRAFT.value, TenderStatus.SENT.value, TenderStatus.COUNTER_OFFERED.value]},
         },
         {"$set": {"status": TenderStatus.CANCELLED.value, "updated_at": now}}
     )
 
+    # Auto-remove load board postings when load is covered
+    await db.loadboard_postings.update_many(
+        {
+            "shipment_id": tender_doc["shipment_id"],
+            "status": {"$in": ["draft", "posted"]},
+        },
+        {"$set": {"status": "cancelled", "updated_at": now}}
+    )
+
     await manager.broadcast("tender_accepted", {"id": tender_id, "rate": new_rate})
     return {"status": "accepted", "new_rate": new_rate, "tender_id": tender_id}
+
+
+# ============================================================================
+# Negotiation Thread (per-tender)
+# ============================================================================
+
+@router.get("/{tender_id}/negotiation-thread")
+async def get_negotiation_thread(tender_id: str):
+    """Get the full negotiation thread for a specific tender, including all events with timestamps."""
+    db = get_database()
+
+    tender = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    # Get carrier name
+    carrier = await db.carriers.find_one({"_id": tender["carrier_id"]})
+    carrier_name = carrier.get("name", "Unknown") if carrier else "Unknown"
+
+    # Get shipment info
+    shipment = await db.shipments.find_one({"_id": tender["shipment_id"]})
+    shipment_number = shipment.get("shipment_number", "") if shipment else ""
+
+    # Get counter-offers from collection as well
+    counter_offers = await db.counter_offers.find(
+        {"tender_id": ObjectId(tender_id)}
+    ).sort("created_at", 1).to_list(100)
+
+    return {
+        "tender_id": str(tender["_id"]),
+        "shipment_id": str(tender["shipment_id"]),
+        "shipment_number": shipment_number,
+        "carrier_id": str(tender["carrier_id"]),
+        "carrier_name": carrier_name,
+        "status": tender.get("status"),
+        "offered_rate": tender.get("offered_rate", 0),
+        "counter_offer_rate": tender.get("counter_offer_rate"),
+        "negotiation_events": tender.get("negotiation_history", []),
+        "counter_offers": [
+            {
+                "id": str(c["_id"]),
+                "round_number": c.get("round_number", 1),
+                "offered_by": c.get("offered_by", "carrier"),
+                "original_rate": c.get("original_rate", 0),
+                "counter_rate": c.get("counter_rate", 0),
+                "status": c.get("status", "pending"),
+                "auto_accepted": c.get("auto_accepted", False),
+                "notes": c.get("notes"),
+                "created_at": c["created_at"].isoformat() if hasattr(c.get("created_at"), "isoformat") else "",
+            }
+            for c in counter_offers
+        ],
+        "total_rounds": len(tender.get("negotiation_history", [])),
+        "created_at": tender["created_at"].isoformat() if hasattr(tender.get("created_at"), "isoformat") else "",
+    }
+
+
+class BrokerCounterOfferRequest(BaseModel):
+    counter_rate: int  # in cents
+    notes: Optional[str] = None
+
+
+@router.post("/{tender_id}/broker-counter")
+async def broker_counter_offer(tender_id: str, data: BrokerCounterOfferRequest):
+    """Broker proposes a different rate back to the carrier."""
+    db = get_database()
+
+    tender_doc = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender_doc:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    if tender_doc.get("status") not in [TenderStatus.COUNTER_OFFERED.value, TenderStatus.SENT.value]:
+        raise HTTPException(status_code=400, detail="Tender not in a state for counter-offers")
+
+    now = datetime.utcnow()
+
+    negotiation_event = {
+        "timestamp": now,
+        "action": "counter_offer",
+        "amount": data.counter_rate,
+        "party": "broker",
+        "notes": data.notes,
+        "auto_action": False,
+    }
+
+    # Update tender with new offered rate
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {
+            "$set": {
+                "offered_rate": data.counter_rate,
+                "status": TenderStatus.SENT.value,  # Re-set to sent (awaiting carrier response)
+                "response_notes": data.notes,
+                "updated_at": now,
+            },
+            "$push": {"negotiation_history": negotiation_event},
+        }
+    )
+
+    # Save to counter_offers collection
+    existing_count = await db.counter_offers.count_documents({"tender_id": ObjectId(tender_id)})
+    await db.counter_offers.insert_one({
+        "_id": ObjectId(),
+        "tender_id": ObjectId(tender_id),
+        "round_number": existing_count + 1,
+        "offered_by": "broker",
+        "original_rate": tender_doc.get("offered_rate", 0),
+        "counter_rate": data.counter_rate,
+        "notes": data.notes,
+        "status": "pending",
+        "auto_accepted": False,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    # Create notification for carrier
+    await db.portal_notifications.insert_one({
+        "portal_type": "carrier",
+        "entity_id": tender_doc["carrier_id"],
+        "title": "Updated Rate Offer",
+        "message": f"The broker has proposed a new rate: ${data.counter_rate / 100:.2f}",
+        "notification_type": "tender",
+        "tender_id": ObjectId(tender_id),
+        "shipment_id": tender_doc["shipment_id"],
+        "is_read": False,
+        "created_at": now,
+        "updated_at": now,
+    })
+
+    await manager.broadcast("broker_counter_offer", {"id": tender_id, "new_rate": data.counter_rate})
+
+    return {
+        "status": "counter_sent",
+        "tender_id": tender_id,
+        "new_rate": data.counter_rate,
+        "message": "Counter-offer sent to carrier",
+    }
 
 
 # ============================================================================

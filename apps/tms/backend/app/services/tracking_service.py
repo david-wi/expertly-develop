@@ -431,6 +431,16 @@ class TrackingService:
                 }
             )
 
+        # Auto-generate invoice from POD (Feature: e07899c0)
+        try:
+            from app.services.invoice_automation_service import InvoiceAutomationService
+            await InvoiceAutomationService.trigger_invoice_from_pod(shipment_id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"Auto-invoice from POD failed for shipment {shipment_id}: {e}"
+            )
+
         return pod
 
     @staticmethod

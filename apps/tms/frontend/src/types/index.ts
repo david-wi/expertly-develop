@@ -170,6 +170,16 @@ export interface Shipment {
   commodity?: string
   customer_price: number
   carrier_cost: number
+  fuel_surcharge?: number
+  fuel_surcharge_schedule_id?: string
+  assigned_equipment?: {
+    equipment_number: string
+    equipment_type: string
+    trailer_number?: string
+    chassis_number?: string
+    notes?: string
+    assigned_at?: string
+  }
   margin: number
   margin_percent: number
   pickup_date?: string
@@ -179,6 +189,10 @@ export interface Shipment {
   eta?: string
   at_risk: boolean
   is_at_risk: boolean
+  // Split shipment parent-child relationship
+  split_parent_id?: string
+  split_children?: string[]
+  consolidated_into?: string
   created_at: string
 }
 
@@ -1770,6 +1784,95 @@ export const RATE_MATCH_STATUS_LABELS: Record<string, string> = {
 }
 
 // ============================================================================
+// Carrier Payables Types (dedicated module)
+// ============================================================================
+
+export interface CarrierPayableBill {
+  id: string
+  carrier_id: string
+  shipment_id: string
+  bill_number: string
+  amount: number
+  received_date: string
+  due_date?: string
+  status: string
+  matched_tender_id?: string
+  variance_amount?: number
+  variance_reason?: string
+  approved_by?: string
+  paid_at?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+  carrier_name?: string
+  shipment_number?: string
+  is_factored: boolean
+  factor_company?: string
+  factor_payment_email?: string
+}
+
+export interface CarrierPayablesQuickPayOffer {
+  id: string
+  carrier_id: string
+  carrier_name: string
+  bill_id: string
+  bill_number?: string
+  bill_amount: number
+  tiers: QuickPayTier[]
+  standard_payment_date?: string
+  status: string
+  selected_tier?: string
+  savings?: number
+  created_at?: string
+}
+
+export interface CarrierPayablesFactoringAssignment {
+  id: string
+  carrier_id: string
+  carrier_name: string
+  factoring_company_name: string
+  factoring_company_id?: string
+  noa_reference?: string
+  noa_date?: string
+  noa_status: string
+  payment_email?: string
+  payment_address?: string
+  fee_percent?: number
+  total_factored_amount: number
+  factored_invoice_count: number
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface CarrierPayablesRateConMatch {
+  bill_id: string
+  shipment_id: string
+  shipment_number?: string
+  carrier_id?: string
+  carrier_name?: string
+  rate_con_amount?: number
+  carrier_bill_amount?: number
+  variance?: number
+  variance_percent?: number
+  match_status: string
+  flags: string[]
+  auto_approved: boolean
+}
+
+export interface CarrierPayablesDashboard {
+  total_outstanding: number
+  total_bill_count: number
+  approved_pending_payment: number
+  approved_pending_count: number
+  quick_pay_savings_ytd: number
+  factored_carrier_count: number
+  unmatched_invoices: number
+  disputed_bills: number
+  avg_days_to_pay: number | null
+}
+
+// ============================================================================
 // Carrier Capacity Types
 // ============================================================================
 
@@ -2047,6 +2150,35 @@ export interface SavedReport {
   created_by?: string
   created_at: string
   updated_at: string
+}
+
+export interface ReportFieldDefinition {
+  name: string
+  label: string
+  type: 'string' | 'number' | 'currency' | 'percentage' | 'date'
+}
+
+export interface ReportEntityDefinition {
+  label: string
+  fields: ReportFieldDefinition[]
+}
+
+export interface ReportCalculatedField {
+  name: string
+  label: string
+  formula: string
+}
+
+export interface ReportOperatorDefinition {
+  value: string
+  label: string
+  types: string[]
+}
+
+export interface ReportFieldsResponse {
+  entities: Record<string, ReportEntityDefinition>
+  calculated_fields: ReportCalculatedField[]
+  operators: ReportOperatorDefinition[]
 }
 
 // ============================================================================
@@ -2675,6 +2807,15 @@ export interface BulkImportResult {
   shipment_ids: string[]
 }
 
+export interface ImportMappingTemplate {
+  id: string
+  name: string
+  customer_id: string
+  column_mapping: Record<string, string>
+  notes?: string
+  created_at: string
+}
+
 // ============================================================================
 // Split Shipment Types
 // ============================================================================
@@ -2900,4 +3041,193 @@ export const EDI_204_STATUS_LABELS: Record<EDI204TenderStatus, string> = {
   accepted: 'Accepted',
   rejected: 'Rejected',
   countered: 'Countered',
+}
+
+// ============================================================================
+// Driver Location Update Types
+// ============================================================================
+
+export interface DriverLocationUpdate {
+  shipment_id: string
+  latitude: number
+  longitude: number
+  city?: string
+  state?: string
+  heading?: number
+  speed_mph?: number
+  source?: string
+}
+
+export interface DriverLocationUpdateResponse {
+  tracking_event_id: string
+  location?: string
+  latitude: number
+  longitude: number
+  eta?: string
+  distance_remaining_miles?: number
+  triggered_geofences: {
+    geofence_id: string
+    geofence_name: string
+    trigger_type: string
+  }[]
+}
+
+export interface LiveMapResponse {
+  total_active: number
+  in_transit_count: number
+  pending_pickup_count: number
+  locations: DriverLocation[]
+}
+
+export interface RequestLocationResponse {
+  tracking_link_token: string
+  tracking_url: string
+  sent_to?: string
+  message: string
+}
+
+// ============================================================================
+// DOE Fuel Rate Types
+// ============================================================================
+
+export interface DOEFuelRate {
+  current_price: number
+  date: string
+  source: string
+  region: string
+  note?: string
+}
+
+// ============================================================================
+// Route Calculate Types
+// ============================================================================
+
+export interface RouteCalculation {
+  origin: {
+    latitude: number
+    longitude: number
+    city?: string
+    state?: string
+  }
+  destination: {
+    latitude: number
+    longitude: number
+    city?: string
+    state?: string
+  }
+  straight_line_miles: number
+  practical_miles: number
+  estimated_transit_hours: number
+  estimated_transit_days: number
+  estimated_fuel_gallons: number
+  estimated_fuel_cost: number
+  fuel_price_per_gallon: number
+  avg_speed_mph: number
+  route_type: string
+}
+
+// ============================================================================
+// Equipment Types (Enhanced)
+// ============================================================================
+
+export interface EquipmentDetail {
+  id: string
+  equipment_number: string
+  equipment_type: string
+  status: 'available' | 'in_use' | 'maintenance' | 'retired'
+  current_location?: string
+  current_shipment_id?: string
+  current_shipment_number?: string
+  carrier_id?: string
+  carrier_name?: string
+  length_ft?: number
+  width_ft?: number
+  height_ft?: number
+  max_weight_lbs?: number
+  temperature_min?: number
+  temperature_max?: number
+  notes?: string
+  created_at?: string
+}
+
+export interface EquipmentListResponse {
+  total: number
+  equipment: EquipmentDetail[]
+}
+
+export const EQUIPMENT_STATUS_LABELS: Record<string, string> = {
+  available: 'Available',
+  in_use: 'In Use',
+  maintenance: 'Maintenance',
+  retired: 'Retired',
+}
+
+// ============================================================================
+// EDI & Integrations Dashboard Types
+// ============================================================================
+
+export interface EntitySyncResponse {
+  entity_type: string
+  status: string
+  total_records: number
+  synced_count: number
+  failed_count: number
+  skipped_count: number
+  error_message?: string
+  started_at?: string
+  completed_at?: string
+}
+
+export interface IntegrationDashboard {
+  quickbooks_connected: boolean
+  quickbooks_company_name?: string
+  quickbooks_last_sync?: string
+  quickbooks_synced_customers: number
+  quickbooks_synced_invoices: number
+  quickbooks_synced_payments: number
+  quickbooks_synced_vendors: number
+  quickbooks_pending_invoices: number
+  quickbooks_auto_sync: boolean
+  quickbooks_recent_errors: {
+    entity_type: string
+    entity_name?: string
+    error: string
+    occurred_at?: string
+  }[]
+}
+
+export interface IntegrationsDashboardSummary {
+  edi: {
+    total_messages: number
+    active_trading_partners: number
+    by_type: Record<string, number>
+    errors: number
+    pending: number
+    tenders: {
+      pending: number
+      accepted: number
+      rejected: number
+    }
+    invoices_210: {
+      sent: number
+      acknowledged: number
+      errors: number
+    }
+    responses_990: {
+      sent: number
+    }
+  }
+  load_boards: {
+    total_postings: number
+    posted: number
+    booked: number
+    by_provider: Record<string, number>
+  }
+  quickbooks: {
+    connected: boolean
+    company_name?: string
+    last_sync_at?: string
+    synced_customers: number
+    synced_invoices: number
+  }
 }

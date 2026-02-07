@@ -415,12 +415,138 @@ async def get_notification_center(
 # ============================================================================
 
 
+class NotificationChannels(BaseModel):
+    """Per-event channel configuration."""
+    in_app: bool = True
+    push: bool = True
+    email: bool = False
+
+
+class NotificationRule(BaseModel):
+    """Configurable notification rule for a specific event type."""
+    event_type: str
+    label: str
+    description: str
+    channels: NotificationChannels = NotificationChannels()
+    enabled: bool = True
+
+
+# Default notification rules with sensible defaults
+DEFAULT_NOTIFICATION_RULES: List[dict] = [
+    {
+        "event_type": "load_accepted",
+        "label": "Load Accepted",
+        "description": "When a carrier accepts a tendered load",
+        "channels": {"in_app": True, "push": True, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "delivery_complete",
+        "label": "Delivery Complete",
+        "description": "When a shipment is delivered to its destination",
+        "channels": {"in_app": True, "push": True, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "shipment_at_risk",
+        "label": "Shipment at Risk",
+        "description": "When a shipment is flagged as at-risk for delay or issue",
+        "channels": {"in_app": True, "push": True, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "new_quote_request",
+        "label": "New Quote Request",
+        "description": "When a new rate request is received",
+        "channels": {"in_app": True, "push": True, "email": False},
+        "enabled": True,
+    },
+    {
+        "event_type": "tender_response",
+        "label": "Tender Response",
+        "description": "When a carrier responds to a tender offer",
+        "channels": {"in_app": True, "push": True, "email": False},
+        "enabled": True,
+    },
+    {
+        "event_type": "shipment_status_change",
+        "label": "Shipment Status Change",
+        "description": "When a shipment transitions to a new status",
+        "channels": {"in_app": True, "push": False, "email": False},
+        "enabled": True,
+    },
+    {
+        "event_type": "exception_alert",
+        "label": "Exception Alert",
+        "description": "When a shipment exception is detected",
+        "channels": {"in_app": True, "push": True, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "invoice_due",
+        "label": "Invoice Due",
+        "description": "When an invoice payment is approaching due date",
+        "channels": {"in_app": True, "push": False, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "check_call_due",
+        "label": "Check Call Due",
+        "description": "When a check call is due for a shipment",
+        "channels": {"in_app": True, "push": True, "email": False},
+        "enabled": True,
+    },
+    {
+        "event_type": "document_uploaded",
+        "label": "Document Uploaded",
+        "description": "When a document (BOL, POD, etc.) is uploaded",
+        "channels": {"in_app": True, "push": False, "email": False},
+        "enabled": True,
+    },
+    {
+        "event_type": "approval_needed",
+        "label": "Approval Needed",
+        "description": "When an action requires your approval",
+        "channels": {"in_app": True, "push": True, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "carrier_update",
+        "label": "Carrier Update",
+        "description": "When carrier information changes (insurance, status)",
+        "channels": {"in_app": True, "push": False, "email": False},
+        "enabled": True,
+    },
+    {
+        "event_type": "billing_alert",
+        "label": "Billing Alert",
+        "description": "Important billing and payment notifications",
+        "channels": {"in_app": True, "push": False, "email": True},
+        "enabled": True,
+    },
+    {
+        "event_type": "edi_transmission",
+        "label": "EDI Transmission",
+        "description": "EDI message send/receive notifications",
+        "channels": {"in_app": True, "push": False, "email": False},
+        "enabled": False,
+    },
+    {
+        "event_type": "load_board_activity",
+        "label": "Load Board Activity",
+        "description": "Updates from connected load boards",
+        "channels": {"in_app": True, "push": False, "email": False},
+        "enabled": False,
+    },
+]
+
+
 class NotificationPreferences(BaseModel):
     email_enabled: bool = True
     push_enabled: bool = True
     sms_enabled: bool = False
 
-    # Event types
+    # Event types (legacy fields kept for backward compatibility)
     new_quote_request: bool = True
     tender_response: bool = True
     shipment_status_change: bool = True
@@ -436,6 +562,14 @@ class NotificationPreferences(BaseModel):
     edi_transmission: bool = False
     load_board_activity: bool = False
 
+    # Configurable notification rules with per-event channel control
+    notification_rules: Optional[List[NotificationRule]] = None
+
+    # Quiet hours
+    quiet_hours_enabled: bool = False
+    quiet_hours_start: Optional[str] = "22:00"  # HH:MM format
+    quiet_hours_end: Optional[str] = "07:00"  # HH:MM format
+
 
 @router.get("/preferences/{user_id}", response_model=NotificationPreferences)
 async def get_notification_preferences(user_id: str):
@@ -445,10 +579,21 @@ async def get_notification_preferences(user_id: str):
     prefs = await db.notification_preferences.find_one({"user_id": user_id})
 
     if not prefs:
-        # Return defaults
-        return NotificationPreferences()
+        # Return defaults with default rules
+        default_prefs = NotificationPreferences(
+            notification_rules=[NotificationRule(**rule) for rule in DEFAULT_NOTIFICATION_RULES]
+        )
+        return default_prefs
 
-    return NotificationPreferences(**{k: v for k, v in prefs.items() if k != "_id" and k != "user_id"})
+    # Parse stored rules or use defaults
+    stored_rules = prefs.get("notification_rules")
+    if stored_rules:
+        rules = [NotificationRule(**rule) for rule in stored_rules]
+    else:
+        rules = [NotificationRule(**rule) for rule in DEFAULT_NOTIFICATION_RULES]
+
+    filtered = {k: v for k, v in prefs.items() if k not in ("_id", "user_id", "notification_rules", "updated_at")}
+    return NotificationPreferences(notification_rules=rules, **filtered)
 
 
 @router.put("/preferences/{user_id}", response_model=NotificationPreferences)
@@ -460,6 +605,13 @@ async def update_notification_preferences(user_id: str, data: NotificationPrefer
     prefs["user_id"] = user_id
     prefs["updated_at"] = utc_now()
 
+    # Convert notification rules to dicts for MongoDB storage
+    if prefs.get("notification_rules"):
+        prefs["notification_rules"] = [
+            rule if isinstance(rule, dict) else rule
+            for rule in prefs["notification_rules"]
+        ]
+
     await db.notification_preferences.update_one(
         {"user_id": user_id},
         {"$set": prefs},
@@ -467,3 +619,51 @@ async def update_notification_preferences(user_id: str, data: NotificationPrefer
     )
 
     return data
+
+
+@router.post("/test")
+async def send_test_notification(request: Request):
+    """Send a test push notification to verify push is working."""
+    db = get_database()
+    user_id = request.headers.get("X-User-Id", "anonymous")
+
+    # Get user's active subscriptions
+    subscriptions = await db.push_subscriptions.find(
+        {"user_id": user_id, "is_active": True}
+    ).to_list(10)
+
+    if not subscriptions:
+        raise HTTPException(
+            status_code=404,
+            detail="No active push subscription found. Please enable push notifications first."
+        )
+
+    # Create a test in-app notification
+    test_notification = {
+        "user_id": user_id,
+        "title": "Test Notification",
+        "message": "Push notifications are working! You will receive alerts for important TMS events.",
+        "notification_type": "info",
+        "is_read": False,
+        "read_at": None,
+        "created_at": utc_now(),
+        "updated_at": utc_now(),
+    }
+    await db.notifications.insert_one(test_notification)
+
+    # Send test push notification
+    push_data = SendNotificationRequest(
+        title="Expertly TMS - Test",
+        body="Push notifications are working! You will receive alerts for load accepted, delivery complete, and shipment at risk events.",
+        url="/settings",
+        tag="tms-test",
+        user_ids=[user_id],
+        data={"type": "test"},
+    )
+    result = await send_push_notification(push_data)
+
+    return {
+        "status": "sent",
+        "message": "Test notification sent successfully",
+        "subscribers": len(subscriptions),
+    }
