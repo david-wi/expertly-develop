@@ -16,14 +16,14 @@ import type { TemplateVersion, TemplateSection, TemplateQuestion, AnswerType } f
 
 // ── API helpers ──
 
-function fetchTemplateVersion(versionId: string): Promise<TemplateVersion> {
-  return api.templates.get(versionId);
+function fetchTemplateVersion(templateId: string): Promise<TemplateVersion> {
+  return api.templates.get(templateId);
 }
 
 // ── Page ──
 
 export default function TemplateEditorPage() {
-  const { versionId } = useParams<{ versionId: string }>();
+  const { templateId } = useParams<{ templateId: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -34,15 +34,15 @@ export default function TemplateEditorPage() {
   const [editingQuestion, setEditingQuestion] = useState<TemplateQuestion | null>(null);
 
   const { data: template, isLoading } = useQuery({
-    queryKey: ['template-version', versionId],
-    queryFn: () => fetchTemplateVersion(versionId!),
-    enabled: !!versionId,
+    queryKey: ['template-version', templateId],
+    queryFn: () => fetchTemplateVersion(templateId!),
+    enabled: !!templateId,
   });
 
   const publishMutation = useMutation({
-    mutationFn: () => api.templates.publish(versionId!),
+    mutationFn: () => api.templates.publish(templateId!),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
+      queryClient.invalidateQueries({ queryKey: ['template-version', templateId] });
     },
   });
 
@@ -53,9 +53,9 @@ export default function TemplateEditorPage() {
       isRepeatable: boolean;
       repeatKeyName?: string;
       applicabilityRuleText?: string;
-    }) => api.templates.createSection(versionId!, data),
+    }) => api.templates.createSection(templateId!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
+      queryClient.invalidateQueries({ queryKey: ['template-version', templateId] });
       setShowSectionModal(false);
       setEditingSection(null);
     },
@@ -72,9 +72,9 @@ export default function TemplateEditorPage() {
       isRepeatable: boolean;
       repeatKeyName?: string;
       applicabilityRuleText?: string;
-    }) => axiosInstance.put(`/templates/${versionId}/sections/${sectionId}`, data),
+    }) => axiosInstance.put(`/templates/${templateId}/sections/${sectionId}`, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
+      queryClient.invalidateQueries({ queryKey: ['template-version', templateId] });
       setShowSectionModal(false);
       setEditingSection(null);
     },
@@ -93,9 +93,9 @@ export default function TemplateEditorPage() {
       isRequired: boolean;
       answerType: AnswerType;
       applicabilityRuleText?: string;
-    }) => api.templates.createQuestion(versionId!, sectionId, data),
+    }) => api.templates.createQuestion(templateId!, sectionId, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
+      queryClient.invalidateQueries({ queryKey: ['template-version', templateId] });
       setShowQuestionModal(null);
       setEditingQuestion(null);
     },
@@ -118,11 +118,11 @@ export default function TemplateEditorPage() {
       applicabilityRuleText?: string;
     }) =>
       axiosInstance.put(
-        `/templates/${versionId}/sections/${sectionId}/questions/${questionId}`,
+        `/templates/${templateId}/sections/${sectionId}/questions/${questionId}`,
         data,
       ),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
+      queryClient.invalidateQueries({ queryKey: ['template-version', templateId] });
       setShowQuestionModal(null);
       setEditingQuestion(null);
     },
