@@ -29,7 +29,7 @@ COPY apps/tms/frontend ./apps/tms/frontend
 
 # Build the application with timestamp
 WORKDIR /app/apps/tms/frontend
-RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
+RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date -u +%y%m%d.%H%M%S)} npm run build
 
 # Production stage
 FROM nginx:alpine

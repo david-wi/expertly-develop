@@ -49,7 +49,7 @@ deploy_color() {
     # Set environment variables for this deployment
     export DEPLOY_COLOR=$color
     export GIT_COMMIT=$(git rev-parse --short HEAD)
-    export BUILD_TIMESTAMP=$(date +%s)
+    export BUILD_TIMESTAMP=$(date -u +%y%m%d.%H%M%S)
 
     # Build and start with color suffix
     COMPOSE_PROJECT_NAME="expertly-${color}" \

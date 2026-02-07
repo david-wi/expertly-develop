@@ -310,7 +310,7 @@ jobs:
             echo "=== Deploying \$APP: \$OLD -> \$TARGET ==="
 
             export GIT_COMMIT=\$(git rev-parse --short HEAD)
-            export BUILD_TIMESTAMP=\$(date +%s)
+            export BUILD_TIMESTAMP=\$(date -u +%y%m%d.%H%M%S)
             export DEPLOY_COLOR="-\${TARGET}"
 
             # Build this app's services

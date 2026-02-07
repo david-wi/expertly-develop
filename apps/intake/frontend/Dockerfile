@@ -32,7 +32,7 @@ ENV VITE_UI_REMOTE_URL=$VITE_UI_REMOTE_URL
 # Build the application
 WORKDIR /app/apps/intake/frontend
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
-      export VITE_BUILD_TIMESTAMP=$(date +%s); \
+      export VITE_BUILD_TIMESTAMP=$(date -u +%y%m%d.%H%M%S); \
     else \
       export VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP; \
     fi && \

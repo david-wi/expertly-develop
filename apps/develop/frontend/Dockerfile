@@ -35,7 +35,7 @@ ENV VITE_GIT_COMMIT=$VITE_GIT_COMMIT
 # Build the application with timestamp
 WORKDIR /app/apps/develop/frontend
 RUN if [ -z "$VITE_BUILD_TIMESTAMP" ]; then \
-      export VITE_BUILD_TIMESTAMP=$(date +%s); \
+      export VITE_BUILD_TIMESTAMP=$(date -u +%y%m%d.%H%M%S); \
     else \
       export VITE_BUILD_TIMESTAMP=$VITE_BUILD_TIMESTAMP; \
     fi && \
