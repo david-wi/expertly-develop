@@ -128,10 +128,11 @@ export default function Layout() {
         />
       )}
 
-      {/* Sidebar wrapper: hidden on mobile, shown on desktop; slides in on mobile when open */}
+      {/* Sidebar wrapper: slides in on mobile; on desktop, transform-none avoids creating
+           a containing block so the fixed Sidebar positions relative to viewport */}
       <div className={`
         fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out
-        lg:translate-x-0 lg:static lg:z-auto
+        lg:transform-none lg:static lg:z-auto
         ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
         <Sidebar
