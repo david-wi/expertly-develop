@@ -32,6 +32,19 @@ class LaneRateInput(BaseModel):
     notes: Optional[str] = None
 
 
+class CustomerPricingRuleInput(BaseModel):
+    """Input model for a customer-specific pricing rule."""
+    rule_name: str
+    discount_percent: float = 0.0
+    volume_discount_tiers: list[dict] = []
+    contract_rate_per_mile: Optional[int] = None  # cents
+    contract_flat_rate: Optional[int] = None  # cents
+    fuel_surcharge_override: Optional[float] = None
+    min_margin_percent: float = 0.0
+    auto_apply: bool = True
+    notes: Optional[str] = None
+
+
 class RateTableCreate(BaseModel):
     """Create a new rate table."""
     customer_id: str
@@ -41,6 +54,7 @@ class RateTableCreate(BaseModel):
     expiry_date: Optional[datetime] = None
     is_active: bool = True
     lanes: list[LaneRateInput] = []
+    customer_pricing_rules: list[CustomerPricingRuleInput] = []
     currency: str = "USD"
     created_by: Optional[str] = None
 
@@ -53,6 +67,7 @@ class RateTableUpdate(BaseModel):
     expiry_date: Optional[datetime] = None
     is_active: Optional[bool] = None
     lanes: Optional[list[LaneRateInput]] = None
+    customer_pricing_rules: Optional[list[CustomerPricingRuleInput]] = None
     currency: Optional[str] = None
 
 
@@ -67,6 +82,7 @@ class RateTableResponse(BaseModel):
     is_active: bool
     lanes: list[LaneRateInput]
     lane_count: int
+    customer_pricing_rules: list[CustomerPricingRuleInput] = []
     currency: str
     created_by: Optional[str] = None
     is_expired: bool
@@ -155,6 +171,8 @@ async def rate_table_to_response(doc: dict) -> RateTableResponse:
     expiry_date = doc.get("expiry_date")
     is_expired = bool(expiry_date and now > expiry_date)
 
+    pricing_rules = doc.get("customer_pricing_rules", [])
+
     return RateTableResponse(
         id=str(doc["_id"]),
         customer_id=str(doc["customer_id"]),
@@ -165,6 +183,7 @@ async def rate_table_to_response(doc: dict) -> RateTableResponse:
         is_active=doc.get("is_active", True),
         lanes=[LaneRateInput(**lane) for lane in lanes],
         lane_count=len(lanes),
+        customer_pricing_rules=[CustomerPricingRuleInput(**rule) for rule in pricing_rules],
         currency=doc.get("currency", "USD"),
         created_by=doc.get("created_by"),
         is_expired=is_expired,
@@ -217,6 +236,8 @@ async def create_rate_table(data: RateTableCreate):
         raise HTTPException(status_code=404, detail="Customer not found")
 
     lane_dicts = [lane.model_dump() for lane in data.lanes]
+    from app.models.rate_table import CustomerPricingRule
+    pricing_rule_dicts = [rule.model_dump() for rule in data.customer_pricing_rules]
 
     rate_table = RateTable(
         customer_id=ObjectId(data.customer_id),
@@ -226,6 +247,7 @@ async def create_rate_table(data: RateTableCreate):
         expiry_date=data.expiry_date,
         is_active=data.is_active,
         lanes=[LaneRate(**ld) for ld in lane_dicts],
+        customer_pricing_rules=[CustomerPricingRule(**r) for r in pricing_rule_dicts],
         currency=data.currency,
         created_by=data.created_by,
     )
@@ -263,6 +285,13 @@ async def update_rate_table(table_id: str, data: RateTableUpdate):
         update_data["lanes"] = [
             lane.model_dump() if hasattr(lane, "model_dump") else lane
             for lane in update_data["lanes"]
+        ]
+
+    # Convert customer pricing rules from Pydantic models to dicts
+    if "customer_pricing_rules" in update_data and update_data["customer_pricing_rules"] is not None:
+        update_data["customer_pricing_rules"] = [
+            rule.model_dump() if hasattr(rule, "model_dump") else rule
+            for rule in update_data["customer_pricing_rules"]
         ]
 
     update_data["updated_at"] = utc_now()
