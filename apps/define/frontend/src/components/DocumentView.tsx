@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react'
+import { Copy, Check } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Requirement } from '@/api/client'
 
@@ -125,6 +127,65 @@ function RequirementSection({ node, depth }: { node: TreeNode; depth: number }) 
   )
 }
 
+function formatNodeAsText(node: TreeNode, depth: number): string {
+  const indent = '  '.repeat(depth)
+  const lines: string[] = []
+
+  const heading = depth === 0 ? '##' : depth === 1 ? '###' : '####'
+  lines.push(`${indent}${heading} ${node.stable_key} ${node.title}`)
+  lines.push(`${indent}Status: ${node.status.replace('_', ' ')}${node.priority ? ` | Priority: ${node.priority}` : ''}`)
+  lines.push('')
+
+  if (node.what_this_does) {
+    lines.push(`${indent}**What this does**`)
+    lines.push(`${indent}${node.what_this_does}`)
+    lines.push('')
+  }
+  if (node.why_this_exists) {
+    lines.push(`${indent}**Why this exists**`)
+    lines.push(`${indent}${node.why_this_exists}`)
+    lines.push('')
+  }
+  if (node.acceptance_criteria) {
+    lines.push(`${indent}**Acceptance criteria**`)
+    lines.push(`${indent}${node.acceptance_criteria}`)
+    lines.push('')
+  }
+  if (node.not_included) {
+    lines.push(`${indent}**Not included**`)
+    lines.push(`${indent}${node.not_included}`)
+    lines.push('')
+  }
+  if (node.tags) {
+    const tagList = typeof node.tags === 'string' ? node.tags.split(',').map((t) => t.trim()).filter(Boolean) : []
+    if (tagList.length > 0) {
+      lines.push(`${indent}Tags: ${tagList.join(', ')}`)
+      lines.push('')
+    }
+  }
+
+  for (const child of node.children) {
+    lines.push(formatNodeAsText(child, depth + 1))
+  }
+
+  return lines.join('\n')
+}
+
+function formatDocumentAsText(productName: string, requirements: Requirement[], tree: TreeNode[]): string {
+  const lines: string[] = []
+  lines.push(`# ${productName} — Requirements Document`)
+  lines.push(`${requirements.length} requirements`)
+  lines.push('')
+  lines.push('---')
+  lines.push('')
+
+  for (const node of tree) {
+    lines.push(formatNodeAsText(node, 0))
+  }
+
+  return lines.join('\n')
+}
+
 interface DocumentViewProps {
   requirements: Requirement[]
   productName: string
@@ -132,6 +193,14 @@ interface DocumentViewProps {
 
 export function DocumentView({ requirements, productName }: DocumentViewProps) {
   const tree = buildTree(requirements)
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = useCallback(async () => {
+    const text = formatDocumentAsText(productName, requirements, tree)
+    await navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [productName, requirements, tree])
 
   if (requirements.length === 0) {
     return (
@@ -153,9 +222,28 @@ export function DocumentView({ requirements, productName }: DocumentViewProps) {
     <div className="max-w-4xl mx-auto">
       {/* Document header */}
       <div className="mb-8 pb-6 border-b border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          {productName} — Requirements Document
-        </h1>
+        <div className="flex items-center gap-3 mb-2">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {productName} — Requirements Document
+          </h1>
+          <button
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+            title="Copy document to clipboard"
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                <span>Copied!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        </div>
         <div className="flex gap-4 text-sm text-gray-500">
           <span>{stats.total} requirements</span>
           {stats.draft > 0 && <span>{stats.draft} draft</span>}
