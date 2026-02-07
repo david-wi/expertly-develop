@@ -81,6 +81,8 @@ export function GenerateFromArtifactsDialog({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [editingId, setEditingId] = useState<string | null>(null)
   const [createProgress, setCreateProgress] = useState({ current: 0, total: 0 })
+  const [generatingStartTime, setGeneratingStartTime] = useState<number | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   // Determine which artifacts have completed markdown conversion
   const getArtifactStatus = (artifact: ArtifactWithVersions) => {
@@ -116,6 +118,25 @@ export function GenerateFromArtifactsDialog({
     setSelectedArtifactIds(new Set(notYetGenerated.map((a) => a.id)))
   }, [artifacts])
 
+  // Auto-initialize selection when dialog opens
+  useEffect(() => {
+    if (open) {
+      initializeSelection()
+    }
+  }, [open, initializeSelection])
+
+  // Elapsed timer for generation progress
+  useEffect(() => {
+    if (!generatingStartTime) {
+      setElapsedSeconds(0)
+      return
+    }
+    const timer = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - generatingStartTime) / 1000))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [generatingStartTime])
+
   const resetDialog = useCallback(() => {
     stopPolling()
     setStep('select')
@@ -128,6 +149,8 @@ export function GenerateFromArtifactsDialog({
     setExpandedItems(new Set())
     setEditingId(null)
     setCreateProgress({ current: 0, total: 0 })
+    setGeneratingStartTime(null)
+    setElapsedSeconds(0)
   }, [stopPolling])
 
   const handleClose = useCallback(
@@ -161,6 +184,7 @@ export function GenerateFromArtifactsDialog({
     }
 
     setGenerating(true)
+    setGeneratingStartTime(Date.now())
     setError('')
 
     try {
@@ -178,6 +202,7 @@ export function GenerateFromArtifactsDialog({
           if (status.status === 'completed' && status.requirements) {
             stopPolling()
             setGenerating(false)
+            setGeneratingStartTime(null)
             const requirementsWithApproval: ParsedReqWithApproval[] = status.requirements.map((req) => ({
               ...req,
               approval_status: 'pending' as ApprovalStatus,
@@ -188,17 +213,20 @@ export function GenerateFromArtifactsDialog({
           } else if (status.status === 'failed') {
             stopPolling()
             setGenerating(false)
+            setGeneratingStartTime(null)
             setError(status.error || 'Generation failed')
           }
           // status === 'processing' → keep polling
         } catch {
           stopPolling()
           setGenerating(false)
+          setGeneratingStartTime(null)
           setError('Lost connection while generating requirements. Please try again.')
         }
       }, 2000)
     } catch (err: unknown) {
       setGenerating(false)
+      setGeneratingStartTime(null)
       const errorMsg = err instanceof Error ? err.message : 'Failed to start generation'
       const axiosErr = err as { response?: { data?: { detail?: string } } }
       setError(axiosErr?.response?.data?.detail || errorMsg)
@@ -707,6 +735,38 @@ export function GenerateFromArtifactsDialog({
                   const { roots, childrenMap } = buildPreviewTree(parsedRequirements)
                   return roots.map((req) => renderPreviewItem(req, childrenMap))
                 })()}
+              </div>
+            </div>
+          )}
+
+          {step === 'select' && generating && (
+            <div className="py-8">
+              <div className="max-w-md mx-auto">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
+                  <span className="text-gray-700 font-medium">
+                    Analyzing {selectedArtifactIds.size} artifact{selectedArtifactIds.size !== 1 ? 's' : ''}...
+                  </span>
+                </div>
+
+                {/* Progress bar — asymptotic approach so it never reaches 100% until done */}
+                <div className="w-full bg-gray-200 rounded-full h-2 mb-3">
+                  <div
+                    className="bg-primary-500 h-2 rounded-full transition-all duration-1000 ease-out"
+                    style={{
+                      width: `${Math.min(95, (1 - 1 / (1 + elapsedSeconds / 20)) * 100)}%`,
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>AI is reading and structuring requirements</span>
+                  <span>
+                    {Math.floor(elapsedSeconds / 60) > 0
+                      ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`
+                      : `${elapsedSeconds}s`}
+                  </span>
+                </div>
               </div>
             </div>
           )}

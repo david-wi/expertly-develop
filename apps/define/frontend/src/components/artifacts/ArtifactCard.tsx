@@ -118,30 +118,32 @@ export function ArtifactCard({ artifact, latestVersion, onClick }: ArtifactCardP
             <p className="text-sm text-gray-500 truncate">
               {isLink ? getDomainFromUrl(artifact.url || '') : artifact.original_filename}
             </p>
-            <div className="flex items-center gap-2 mt-1.5">
-              {isLink ? (
-                <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
-                  Link
-                </Badge>
-              ) : (
-                <>
-                  <Badge variant="outline" className="text-xs">
-                    v{artifact.current_version}
+            <div className="flex items-center justify-between mt-1.5">
+              <div className="flex items-center gap-2">
+                {isLink ? (
+                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    Link
                   </Badge>
-                  {latestVersion && getStatusBadge(latestVersion.conversion_status)}
-                  {latestVersion && (
-                    <span className="text-xs text-gray-400">
-                      {formatFileSize(latestVersion.size_bytes)}
-                    </span>
-                  )}
-                </>
-              )}
-              {artifact.context?.requirements_generated && (
-                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  Generated
-                </Badge>
-              )}
+                ) : (
+                  <>
+                    <Badge variant="outline" className="text-xs">
+                      v{artifact.current_version}
+                    </Badge>
+                    {latestVersion && (
+                      <span className="text-xs text-gray-400">
+                        {formatFileSize(latestVersion.size_bytes)}
+                      </span>
+                    )}
+                  </>
+                )}
+                {artifact.context?.requirements_generated && (
+                  <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Generated
+                  </Badge>
+                )}
+              </div>
+              {!isLink && latestVersion && getStatusBadge(latestVersion.conversion_status)}
             </div>
           </div>
         </div>
