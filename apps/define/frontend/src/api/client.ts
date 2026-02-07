@@ -73,6 +73,7 @@ export interface Requirement {
   parent_id: string | null
   stable_key: string
   title: string
+  node_type: string | null
   what_this_does: string | null
   why_this_exists: string | null
   not_included: string | null
@@ -128,6 +129,7 @@ export interface JiraStoryDraft {
 
 export interface ParsedRequirement {
   temp_id: string
+  node_type: string
   title: string
   what_this_does: string | null
   why_this_exists: string | null
@@ -205,6 +207,8 @@ export const requirementsApi = {
   update: (id: string, data: Partial<Requirement>) =>
     api.patch<Requirement>(`/requirements/${id}`, data).then((r) => r.data),
   delete: (id: string) => api.delete(`/requirements/${id}`),
+  clearAll: (productId: string) =>
+    api.post<{ cleared: number }>('/requirements/clear', null, { params: { product_id: productId } }).then((r) => r.data),
   createBatch: (data: {
     product_id: string
     requirements: Array<{

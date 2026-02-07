@@ -13,6 +13,7 @@ class ExistingRequirement(BaseModel):
     stable_key: str
     title: str
     parent_id: Optional[str] = None
+    node_type: Optional[str] = None
 
 
 class ContextUrl(BaseModel):
@@ -39,6 +40,7 @@ class GenerateFromArtifactsRequest(BaseModel):
 
 class ParsedRequirement(BaseModel):
     temp_id: str
+    node_type: str = "requirement"
     title: str
     what_this_does: Optional[str] = None
     why_this_exists: Optional[str] = None

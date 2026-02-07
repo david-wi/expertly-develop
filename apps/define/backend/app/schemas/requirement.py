@@ -6,6 +6,7 @@ class RequirementCreate(BaseModel):
     product_id: str
     parent_id: Optional[str] = None
     title: str
+    node_type: Optional[str] = None
     what_this_does: Optional[str] = None
     why_this_exists: Optional[str] = None
     not_included: Optional[str] = None
@@ -17,6 +18,7 @@ class RequirementCreate(BaseModel):
 
 class RequirementUpdate(BaseModel):
     title: Optional[str] = None
+    node_type: Optional[str] = None
     what_this_does: Optional[str] = None
     why_this_exists: Optional[str] = None
     not_included: Optional[str] = None
@@ -34,6 +36,7 @@ class RequirementResponse(BaseModel):
     parent_id: Optional[str] = None
     stable_key: str
     title: str
+    node_type: Optional[str] = None
     what_this_does: Optional[str] = None
     why_this_exists: Optional[str] = None
     not_included: Optional[str] = None
@@ -53,6 +56,7 @@ class RequirementResponse(BaseModel):
 class RequirementBatchItem(BaseModel):
     temp_id: str
     title: str
+    node_type: Optional[str] = None
     what_this_does: Optional[str] = None
     why_this_exists: Optional[str] = None
     not_included: Optional[str] = None

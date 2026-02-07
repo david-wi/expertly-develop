@@ -26,8 +26,11 @@ async def upload_file(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Upload a file attachment for a requirement."""
-    # Verify requirement exists
-    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    # Verify requirement exists and is not soft-deleted
+    stmt = select(Requirement).where(
+        Requirement.id == requirement_id,
+        Requirement.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     requirement = result.scalar_one_or_none()
     if not requirement:

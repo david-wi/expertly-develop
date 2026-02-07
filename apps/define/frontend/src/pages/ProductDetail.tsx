@@ -35,6 +35,7 @@ import {
   Pencil,
   List,
   BookOpen,
+  Trash2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
@@ -182,6 +183,8 @@ export default function ProductDetail() {
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'tree' | 'document'>('tree')
+  const [clearDialogOpen, setClearDialogOpen] = useState(false)
+  const [clearing, setClearing] = useState(false)
 
   useEffect(() => {
     if (id) fetchProduct()
@@ -254,6 +257,20 @@ export default function ProductDetail() {
       console.error('Error creating requirement:', error)
     } finally {
       setCreating(false)
+    }
+  }
+
+  async function clearAllRequirements() {
+    setClearing(true)
+    try {
+      await requirementsApi.clearAll(id!)
+      setClearDialogOpen(false)
+      setSelectedId(null)
+      fetchProduct()
+    } catch (error) {
+      console.error('Error clearing requirements:', error)
+    } finally {
+      setClearing(false)
     }
   }
 
@@ -362,6 +379,32 @@ export default function ProductDetail() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Product map</CardTitle>
                     <div className="flex gap-1">
+                      {requirements.length > 0 && (
+                        <Dialog open={clearDialogOpen} onOpenChange={setClearDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button size="sm" variant="outline" title="Clear all requirements" className="text-red-500 hover:text-red-700 hover:border-red-300">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Clear all requirements?</DialogTitle>
+                              <DialogDescription>
+                                This will remove all {requirements.length} requirement{requirements.length !== 1 ? 's' : ''} from {product.name}. This action can be undone by an administrator.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
+                                Cancel
+                              </Button>
+                              <Button onClick={clearAllRequirements} disabled={clearing} className="bg-red-600 text-white hover:bg-red-700">
+                                {clearing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                Clear all
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
                       <Button size="sm" variant="outline" onClick={() => setBulkImportOpen(true)} title="AI Import">
                         <Sparkles className="h-4 w-4" />
                       </Button>

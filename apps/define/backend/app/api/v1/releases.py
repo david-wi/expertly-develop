@@ -49,10 +49,13 @@ async def create_release(
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
 
-    # Get current requirements
+    # Get current requirements (exclude soft-deleted)
     req_stmt = (
         select(Requirement)
-        .where(Requirement.product_id == data.product_id)
+        .where(
+            Requirement.product_id == data.product_id,
+            Requirement.deleted_at.is_(None),
+        )
         .order_by(Requirement.order_index)
     )
     req_result = await db.execute(req_stmt)

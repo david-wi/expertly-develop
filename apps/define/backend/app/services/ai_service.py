@@ -6,6 +6,7 @@ from pypdf import PdfReader
 from io import BytesIO
 
 from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, ContextUrl
+from app.services.decomposition_guide import DECOMPOSITION_GUIDE
 from artifacts import reflow_pdf_text
 from app.utils.ai_config import get_ai_client
 
@@ -48,7 +49,8 @@ class AIService:
                 prefix = "  " * indent
                 children = by_parent.get(item.id, [])
                 child_text = "\n" + render(children, indent + 1) if children else ""
-                lines.append(f"{prefix}- [{item.stable_key}] {item.title} (id: {item.id}){child_text}")
+                node_type_label = f" [{item.node_type}]" if item.node_type else ""
+                lines.append(f"{prefix}- [{item.stable_key}] {item.title}{node_type_label} (id: {item.id}){child_text}")
             return "\n".join(lines)
 
         return render(roots, 0) if roots else "(No existing requirements)"
@@ -104,40 +106,51 @@ class AIService:
                 for req in related_reqs:
                     related_reqs_context += f"\n[{req.stable_key}] {req.title}"
 
-        # Build system prompt
-        system_prompt = """You are an expert requirements analyst. Your job is to parse user descriptions and create well-structured software requirements.
+        # Build system prompt with decomposition guide
+        system_prompt = f"""You are an expert requirements analyst. Your job is to decompose concept documents and user descriptions into a well-structured tree of products, modules, features, requirements, and guardrails.
 
-When creating requirements:
-1. Each requirement should have a clear, actionable title
-2. "what_this_does" should be a single sentence starting with "Users can..."
-3. "why_this_exists" explains the business value in 1-2 sentences
-4. "not_included" lists scope exclusions as bullet points (use \\n between bullets)
-5. "acceptance_criteria" lists testable criteria as bullet points (use \\n between bullets)
-6. Priority should be: critical, high, medium, or low
-7. Tags should be from: functional, nonfunctional, security, performance, usability, invariant
+{DECOMPOSITION_GUIDE}
+
+## Output format rules
+
+For every node you create:
+1. Set "node_type" to one of: "product", "module", "feature", "requirement", "guardrail"
+2. Title should be clear and actionable
+3. "what_this_does" should describe the capability in plain English. For requirements, start with "Users can..." or "The system..."
+4. "why_this_exists" explains the reason in 1-2 sentences
+5. "not_included" lists scope exclusions as bullet points (use \\n between bullets). Most useful for product/module/feature nodes. Requirements can omit this if not needed.
+6. "acceptance_criteria" lists testable criteria as bullet points (use \\n between bullets). Required at every level. Product-level criteria are broad (4-8 items). Requirement-level criteria are specific and independently testable.
+7. Priority should be: critical, high, medium, or low
+8. Tags should be from: functional, nonfunctional, security, performance, usability, invariant
 
 For hierarchical structure:
-- Create parent requirements for major features
-- Create child requirements for sub-features
-- Use parent_ref to link children to parents (either an existing ID or a temp_id from another requirement you're creating)
+- Use parent_ref to build the tree: product at root, modules under product, features under modules, requirements under features
+- parent_ref can be an existing requirement ID from the tree or a temp_id from another node you are creating in this batch
+- Guardrails are separate root-level or module-level nodes. They should be tagged with "invariant".
 
 When provided with external context (URLs or related requirements):
 - Use the terminology and patterns from the context
-- Ensure new requirements complement rather than conflict with existing ones
+- Ensure new nodes complement rather than conflict with existing ones
 
 IMPORTANT — Deduplication rules:
 - Carefully review the existing requirements tree before generating new ones
-- Do NOT create requirements that duplicate or substantially overlap with existing ones
-- Only generate requirements for functionality NOT already covered
+- Do NOT create nodes that duplicate or substantially overlap with existing ones
+- Only generate nodes for functionality NOT already covered
 - If an artifact describes something already captured in existing requirements, skip it
 - When in doubt, err on the side of NOT creating a duplicate
 
-Respond ONLY with a valid JSON array of requirements. No explanation or markdown."""
+IMPORTANT — Completeness rules:
+- Read the ENTIRE input before generating nodes
+- Cover every section, screen, API group, data entity, stated goal, edge case, and guardrail in the input
+- Check your output against the sizing guide: a 500-1000 line document should produce 40-80 nodes; a 1000-2000 line document should produce 80-150 nodes
+- If your output is significantly below the expected range, you have missed categories — go back and check
+
+Respond ONLY with a valid JSON array. No explanation or markdown."""
 
         target_info = (
-            f'\nTarget parent: Place new requirements under the requirement with ID "{target_parent_id}"'
+            f'\\nTarget parent: Place new requirements under the requirement with ID "{target_parent_id}"'
             if target_parent_id
-            else "\nTarget: Create at root level (no parent) unless the structure suggests nesting."
+            else "\\nTarget: Create at root level (no parent) unless the structure suggests nesting."
         )
 
         user_prompt_text = f"""Product: "{product_name}"
@@ -150,27 +163,76 @@ Existing requirements tree (DO NOT duplicate these — only create NEW requireme
 
 User's description of new requirements:
 {description}
-{f'\\n\\nAdditional context from files:{file_context}' if file_context else ''}
+{'\\n\\nAdditional context from files:' + file_context if file_context else ''}
 {'\\n\\n(See attached images for additional context)' if images else ''}
 
-Generate structured requirements based on this input. Return a JSON array with this exact structure:
+Decompose the input into a structured tree. Return a JSON array with this exact structure:
 [
   {{
     "temp_id": "temp-1",
+    "node_type": "product",
     "title": "...",
-    "what_this_does": "Users can...",
+    "what_this_does": "...",
     "why_this_exists": "...",
     "not_included": "- Point 1\\n- Point 2",
     "acceptance_criteria": "- Criterion 1\\n- Criterion 2",
-    "priority": "medium",
+    "priority": "critical",
     "tags": ["functional"],
     "parent_ref": null
+  }},
+  {{
+    "temp_id": "temp-2",
+    "node_type": "module",
+    "title": "...",
+    "what_this_does": "...",
+    "why_this_exists": "...",
+    "not_included": "- ...",
+    "acceptance_criteria": "- ...",
+    "priority": "high",
+    "tags": ["functional"],
+    "parent_ref": "temp-1"
+  }},
+  {{
+    "temp_id": "temp-3",
+    "node_type": "feature",
+    "title": "...",
+    "what_this_does": "...",
+    "why_this_exists": "...",
+    "acceptance_criteria": "- ...",
+    "priority": "high",
+    "tags": ["functional"],
+    "parent_ref": "temp-2"
+  }},
+  {{
+    "temp_id": "temp-4",
+    "node_type": "requirement",
+    "title": "...",
+    "what_this_does": "Users can...",
+    "why_this_exists": "...",
+    "acceptance_criteria": "- Criterion 1\\n- Criterion 2",
+    "priority": "medium",
+    "tags": ["functional"],
+    "parent_ref": "temp-3"
+  }},
+  {{
+    "temp_id": "temp-5",
+    "node_type": "guardrail",
+    "title": "...",
+    "what_this_does": "...",
+    "why_this_exists": "...",
+    "acceptance_criteria": "- ...",
+    "priority": "critical",
+    "tags": ["invariant"],
+    "parent_ref": "temp-1"
   }}
 ]
 
-For child requirements, set parent_ref to either:
+node_type must be one of: "product", "module", "feature", "requirement", "guardrail".
+
+For parent_ref, use either:
 - An existing requirement ID from the tree above
-- Another temp_id from this batch (e.g., "temp-1" if this is a child of the first requirement)
+- Another temp_id from this batch (e.g., "temp-1" if this is a child of the first node)
+- null for root-level nodes
 
 Respond with ONLY the JSON array, no other text."""
 
@@ -192,6 +254,7 @@ Respond with ONLY the JSON array, no other text."""
             raise ValueError("Response is not an array")
 
         # Validate and convert to Pydantic models
+        valid_node_types = {"product", "module", "feature", "requirement", "guardrail"}
         requirements = []
         for i, item in enumerate(parsed):
             if not item.get("temp_id"):
@@ -202,9 +265,14 @@ Respond with ONLY the JSON array, no other text."""
                 item["priority"] = "medium"
             if not item.get("tags"):
                 item["tags"] = ["functional"]
+            # Default node_type to "requirement" if missing or invalid
+            node_type = item.get("node_type", "requirement")
+            if node_type not in valid_node_types:
+                node_type = "requirement"
 
             requirements.append(ParsedRequirement(
                 temp_id=item["temp_id"],
+                node_type=node_type,
                 title=item["title"],
                 what_this_does=item.get("what_this_does"),
                 why_this_exists=item.get("why_this_exists"),

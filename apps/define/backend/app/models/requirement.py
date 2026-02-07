@@ -25,6 +25,7 @@ class Requirement(Base):
     )
     stable_key: Mapped[str] = mapped_column(String, nullable=False)
     title: Mapped[str] = mapped_column(String, nullable=False)
+    node_type: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     what_this_does: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     why_this_exists: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     not_included: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -36,6 +37,7 @@ class Requirement(Base):
     current_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    deleted_at: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
     # Relationships
     product: Mapped["Product"] = relationship("Product", back_populates="requirements")
