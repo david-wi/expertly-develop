@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import { FileText, FileImage, FileSpreadsheet, File, Loader2, AlertCircle, CheckCircle, Link2, ExternalLink } from 'lucide-react'
+import { FileText, FileImage, FileSpreadsheet, File, Loader2, AlertCircle, CheckCircle, CheckCircle2, Link2, ExternalLink } from 'lucide-react'
 import { Artifact, ArtifactVersion } from '@/api/client'
 import { cn } from '@/lib/utils'
 
@@ -135,6 +135,12 @@ export function ArtifactCard({ artifact, latestVersion, onClick }: ArtifactCardP
                     </span>
                   )}
                 </>
+              )}
+              {artifact.context?.requirements_generated && (
+                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Generated
+                </Badge>
               )}
             </div>
           </div>

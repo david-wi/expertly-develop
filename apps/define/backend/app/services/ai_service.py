@@ -123,8 +123,14 @@ For hierarchical structure:
 
 When provided with external context (URLs or related requirements):
 - Use the terminology and patterns from the context
-- Avoid duplicating existing functionality
 - Ensure new requirements complement rather than conflict with existing ones
+
+IMPORTANT — Deduplication rules:
+- Carefully review the existing requirements tree before generating new ones
+- Do NOT create requirements that duplicate or substantially overlap with existing ones
+- Only generate requirements for functionality NOT already covered
+- If an artifact describes something already captured in existing requirements, skip it
+- When in doubt, err on the side of NOT creating a duplicate
 
 Respond ONLY with a valid JSON array of requirements. No explanation or markdown."""
 
@@ -136,7 +142,7 @@ Respond ONLY with a valid JSON array of requirements. No explanation or markdown
 
         user_prompt_text = f"""Product: "{product_name}"
 
-Existing requirements tree:
+Existing requirements tree (DO NOT duplicate these — only create NEW requirements for uncovered functionality):
 {tree_text}
 {target_info}
 {url_context}

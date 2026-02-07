@@ -398,6 +398,10 @@ async def update_artifact(
         artifact.status = data.status
     if data.url is not None and artifact.artifact_type == "link":
         artifact.url = data.url
+    if data.context is not None:
+        merged = dict(artifact.context or {})
+        merged.update(data.context)
+        artifact.context = merged
 
     artifact.updated_at = datetime.utcnow().isoformat()
     await db.flush()
