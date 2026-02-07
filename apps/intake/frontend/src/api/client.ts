@@ -22,6 +22,8 @@ import type {
   Proposal,
   TimelineEvent,
   UsageRollup,
+  AITemplateSuggestionsResponse,
+  SuggestedSection,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -48,10 +50,15 @@ const axiosInstance: AxiosInstance = axios.create({
 // Response interceptor — redirect to Identity login on 401
 // ---------------------------------------------------------------------------
 
+const PUBLIC_PATHS = ['/landing', '/login'];
+
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    if (
+      error.response?.status === 401 &&
+      !PUBLIC_PATHS.includes(window.location.pathname)
+    ) {
       const returnUrl = encodeURIComponent(window.location.href);
       window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`;
     }
@@ -201,6 +208,28 @@ const templates = {
 
   publish(templateId: string): Promise<TemplateVersion> {
     return axiosInstance.post(`/templates/${templateId}/publish`).then(unwrap);
+  },
+
+  aiSuggest(templateId: string, files: File[]): Promise<AITemplateSuggestionsResponse> {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+    return axiosInstance
+      .post(`/templates/${templateId}/ai/suggest`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120_000,
+      })
+      .then(unwrap);
+  },
+
+  aiAccept(
+    templateId: string,
+    data: { sections: SuggestedSection[] },
+  ): Promise<TemplateVersion> {
+    return axiosInstance
+      .post(`/templates/${templateId}/ai/accept`, data)
+      .then(unwrap);
   },
 };
 

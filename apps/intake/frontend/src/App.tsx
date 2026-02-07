@@ -62,11 +62,15 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 // App root
 // ---------------------------------------------------------------------------
 
+const PUBLIC_PATHS = ['/landing', '/login'];
+
 function AppRoutes() {
   const loadUser = useAuthStore((s: { loadUser: () => Promise<void> }) => s.loadUser);
 
   useEffect(() => {
-    loadUser();
+    if (!PUBLIC_PATHS.includes(window.location.pathname)) {
+      loadUser();
+    }
   }, [loadUser]);
 
   return (
