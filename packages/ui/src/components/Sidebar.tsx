@@ -16,6 +16,7 @@ import {
   Headphones,
   Users,
   Wrench,
+  Inbox,
   LayoutGrid,
   TrendingUp,
   FlaskRound,
@@ -51,11 +52,13 @@ export interface ExpertlyProduct {
   sectionHeader?: string
 }
 
+// Keep alphabetized by name (Admin always last with separator)
 export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
+  { name: 'Expertly Command', code: 'command', href: 'https://command.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
   { name: 'Expertly Define', code: 'define', href: 'https://define.ai.devintensive.com', icon: ClipboardList, description: 'Requirements management' },
   { name: 'Expertly Develop', code: 'develop', href: 'https://develop.ai.devintensive.com', icon: MousePointerClick, description: 'Visual walkthroughs' },
   { name: 'Expertly Identity', code: 'identity', href: 'https://identity.ai.devintensive.com', icon: Lock, description: 'Users & authentication' },
-  { name: 'Expertly Command', code: 'command', href: 'https://command.ai.devintensive.com', icon: CheckSquare, description: 'Task management' },
+  { name: 'Expertly Intake', code: 'intake', href: 'https://intake.ai.devintensive.com', icon: Inbox, description: 'Intake management' },
   { name: 'Expertly Salon', code: 'salon', href: 'https://salon.ai.devintensive.com', icon: Scissors, description: 'Salon management' },
   { name: 'Expertly TMS', code: 'tms', href: 'https://tms.ai.devintensive.com', icon: Truck, description: 'Transportation management' },
   { name: 'Expertly VibeCode', code: 'vibecode', href: 'https://vibecode.ai.devintensive.com', icon: Code, description: 'AI coding assistant' },
@@ -64,16 +67,18 @@ export const EXPERTLY_PRODUCTS: ExpertlyProduct[] = [
 ]
 
 // Expertly Tools - native iOS/macOS/desktop apps with landing pages (shown in submenu)
+// Keep alphabetized by name
 export const EXPERTLY_TOOLS: ExpertlyProduct[] = [
+  { name: 'Expertly Cowork', code: 'cowork', href: 'https://cowork.ai.devintensive.com', icon: Users, description: 'Desktop collaboration app' },
   { name: 'Expertly Discover', code: 'discover', href: 'https://discover.ai.devintensive.com', icon: ScanSearch, description: 'Video analysis app' },
   { name: 'Expertly Hear', code: 'hear', href: 'https://hear.ai.devintensive.com', icon: Headphones, description: 'Audio transcription app' },
-  { name: 'Expertly Cowork', code: 'cowork', href: 'https://cowork.ai.devintensive.com', icon: Users, description: 'Desktop collaboration app' },
 ]
 
 // More Apps - additional web apps (shown in submenu)
+// Keep alphabetized by name
 export const EXPERTLY_MORE_APPS: ExpertlyProduct[] = [
   { name: 'Aipocalypse Fund', code: 'aipocalypse', href: 'https://aipocalypse.ai.devintensive.com', icon: TrendingUp, description: 'AI investment research' },
-  { name: 'Expertly Chem', code: 'chem', href: 'https://chem.ai.devintensive.com', icon: FlaskRound, description: 'Chemistry platform' },
+  { name: 'Chem', code: 'chem', href: 'https://chem.ai.devintensive.com', icon: FlaskRound, description: 'Chemistry platform' },
   { name: 'Expertly Demos', code: 'demos', href: 'https://demos.ai.devintensive.com', icon: Play, description: 'AI demos' },
   { name: 'Expertly Simulate', code: 'simulate', href: 'https://simulate.ai.devintensive.com', icon: Cpu, description: 'Simulation platform' },
   { name: 'Expertly Today', code: 'today', href: 'https://today.ai.devintensive.com', icon: Calendar, description: 'Daily workflow' },

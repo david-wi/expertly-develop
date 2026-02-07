@@ -42,7 +42,7 @@ jobs:
           # If workflow_dispatch with deploy_all, or if this is a forced deployment
           if [ "${{ github.event.inputs.deploy_all }}" = "true" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Manual dispatch - deploying all apps"
-            APPS='["define","develop","identity","admin","command","salon","today","vibetest","vibecode","tms","discover","hear","cowork","aipocalypse"]'
+            APPS='["define","develop","identity","admin","command","salon","today","vibetest","vibecode","tms","discover","hear","cowork","aipocalypse","intake"]'
             echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             exit 0
@@ -54,7 +54,7 @@ jobs:
             CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
           else
             echo "First commit - deploying all apps"
-            APPS='["define","develop","identity","admin","command","salon","today","vibetest","vibecode","tms","discover","hear","cowork","aipocalypse"]'
+            APPS='["define","develop","identity","admin","command","salon","today","vibetest","vibecode","tms","discover","hear","cowork","aipocalypse","intake"]'
             echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             exit 0
@@ -78,7 +78,7 @@ jobs:
           fi
 
           if [ "$DEPLOY_ALL" = "true" ]; then
-            APPS='["define","develop","identity","admin","command","salon","today","vibetest","vibecode","tms","discover","hear","cowork","aipocalypse"]'
+            APPS='["define","develop","identity","admin","command","salon","today","vibetest","vibecode","tms","discover","hear","cowork","aipocalypse","intake"]'
             echo "apps_to_deploy=$APPS" >> $GITHUB_OUTPUT
             echo "should_deploy=true" >> $GITHUB_OUTPUT
             exit 0
@@ -96,7 +96,7 @@ jobs:
           # Detect which specific apps changed
           APPS_TO_DEPLOY=()
 
-          for app in admin define develop identity command salon today vibetest vibecode tms discover hear cowork aipocalypse; do
+          for app in admin define develop identity command salon today vibetest vibecode tms discover hear cowork aipocalypse intake; do
             if echo "$CHANGED_FILES" | grep -q "^apps/${app}/"; then
               APPS_TO_DEPLOY+=("$app")
             fi
@@ -179,7 +179,8 @@ jobs:
                     discover: {active: "blue", last_deploy: ""},
                     hear: {active: "blue", last_deploy: ""},
                     cowork: {active: "blue", last_deploy: ""},
-                    aipocalypse: {active: "blue", last_deploy: ""}
+                    aipocalypse: {active: "blue", last_deploy: ""},
+                    intake: {active: "blue", last_deploy: ""}
                   },
                   shared: {active: "running", last_deploy: ""}
                 }' > "$STATE_FILE"
@@ -278,6 +279,7 @@ jobs:
             hear)     SERVICES="hear-frontend"; HEALTH_CONTAINER="hear-frontend" ;;
             cowork)   SERVICES="cowork-frontend"; HEALTH_CONTAINER="cowork-frontend" ;;
             aipocalypse) SERVICES="aipocalypse-frontend aipocalypse-backend"; HEALTH_CONTAINER="aipocalypse-backend" ;;
+            intake)   SERVICES="intake-frontend intake-backend"; HEALTH_CONTAINER="intake-backend" ;;
             *)        echo "Unknown app: ${{ matrix.app }}"; exit 1 ;;
           esac
 
