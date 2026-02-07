@@ -3,12 +3,15 @@ Multi-Provider AI Client - fetches config from Admin API and routes to appropria
 
 Supports: OpenAI, Anthropic, Groq, Google (Gemini)
 """
+import logging
 import os
 import time
 import httpx
 import json
 from typing import Optional, List, Any
 from dataclasses import dataclass
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -228,7 +231,31 @@ class MultiProviderAIClient:
                 temperature=config.temperature,
             )
 
-        return response.choices[0].message.content
+        choice = response.choices[0]
+        content = choice.message.content
+        finish_reason = choice.finish_reason
+        usage = response.usage
+
+        logger.info(
+            f"[OpenAI] model={config.model_id} finish_reason={finish_reason} "
+            f"prompt_tokens={usage.prompt_tokens if usage else '?'} "
+            f"completion_tokens={usage.completion_tokens if usage else '?'} "
+            f"content_length={len(content) if content else 0}"
+        )
+
+        if not content:
+            detail = f"model={config.model_id}, finish_reason={finish_reason}"
+            if usage:
+                detail += f", prompt_tokens={usage.prompt_tokens}, completion_tokens={usage.completion_tokens}"
+                if hasattr(usage, 'completion_tokens_details') and usage.completion_tokens_details:
+                    detail += f", details={usage.completion_tokens_details}"
+            raise ValueError(
+                f"OpenAI returned empty response ({detail}). "
+                f"This may indicate the model used all tokens on internal reasoning. "
+                f"Try increasing max_tokens in Admin AI config."
+            )
+
+        return content
 
     async def _complete_anthropic(
         self,
@@ -302,7 +329,13 @@ class MultiProviderAIClient:
             temperature=config.temperature,
         )
 
-        return response.choices[0].message.content
+        content = response.choices[0].message.content
+        if not content:
+            raise ValueError(
+                f"Groq returned empty response (model={config.model_id}, "
+                f"finish_reason={response.choices[0].finish_reason})"
+            )
+        return content
 
     async def _complete_google(
         self,
