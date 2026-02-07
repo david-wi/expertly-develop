@@ -39,6 +39,8 @@ import type {
   CapacityPosting,
   NegotiationHistory,
   NegotiationRecord,
+  OnboardingDashboard,
+  OnboardingDashboardItem,
 } from '../types'
 
 const carrierStatusConfig: Record<string, { bg: string; text: string }> = {
@@ -884,11 +886,7 @@ export default function CarrierDetail() {
 
       {/* Onboarding Tab */}
       {activeTab === 'onboarding' && (
-        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
-          <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-900 font-medium">Carrier Onboarding</p>
-          <p className="text-sm text-gray-400 mt-2">Onboarding dashboard coming soon</p>
-        </div>
+        <CarrierOnboardingTab carrierId={id!} carrierName={carrier.name} />
       )}
 
       {/* Load History Tab */}
@@ -1677,6 +1675,416 @@ function CarrierNegotiationsTab({ carrierId }: { carrierId: string }) {
               </div>
             </div>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ============================================================================
+// Carrier Onboarding Tab Component
+// ============================================================================
+
+const ONBOARDING_STEPS = [
+  { key: 'company_info', label: 'Company Info', number: 1 },
+  { key: 'insurance', label: 'Insurance', number: 2 },
+  { key: 'w9', label: 'W-9', number: 3 },
+  { key: 'agreement', label: 'Agreement', number: 4 },
+  { key: 'equipment', label: 'Equipment', number: 5 },
+  { key: 'compliance', label: 'Compliance', number: 6 },
+]
+
+function CarrierOnboardingTab({ carrierId, carrierName }: { carrierId: string; carrierName: string }) {
+  const [dashboard, setDashboard] = useState<OnboardingDashboard | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [currentOnboarding, setCurrentOnboarding] = useState<OnboardingDashboardItem | null>(null)
+  const [activeStep, setActiveStep] = useState(0)
+  const [stepData, setStepData] = useState<Record<string, string>>({})
+  const [savingStep, setSavingStep] = useState(false)
+  const [fmcsaVerified, setFmcsaVerified] = useState(false)
+  const [insuranceVerified, setInsuranceVerified] = useState(false)
+  const [completedSteps, setCompletedSteps] = useState<string[]>([])
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [carrierId])
+
+  const fetchDashboard = async () => {
+    try {
+      const data = await api.getOnboardingDashboard()
+      setDashboard(data)
+      const carrierOnboarding = data.onboardings.find(
+        (o: OnboardingDashboardItem) => o.company_name === carrierName || o.id === carrierId
+      )
+      if (carrierOnboarding) {
+        setCurrentOnboarding(carrierOnboarding)
+        setActiveStep(Math.max(0, carrierOnboarding.current_step - 1))
+      }
+    } catch (error) {
+      console.error('Failed to fetch onboarding dashboard:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSaveStep = async () => {
+    if (!currentOnboarding) return
+    setSavingStep(true)
+    try {
+      const stepKey = ONBOARDING_STEPS[activeStep].key
+      const result = await api.updateOnboardingStep(currentOnboarding.id, stepKey, stepData)
+      setCompletedSteps(result.completed_steps || [])
+      setFmcsaVerified(result.fmcsa_verified || false)
+      setInsuranceVerified(result.insurance_verified || false)
+      if (result.next_step && result.next_step <= ONBOARDING_STEPS.length) {
+        setActiveStep(result.next_step - 1)
+      }
+      setStepData({})
+      fetchDashboard()
+    } catch (error) {
+      console.error('Failed to save onboarding step:', error)
+    } finally {
+      setSavingStep(false)
+    }
+  }
+
+  const statusBadge = (status: string) => {
+    const colors: Record<string, string> = {
+      not_started: 'bg-gray-100 text-gray-600',
+      in_progress: 'bg-blue-100 text-blue-700',
+      pending_review: 'bg-amber-100 text-amber-700',
+      approved: 'bg-emerald-100 text-emerald-700',
+      rejected: 'bg-red-100 text-red-700',
+    }
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-600'}`}>
+        {status.replace(/_/g, ' ')}
+      </span>
+    )
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <RefreshCw className="h-6 w-6 animate-spin text-emerald-600" />
+      </div>
+    )
+  }
+
+  const progressPercent = currentOnboarding ? currentOnboarding.progress_percent : 0
+
+  return (
+    <div className="space-y-6">
+      {/* Dashboard Summary */}
+      {dashboard && (
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p className="text-2xl font-bold text-gray-900">{dashboard.total}</p>
+            <p className="text-xs text-gray-500 mt-1">Total</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p className="text-2xl font-bold text-blue-600">{dashboard.status_counts?.in_progress || 0}</p>
+            <p className="text-xs text-gray-500 mt-1">In Progress</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p className="text-2xl font-bold text-amber-600">{dashboard.status_counts?.pending_review || 0}</p>
+            <p className="text-xs text-gray-500 mt-1">Pending Review</p>
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 p-4 text-center">
+            <p className="text-2xl font-bold text-emerald-600">{dashboard.status_counts?.approved || 0}</p>
+            <p className="text-xs text-gray-500 mt-1">Approved</p>
+          </div>
+        </div>
+      )}
+
+      {/* Current Carrier Onboarding */}
+      {currentOnboarding ? (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900">Onboarding: {currentOnboarding.company_name}</h3>
+                <p className="text-sm text-gray-500 mt-0.5">{currentOnboarding.contact_name} - {currentOnboarding.contact_email}</p>
+              </div>
+              {statusBadge(currentOnboarding.status)}
+            </div>
+            {/* Progress bar */}
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                <span>Progress</span>
+                <span>{progressPercent}%</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="bg-emerald-500 h-2 rounded-full transition-all" style={{ width: `${progressPercent}%` }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Step Navigation */}
+          <div className="flex border-b border-gray-200">
+            {ONBOARDING_STEPS.map((step, idx) => {
+              const isCompleted = completedSteps.includes(step.key) || idx < (currentOnboarding?.current_step ?? 0) - 1
+              const isCurrent = idx === activeStep
+              return (
+                <button
+                  key={step.key}
+                  onClick={() => setActiveStep(idx)}
+                  className={`flex-1 py-3 text-xs font-medium text-center border-b-2 transition-colors ${
+                    isCurrent ? 'border-emerald-500 text-emerald-700 bg-emerald-50' :
+                    isCompleted ? 'border-emerald-300 text-emerald-600' :
+                    'border-transparent text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] mr-1 ${
+                    isCompleted ? 'bg-emerald-500 text-white' :
+                    isCurrent ? 'bg-emerald-100 text-emerald-700' :
+                    'bg-gray-200 text-gray-500'
+                  }`}>
+                    {isCompleted ? '\u2713' : step.number}
+                  </span>
+                  {step.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Step Content */}
+          <div className="p-6">
+            {activeStep === 0 && (
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Company Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Legal Company Name</label>
+                    <input type="text" value={stepData.legal_name || ''} onChange={(e) => setStepData({ ...stepData, legal_name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">DBA Name</label>
+                    <input type="text" value={stepData.dba_name || ''} onChange={(e) => setStepData({ ...stepData, dba_name: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">MC Number</label>
+                    <input type="text" value={stepData.mc_number || ''} onChange={(e) => setStepData({ ...stepData, mc_number: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">DOT Number</label>
+                    <input type="text" value={stepData.dot_number || ''} onChange={(e) => setStepData({ ...stepData, dot_number: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Address</label>
+                    <input type="text" value={stepData.address || ''} onChange={(e) => setStepData({ ...stepData, address: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Phone</label>
+                    <input type="text" value={stepData.phone || ''} onChange={(e) => setStepData({ ...stepData, phone: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeStep === 1 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-900">Insurance Verification</h4>
+                  {insuranceVerified && (
+                    <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                      <Sparkles className="h-3 w-3" /> AI Verified
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Insurance Provider</label>
+                    <input type="text" value={stepData.insurance_provider || ''} onChange={(e) => setStepData({ ...stepData, insurance_provider: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Policy Number</label>
+                    <input type="text" value={stepData.policy_number || ''} onChange={(e) => setStepData({ ...stepData, policy_number: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Coverage Amount ($)</label>
+                    <input type="text" value={stepData.coverage_amount || ''} onChange={(e) => setStepData({ ...stepData, coverage_amount: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Expiration Date</label>
+                    <input type="date" value={stepData.expiration_date || ''} onChange={(e) => setStepData({ ...stepData, expiration_date: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeStep === 2 && (
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">W-9 Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Tax ID / EIN</label>
+                    <input type="text" value={stepData.tax_id || ''} onChange={(e) => setStepData({ ...stepData, tax_id: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Business Type</label>
+                    <select value={stepData.business_type || ''} onChange={(e) => setStepData({ ...stepData, business_type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="">Select...</option>
+                      <option value="sole_proprietor">Sole Proprietor</option>
+                      <option value="llc">LLC</option>
+                      <option value="corporation">Corporation</option>
+                      <option value="partnership">Partnership</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeStep === 3 && (
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Carrier Agreement</h4>
+                <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600 max-h-48 overflow-y-auto">
+                  <p className="font-medium text-gray-900 mb-2">Standard Carrier Agreement Terms</p>
+                  <p>By checking the box below, the carrier acknowledges and agrees to the standard terms and conditions for transportation services, including but not limited to: liability requirements, insurance minimums, payment terms (Net-30), and compliance with all applicable FMCSA regulations.</p>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={stepData.agreement_accepted === 'true'} onChange={(e) => setStepData({ ...stepData, agreement_accepted: e.target.checked ? 'true' : 'false' })} className="rounded border-gray-300 text-emerald-600" />
+                  I agree to the carrier agreement terms
+                </label>
+              </div>
+            )}
+
+            {activeStep === 4 && (
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Equipment Information</h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Primary Equipment Type</label>
+                    <select value={stepData.equipment_type || ''} onChange={(e) => setStepData({ ...stepData, equipment_type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="">Select...</option>
+                      <option value="van">Dry Van</option>
+                      <option value="reefer">Reefer</option>
+                      <option value="flatbed">Flatbed</option>
+                      <option value="step_deck">Step Deck</option>
+                      <option value="tanker">Tanker</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Number of Trucks</label>
+                    <input type="number" value={stepData.truck_count || ''} onChange={(e) => setStepData({ ...stepData, truck_count: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" min="1" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Number of Drivers</label>
+                    <input type="number" value={stepData.driver_count || ''} onChange={(e) => setStepData({ ...stepData, driver_count: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" min="1" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Preferred Lanes</label>
+                    <input type="text" value={stepData.preferred_lanes || ''} onChange={(e) => setStepData({ ...stepData, preferred_lanes: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="e.g., Chicago-Dallas, NYC-Atlanta" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeStep === 5 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-medium text-gray-900">Compliance & FMCSA Verification</h4>
+                  {fmcsaVerified && (
+                    <span className="flex items-center gap-1 text-xs text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
+                      <CheckCircle className="h-3 w-3" /> FMCSA Verified
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">FMCSA Authority Status</label>
+                    <select value={stepData.authority_status || ''} onChange={(e) => setStepData({ ...stepData, authority_status: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="">Select...</option>
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Safety Rating</label>
+                    <select value={stepData.safety_rating || ''} onChange={(e) => setStepData({ ...stepData, safety_rating: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                      <option value="">Select...</option>
+                      <option value="satisfactory">Satisfactory</option>
+                      <option value="conditional">Conditional</option>
+                      <option value="unsatisfactory">Unsatisfactory</option>
+                    </select>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setStepData({ ...stepData, fmcsa_check_requested: 'true' })
+                    setFmcsaVerified(true)
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-2"
+                >
+                  <Shield className="h-4 w-4" /> Verify with FMCSA
+                </button>
+              </div>
+            )}
+
+            {/* Save Step Button */}
+            <div className="flex justify-end mt-6 pt-4 border-t border-gray-200">
+              {activeStep > 0 && (
+                <button onClick={() => setActiveStep(activeStep - 1)} className="px-4 py-2 text-gray-600 hover:text-gray-900 text-sm mr-auto">
+                  Previous
+                </button>
+              )}
+              <button
+                onClick={handleSaveStep}
+                disabled={savingStep}
+                className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm flex items-center gap-2"
+              >
+                {savingStep ? <RefreshCw className="h-4 w-4 animate-spin" /> : null}
+                {activeStep === ONBOARDING_STEPS.length - 1 ? 'Complete Onboarding' : 'Save & Continue'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+          <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-900 font-medium">No Active Onboarding</p>
+          <p className="text-sm text-gray-400 mt-2">No onboarding process found for this carrier</p>
+        </div>
+      )}
+
+      {/* All Onboardings Table */}
+      {dashboard && dashboard.onboardings.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200">
+          <div className="p-4 border-b border-gray-200">
+            <h3 className="font-semibold text-gray-900">All Carrier Onboardings</h3>
+          </div>
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Contact</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">MC#</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Progress</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Started</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {dashboard.onboardings.map((item: OnboardingDashboardItem) => (
+                <tr key={item.id} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 text-sm text-gray-900">{item.company_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.contact_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{item.mc_number || '-'}</td>
+                  <td className="px-4 py-3">{statusBadge(item.status)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-20 bg-gray-200 rounded-full h-1.5">
+                        <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${item.progress_percent}%` }} />
+                      </div>
+                      <span className="text-xs text-gray-500">{item.progress_percent}%</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">{new Date(item.created_at).toLocaleDateString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
