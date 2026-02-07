@@ -22,6 +22,8 @@
     {"name": "TMS API", "url": "https://tms-api.ai.devintensive.com", "healthEndpoint": "/health"},
     {"name": "Aipocalypse", "url": "https://aipocalypse.ai.devintensive.com", "healthEndpoint": "/"},
     {"name": "Aipocalypse API", "url": "https://aipocalypse-api.ai.devintensive.com", "healthEndpoint": "/health"},
+    {"name": "Intake", "url": "https://intake.ai.devintensive.com", "healthEndpoint": "/"},
+    {"name": "Intake API", "url": "https://intake-api.ai.devintensive.com", "healthEndpoint": "/health"},
     {"name": "Chem", "url": "https://chem.ai.devintensive.com", "healthEndpoint": "/"},
     {"name": "Chem API", "url": "https://chem-api.ai.devintensive.com", "healthEndpoint": "/health"}
   ]

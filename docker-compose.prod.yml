@@ -523,6 +523,56 @@ services:
     restart: unless-stopped
 
   # ===================
+  # EXPERTLY INTAKE
+  # ===================
+  intake-backend:
+    build:
+      context: .
+      dockerfile: ./apps/intake/backend/Dockerfile
+    environment:
+      - MONGODB_URL=mongodb://expertly-shared-mongo:27017
+      - MONGODB_DATABASE=expertly_intake
+    networks:
+      - traefik
+      - default
+      - expertly-shared
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.intake-backend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.intake-backend${DEPLOY_COLOR:-}.rule=Host(`intake-api.ai.devintensive.com`)"
+      - "traefik.http.routers.intake-backend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.intake-backend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.intake-backend${DEPLOY_COLOR:-}.loadbalancer.server.port=8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  intake-frontend:
+    build:
+      context: .
+      dockerfile: ./apps/intake/frontend/Dockerfile
+      args:
+        VITE_API_URL: https://intake-api.ai.devintensive.com/api/v1
+    depends_on:
+      - intake-backend
+    networks:
+      - traefik
+      - default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.intake-frontend${DEPLOY_COLOR:-}.entrypoints=https"
+      - "traefik.http.routers.intake-frontend${DEPLOY_COLOR:-}.rule=Host(`intake.ai.devintensive.com`)"
+      - "traefik.http.routers.intake-frontend${DEPLOY_COLOR:-}.tls=true"
+      - "traefik.http.routers.intake-frontend${DEPLOY_COLOR:-}.tls.certresolver=letsencrypt"
+      - "traefik.http.services.intake-frontend${DEPLOY_COLOR:-}.loadbalancer.server.port=80"
+    restart: unless-stopped
+
+  # ===================
   # EXPERTLY DISCOVER (Landing Page)
   # ===================
   discover-frontend:
