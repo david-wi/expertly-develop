@@ -337,7 +337,7 @@ export default function SectionOverviewPage() {
         {showQuestions && questions && (
           <div className="mt-2 divide-y divide-gray-100 rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
             {questions
-              .sort((a, b) => {
+              .sort(() => {
                 // Sort by question order via questionKey as a proxy, or just use array order
                 return 0;
               })
