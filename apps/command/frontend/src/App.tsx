@@ -9,7 +9,6 @@ import Users from './pages/Users'
 import Teams from './pages/Teams'
 import RecurringTasks from './pages/RecurringTasks'
 import Wins from './pages/Wins'
-import Backlog from './pages/Backlog'
 import IdeaBacklog from './pages/IdeaBacklog'
 import Connections from './pages/Connections'
 import Changelog from './pages/Changelog'
@@ -44,7 +43,6 @@ function App() {
           <Route path="bots" element={<Bots />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="wins" element={<Wins />} />
-          <Route path="backlog" element={<Backlog />} />
           <Route path="idea-backlog" element={<IdeaBacklog />} />
           <Route path="connections" element={<Connections />} />
           <Route path="changelog" element={<Changelog />} />

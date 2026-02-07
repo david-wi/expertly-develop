@@ -111,7 +111,7 @@ interface IdeaCreate {
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const ideasApi = {
-  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string; backlog_type?: string; item_type?: string }): Promise<Idea[]> {
+  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string; item_type?: string }): Promise<Idea[]> {
     const searchParams = new URLSearchParams()
     if (params?.product) searchParams.set('product', params.product)
     if (params?.status) searchParams.set('status', params.status)
@@ -119,7 +119,6 @@ const ideasApi = {
     if (params?.include_archived) searchParams.set('include_archived', 'true')
     if (params?.user_email) searchParams.set('user_email', params.user_email)
     if (params?.organization_id) searchParams.set('organization_id', params.organization_id)
-    if (params?.backlog_type) searchParams.set('backlog_type', params.backlog_type)
     if (params?.item_type) searchParams.set('item_type', params.item_type)
     const query = searchParams.toString()
     const res = await fetch(`${API_BASE}/ideas${query ? `?${query}` : ''}`, {
@@ -928,10 +927,9 @@ export function IdeaBacklog() {
   // Determine mode based on URL path
   const isIdeaCatalogMode = location.pathname === '/idea-catalog' || location.pathname === '/idea-backlog'
   const isDevBacklogMode = location.pathname === '/dev-backlog'
-  const isWorkBacklogMode = location.pathname === '/work-backlog'
 
   // Default sort and group per mode
-  const [sortBy, setSortBy] = useState<SortOption>(isIdeaCatalogMode ? 'loves' : isDevBacklogMode ? 'priority' : 'priority')
+  const [sortBy, setSortBy] = useState<SortOption>(isIdeaCatalogMode ? 'loves' : 'priority')
   const [groupBy, setGroupBy] = useState<GroupByOption>(isIdeaCatalogMode ? 'category' : 'none')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -954,7 +952,7 @@ export function IdeaBacklog() {
 
   // Fetch ideas - don't wait for user email, it's only needed for vote status
   const { data: ideas = [], isLoading: isIdeasLoading, refetch } = useQuery({
-    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType],
+    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, itemType],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
       status: statusFilter || undefined,
@@ -962,7 +960,6 @@ export function IdeaBacklog() {
       include_archived: includeArchived,
       user_email: userEmail || undefined,
       organization_id: organizationId || undefined,
-      backlog_type: isWorkBacklogMode ? 'work' : undefined,
       item_type: itemType,
     }),
   })
@@ -1003,11 +1000,11 @@ export function IdeaBacklog() {
       await queryClient.cancelQueries({ queryKey: ['ideas'] })
 
       // Snapshot previous value
-      const previousIdeas = queryClient.getQueryData(['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType])
+      const previousIdeas = queryClient.getQueryData(['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, itemType])
 
       // Optimistically update
       queryClient.setQueryData(
-        ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType],
+        ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, itemType],
         (old: Idea[] | undefined) => old?.map(idea => {
           if (idea.id === ideaId) {
             const newVoted = !idea.user_voted
@@ -1027,7 +1024,7 @@ export function IdeaBacklog() {
       // Rollback on error
       if (context?.previousIdeas) {
         queryClient.setQueryData(
-          ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType],
+          ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, itemType],
           context.previousIdeas
         )
       }
@@ -1147,23 +1144,17 @@ export function IdeaBacklog() {
   const HeaderIcon = isDevBacklogMode ? Code : Lightbulb
   const headerIconColor = isDevBacklogMode ? 'text-blue-500' : 'text-yellow-500'
 
-  const headerTitle = isWorkBacklogMode
+  const headerTitle = isDevBacklogMode
     ? productFilter
-      ? `Work Backlog - Expertly ${getProductDisplayName(productFilter)}`
-      : 'Work Backlog'
-    : isDevBacklogMode
-      ? productFilter
-        ? `Dev Backlog - Expertly ${getProductDisplayName(productFilter)}`
-        : 'Dev Backlog'
-      : productFilter
-        ? `Idea Catalog - Expertly ${getProductDisplayName(productFilter)}`
-        : 'Idea Catalog'
+      ? `Dev Backlog - Expertly ${getProductDisplayName(productFilter)}`
+      : 'Dev Backlog'
+    : productFilter
+      ? `Idea Catalog - Expertly ${getProductDisplayName(productFilter)}`
+      : 'Idea Catalog'
 
-  const headerDescription = isWorkBacklogMode
-    ? 'Track work items and tasks for your organization'
-    : isDevBacklogMode
-      ? 'Track development features and improvements'
-      : 'Capture and nurture ideas across all Expertly products'
+  const headerDescription = isDevBacklogMode
+    ? 'Track development features and improvements'
+    : 'Capture and nurture ideas across all Expertly products'
 
   const defaultItemType = isDevBacklogMode ? 'feature' : 'idea'
 
@@ -1227,7 +1218,7 @@ export function IdeaBacklog() {
             className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            {isWorkBacklogMode ? 'New Item' : isDevBacklogMode ? 'New Feature' : 'New Idea'}
+            {isDevBacklogMode ? 'New Feature' : 'New Idea'}
           </button>
         </div>
       </div>
@@ -1241,7 +1232,7 @@ export function IdeaBacklog() {
             </div>
             <div>
               <p className="text-2xl font-bold text-theme-text-primary">{newCount}</p>
-              <p className="text-sm text-theme-text-secondary">{isWorkBacklogMode ? 'New Items' : isDevBacklogMode ? 'New Features' : 'New Ideas'}</p>
+              <p className="text-sm text-theme-text-secondary">{isDevBacklogMode ? 'New Features' : 'New Ideas'}</p>
             </div>
           </div>
         </div>
@@ -1425,14 +1416,10 @@ export function IdeaBacklog() {
         <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
           <HeaderIcon className="w-8 h-8 mx-auto mb-2" />
           <p className="text-lg font-medium text-theme-text-primary mb-1">
-            {isWorkBacklogMode ? 'No work items yet' : isDevBacklogMode ? 'No features yet' : 'No ideas yet'}
+            {isDevBacklogMode ? 'No features yet' : 'No ideas yet'}
           </p>
           <p className="text-sm">
-            {isWorkBacklogMode
-              ? productFilter
-                ? `No work items for ${getProductDisplayName(productFilter)}.`
-                : 'No work items found.'
-              : isDevBacklogMode
+            {isDevBacklogMode
                 ? productFilter
                   ? `No features for ${getProductDisplayName(productFilter)} yet.`
                   : 'No features found. Add one to get started!'
