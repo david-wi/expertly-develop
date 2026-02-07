@@ -83,6 +83,7 @@ export function GenerateFromArtifactsDialog({
   const [createProgress, setCreateProgress] = useState({ current: 0, total: 0 })
   const [generatingStartTime, setGeneratingStartTime] = useState<number | null>(null)
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [progressMessage, setProgressMessage] = useState<string | null>(null)
 
   // Determine which artifacts have completed markdown conversion
   const getArtifactStatus = (artifact: ArtifactWithVersions) => {
@@ -203,6 +204,7 @@ export function GenerateFromArtifactsDialog({
             stopPolling()
             setGenerating(false)
             setGeneratingStartTime(null)
+            setProgressMessage(null)
             const requirementsWithApproval: ParsedReqWithApproval[] = status.requirements.map((req) => ({
               ...req,
               approval_status: 'pending' as ApprovalStatus,
@@ -214,7 +216,10 @@ export function GenerateFromArtifactsDialog({
             stopPolling()
             setGenerating(false)
             setGeneratingStartTime(null)
+            setProgressMessage(null)
             setError(status.error || 'Generation failed')
+          } else if (status.progress) {
+            setProgressMessage(status.progress)
           }
           // status === 'processing' → keep polling
         } catch {
@@ -760,7 +765,7 @@ export function GenerateFromArtifactsDialog({
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>AI is reading and structuring requirements</span>
+                  <span>{progressMessage || 'AI is reading and structuring requirements'}</span>
                   <span>
                     {Math.floor(elapsedSeconds / 60) > 0
                       ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`

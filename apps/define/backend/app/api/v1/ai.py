@@ -175,6 +175,7 @@ async def generate_from_artifacts(
         "status": "processing",
         "requirements": None,
         "error": None,
+        "progress": None,
         "created_at": time.time(),
     }
 
@@ -199,6 +200,10 @@ async def _run_generation(
     product_name: str,
 ):
     """Background task that runs the AI generation and updates the job store."""
+
+    async def on_progress(phase: str, detail: str):
+        _generation_jobs[job_id]["progress"] = detail
+
     try:
         ai_service = AIService()
         requirements = await ai_service.parse_requirements(
@@ -207,6 +212,7 @@ async def _run_generation(
             existing_requirements=existing_requirements,
             target_parent_id=target_parent_id,
             product_name=product_name,
+            on_progress=on_progress,
         )
         _generation_jobs[job_id]["status"] = "completed"
         _generation_jobs[job_id]["requirements"] = requirements
@@ -230,4 +236,5 @@ async def get_generation_status(
         status=job["status"],
         requirements=job["requirements"],
         error=job["error"],
+        progress=job.get("progress"),
     )

@@ -213,17 +213,15 @@ class MultiProviderAIClient:
                 messages.append({"role": "user", "content": "\n".join(text_parts)})
 
         # Newer OpenAI models (gpt-5.x, o1, o3, o4) use max_completion_tokens instead of max_tokens
-        # and support a reasoning parameter to control thinking effort
         model_lower = config.model_id.lower()
-        is_reasoning_model = any(x in model_lower for x in ['gpt-5', 'o1', 'o3', 'o4'])
+        uses_new_params = any(x in model_lower for x in ['gpt-5', 'o1', 'o3', 'o4'])
 
-        if is_reasoning_model:
+        if uses_new_params:
             response = client.chat.completions.create(
                 model=config.model_id,
                 messages=messages,
                 max_completion_tokens=config.max_tokens,
                 temperature=config.temperature,
-                reasoning={"effort": "medium"},
             )
         else:
             response = client.chat.completions.create(
