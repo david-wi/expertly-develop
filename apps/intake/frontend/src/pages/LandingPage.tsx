@@ -110,9 +110,11 @@ export default function LandingPage() {
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
               Every subscription and service business has the same problem: before you can
               start serving a new customer, someone has to sit down with them and capture
-              their details. Expertly Intake replaces that manual onboarding process with a
-              voice-first AI agent that your customers call directly — so you get structured
-              data without the back-and-forth.
+              their details.
+            </p>
+            <p className="mt-3 text-xl text-gray-600 max-w-2xl mx-auto">
+              Expertly Intake replaces that manual process with a voice-first AI agent your
+              customers call directly. Structured onboarding data — without the back-and-forth.
             </p>
 
             {/* Visual flow */}
@@ -141,15 +143,69 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Hero Image Placeholder */}
+          {/* Hero Illustration */}
           <div className="mt-16 relative max-w-5xl mx-auto">
-            <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-100">
-              <div className="w-full h-[400px] bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-24 h-24 mx-auto mb-4 bg-indigo-200 rounded-2xl flex items-center justify-center">
-                    <Phone className="w-12 h-12 text-indigo-600" />
+            <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-white">
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                {/* Left: Conversation */}
+                <div className="bg-gray-50 p-6 sm:p-8 border-b md:border-b-0 md:border-r border-gray-200">
+                  <div className="flex items-center gap-2 mb-5">
+                    <Phone className="w-5 h-5 text-indigo-600" />
+                    <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Customer call</span>
                   </div>
-                  <p className="text-indigo-700 font-medium">Voice-First Onboarding Dashboard</p>
+                  <div className="space-y-3">
+                    <div className="flex justify-end">
+                      <div className="bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%] text-sm">
+                        What's the name of your organization?
+                      </div>
+                    </div>
+                    <div className="flex justify-start">
+                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%] text-sm text-gray-700">
+                        We're Acme Health Services, based out of Chicago. About 120 employees.
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <div className="bg-indigo-600 text-white rounded-2xl rounded-br-md px-4 py-2.5 max-w-[85%] text-sm">
+                        And who's the primary point of contact for billing?
+                      </div>
+                    </div>
+                    <div className="flex justify-start">
+                      <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-2.5 max-w-[85%] text-sm text-gray-700">
+                        That'd be Sarah Chen, she's our finance director. I can give you her email...
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Right: Structured data */}
+                <div className="p-6 sm:p-8">
+                  <div className="flex items-center gap-2 mb-5">
+                    <FileText className="w-5 h-5 text-indigo-600" />
+                    <span className="text-sm font-semibold text-gray-500 uppercase tracking-wide">Onboarding record</span>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Organization</div>
+                      <div className="mt-1 text-sm font-medium text-gray-900">Acme Health Services</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Location</div>
+                      <div className="mt-1 text-sm font-medium text-gray-900">Chicago, IL</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Company Size</div>
+                      <div className="mt-1 text-sm font-medium text-gray-900">~120 employees</div>
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-gray-400 uppercase tracking-wide">Billing Contact</div>
+                      <div className="mt-1 text-sm font-medium text-gray-900">Sarah Chen, Finance Director</div>
+                    </div>
+                    <div className="pt-2 border-t border-gray-100">
+                      <div className="flex items-center gap-1.5 text-xs text-indigo-600 font-medium">
+                        <Check className="w-3.5 h-3.5" />
+                        4 of 12 fields captured — call in progress
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -166,8 +222,8 @@ export default function LandingPage() {
               <div className="mt-2 text-gray-400 font-medium">Customers talk, AI captures</div>
             </div>
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-white">0</div>
-              <div className="mt-2 text-gray-400 font-medium">Staff hours per onboarding</div>
+              <div className="text-4xl sm:text-5xl font-bold text-white">Self-serve</div>
+              <div className="mt-2 text-gray-400 font-medium">Customers do it themselves</div>
             </div>
             <div>
               <div className="text-4xl sm:text-5xl font-bold text-white">24/7</div>
@@ -439,7 +495,9 @@ export default function LandingPage() {
             <Mic className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-            Customer onboarding should run itself
+            Customer onboarding
+            <br />
+            should run itself
           </h2>
           <p className="mt-6 text-xl text-indigo-100 max-w-xl mx-auto">
             Give your new customers a phone number instead of a project manager.
