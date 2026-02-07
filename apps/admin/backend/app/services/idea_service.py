@@ -27,6 +27,8 @@ class IdeaService:
             status=data.status.value,
             priority=data.priority.value,
             tags=data.tags or [],
+            category=data.category,
+            item_type=data.item_type,
             created_by_email=data.created_by_email,
             organization_id=data.organization_id,
         )
@@ -45,6 +47,7 @@ class IdeaService:
         include_archived: bool = False,
         organization_id: Optional[str] = None,
         backlog_type: Optional[str] = None,
+        item_type: Optional[str] = None,
     ) -> List[Idea]:
         """List ideas with filters.
 
@@ -71,6 +74,8 @@ class IdeaService:
             conditions.append(Idea.status == status)
         if priority:
             conditions.append(Idea.priority == priority)
+        if item_type:
+            conditions.append(Idea.item_type == item_type)
         if not include_archived:
             conditions.append(Idea.status != IdeaStatus.ARCHIVED.value)
 
@@ -121,6 +126,17 @@ class IdeaService:
         await self.db.delete(idea)
         await self.db.flush()
         return True
+
+    async def get_distinct_categories(self) -> List[str]:
+        """Get distinct non-null categories for typeahead suggestions."""
+        query = (
+            select(Idea.category)
+            .where(Idea.category.isnot(None))
+            .distinct()
+            .order_by(Idea.category)
+        )
+        result = await self.db.execute(query)
+        return [row[0] for row in result.fetchall()]
 
     async def get_products_with_ideas(self) -> List[str]:
         """Get list of products that have ideas."""

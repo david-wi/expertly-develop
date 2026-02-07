@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity, Bug } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity, Bug, Code } from 'lucide-react'
 
 export interface Organization {
   id: string
@@ -387,10 +387,15 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
   const backlogQuery = backlogParams.toString()
   const backlogUrl = `https://admin.ai.devintensive.com/work-backlog${backlogQuery ? `?${backlogQuery}` : ''}`
 
-  // Idea backlog URL - product filter only, no org (shows cross-org ideas)
-  const ideaBacklogUrl = currentAppCode
-    ? `https://admin.ai.devintensive.com/idea-backlog?product=${currentAppCode}`
-    : 'https://admin.ai.devintensive.com/idea-backlog'
+  // Idea catalog URL - product filter only, no org (shows cross-org ideas)
+  const ideaCatalogUrl = currentAppCode
+    ? `https://admin.ai.devintensive.com/idea-catalog?product=${currentAppCode}`
+    : 'https://admin.ai.devintensive.com/idea-catalog'
+
+  // Dev backlog URL - product filter only
+  const devBacklogUrl = currentAppCode
+    ? `https://admin.ai.devintensive.com/dev-backlog?product=${currentAppCode}`
+    : 'https://admin.ai.devintensive.com/dev-backlog'
 
   // Developer Tools section (as expandable submenu) - alphabetized
   sections.push({
@@ -426,11 +431,19 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
             external: true,
           },
           {
-            id: 'idea-backlog',
-            label: 'Idea Backlog',
+            id: 'dev-backlog',
+            label: 'Dev Backlog',
+            icon: Code,
+            type: 'link',
+            href: devBacklogUrl,
+            external: true,
+          },
+          {
+            id: 'idea-catalog',
+            label: 'Idea Catalog',
             icon: Lightbulb,
             type: 'link',
-            href: ideaBacklogUrl,
+            href: ideaCatalogUrl,
             external: true,
           },
           {

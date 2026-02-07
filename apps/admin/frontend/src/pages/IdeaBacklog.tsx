@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import ReactMarkdown from 'react-markdown'
@@ -20,6 +20,7 @@ import {
   CheckSquare,
   Trash2,
   Send,
+  Code,
 } from 'lucide-react'
 import { InlineVoiceTranscription, EXPERTLY_PRODUCTS } from '@expertly/ui'
 
@@ -32,6 +33,8 @@ interface Idea {
   status: 'new' | 'in_progress' | 'done' | 'archived'
   priority: 'low' | 'medium' | 'high'
   tags: string[] | null
+  category: string | null
+  item_type: string
   created_by_email: string | null
   organization_id: string | null
   created_at: string
@@ -86,6 +89,9 @@ const PRIORITY_ORDER: Record<string, number> = {
   low: 2,
 }
 
+type SortOption = 'priority' | 'date' | 'loves'
+type GroupByOption = 'none' | 'category'
+
 interface IdeaCreate {
   product: string
   title: string
@@ -93,6 +99,8 @@ interface IdeaCreate {
   status?: Idea['status']
   priority?: Idea['priority']
   tags?: string[]
+  category?: string
+  item_type?: string
   organization_id?: string
   created_by_email?: string
 }
@@ -103,7 +111,7 @@ interface IdeaCreate {
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const ideasApi = {
-  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string; backlog_type?: string }): Promise<Idea[]> {
+  async list(params?: { product?: string; status?: string; priority?: string; include_archived?: boolean; user_email?: string; organization_id?: string; backlog_type?: string; item_type?: string }): Promise<Idea[]> {
     const searchParams = new URLSearchParams()
     if (params?.product) searchParams.set('product', params.product)
     if (params?.status) searchParams.set('status', params.status)
@@ -112,11 +120,20 @@ const ideasApi = {
     if (params?.user_email) searchParams.set('user_email', params.user_email)
     if (params?.organization_id) searchParams.set('organization_id', params.organization_id)
     if (params?.backlog_type) searchParams.set('backlog_type', params.backlog_type)
+    if (params?.item_type) searchParams.set('item_type', params.item_type)
     const query = searchParams.toString()
     const res = await fetch(`${API_BASE}/ideas${query ? `?${query}` : ''}`, {
       credentials: 'include',
     })
     if (!res.ok) throw new Error('Failed to fetch ideas')
+    return res.json()
+  },
+
+  async getCategories(): Promise<string[]> {
+    const res = await fetch(`${API_BASE}/ideas/categories`, {
+      credentials: 'include',
+    })
+    if (!res.ok) throw new Error('Failed to fetch categories')
     return res.json()
   },
 
@@ -352,6 +369,11 @@ function IdeaCard({
                 {ProductIcon && <ProductIcon className="w-3 h-3" />}
                 {getProductDisplayName(idea.product)}
               </span>
+              {idea.category && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  {idea.category}
+                </span>
+              )}
             </div>
             <h3 className="text-base font-semibold text-theme-text-primary">{idea.title}</h3>
           </div>
@@ -575,12 +597,14 @@ function CreateIdeaModal({
   idea,
   defaultProduct,
   organizationId,
+  defaultItemType,
   onClose,
   onSave,
 }: {
   idea?: Idea
   defaultProduct?: string
   organizationId?: string
+  defaultItemType?: string
   onClose: () => void
   onSave: (data: IdeaCreate | Partial<Idea>) => void
 }) {
@@ -591,8 +615,39 @@ function CreateIdeaModal({
     status: idea?.status || 'new',
     priority: idea?.priority || 'medium',
     tags: idea?.tags || [],
+    category: idea?.category || '',
+    item_type: idea?.item_type || defaultItemType || 'idea',
   })
   const [tagInput, setTagInput] = useState('')
+  const [categoryInput, setCategoryInput] = useState(idea?.category || '')
+  const [showCategorySuggestions, setShowCategorySuggestions] = useState(false)
+  const categoryRef = useRef<HTMLDivElement>(null)
+
+  // Fetch categories for typeahead
+  const { data: categories = [] } = useQuery({
+    queryKey: ['idea-categories'],
+    queryFn: () => ideasApi.getCategories(),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  // Filter categories based on input
+  const filteredCategories = useMemo(() => {
+    if (!categoryInput.trim()) return categories
+    return categories.filter(c =>
+      c.toLowerCase().includes(categoryInput.toLowerCase())
+    )
+  }, [categories, categoryInput])
+
+  // Close category suggestions when clicking outside
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
+        setShowCategorySuggestions(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   // Get suggested tags for selected product
   const suggestedTags = PRODUCT_TAGS[form.product] || []
@@ -607,7 +662,8 @@ function CreateIdeaModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(form)
+    const submitData = { ...form, category: categoryInput.trim() || undefined }
+    onSave(submitData)
   }
 
   const addTag = (tag: string) => {
@@ -629,12 +685,16 @@ function CreateIdeaModal({
     }
   }
 
+  const isFeatureMode = form.item_type === 'feature'
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-theme-bg-surface rounded-xl border border-theme-border w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-4 border-b border-theme-border flex items-center justify-between">
           <h2 className="text-lg font-semibold text-theme-text-primary">
-            {idea ? (organizationId ? 'Edit Backlog Item' : 'Edit Idea') : (organizationId ? 'Add Backlog Item' : 'Capture New Idea')}
+            {idea
+              ? (organizationId ? 'Edit Backlog Item' : isFeatureMode ? 'Edit Feature' : 'Edit Idea')
+              : (organizationId ? 'Add Backlog Item' : isFeatureMode ? 'Add Feature' : 'Capture New Idea')}
           </h2>
           <button
             onClick={onClose}
@@ -684,6 +744,41 @@ function CreateIdeaModal({
                 className="self-center"
               />
             </div>
+          </div>
+
+          {/* Category field with typeahead */}
+          <div ref={categoryRef} className="relative">
+            <label className="block text-sm font-medium text-theme-text-primary mb-1">
+              Category
+            </label>
+            <input
+              type="text"
+              value={categoryInput}
+              onChange={(e) => {
+                setCategoryInput(e.target.value)
+                setShowCategorySuggestions(true)
+              }}
+              onFocus={() => setShowCategorySuggestions(true)}
+              className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
+              placeholder="e.g., Platform & Support, AI Features"
+            />
+            {showCategorySuggestions && filteredCategories.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-theme-bg-surface border border-theme-border rounded-lg shadow-lg max-h-48 overflow-auto">
+                {filteredCategories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => {
+                      setCategoryInput(cat)
+                      setShowCategorySuggestions(false)
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-theme-text-primary hover:bg-theme-bg-elevated transition-colors"
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div>
@@ -809,7 +904,7 @@ function CreateIdeaModal({
               type="submit"
               className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
             >
-              {idea ? 'Save Changes' : (organizationId ? 'Add Item' : 'Capture Idea')}
+              {idea ? 'Save Changes' : (organizationId ? 'Add Item' : isFeatureMode ? 'Add Feature' : 'Capture Idea')}
             </button>
           </div>
         </form>
@@ -829,10 +924,15 @@ export function IdeaBacklog() {
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [priorityFilter, setPriorityFilter] = useState<string>('')
   const [includeArchived, setIncludeArchived] = useState(false)
-  const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority')
 
-  // Determine if we're in "Work Backlog" mode based on URL path (not just org_id param)
+  // Determine mode based on URL path
+  const isIdeaCatalogMode = location.pathname === '/idea-catalog' || location.pathname === '/idea-backlog'
+  const isDevBacklogMode = location.pathname === '/dev-backlog'
   const isWorkBacklogMode = location.pathname === '/work-backlog'
+
+  // Default sort and group per mode
+  const [sortBy, setSortBy] = useState<SortOption>(isIdeaCatalogMode ? 'loves' : isDevBacklogMode ? 'priority' : 'priority')
+  const [groupBy, setGroupBy] = useState<GroupByOption>(isIdeaCatalogMode ? 'category' : 'none')
 
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null)
@@ -849,9 +949,12 @@ export function IdeaBacklog() {
   })
   const userEmail = currentUser?.email
 
+  // Determine item_type for API query
+  const itemType = isIdeaCatalogMode ? 'idea' : isDevBacklogMode ? 'feature' : undefined
+
   // Fetch ideas - don't wait for user email, it's only needed for vote status
   const { data: ideas = [], isLoading: isIdeasLoading, refetch } = useQuery({
-    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode],
+    queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
       status: statusFilter || undefined,
@@ -860,6 +963,7 @@ export function IdeaBacklog() {
       user_email: userEmail || undefined,
       organization_id: organizationId || undefined,
       backlog_type: isWorkBacklogMode ? 'work' : undefined,
+      item_type: itemType,
     }),
   })
 
@@ -871,6 +975,7 @@ export function IdeaBacklog() {
     mutationFn: (data: IdeaCreate) => ideasApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideas'] })
+      queryClient.invalidateQueries({ queryKey: ['idea-categories'] })
       setShowCreateModal(false)
     },
     onError: (error: Error) => {
@@ -885,6 +990,7 @@ export function IdeaBacklog() {
       ideasApi.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ideas'] })
+      queryClient.invalidateQueries({ queryKey: ['idea-categories'] })
       setEditingIdea(null)
     },
   })
@@ -897,11 +1003,11 @@ export function IdeaBacklog() {
       await queryClient.cancelQueries({ queryKey: ['ideas'] })
 
       // Snapshot previous value
-      const previousIdeas = queryClient.getQueryData(['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail])
+      const previousIdeas = queryClient.getQueryData(['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType])
 
       // Optimistically update
       queryClient.setQueryData(
-        ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
+        ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType],
         (old: Idea[] | undefined) => old?.map(idea => {
           if (idea.id === ideaId) {
             const newVoted = !idea.user_voted
@@ -921,7 +1027,7 @@ export function IdeaBacklog() {
       // Rollback on error
       if (context?.previousIdeas) {
         queryClient.setQueryData(
-          ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail],
+          ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, isWorkBacklogMode, itemType],
           context.previousIdeas
         )
       }
@@ -936,10 +1042,14 @@ export function IdeaBacklog() {
   const exploringCount = ideas.filter((i) => i.status === 'in_progress').length
   const implementedCount = ideas.filter((i) => i.status === 'done').length
 
-  // Sort ideas by priority (high → medium → low) then by date within same priority
+  // Sort ideas
   const sortedIdeas = useMemo(() => {
     return [...ideas].sort((a, b) => {
-      if (sortBy === 'priority') {
+      if (sortBy === 'loves') {
+        const loveDiff = (b.vote_count || 0) - (a.vote_count || 0)
+        if (loveDiff !== 0) return loveDiff
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      } else if (sortBy === 'priority') {
         const priorityDiff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]
         if (priorityDiff !== 0) return priorityDiff
         // Same priority, sort by date (newest first)
@@ -950,6 +1060,27 @@ export function IdeaBacklog() {
       }
     })
   }, [ideas, sortBy])
+
+  // Group ideas by category
+  const groupedIdeas = useMemo(() => {
+    if (groupBy !== 'category') return null
+
+    const groups: Record<string, Idea[]> = {}
+    for (const idea of sortedIdeas) {
+      const key = idea.category || 'Uncategorized'
+      if (!groups[key]) groups[key] = []
+      groups[key].push(idea)
+    }
+
+    // Sort groups alphabetically, with Uncategorized at the end
+    const sortedKeys = Object.keys(groups).sort((a, b) => {
+      if (a === 'Uncategorized') return 1
+      if (b === 'Uncategorized') return -1
+      return a.localeCompare(b)
+    })
+
+    return sortedKeys.map(key => ({ category: key, ideas: groups[key] }))
+  }, [sortedIdeas, groupBy])
 
   // Update URL when product filter changes
   const handleProductFilterChange = useCallback((product: string) => {
@@ -1012,25 +1143,59 @@ export function IdeaBacklog() {
     bulkUpdateMutation.mutate({ ids: Array.from(selectedIds), updates: { priority } })
   }, [selectedIds, bulkUpdateMutation])
 
-  // Dynamic header title based on mode and product filter
+  // Dynamic header based on mode
+  const HeaderIcon = isDevBacklogMode ? Code : Lightbulb
+  const headerIconColor = isDevBacklogMode ? 'text-blue-500' : 'text-yellow-500'
+
   const headerTitle = isWorkBacklogMode
     ? productFilter
       ? `Work Backlog - Expertly ${getProductDisplayName(productFilter)}`
       : 'Work Backlog'
-    : productFilter
-      ? `Idea Backlog - Expertly ${getProductDisplayName(productFilter)}`
-      : 'Idea Backlog'
+    : isDevBacklogMode
+      ? productFilter
+        ? `Dev Backlog - Expertly ${getProductDisplayName(productFilter)}`
+        : 'Dev Backlog'
+      : productFilter
+        ? `Idea Catalog - Expertly ${getProductDisplayName(productFilter)}`
+        : 'Idea Catalog'
 
   const headerDescription = isWorkBacklogMode
     ? 'Track work items and tasks for your organization'
-    : 'Capture and nurture ideas across all Expertly products'
+    : isDevBacklogMode
+      ? 'Track development features and improvements'
+      : 'Capture and nurture ideas across all Expertly products'
+
+  const defaultItemType = isDevBacklogMode ? 'feature' : 'idea'
+
+  // Render a list of idea cards (reused in flat and grouped views)
+  const renderIdeaCards = (ideaList: Idea[]) => (
+    ideaList.map((idea) => (
+      <IdeaCard
+        key={idea.id}
+        idea={idea}
+        onEdit={() => setEditingIdea(idea)}
+        onUpdateStatus={(status) =>
+          updateMutation.mutate({
+            id: idea.id,
+            data: { status },
+          })
+        }
+        onVote={userEmail ? () => voteMutation.mutate(idea.id) : undefined}
+        selectMode={selectMode}
+        isSelected={selectedIds.has(idea.id)}
+        onToggleSelect={() => toggleSelect(idea.id)}
+        userEmail={userEmail}
+        onCommentCountChange={() => refetch()}
+      />
+    ))
+  )
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Lightbulb className="h-8 w-8 text-yellow-500" />
+          <HeaderIcon className={`h-8 w-8 ${headerIconColor}`} />
           <div>
             <h1 className="text-2xl font-bold text-theme-text-primary">{headerTitle}</h1>
             <p className="text-theme-text-secondary mt-1">
@@ -1062,7 +1227,7 @@ export function IdeaBacklog() {
             className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors"
           >
             <Sparkles className="w-4 h-4" />
-            {isWorkBacklogMode ? 'New Item' : 'New Idea'}
+            {isWorkBacklogMode ? 'New Item' : isDevBacklogMode ? 'New Feature' : 'New Idea'}
           </button>
         </div>
       </div>
@@ -1076,7 +1241,7 @@ export function IdeaBacklog() {
             </div>
             <div>
               <p className="text-2xl font-bold text-theme-text-primary">{newCount}</p>
-              <p className="text-sm text-theme-text-secondary">{isWorkBacklogMode ? 'New Items' : 'New Ideas'}</p>
+              <p className="text-sm text-theme-text-secondary">{isWorkBacklogMode ? 'New Items' : isDevBacklogMode ? 'New Features' : 'New Ideas'}</p>
             </div>
           </div>
         </div>
@@ -1203,11 +1368,24 @@ export function IdeaBacklog() {
           <label className="block text-xs text-theme-text-muted mb-1">Sort By</label>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'priority' | 'date')}
+            onChange={(e) => setSortBy(e.target.value as SortOption)}
             className="px-3 py-1.5 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary"
           >
+            <option value="loves">Loves</option>
             <option value="priority">Priority</option>
             <option value="date">Date</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-xs text-theme-text-muted mb-1">Group By</label>
+          <select
+            value={groupBy}
+            onChange={(e) => setGroupBy(e.target.value as GroupByOption)}
+            className="px-3 py-1.5 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary"
+          >
+            <option value="none">None</option>
+            <option value="category">Category</option>
           </select>
         </div>
 
@@ -1237,51 +1415,57 @@ export function IdeaBacklog() {
         )}
       </div>
 
-      {/* Ideas list - responsive grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
-        {isLoading ? (
-          <div className="col-span-full bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
-            <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
-            Loading ideas...
-          </div>
-        ) : sortedIdeas.length === 0 ? (
-          <div className="col-span-full bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
-            <Lightbulb className="w-8 h-8 mx-auto mb-2" />
-            <p className="text-lg font-medium text-theme-text-primary mb-1">
-              {isWorkBacklogMode ? 'No work items yet' : 'No ideas yet'}
-            </p>
-            <p className="text-sm">
-              {isWorkBacklogMode
+      {/* Ideas list */}
+      {isLoading ? (
+        <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
+          <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2" />
+          Loading...
+        </div>
+      ) : sortedIdeas.length === 0 ? (
+        <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
+          <HeaderIcon className="w-8 h-8 mx-auto mb-2" />
+          <p className="text-lg font-medium text-theme-text-primary mb-1">
+            {isWorkBacklogMode ? 'No work items yet' : isDevBacklogMode ? 'No features yet' : 'No ideas yet'}
+          </p>
+          <p className="text-sm">
+            {isWorkBacklogMode
+              ? productFilter
+                ? `No work items for ${getProductDisplayName(productFilter)}.`
+                : 'No work items found.'
+              : isDevBacklogMode
                 ? productFilter
-                  ? `No work items for ${getProductDisplayName(productFilter)}.`
-                  : 'No work items found.'
+                  ? `No features for ${getProductDisplayName(productFilter)} yet.`
+                  : 'No features found. Add one to get started!'
                 : productFilter
                   ? `No ideas for ${productFilter}. Got a spark of inspiration? Capture it!`
                   : "Got a spark of inspiration? Capture it here!"}
-            </p>
-          </div>
-        ) : (
-          sortedIdeas.map((idea) => (
-            <IdeaCard
-              key={idea.id}
-              idea={idea}
-              onEdit={() => setEditingIdea(idea)}
-              onUpdateStatus={(status) =>
-                updateMutation.mutate({
-                  id: idea.id,
-                  data: { status },
-                })
-              }
-              onVote={userEmail ? () => voteMutation.mutate(idea.id) : undefined}
-              selectMode={selectMode}
-              isSelected={selectedIds.has(idea.id)}
-              onToggleSelect={() => toggleSelect(idea.id)}
-              userEmail={userEmail}
-              onCommentCountChange={() => refetch()}
-            />
-          ))
-        )}
-      </div>
+          </p>
+        </div>
+      ) : groupedIdeas ? (
+        // Grouped view
+        <div className="space-y-6">
+          {groupedIdeas.map(({ category, ideas: groupIdeas }) => (
+            <div key={category}>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+                  {category}
+                </span>
+                <span className="text-sm text-theme-text-muted">
+                  ({groupIdeas.length})
+                </span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+                {renderIdeaCards(groupIdeas)}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // Flat view
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
+          {renderIdeaCards(sortedIdeas)}
+        </div>
+      )}
 
       {/* Create/Edit modal */}
       {(showCreateModal || editingIdea) && (
@@ -1289,6 +1473,7 @@ export function IdeaBacklog() {
           idea={editingIdea || undefined}
           defaultProduct={productFilter || undefined}
           organizationId={organizationId || undefined}
+          defaultItemType={defaultItemType}
           onClose={() => {
             setShowCreateModal(false)
             setEditingIdea(null)

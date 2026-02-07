@@ -33,7 +33,9 @@ function App() {
         <Route path="/monitor" element={<Monitor />} />
         <Route path="/ai-config" element={<AIConfig />} />
         <Route path="/changelog" element={<Changelog />} />
-        <Route path="/idea-backlog" element={<IdeaBacklog />} />
+        <Route path="/idea-catalog" element={<IdeaBacklog />} />
+        <Route path="/idea-backlog" element={<Navigate to="/idea-catalog" replace />} />
+        <Route path="/dev-backlog" element={<IdeaBacklog />} />
         <Route path="/work-backlog" element={<IdeaBacklog />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
