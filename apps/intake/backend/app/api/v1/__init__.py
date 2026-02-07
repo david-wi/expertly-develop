@@ -19,6 +19,7 @@ from .proposals import router as proposals_router
 from .voice_calls import router as voice_calls_router
 from .timeline import router as timeline_router
 from .exports import router as exports_router
+from .ai_templates import router as ai_templates_router
 
 router = APIRouter()
 
@@ -41,3 +42,4 @@ router.include_router(proposals_router, tags=["proposals"])
 router.include_router(voice_calls_router, tags=["voice-calls"])
 router.include_router(timeline_router, tags=["timeline"])
 router.include_router(exports_router, tags=["exports"])
+router.include_router(ai_templates_router, tags=["ai-templates"])
