@@ -1,21 +1,25 @@
 import os
 import asyncio
+import json
 import logging
 import time
 import uuid
+from datetime import datetime
+from uuid import uuid4
 
 import aiofiles
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_db
+from app.database import get_db, async_session_maker
 from app.api.deps import get_current_user, CurrentUser
 from app.config import get_settings
 from app.models.product import Product
 from app.models.artifact import Artifact
 from app.models.artifact_version import ArtifactVersion
 from app.models.requirement import Requirement
+from app.models.requirement_version import RequirementVersion
 from app.schemas.ai import (
     ParseRequirementsRequest,
     ParsedRequirement,
@@ -24,7 +28,7 @@ from app.schemas.ai import (
     GenerateJobStatusResponse,
     ExistingRequirement,
 )
-from app.services.ai_service import AIService
+from app.services.ai_service import AIService, ENRICHMENT_BATCH_SIZE, MAX_CONCURRENCY
 
 logger = logging.getLogger(__name__)
 
@@ -176,12 +180,16 @@ async def generate_from_artifacts(
         "requirements": None,
         "error": None,
         "progress": None,
+        "created_count": 0,
         "created_at": time.time(),
     }
 
     asyncio.create_task(
         _run_generation(
             job_id=job_id,
+            product_id=data.product_id,
+            product_prefix=product.prefix,
+            user_name=current_user.name,
             combined_description=combined_description,
             existing_requirements=existing_requirements,
             target_parent_id=data.target_parent_id,
@@ -192,34 +200,317 @@ async def generate_from_artifacts(
     return GenerateJobStartResponse(job_id=job_id)
 
 
+async def _generate_stable_key(db: AsyncSession, product_id: str, prefix: str) -> str:
+    """Generate stable key for a requirement."""
+    stmt = select(func.count(Requirement.id)).where(Requirement.product_id == product_id)
+    result = await db.execute(stmt)
+    count = result.scalar() or 0
+    return f"{prefix}-{str(count + 1).zfill(3)}"
+
+
+async def _batch_create_in_db(
+    product_id: str,
+    product_prefix: str,
+    user_name: str,
+    nodes: list[dict],
+    temp_to_real: dict[str, str],
+) -> dict[str, str]:
+    """Persist a batch of nodes to the DB. Returns updated temp_to_real mapping."""
+    now = datetime.utcnow().isoformat()
+
+    async with async_session_maker() as db:
+        try:
+            created_pairs = []
+            for node in nodes:
+                temp_id = node.get("temp_id", "")
+                title = (node.get("title") or "").strip()
+                if not title:
+                    continue
+
+                stable_key = await _generate_stable_key(db, product_id, product_prefix)
+                requirement_id = str(uuid4())
+                temp_to_real[temp_id] = requirement_id
+
+                # Resolve parent_ref to real ID
+                parent_ref = node.get("parent_ref")
+                parent_id = None
+                if parent_ref:
+                    parent_id = temp_to_real.get(parent_ref, parent_ref)
+
+                node_type = node.get("node_type", "requirement")
+                valid_types = {"product", "module", "feature", "requirement", "guardrail"}
+                if node_type not in valid_types:
+                    node_type = "requirement"
+
+                tags = node.get("tags", ["functional"])
+
+                requirement = Requirement(
+                    id=requirement_id,
+                    product_id=product_id,
+                    parent_id=parent_id,
+                    stable_key=stable_key,
+                    title=title,
+                    node_type=node_type,
+                    what_this_does=(node.get("what_this_does") or "").strip() or None,
+                    why_this_exists=(node.get("why_this_exists") or "").strip() or None,
+                    not_included=(node.get("not_included") or "").strip() or None,
+                    acceptance_criteria=(node.get("acceptance_criteria") or "").strip() or None,
+                    status="draft",
+                    priority=node.get("priority", "medium"),
+                    tags=json.dumps(tags) if tags else None,
+                    order_index=0,
+                    current_version=1,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(requirement)
+                created_pairs.append((requirement, node))
+
+            await db.flush()
+
+            # Calculate order indices
+            parent_order_counts: dict[str, int] = {}
+            for requirement, node in created_pairs:
+                parent_key = requirement.parent_id or "root"
+                if parent_key not in parent_order_counts:
+                    if requirement.parent_id:
+                        max_stmt = select(func.max(Requirement.order_index)).where(
+                            and_(Requirement.product_id == product_id, Requirement.parent_id == requirement.parent_id, Requirement.id != requirement.id)
+                        )
+                    else:
+                        max_stmt = select(func.max(Requirement.order_index)).where(
+                            and_(Requirement.product_id == product_id, Requirement.parent_id.is_(None), Requirement.id != requirement.id)
+                        )
+                    result = await db.execute(max_stmt)
+                    max_order = result.scalar()
+                    parent_order_counts[parent_key] = (max_order or -1) + 1
+
+                requirement.order_index = parent_order_counts[parent_key]
+                parent_order_counts[parent_key] += 1
+
+                # Create version record
+                version = RequirementVersion(
+                    id=str(uuid4()),
+                    requirement_id=requirement.id,
+                    version_number=1,
+                    snapshot=json.dumps({
+                        "title": requirement.title,
+                        "node_type": requirement.node_type,
+                        "what_this_does": requirement.what_this_does,
+                        "why_this_exists": requirement.why_this_exists,
+                        "not_included": requirement.not_included,
+                        "acceptance_criteria": requirement.acceptance_criteria,
+                        "status": requirement.status,
+                        "priority": requirement.priority,
+                        "tags": node.get("tags", []),
+                    }),
+                    change_summary="AI generation from artifacts",
+                    changed_by=user_name,
+                    changed_at=now,
+                    status="active",
+                )
+                db.add(version)
+
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+    return temp_to_real
+
+
+async def _batch_update_enrichment(
+    temp_to_real: dict[str, str],
+    enriched_nodes: list[dict],
+):
+    """Update existing DB records with enrichment details."""
+    async with async_session_maker() as db:
+        try:
+            for node in enriched_nodes:
+                temp_id = node.get("temp_id", "")
+                real_id = temp_to_real.get(temp_id)
+                if not real_id:
+                    continue
+
+                result = await db.execute(
+                    select(Requirement).where(Requirement.id == real_id)
+                )
+                req = result.scalar_one_or_none()
+                if not req:
+                    continue
+
+                if node.get("what_this_does"):
+                    req.what_this_does = node["what_this_does"].strip()
+                if node.get("why_this_exists"):
+                    req.why_this_exists = node["why_this_exists"].strip()
+                if node.get("not_included"):
+                    req.not_included = node["not_included"].strip()
+                if node.get("acceptance_criteria"):
+                    req.acceptance_criteria = node["acceptance_criteria"].strip()
+                req.updated_at = datetime.utcnow().isoformat()
+
+            await db.commit()
+        except Exception:
+            await db.rollback()
+            raise
+
+
 async def _run_generation(
     job_id: str,
+    product_id: str,
+    product_prefix: str,
+    user_name: str,
     combined_description: str,
     existing_requirements: list[ExistingRequirement],
     target_parent_id: str | None,
     product_name: str,
 ):
-    """Background task that runs the AI generation and updates the job store."""
+    """Background task: three-phase generation with incremental DB persistence."""
+    job = _generation_jobs[job_id]
 
-    async def on_progress(phase: str, detail: str):
-        _generation_jobs[job_id]["progress"] = detail
+    def update_progress(msg: str):
+        job["progress"] = msg
+
+    def update_count(n: int):
+        job["created_count"] = n
 
     try:
         ai_service = AIService()
-        requirements = await ai_service.parse_requirements(
+        temp_to_real: dict[str, str] = {}
+
+        # Build context once
+        tree_text, file_context, images, url_context, related_reqs_context, target_info = \
+            ai_service._build_input_context(
+                combined_description, None, existing_requirements, target_parent_id,
+                product_name,
+            )
+
+        # ---- Phase 1: Generate outline ----
+        update_progress("Generating high-level structure (product, modules, features)...")
+        logger.info(f"Job {job_id}: Phase 1 — generating outline")
+
+        outline = await ai_service.generate_outline(
             description=combined_description,
-            files=None,
-            existing_requirements=existing_requirements,
-            target_parent_id=target_parent_id,
+            tree_text=tree_text,
+            file_context=file_context,
+            images=images,
+            url_context=url_context,
+            related_reqs_context=related_reqs_context,
+            target_info=target_info,
             product_name=product_name,
-            on_progress=on_progress,
         )
-        _generation_jobs[job_id]["status"] = "completed"
-        _generation_jobs[job_id]["requirements"] = requirements
+
+        # Assign temp_ids if missing
+        for i, node in enumerate(outline):
+            if not node.get("temp_id"):
+                node["temp_id"] = f"temp-{i + 1}"
+
+        # Save outline to DB immediately
+        update_progress(f"Saving {len(outline)} outline nodes...")
+        temp_to_real = await _batch_create_in_db(
+            product_id, product_prefix, user_name, outline, temp_to_real,
+        )
+        update_count(len(temp_to_real))
+        logger.info(f"Job {job_id}: Phase 1 complete — {len(outline)} outline nodes saved")
+
+        # ---- Phase 2: Expand features into requirements ----
+        features = [n for n in outline if n.get("node_type") == "feature"]
+        logger.info(f"Job {job_id}: Phase 2 — expanding {len(features)} features")
+
+        if features:
+            # Calculate starting temp_id for requirements
+            max_outline_id = 0
+            for n in outline:
+                tid = n.get("temp_id", "")
+                if tid.startswith("temp-"):
+                    try:
+                        max_outline_id = max(max_outline_id, int(tid.split("-")[1]))
+                    except ValueError:
+                        pass
+            next_id = max_outline_id + 1
+
+            semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+            completed_features = 0
+            ID_BLOCK_SIZE = 50
+            all_requirement_nodes: list[dict] = []
+
+            async def expand_and_save(feature_node: dict, start_id: int) -> None:
+                nonlocal completed_features
+                async with semaphore:
+                    nodes = await ai_service.expand_feature(
+                        description=combined_description,
+                        outline=outline,
+                        feature_node=feature_node,
+                        product_name=product_name,
+                        next_temp_id_start=start_id,
+                    )
+                    # Save this feature's requirements to DB immediately
+                    # Replace parent_ref with the real ID of the feature
+                    feature_temp_id = feature_node.get("temp_id", "")
+                    for node in nodes:
+                        if node.get("parent_ref") == feature_temp_id:
+                            node["parent_ref"] = temp_to_real.get(feature_temp_id, feature_temp_id)
+
+                    await _batch_create_in_db(
+                        product_id, product_prefix, user_name, nodes, temp_to_real,
+                    )
+                    all_requirement_nodes.extend(nodes)
+                    completed_features += 1
+                    update_count(len(temp_to_real))
+                    update_progress(
+                        f"Expanding features ({completed_features}/{len(features)}) — {len(temp_to_real)} nodes created"
+                    )
+
+            tasks = []
+            for i, feature in enumerate(features):
+                start = next_id + (i * ID_BLOCK_SIZE)
+                tasks.append(expand_and_save(feature, start))
+
+            await asyncio.gather(*tasks)
+            logger.info(f"Job {job_id}: Phase 2 complete — {len(all_requirement_nodes)} requirements saved")
+        else:
+            all_requirement_nodes = []
+
+        # ---- Phase 3: Enrich all nodes with details ----
+        all_nodes = outline + all_requirement_nodes
+        batches = [
+            all_nodes[i:i + ENRICHMENT_BATCH_SIZE]
+            for i in range(0, len(all_nodes), ENRICHMENT_BATCH_SIZE)
+        ]
+        total_batches = len(batches)
+        logger.info(f"Job {job_id}: Phase 3 — enriching {len(all_nodes)} nodes in {total_batches} batches")
+
+        semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
+        completed_batches = 0
+
+        async def enrich_and_save(batch_nodes: list) -> None:
+            nonlocal completed_batches
+            async with semaphore:
+                enriched = await ai_service.enrich_batch(
+                    description=combined_description,
+                    all_nodes=all_nodes,
+                    batch_nodes=batch_nodes,
+                    product_name=product_name,
+                )
+                # Update DB records with enrichment
+                await _batch_update_enrichment(temp_to_real, enriched)
+                completed_batches += 1
+                update_progress(
+                    f"Adding details ({completed_batches}/{total_batches} batches) — {len(temp_to_real)} nodes total"
+                )
+
+        await asyncio.gather(*(enrich_and_save(batch) for batch in batches))
+        logger.info(f"Job {job_id}: Phase 3 complete — all nodes enriched")
+
+        job["status"] = "completed"
+        job["progress"] = f"Done — {len(temp_to_real)} requirements created"
+
     except Exception as e:
         logger.error(f"AI generation from artifacts failed (job {job_id}): {e}")
-        _generation_jobs[job_id]["status"] = "failed"
-        _generation_jobs[job_id]["error"] = str(e)
+        job["status"] = "failed"
+        job["error"] = str(e)
+        # Note: partially created nodes remain in DB — this is by design
+        # so the user can see what was generated before the failure
 
 
 @router.get("/generate-from-artifacts/{job_id}", response_model=GenerateJobStatusResponse)
@@ -234,7 +525,8 @@ async def get_generation_status(
 
     return GenerateJobStatusResponse(
         status=job["status"],
-        requirements=job["requirements"],
-        error=job["error"],
+        requirements=job.get("requirements"),
+        error=job.get("error"),
         progress=job.get("progress"),
+        created_count=job.get("created_count", 0),
     )

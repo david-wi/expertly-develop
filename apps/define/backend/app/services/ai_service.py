@@ -140,7 +140,7 @@ class AIService:
 
     # ---- Phase 1: High-level outline (product → modules → features + guardrails) ----
 
-    async def _generate_outline(
+    async def generate_outline(
         self,
         description: str,
         tree_text: str,
@@ -208,7 +208,7 @@ Return a JSON array of outline nodes (product, modules, features, guardrails —
 
     # ---- Phase 2: Expand features into requirements (parallel per feature) ----
 
-    async def _expand_feature(
+    async def expand_feature(
         self,
         description: str,
         outline: list,
@@ -274,7 +274,7 @@ Return a JSON array of requirement nodes:
 
     # ---- Phase 3: Enrich nodes with details (parallel batches) ----
 
-    async def _enrich_batch(
+    async def enrich_batch(
         self,
         description: str,
         all_nodes: list,
@@ -362,7 +362,7 @@ Return a JSON array with enriched nodes."""
             await on_progress("outline", "Generating high-level structure (product, modules, features)...")
 
         logger.info("Phase 1: Generating outline")
-        outline = await self._generate_outline(
+        outline = await self.generate_outline(
             description=description,
             tree_text=tree_text,
             file_context=file_context,
@@ -407,7 +407,7 @@ Return a JSON array with enriched nodes."""
         async def expand_and_track(feature_node: dict, start_id: int) -> None:
             nonlocal completed_features
             async with semaphore:
-                nodes = await self._expand_feature(
+                nodes = await self.expand_feature(
                     description=description,
                     outline=outline,
                     feature_node=feature_node,
@@ -457,7 +457,7 @@ Return a JSON array with enriched nodes."""
         async def enrich_and_track(batch_nodes: list) -> None:
             nonlocal completed_batches
             async with semaphore:
-                result = await self._enrich_batch(
+                result = await self.enrich_batch(
                     description=description,
                     all_nodes=all_nodes,
                     batch_nodes=batch_nodes,
