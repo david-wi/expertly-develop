@@ -100,10 +100,7 @@ export default function IntakesListPage() {
     error,
   } = useQuery<IntakeResponse[]>({
     queryKey: ['intakes'],
-    queryFn: async () => {
-      const res = await api.get<IntakeResponse[]>('/intakes');
-      return res.data;
-    },
+    queryFn: () => api.intakes.list(),
   });
 
   // Filter + search

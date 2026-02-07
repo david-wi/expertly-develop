@@ -7,7 +7,7 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, type AuthState } from '@/stores/authStore';
 
 // ---------------------------------------------------------------------------
 // Navigation items
@@ -32,8 +32,8 @@ const navItems: NavItem[] = [
 // ---------------------------------------------------------------------------
 
 export default function Layout() {
-  const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s: AuthState) => s.user);
+  const logout = useAuthStore((s: AuthState) => s.logout);
   const navigate = useNavigate();
 
   function handleLogout() {

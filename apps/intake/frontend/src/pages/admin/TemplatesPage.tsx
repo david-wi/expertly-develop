@@ -14,12 +14,12 @@ import { format } from 'date-fns';
 
 // ── API helpers ──
 
-function fetchTemplateVersions() {
-  return api.get<TemplateVersion[]>('/templates').then((r) => r.data);
+function fetchTemplateVersions(): Promise<TemplateVersion[]> {
+  return api.templates.list();
 }
 
-function fetchIntakeTypes() {
-  return api.get<IntakeType[]>('/intake-types').then((r) => r.data);
+function fetchIntakeTypes(): Promise<IntakeType[]> {
+  return api.intakeTypes.list();
 }
 
 // ── Page ──
@@ -41,10 +41,10 @@ export default function TemplatesPage() {
 
   const createMutation = useMutation({
     mutationFn: (data: { templateName: string; intakeTypeId: string; versionLabel: string }) =>
-      api.post<TemplateVersion>('/templates', data),
-    onSuccess: (res) => {
+      api.templates.create(data),
+    onSuccess: (res: TemplateVersion) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
-      navigate(`/admin/templates/${res.data.templateVersionId}`);
+      navigate(`/admin/templates/${res.templateVersionId}`);
     },
   });
 

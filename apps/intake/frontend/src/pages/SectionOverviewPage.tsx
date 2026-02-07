@@ -15,7 +15,7 @@ import {
   Loader2,
   BookOpen,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type {
   IntakeResponse,
   IntakeSectionInstanceResponse,
@@ -79,9 +79,9 @@ function SectionSkeleton() {
 // ---------------------------------------------------------------------------
 
 export default function SectionOverviewPage() {
-  const { intakeId, sectionInstanceId } = useParams<{
+  const { intakeId, sectionId: sectionInstanceId } = useParams<{
     intakeId: string;
-    sectionInstanceId: string;
+    sectionId: string;
   }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -94,41 +94,28 @@ export default function SectionOverviewPage() {
 
   const { data: intake } = useQuery<IntakeResponse>({
     queryKey: ['intake', intakeId],
-    queryFn: async () => {
-      const res = await api.get<IntakeResponse>(`/intakes/${intakeId}`);
-      return res.data;
-    },
+    queryFn: () => api.intakes.get(intakeId!),
     enabled: !!intakeId,
   });
 
   const { data: section, isLoading: sectionLoading, isError: sectionError } = useQuery<IntakeSectionInstanceResponse>({
     queryKey: ['sectionInstance', sectionInstanceId],
-    queryFn: async () => {
-      const res = await api.get<IntakeSectionInstanceResponse>(
-        `/intakes/${intakeId}/sectionInstances/${sectionInstanceId}`,
-      );
-      return res.data;
-    },
+    queryFn: () => api.sections.get(intakeId!, sectionInstanceId!),
     enabled: !!intakeId && !!sectionInstanceId,
   });
 
   // Fetch all section instances for the same template section (for repeatable tabs)
   const { data: allSections } = useQuery<IntakeSectionInstanceResponse[]>({
     queryKey: ['intakeSections', intakeId],
-    queryFn: async () => {
-      const res = await api.get<IntakeSectionInstanceResponse[]>(
-        `/intakes/${intakeId}/sectionInstances`,
-      );
-      return res.data;
-    },
+    queryFn: () => api.sections.list(intakeId!),
     enabled: !!intakeId,
   });
 
   const { data: questions } = useQuery<IntakeQuestionInstanceResponse[]>({
     queryKey: ['sectionQuestions', sectionInstanceId],
     queryFn: async () => {
-      const res = await api.get<IntakeQuestionInstanceResponse[]>(
-        `/intakes/${intakeId}/sectionInstances/${sectionInstanceId}/questionInstances`,
+      const res = await axiosInstance.get<IntakeQuestionInstanceResponse[]>(
+        `/intakes/${intakeId}/sections/${sectionInstanceId}/questions`,
       );
       return res.data;
     },
@@ -138,8 +125,8 @@ export default function SectionOverviewPage() {
   const { data: narrative } = useQuery<SectionNarrativeSummary>({
     queryKey: ['sectionNarrative', sectionInstanceId],
     queryFn: async () => {
-      const res = await api.get<SectionNarrativeSummary>(
-        `/intakes/${intakeId}/sectionInstances/${sectionInstanceId}/narrative`,
+      const res = await axiosInstance.get<SectionNarrativeSummary>(
+        `/intakes/${intakeId}/sections/${sectionInstanceId}/narrative`,
       );
       return res.data;
     },
@@ -149,13 +136,7 @@ export default function SectionOverviewPage() {
   // ---- Mutations ----
 
   const markCompleteMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.patch<IntakeSectionInstanceResponse>(
-        `/intakes/${intakeId}/sectionInstances/${sectionInstanceId}`,
-        { status: 'complete' },
-      );
-      return res.data;
-    },
+    mutationFn: () => api.sections.markComplete(intakeId!, sectionInstanceId!),
     onSuccess: () => {
       setShowCompleteConfirm(false);
       queryClient.invalidateQueries({ queryKey: ['sectionInstance', sectionInstanceId] });
@@ -165,13 +146,8 @@ export default function SectionOverviewPage() {
   });
 
   const addRepeatMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post<IntakeSectionInstanceResponse>(
-        `/intakes/${intakeId}/sectionInstances`,
-        { templateSectionId: section?.templateSectionId },
-      );
-      return res.data;
-    },
+    mutationFn: () =>
+      api.sections.addRepeatInstance(intakeId!, section!.templateSectionId, {}),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['intakeSections', intakeId] });
       navigate(`/intakes/${intakeId}/sections/${data.intakeSectionInstanceId}`);

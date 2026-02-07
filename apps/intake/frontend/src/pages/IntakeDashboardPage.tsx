@@ -17,7 +17,7 @@ import {
   Plus,
   Loader2,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type {
   IntakeResponse,
   IntakeTypeResponse,
@@ -252,17 +252,14 @@ export default function IntakeDashboardPage() {
 
   const { data: intake, isLoading: intakeLoading, isError } = useQuery<IntakeResponse>({
     queryKey: ['intake', intakeId],
-    queryFn: async () => {
-      const res = await api.get<IntakeResponse>(`/intakes/${intakeId}`);
-      return res.data;
-    },
+    queryFn: () => api.intakes.get(intakeId!),
     enabled: !!intakeId,
   });
 
   const { data: intakeType } = useQuery<IntakeTypeResponse>({
     queryKey: ['intakeType', intake?.intakeTypeId],
     queryFn: async () => {
-      const res = await api.get<IntakeTypeResponse>(`/intakeTypes/${intake!.intakeTypeId}`);
+      const res = await axiosInstance.get<IntakeTypeResponse>(`/intake-types/${intake!.intakeTypeId}`);
       return res.data;
     },
     enabled: !!intake?.intakeTypeId,
@@ -270,19 +267,14 @@ export default function IntakeDashboardPage() {
 
   const { data: sections } = useQuery<IntakeSectionInstanceResponse[]>({
     queryKey: ['intakeSections', intakeId],
-    queryFn: async () => {
-      const res = await api.get<IntakeSectionInstanceResponse[]>(
-        `/intakes/${intakeId}/sectionInstances`,
-      );
-      return res.data;
-    },
+    queryFn: () => api.sections.list(intakeId!),
     enabled: !!intakeId,
   });
 
   const { data: contributors } = useQuery<ContributorResponse[]>({
     queryKey: ['intakeContributors', intakeId],
     queryFn: async () => {
-      const res = await api.get<ContributorResponse[]>(`/intakes/${intakeId}/contributors`);
+      const res = await axiosInstance.get<ContributorResponse[]>(`/intakes/${intakeId}/contributors`);
       return res.data;
     },
     enabled: !!intakeId,
@@ -291,7 +283,7 @@ export default function IntakeDashboardPage() {
   const { data: assignments } = useQuery<AssignmentResponse[]>({
     queryKey: ['intakeAssignments', intakeId],
     queryFn: async () => {
-      const res = await api.get<AssignmentResponse[]>(`/intakes/${intakeId}/assignments`);
+      const res = await axiosInstance.get<AssignmentResponse[]>(`/intakes/${intakeId}/assignments`);
       return res.data;
     },
     enabled: !!intakeId,
@@ -300,7 +292,7 @@ export default function IntakeDashboardPage() {
   const { data: followUps } = useQuery<FollowUpResponse[]>({
     queryKey: ['intakeFollowUps', intakeId],
     queryFn: async () => {
-      const res = await api.get<FollowUpResponse[]>(`/intakes/${intakeId}/followUps`);
+      const res = await axiosInstance.get<FollowUpResponse[]>(`/intakes/${intakeId}/follow-ups`);
       return res.data;
     },
     enabled: !!intakeId,
@@ -308,22 +300,14 @@ export default function IntakeDashboardPage() {
 
   const { data: sessions } = useQuery<SessionResponse[]>({
     queryKey: ['intakeSessions', intakeId],
-    queryFn: async () => {
-      const res = await api.get<SessionResponse[]>(`/intakes/${intakeId}/sessions`);
-      return res.data;
-    },
+    queryFn: () => api.sessions.list(intakeId!),
     enabled: !!intakeId,
   });
 
   // ---- Start Call mutation ----
 
   const startCallMutation = useMutation({
-    mutationFn: async () => {
-      const res = await api.post<SessionResponse>(`/intakes/${intakeId}/sessions`, {
-        sessionType: 'phoneCall',
-      });
-      return res.data;
-    },
+    mutationFn: () => api.sessions.create(intakeId!, { sessionType: 'phoneCall' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['intakeSessions', intakeId] });
     },

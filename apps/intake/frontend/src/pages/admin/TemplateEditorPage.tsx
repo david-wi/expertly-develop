@@ -11,13 +11,13 @@ import {
   ChevronRight,
   X,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type { TemplateVersion, TemplateSection, TemplateQuestion, AnswerType } from '@/types';
 
 // ── API helpers ──
 
-function fetchTemplateVersion(versionId: string) {
-  return api.get<TemplateVersion>(`/templates/${versionId}`).then((r) => r.data);
+function fetchTemplateVersion(versionId: string): Promise<TemplateVersion> {
+  return api.templates.get(versionId);
 }
 
 // ── Page ──
@@ -40,7 +40,7 @@ export default function TemplateEditorPage() {
   });
 
   const publishMutation = useMutation({
-    mutationFn: () => api.post(`/templates/${versionId}/publish`),
+    mutationFn: () => api.templates.publish(versionId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
     },
@@ -53,7 +53,7 @@ export default function TemplateEditorPage() {
       isRepeatable: boolean;
       repeatKeyName?: string;
       applicabilityRuleText?: string;
-    }) => api.post(`/templates/${versionId}/sections`, data),
+    }) => api.templates.createSection(versionId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
       setShowSectionModal(false);
@@ -72,7 +72,7 @@ export default function TemplateEditorPage() {
       isRepeatable: boolean;
       repeatKeyName?: string;
       applicabilityRuleText?: string;
-    }) => api.put(`/templates/${versionId}/sections/${sectionId}`, data),
+    }) => axiosInstance.put(`/templates/${versionId}/sections/${sectionId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
       setShowSectionModal(false);
@@ -93,7 +93,7 @@ export default function TemplateEditorPage() {
       isRequired: boolean;
       answerType: AnswerType;
       applicabilityRuleText?: string;
-    }) => api.post(`/templates/${versionId}/sections/${sectionId}/questions`, data),
+    }) => api.templates.createQuestion(versionId!, sectionId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['template-version', versionId] });
       setShowQuestionModal(null);
@@ -117,7 +117,7 @@ export default function TemplateEditorPage() {
       answerType: AnswerType;
       applicabilityRuleText?: string;
     }) =>
-      api.put(
+      axiosInstance.put(
         `/templates/${versionId}/sections/${sectionId}/questions/${questionId}`,
         data,
       ),

@@ -8,17 +8,17 @@ import {
   Layers,
 } from 'lucide-react';
 import { api } from '@/api/client';
-import type { UsageRollup, Session } from '@/types';
+import type { Session } from '@/types';
 import { format } from 'date-fns';
 
 // ── API helpers ──
 
 function fetchUsageRollup(intakeId: string) {
-  return api.get<UsageRollup>(`/intakes/${intakeId}/usage`).then((r) => r.data);
+  return api.usage.getIntake(intakeId);
 }
 
 function fetchSessions(intakeId: string) {
-  return api.get<Session[]>(`/intakes/${intakeId}/sessions`).then((r) => r.data);
+  return api.sessions.list(intakeId);
 }
 
 // ── Page ──

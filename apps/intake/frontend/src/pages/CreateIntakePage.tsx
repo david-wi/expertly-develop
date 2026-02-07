@@ -63,31 +63,18 @@ export default function CreateIntakePage() {
 
   const { data: intakeTypes, isLoading: typesLoading } = useQuery<IntakeTypeResponse[]>({
     queryKey: ['intakeTypes'],
-    queryFn: async () => {
-      const res = await api.get<IntakeTypeResponse[]>('/intakeTypes');
-      return res.data;
-    },
+    queryFn: () => api.intakeTypes.list(),
   });
 
   const { data: templateVersions } = useQuery<TemplateVersionResponse[]>({
     queryKey: ['templateVersions', intakeTypeId],
-    queryFn: async () => {
-      const res = await api.get<TemplateVersionResponse[]>('/templateVersions', {
-        params: { intakeTypeId },
-      });
-      return res.data;
-    },
+    queryFn: () => api.templates.list({ intakeTypeId }),
     enabled: !!intakeTypeId,
   });
 
   const { data: voiceProfiles } = useQuery<VoiceProfileResponse[]>({
     queryKey: ['voiceProfiles'],
-    queryFn: async () => {
-      const res = await api.get<VoiceProfileResponse[]>('/voiceProfiles', {
-        params: { isEnabled: true },
-      });
-      return res.data;
-    },
+    queryFn: () => api.voiceProfiles.list(),
   });
 
   // Auto-populate defaults when intake type changes
@@ -97,10 +84,10 @@ export default function CreateIntakePage() {
     if (!selected) return;
 
     if (!templateOverride) {
-      setTemplateVersionId(selected.defaultTemplateVersionId);
+      setTemplateVersionId(selected.defaultTemplateVersionId ?? null);
     }
     if (!voiceOverride) {
-      setVoiceProfileId(selected.defaultVoiceProfileId);
+      setVoiceProfileId(selected.defaultVoiceProfileId ?? null);
     }
   }, [intakeTypeId, intakeTypes, templateOverride, voiceOverride]);
 
@@ -108,8 +95,13 @@ export default function CreateIntakePage() {
 
   const createMutation = useMutation({
     mutationFn: async (payload: IntakeCreate) => {
-      const res = await api.post<IntakeResponse>('/intakes', payload);
-      return res.data;
+      return api.intakes.create({
+        intakeName: payload.intakeName,
+        intakeTypeId: payload.intakeTypeId,
+        timezone: payload.timezone,
+        ...(payload.templateVersionId ? { templateVersionId: payload.templateVersionId } : {}),
+        ...(payload.voiceProfileIdOverride ? { voiceProfileIdOverride: payload.voiceProfileIdOverride } : {}),
+      });
     },
     onSuccess: (data) => {
       setCreatedIntake(data);

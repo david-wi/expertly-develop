@@ -7,8 +7,8 @@ import { format } from 'date-fns';
 
 // ── API helpers ──
 
-function fetchVoiceProfiles() {
-  return api.get<VoiceProfile[]>('/voice-profiles').then((r) => r.data);
+function fetchVoiceProfiles(): Promise<VoiceProfile[]> {
+  return api.voiceProfiles.list();
 }
 
 // ── Page ──
@@ -29,7 +29,7 @@ export default function VoicesPage() {
       vapiVoiceId: string;
       notes?: string;
       isEnabled: boolean;
-    }) => api.post('/voice-profiles', data),
+    }) => api.voiceProfiles.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voice-profiles'] });
       setShowModal(false);
@@ -46,7 +46,7 @@ export default function VoicesPage() {
       vapiVoiceId: string;
       notes?: string;
       isEnabled: boolean;
-    }) => api.put(`/voice-profiles/${voiceProfileId}`, data),
+    }) => api.voiceProfiles.update(voiceProfileId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voice-profiles'] });
       setShowModal(false);
@@ -56,7 +56,7 @@ export default function VoicesPage() {
 
   const toggleEnabled = useMutation({
     mutationFn: ({ voiceProfileId, isEnabled }: { voiceProfileId: string; isEnabled: boolean }) =>
-      api.patch(`/voice-profiles/${voiceProfileId}`, { isEnabled }),
+      api.voiceProfiles.update(voiceProfileId, { isEnabled }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['voice-profiles'] });
     },

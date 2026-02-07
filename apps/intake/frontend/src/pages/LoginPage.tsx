@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { useAuthStore, type AuthState } from '@/stores/authStore';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const login = useAuthStore((s) => s.login);
+  const login = useAuthStore((s: AuthState) => s.login);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
