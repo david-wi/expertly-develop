@@ -228,7 +228,7 @@ function formatStatus(status: Idea['status']): string {
     case 'new':
       return 'New'
     case 'in_progress':
-      return 'Exploring'
+      return 'In Progress'
     case 'done':
       return 'Implemented'
     case 'archived':
@@ -810,7 +810,7 @@ function CreateIdeaModal({
                 className="w-full px-3 py-2 bg-theme-bg-elevated border border-theme-border rounded-lg text-theme-text-primary focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
                 <option value="new">New</option>
-                <option value="in_progress">Exploring</option>
+                <option value="in_progress">In Progress</option>
                 <option value="done">Implemented</option>
                 <option value="archived">Archived</option>
               </select>
@@ -953,13 +953,16 @@ export function IdeaBacklog() {
     queryKey: ['ideas', productFilter, statusFilter, priorityFilter, includeArchived, userEmail, organizationId, itemType],
     queryFn: () => ideasApi.list({
       product: productFilter || undefined,
-      status: statusFilter || undefined,
+      status: statusFilter && statusFilter !== 'active' ? statusFilter : undefined,
       priority: priorityFilter || undefined,
       include_archived: includeArchived,
       user_email: userEmail || undefined,
       organization_id: organizationId || undefined,
       item_type: itemType,
     }),
+    select: (data) => statusFilter === 'active'
+      ? data.filter(i => i.status === 'new' || i.status === 'in_progress')
+      : data,
   })
 
   // Combined loading state
@@ -1243,7 +1246,7 @@ export function IdeaBacklog() {
             </div>
             <div>
               <p className="text-2xl font-bold text-theme-text-primary">{exploringCount}</p>
-              <p className="text-sm text-theme-text-secondary">Exploring</p>
+              <p className="text-sm text-theme-text-secondary">In Progress</p>
             </div>
           </div>
         </div>
@@ -1288,7 +1291,7 @@ export function IdeaBacklog() {
             >
               <option value="" disabled>Change Status...</option>
               <option value="new">New</option>
-              <option value="in_progress">Exploring</option>
+              <option value="in_progress">In Progress</option>
               <option value="done">Implemented</option>
               <option value="archived">Archive</option>
             </select>
@@ -1334,8 +1337,9 @@ export function IdeaBacklog() {
             className="px-3 py-1.5 bg-theme-bg-elevated border border-theme-border rounded-lg text-sm text-theme-text-primary"
           >
             <option value="">All Statuses</option>
+            <option value="active">All Active</option>
             <option value="new">New</option>
-            <option value="in_progress">Exploring</option>
+            <option value="in_progress">In Progress</option>
             <option value="done">Implemented</option>
             <option value="archived">Archived</option>
           </select>
