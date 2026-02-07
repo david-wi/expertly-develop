@@ -3,3 +3,4 @@
 20260206 Add New Product button to Dashboard page
 20250207 Fix 504 timeout on Generate Requirements from Artifacts - Convert synchronous POST /api/v1/ai/generate-from-artifacts to async job pattern with polling, update frontend dialog to poll, increase nginx proxy timeout
 20260207 - Four Define fixes: (1) Can't blank out product description - restores old value, (2) Artifact card layout - right-align metadata row with status at end, (3) Generate Requirements dialog - preselect ungenerated artifacts, (4) Generate Requirements progress indicator for Analyzing Documents step
+20260207 - Add Copy link to DocumentView to copy formatted requirements document content to clipboard
