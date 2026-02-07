@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
-import type { MarginDashboard as MarginDashboardData } from '../types'
+import type { MarginDashboard as MarginDashboardData, CustomerProfitabilityDetail } from '../types'
 import {
   TrendingUp,
   TrendingDown,
@@ -13,12 +13,20 @@ import {
   Truck,
   MapPin,
   BarChart3,
+  Sparkles,
+  Users,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 
 export default function MarginDashboard() {
   const [data, setData] = useState<MarginDashboardData | null>(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(30)
+  const [profitability, setProfitability] = useState<CustomerProfitabilityDetail[]>([])
+  const [profitabilityLoading, setProfitabilityLoading] = useState(false)
+  const [showProfitability, setShowProfitability] = useState(false)
+  const [expandedCustomer, setExpandedCustomer] = useState<string | null>(null)
 
   useEffect(() => {
     fetchData()
@@ -35,6 +43,24 @@ export default function MarginDashboard() {
       setLoading(false)
     }
   }
+
+  const fetchProfitability = async () => {
+    setProfitabilityLoading(true)
+    try {
+      const result = await api.getCustomerProfitability({ period: days <= 30 ? '30d' : days <= 90 ? '90d' : '1y' })
+      setProfitability(result.customers || [])
+    } catch (error) {
+      console.error('Failed to fetch profitability:', error)
+    } finally {
+      setProfitabilityLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showProfitability) {
+      fetchProfitability()
+    }
+  }, [showProfitability, days])
 
   const formatCurrency = (cents: number) => {
     return `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
@@ -376,6 +402,173 @@ export default function MarginDashboard() {
           </div>
         </div>
       )}
+
+      {/* Customer Profitability Section */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <button
+          onClick={() => setShowProfitability(!showProfitability)}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors rounded-xl"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Users className="h-5 w-5 text-indigo-600" />
+            Customer Profitability Analysis
+            <span className="text-xs text-gray-400 font-normal ml-2">AI-powered insights</span>
+          </h2>
+          {showProfitability ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
+
+        {showProfitability && (
+          <div className="px-6 pb-6 space-y-4">
+            {profitabilityLoading ? (
+              <div className="py-8 text-center text-gray-500">
+                <div className="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2" />
+                Analyzing customer profitability...
+              </div>
+            ) : profitability.length === 0 ? (
+              <div className="py-8 text-center text-gray-500">
+                <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p>No profitability data available</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {profitability.map((customer) => (
+                  <div key={customer.customer_id} className="border border-gray-200 rounded-lg overflow-hidden">
+                    <button
+                      onClick={() => setExpandedCustomer(expandedCustomer === customer.customer_id ? null : customer.customer_id)}
+                      className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className={`p-2 rounded-lg ${
+                          customer.margin_percent >= 15 ? 'bg-emerald-100' :
+                          customer.margin_percent >= 10 ? 'bg-amber-100' : 'bg-red-100'
+                        }`}>
+                          <Building2 className={`h-4 w-4 ${
+                            customer.margin_percent >= 15 ? 'text-emerald-600' :
+                            customer.margin_percent >= 10 ? 'text-amber-600' : 'text-red-600'
+                          }`} />
+                        </div>
+                        <div className="text-left">
+                          <p className="font-semibold text-gray-900">{customer.customer_name}</p>
+                          <p className="text-sm text-gray-500">{customer.shipment_count} shipments</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-6">
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Revenue</p>
+                          <p className="font-semibold text-gray-900">{formatCurrency(customer.total_revenue)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-gray-500">Margin</p>
+                          <p className={`font-semibold ${getMarginColor(customer.margin_percent)}`}>
+                            {customer.margin_percent.toFixed(1)}%
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {customer.trend_direction === 'improving' ? (
+                            <TrendingUp className="h-4 w-4 text-emerald-500" />
+                          ) : customer.trend_direction === 'declining' ? (
+                            <TrendingDown className="h-4 w-4 text-red-500" />
+                          ) : (
+                            <ArrowRight className="h-4 w-4 text-gray-400" />
+                          )}
+                          <span className={`text-xs font-medium ${
+                            customer.trend_direction === 'improving' ? 'text-emerald-600' :
+                            customer.trend_direction === 'declining' ? 'text-red-600' : 'text-gray-500'
+                          }`}>
+                            {customer.trend_change_percent > 0 ? '+' : ''}{customer.trend_change_percent.toFixed(1)}%
+                          </span>
+                        </div>
+                        {expandedCustomer === customer.customer_id ? (
+                          <ChevronUp className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4 text-gray-400" />
+                        )}
+                      </div>
+                    </button>
+
+                    {expandedCustomer === customer.customer_id && (
+                      <div className="px-5 pb-5 border-t border-gray-200 bg-gray-50 space-y-4">
+                        {/* Cost Breakdown */}
+                        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 pt-4">
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-500">Carrier Cost</p>
+                            <p className="text-sm font-semibold text-gray-900">{formatCurrency(customer.cost_breakdown.carrier_cost)}</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-500">Accessorials</p>
+                            <p className="text-sm font-semibold text-gray-900">{formatCurrency(customer.cost_breakdown.accessorial_cost)}</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-500">Quick Pay</p>
+                            <p className="text-sm font-semibold text-gray-900">{formatCurrency(customer.cost_breakdown.quick_pay_discount)}</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-500">Total Cost</p>
+                            <p className="text-sm font-semibold text-red-600">{formatCurrency(customer.cost_breakdown.total_cost)}</p>
+                          </div>
+                          <div className="bg-white rounded-lg p-3 border border-gray-200">
+                            <p className="text-xs text-gray-500">Net Margin</p>
+                            <p className={`text-sm font-semibold ${getMarginColor(customer.margin_percent)}`}>
+                              {formatCurrency(customer.total_margin)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Monthly Trend Mini Chart */}
+                        {customer.monthly_data && customer.monthly_data.length > 0 && (
+                          <div className="bg-white rounded-lg p-4 border border-gray-200">
+                            <h4 className="text-sm font-semibold text-gray-700 mb-3">Monthly Margin Trend</h4>
+                            <div className="h-24 flex items-end gap-1">
+                              {customer.monthly_data.map((m, idx) => {
+                                const maxM = Math.max(...customer.monthly_data.map(d => d.margin))
+                                const h = maxM > 0 ? (Math.max(m.margin, 0) / maxM) * 100 : 0
+                                return (
+                                  <div key={idx} className="flex-1 flex flex-col items-center gap-1" title={`${m.month}: ${m.margin_percent.toFixed(1)}%`}>
+                                    <div
+                                      className={`w-full rounded-t ${
+                                        m.margin_percent >= 15 ? 'bg-emerald-400' :
+                                        m.margin_percent >= 10 ? 'bg-amber-400' : 'bg-red-400'
+                                      }`}
+                                      style={{ height: `${Math.max(h, 4)}%` }}
+                                    />
+                                    <span className="text-xs text-gray-400">{m.month.slice(5)}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* AI Insights */}
+                        {customer.ai_insights && customer.ai_insights.length > 0 && (
+                          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
+                            <h4 className="text-sm font-semibold text-indigo-900 flex items-center gap-2 mb-2">
+                              <Sparkles className="h-4 w-4 text-indigo-600" />
+                              AI Insights
+                            </h4>
+                            <ul className="space-y-1.5">
+                              {customer.ai_insights.map((insight, idx) => (
+                                <li key={idx} className="text-sm text-indigo-800 flex items-start gap-2">
+                                  <span className="text-indigo-400 mt-1">--</span>
+                                  {insight}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

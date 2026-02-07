@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { apiExtensions } from '../services/api-extensions'
-import type { Carrier, Shipment } from '../types'
+import type { Carrier, Shipment, DOTCompliance } from '../types'
 import type {
   CarrierInsurance,
   CarrierComplianceRecord,
@@ -29,7 +29,23 @@ import {
   XCircle,
   RefreshCw,
   Calendar,
+  MapPin,
+  DollarSign,
+  MessageSquare,
+  ClipboardList,
+  Sparkles,
 } from 'lucide-react'
+import type {
+  CapacityPosting,
+  NegotiationHistory,
+  NegotiationRecord,
+  CounterOffer,
+  OnboardingDashboard,
+  OnboardingDashboardItem,
+  CapacityHeatmapItem,
+  WaterfallStatus,
+  WaterfallConfig,
+} from '../types'
 
 const carrierStatusConfig: Record<string, { bg: string; text: string }> = {
   active: { bg: 'bg-emerald-100', text: 'text-emerald-700' },
@@ -46,7 +62,7 @@ const complianceStatusColors: Record<string, { bg: string; text: string; icon: t
   expired: { bg: 'bg-red-100', text: 'text-red-700', icon: XCircle },
 }
 
-type Tab = 'overview' | 'compliance' | 'insurance' | 'performance' | 'loads'
+type Tab = 'overview' | 'compliance' | 'insurance' | 'performance' | 'loads' | 'capacity' | 'negotiations' | 'onboarding' | 'dot_compliance'
 
 export default function CarrierDetail() {
   const { id } = useParams<{ id: string }>()
@@ -60,6 +76,11 @@ export default function CarrierDetail() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<Tab>('overview')
   const [runningCheck, setRunningCheck] = useState(false)
+
+  // DOT Compliance state
+  const [dotCompliance, setDotCompliance] = useState<DOTCompliance | null>(null)
+  const [dotLoading, setDotLoading] = useState(false)
+  const [dotCheckRunning, setDotCheckRunning] = useState(false)
 
   // Insurance form
   const [showInsuranceForm, setShowInsuranceForm] = useState(false)
@@ -95,6 +116,7 @@ export default function CarrierDetail() {
     }
     if (activeTab === 'insurance') fetchInsuranceRecords()
     if (activeTab === 'loads') fetchShipments()
+    if (activeTab === 'dot_compliance') fetchDOTCompliance()
   }, [activeTab, carrier])
 
   const fetchCarrier = async () => {
@@ -146,6 +168,32 @@ export default function CarrierDetail() {
       setShipments(data)
     } catch (error) {
       console.error('Failed to fetch shipments:', error)
+    }
+  }
+
+  const fetchDOTCompliance = async () => {
+    if (!id) return
+    setDotLoading(true)
+    try {
+      const data = await api.getDOTCompliance(id)
+      setDotCompliance(data)
+    } catch (error) {
+      console.error('Failed to fetch DOT compliance:', error)
+    } finally {
+      setDotLoading(false)
+    }
+  }
+
+  const handleRunDOTCheck = async () => {
+    if (!id) return
+    setDotCheckRunning(true)
+    try {
+      const data = await api.runDOTComplianceCheck(id)
+      setDotCompliance(data)
+    } catch (error) {
+      console.error('Failed to run DOT check:', error)
+    } finally {
+      setDotCheckRunning(false)
     }
   }
 
@@ -226,6 +274,10 @@ export default function CarrierDetail() {
     { key: 'overview', label: 'Overview', icon: Building2 },
     { key: 'compliance', label: 'Compliance', icon: Shield },
     { key: 'insurance', label: 'Insurance', icon: FileCheck },
+    { key: 'capacity', label: 'Capacity', icon: MapPin },
+    { key: 'negotiations', label: 'Negotiations', icon: DollarSign },
+    { key: 'dot_compliance', label: 'DOT/FMCSA', icon: Sparkles },
+    { key: 'onboarding', label: 'Onboarding', icon: ClipboardList },
     { key: 'performance', label: 'Performance', icon: BarChart3 },
     { key: 'loads', label: 'Load History', icon: Truck },
   ]
@@ -826,6 +878,21 @@ export default function CarrierDetail() {
         </div>
       )}
 
+      {/* Capacity Tab */}
+      {activeTab === 'capacity' && (
+        <CarrierCapacityTab carrierId={id!} carrierName={carrier.name} />
+      )}
+
+      {/* Negotiations Tab */}
+      {activeTab === 'negotiations' && (
+        <CarrierNegotiationsTab carrierId={id!} />
+      )}
+
+      {/* Onboarding Tab */}
+      {activeTab === 'onboarding' && (
+        <CarrierOnboardingTab carrierId={id!} carrierName={carrier.name} />
+      )}
+
       {/* Load History Tab */}
       {activeTab === 'loads' && (
         <div className="space-y-4">
@@ -881,6 +948,739 @@ export default function CarrierDetail() {
               </table>
             )}
           </div>
+        </div>
+      )}
+      {/* DOT/FMCSA Compliance Tab */}
+      {activeTab === 'dot_compliance' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">DOT/FMCSA Compliance</h3>
+              <p className="text-sm text-gray-500">Federal safety ratings, CSA scores, and compliance tracking</p>
+            </div>
+            <button
+              onClick={handleRunDOTCheck}
+              disabled={dotCheckRunning}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${dotCheckRunning ? 'animate-spin' : ''}`} />
+              {dotCheckRunning ? 'Checking...' : 'Run DOT Check'}
+            </button>
+          </div>
+
+          {dotLoading ? (
+            <div className="py-8 text-center text-gray-500">
+              <div className="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2" />
+              Loading DOT compliance data...
+            </div>
+          ) : !dotCompliance ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+              <Shield className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No DOT compliance data available</p>
+              <p className="text-sm text-gray-400 mt-2">Click &quot;Run DOT Check&quot; to fetch FMCSA data for this carrier</p>
+            </div>
+          ) : (
+            <>
+              {/* Overall Score and Status */}
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className={`rounded-lg border p-5 ${
+                  dotCompliance.overall_compliance_score >= 80 ? 'border-emerald-200 bg-emerald-50' :
+                  dotCompliance.overall_compliance_score >= 60 ? 'border-amber-200 bg-amber-50' :
+                  'border-red-200 bg-red-50'
+                }`}>
+                  <div className="text-sm font-medium text-gray-600">Overall Score</div>
+                  <div className={`text-3xl font-bold mt-1 ${
+                    dotCompliance.overall_compliance_score >= 80 ? 'text-emerald-600' :
+                    dotCompliance.overall_compliance_score >= 60 ? 'text-amber-600' : 'text-red-600'
+                  }`}>
+                    {dotCompliance.overall_compliance_score}/100
+                  </div>
+                  <div className="mt-2 h-2 bg-white/50 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${
+                        dotCompliance.overall_compliance_score >= 80 ? 'bg-emerald-500' :
+                        dotCompliance.overall_compliance_score >= 60 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${dotCompliance.overall_compliance_score}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border border-gray-200 p-5">
+                  <div className="text-sm font-medium text-gray-500">FMCSA Safety Rating</div>
+                  <div className="text-2xl font-bold text-gray-900 mt-1">
+                    {dotCompliance.fmcsa_safety_rating || 'Not Rated'}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Status: {dotCompliance.fmcsa_status || 'Unknown'}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border border-gray-200 p-5">
+                  <div className="text-sm font-medium text-gray-500">Operating Status</div>
+                  <div className={`text-2xl font-bold mt-1 ${
+                    dotCompliance.operating_status === 'Authorized' ? 'text-emerald-600' : 'text-red-600'
+                  }`}>
+                    {dotCompliance.operating_status || 'Unknown'}
+                  </div>
+                  <div className="text-xs text-gray-400 mt-1">
+                    Authority: {dotCompliance.authority_status || 'Unknown'}
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-lg border border-gray-200 p-5">
+                  <div className="text-sm font-medium text-gray-500">Insurance on File</div>
+                  <div className={`text-2xl font-bold mt-1 ${
+                    dotCompliance.insurance_on_file ? 'text-emerald-600' : 'text-red-600'
+                  }`}>
+                    {dotCompliance.insurance_on_file ? 'Yes' : 'No'}
+                  </div>
+                  {dotCompliance.dot_number && (
+                    <div className="text-xs text-gray-400 mt-1">DOT# {dotCompliance.dot_number}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* CSA Scores */}
+              {dotCompliance.csa_scores && Object.keys(dotCompliance.csa_scores).length > 0 && (
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">CSA BASIC Scores</h4>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {Object.entries(dotCompliance.csa_scores).map(([category, score]) => {
+                      const threshold = category === 'HOS Compliance' ? 65 :
+                                        category === 'Unsafe Driving' ? 65 :
+                                        category === 'Crash Indicator' ? 65 :
+                                        category === 'Vehicle Maintenance' ? 80 :
+                                        category === 'Driver Fitness' ? 80 :
+                                        category === 'Controlled Substances' ? 80 : 75
+                      const isAbove = score > threshold
+                      return (
+                        <div key={category} className={`rounded-lg p-4 border ${
+                          isAbove ? 'border-red-200 bg-red-50' : 'border-gray-200'
+                        }`}>
+                          <div className="text-xs font-medium text-gray-500 mb-1">{category}</div>
+                          <div className={`text-2xl font-bold ${
+                            isAbove ? 'text-red-600' : score > threshold * 0.7 ? 'text-amber-600' : 'text-emerald-600'
+                          }`}>
+                            {score}
+                          </div>
+                          <div className="mt-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                isAbove ? 'bg-red-500' : score > threshold * 0.7 ? 'bg-amber-500' : 'bg-emerald-500'
+                              }`}
+                              style={{ width: `${Math.min(score, 100)}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-400 mt-1">Threshold: {threshold}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Safety & Operations Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Drug Testing & HOS */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Driver Safety</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Drug Testing Enrolled</span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        dotCompliance.drug_testing_enrolled ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {dotCompliance.drug_testing_enrolled ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Drug Testing Compliant</span>
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        dotCompliance.drug_testing_compliant ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {dotCompliance.drug_testing_compliant ? 'Compliant' : 'Non-Compliant'}
+                      </span>
+                    </div>
+                    {dotCompliance.drug_testing_last_test && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-600">Last Test Date</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {new Date(dotCompliance.drug_testing_last_test).toLocaleDateString()}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">HOS Violations</span>
+                      <span className={`text-sm font-bold ${
+                        dotCompliance.hos_violation_count > 0 ? 'text-red-600' : 'text-emerald-600'
+                      }`}>
+                        {dotCompliance.hos_violation_count}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Inspections & Crashes */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide mb-4">Inspection History</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Total Inspections</span>
+                      <span className="text-sm font-bold text-gray-900">{dotCompliance.inspection_count}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Out-of-Service Rate</span>
+                      <span className={`text-sm font-bold ${
+                        dotCompliance.out_of_service_rate > 25 ? 'text-red-600' :
+                        dotCompliance.out_of_service_rate > 15 ? 'text-amber-600' : 'text-emerald-600'
+                      }`}>
+                        {dotCompliance.out_of_service_rate.toFixed(1)}%
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Crash Count</span>
+                      <span className={`text-sm font-bold ${
+                        dotCompliance.crash_count > 0 ? 'text-red-600' : 'text-emerald-600'
+                      }`}>
+                        {dotCompliance.crash_count}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Compliance Alerts */}
+              {dotCompliance.compliance_alerts && dotCompliance.compliance_alerts.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-5">
+                  <h4 className="text-sm font-semibold text-red-800 flex items-center gap-2 mb-3">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                    Compliance Alerts ({dotCompliance.compliance_alerts.length})
+                  </h4>
+                  <ul className="space-y-2">
+                    {dotCompliance.compliance_alerts.map((alert, idx) => (
+                      <li key={idx} className="text-sm text-red-700 flex items-start gap-2">
+                        <XCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
+                        {alert}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Last Checked */}
+              {dotCompliance.last_checked_at && (
+                <div className="text-xs text-gray-400 text-right">
+                  Last checked: {new Date(dotCompliance.last_checked_at).toLocaleString()}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ============================================================================
+// Carrier Capacity Tab Component
+// ============================================================================
+
+function CarrierCapacityTab({ carrierId, carrierName }: { carrierId: string; carrierName: string }) {
+  const [capacityPostings, setCapacityPostings] = useState<CapacityPosting[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({
+    equipment_type: 'van',
+    truck_count: 1,
+    available_date: '',
+    origin_city: '',
+    origin_state: '',
+    destination_city: '',
+    destination_state: '',
+    notes: '',
+    rate_per_mile_target: '',
+    expires_hours: 48,
+  })
+
+  useEffect(() => {
+    fetchCapacity()
+  }, [carrierId])
+
+  const fetchCapacity = async () => {
+    try {
+      const data = await api.getAvailableCapacity()
+      setCapacityPostings(data.filter((c: CapacityPosting) => c.carrier_id === carrierId))
+    } catch (error) {
+      console.error('Failed to fetch capacity:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await api.postCarrierCapacity(carrierId, {
+        equipment_type: form.equipment_type,
+        truck_count: form.truck_count,
+        available_date: form.available_date || undefined,
+        origin_city: form.origin_city || undefined,
+        origin_state: form.origin_state || undefined,
+        destination_city: form.destination_city || undefined,
+        destination_state: form.destination_state || undefined,
+        notes: form.notes || undefined,
+        rate_per_mile_target: form.rate_per_mile_target ? parseFloat(form.rate_per_mile_target) : undefined,
+        expires_hours: form.expires_hours,
+      })
+      setShowForm(false)
+      fetchCapacity()
+    } catch (error) {
+      console.error('Failed to post capacity:', error)
+    }
+  }
+
+  const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Available Capacity</h3>
+          <p className="text-sm text-gray-500">Track and post available trucks for this carrier</p>
+        </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm"
+        >
+          <Plus className="h-4 w-4" />
+          Post Capacity
+        </button>
+      </div>
+
+      {/* Capacity Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg w-full max-w-lg mx-4">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Post Available Capacity</h2>
+              <button onClick={() => setShowForm(false)} className="p-1 text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Equipment Type</label>
+                  <select value={form.equipment_type} onChange={(e) => setForm({ ...form, equipment_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                    <option value="van">Dry Van</option>
+                    <option value="reefer">Reefer</option>
+                    <option value="flatbed">Flatbed</option>
+                    <option value="step_deck">Step Deck</option>
+                    <option value="power_only">Power Only</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck Count</label>
+                  <input type="number" min={1} value={form.truck_count}
+                    onChange={(e) => setForm({ ...form, truck_count: parseInt(e.target.value) || 1 })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+                  <input type="text" value={form.origin_city} onChange={(e) => setForm({ ...form, origin_city: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="e.g., Chicago" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Origin State</label>
+                  <input type="text" value={form.origin_state} onChange={(e) => setForm({ ...form, origin_state: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="e.g., IL" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Destination City</label>
+                  <input type="text" value={form.destination_city} onChange={(e) => setForm({ ...form, destination_city: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="e.g., Dallas" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Destination State</label>
+                  <input type="text" value={form.destination_state} onChange={(e) => setForm({ ...form, destination_state: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="e.g., TX" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Available Date</label>
+                  <input type="date" value={form.available_date} onChange={(e) => setForm({ ...form, available_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Rate/Mile ($)</label>
+                  <input type="number" step="0.01" value={form.rate_per_mile_target}
+                    onChange={(e) => setForm({ ...form, rate_per_mile_target: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" placeholder="e.g., 2.50" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <textarea rows={2} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="submit" className="flex-1 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                  Post Capacity
+                </button>
+                <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Capacity Cards */}
+      {loading ? (
+        <div className="text-center py-8 text-gray-500">Loading...</div>
+      ) : capacityPostings.length === 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+          <Truck className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+          <p>No capacity postings for this carrier</p>
+          <p className="text-xs mt-1">Post available trucks to match with open loads</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {capacityPostings.map((cp) => (
+            <div key={cp.id} className="bg-white rounded-lg border border-gray-200 p-5">
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded">
+                      {cp.equipment_type}
+                    </span>
+                    <span className="text-sm font-medium text-gray-900">{cp.truck_count} truck{cp.truck_count > 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="mt-2 text-sm text-gray-600">
+                    {cp.origin_city && cp.origin_state
+                      ? `${cp.origin_city}, ${cp.origin_state}`
+                      : cp.origin_state || 'Any origin'}
+                    {' -> '}
+                    {cp.destination_city && cp.destination_state
+                      ? `${cp.destination_city}, ${cp.destination_state}`
+                      : cp.destination_state || 'Any destination'}
+                  </div>
+                </div>
+                <div className="text-right">
+                  {cp.ai_matched_loads > 0 && (
+                    <div className="flex items-center gap-1 text-emerald-600 text-xs font-medium">
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      {cp.ai_matched_loads} matching loads
+                    </div>
+                  )}
+                  {cp.rate_per_mile_target && (
+                    <div className="text-sm font-medium text-gray-900 mt-1">
+                      ${cp.rate_per_mile_target}/mi
+                    </div>
+                  )}
+                </div>
+              </div>
+              {cp.notes && <p className="mt-2 text-xs text-gray-500">{cp.notes}</p>}
+              <div className="mt-3 flex items-center justify-between text-xs text-gray-400">
+                <span>{cp.available_date ? `Available: ${new Date(cp.available_date).toLocaleDateString()}` : ''}</span>
+                <span>{cp.expires_at ? `Expires: ${new Date(cp.expires_at).toLocaleDateString()}` : ''}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ============================================================================
+// Carrier Negotiations Tab Component
+// ============================================================================
+
+function CarrierNegotiationsTab({ carrierId }: { carrierId: string }) {
+  const [history, setHistory] = useState<NegotiationHistory | null>(null)
+  const [selectedNegotiation, setSelectedNegotiation] = useState<NegotiationRecord | null>(null)
+  const [counterOfferRate, setCounterOfferRate] = useState('')
+  const [counterOfferNotes, setCounterOfferNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchHistory()
+  }, [carrierId])
+
+  const fetchHistory = async () => {
+    try {
+      const data = await api.getNegotiationHistory({ carrier_id: carrierId })
+      setHistory(data)
+    } catch (error) {
+      console.error('Failed to fetch negotiation history:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+
+  const handleSubmitCounterOffer = async (tenderId: string) => {
+    if (!counterOfferRate) return
+    setSubmitting(true)
+    try {
+      await api.createCounterOffer(tenderId, {
+        counter_rate: Math.round(parseFloat(counterOfferRate) * 100),
+        notes: counterOfferNotes || undefined,
+      })
+      setCounterOfferRate('')
+      setCounterOfferNotes('')
+      fetchHistory()
+    } catch (error) {
+      console.error('Failed to submit counter-offer:', error)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleAcceptCounter = async (tenderId: string) => {
+    try {
+      await api.acceptCounterOffer(tenderId)
+      fetchHistory()
+      setSelectedNegotiation(null)
+    } catch (error) {
+      console.error('Failed to accept counter-offer:', error)
+    }
+  }
+
+  if (loading) return <div className="text-center py-8 text-gray-500">Loading...</div>
+  if (!history) return <div className="text-center py-8 text-gray-500">Failed to load negotiations</div>
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm text-gray-500">Total Negotiations</div>
+          <div className="text-2xl font-bold text-gray-900">{history.total_negotiations}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm text-gray-500">Accepted</div>
+          <div className="text-2xl font-bold text-emerald-600">{history.accepted_count}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm text-gray-500">Avg Negotiation Rounds</div>
+          <div className="text-2xl font-bold text-gray-900">{history.average_rounds.toFixed(1)}</div>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="text-sm text-gray-500">Total Savings</div>
+          <div className="text-2xl font-bold text-blue-600">{formatCurrency(history.total_savings_cents)}</div>
+        </div>
+      </div>
+
+      {/* Negotiation Records */}
+      <h3 className="text-lg font-semibold text-gray-900">Rate Negotiation History</h3>
+      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        {history.negotiations.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <MessageSquare className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+            <p>No negotiation history for this carrier</p>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lane</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Offered Rate</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Counter</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Final</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Rounds</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {history.negotiations.map((n) => (
+                <tr key={n.tender_id} className="hover:bg-gray-50 cursor-pointer" onClick={() => setSelectedNegotiation(selectedNegotiation?.tender_id === n.tender_id ? null : n)}>
+                  <td className="px-4 py-3 text-sm">
+                    <div className="font-medium text-gray-900">{n.lane || '-'}</div>
+                    <div className="text-xs text-gray-500">{n.origin} - {n.destination}</div>
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                      n.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                      n.status === 'declined' ? 'bg-red-100 text-red-700' :
+                      n.status === 'sent' ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {n.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-right text-gray-900">{formatCurrency(n.offered_rate)}</td>
+                  <td className="px-4 py-3 text-sm text-right text-amber-600">
+                    {n.counter_offer_rate ? formatCurrency(n.counter_offer_rate) : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-right font-medium text-gray-900">
+                    {n.final_rate ? formatCurrency(n.final_rate) : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-center">
+                    {n.negotiation_rounds > 0 ? (
+                      <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded">
+                        {n.negotiation_rounds}
+                      </span>
+                    ) : '-'}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    {n.created_at ? new Date(n.created_at).toLocaleDateString() : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Counter-Offer Thread Detail Panel */}
+      {selectedNegotiation && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900">Negotiation Thread</h4>
+              <p className="text-sm text-gray-500">
+                {selectedNegotiation.lane || `${selectedNegotiation.origin} - ${selectedNegotiation.destination}`}
+                {' '}&middot; {selectedNegotiation.carrier_name}
+              </p>
+            </div>
+            <button onClick={() => setSelectedNegotiation(null)} className="p-1 text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Thread Timeline */}
+          <div className="space-y-4 mb-6">
+            {/* Initial Offer */}
+            <div className="flex gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                <DollarSign className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="flex-1 bg-blue-50 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-blue-900">Initial Offer (Broker)</span>
+                  <span className="text-xs text-blue-600">{selectedNegotiation.created_at ? new Date(selectedNegotiation.created_at).toLocaleString() : ''}</span>
+                </div>
+                <div className="text-lg font-bold text-blue-900 mt-1">{formatCurrency(selectedNegotiation.offered_rate)}</div>
+              </div>
+            </div>
+
+            {/* Counter-Offers Thread */}
+            {selectedNegotiation.counter_offers && selectedNegotiation.counter_offers.map((co, idx) => (
+              <div key={co.id || idx} className="flex gap-3">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${co.offered_by === 'carrier' ? 'bg-amber-100' : 'bg-blue-100'}`}>
+                  <MessageSquare className={`h-4 w-4 ${co.offered_by === 'carrier' ? 'text-amber-600' : 'text-blue-600'}`} />
+                </div>
+                <div className={`flex-1 rounded-lg p-3 ${co.offered_by === 'carrier' ? 'bg-amber-50' : 'bg-blue-50'}`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-medium ${co.offered_by === 'carrier' ? 'text-amber-900' : 'text-blue-900'}`}>
+                      Round {co.round_number} Counter ({co.offered_by === 'carrier' ? 'Carrier' : 'Broker'})
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {co.auto_accepted && (
+                        <span className="text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">Auto-Accepted</span>
+                      )}
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        co.status === 'accepted' ? 'bg-emerald-100 text-emerald-700' :
+                        co.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>{co.status}</span>
+                      <span className="text-xs text-gray-500">{co.created_at ? new Date(co.created_at).toLocaleString() : ''}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-1">
+                    <div>
+                      <span className="text-xs text-gray-500">Was: </span>
+                      <span className="text-sm text-gray-500 line-through">{formatCurrency(co.original_rate)}</span>
+                    </div>
+                    <div>
+                      <span className="text-xs text-gray-500">Counter: </span>
+                      <span className={`text-lg font-bold ${co.offered_by === 'carrier' ? 'text-amber-900' : 'text-blue-900'}`}>{formatCurrency(co.counter_rate)}</span>
+                    </div>
+                  </div>
+                  {co.notes && <p className="text-sm text-gray-600 mt-1">{co.notes}</p>}
+                </div>
+              </div>
+            ))}
+
+            {/* Final Rate */}
+            {selectedNegotiation.final_rate && (
+              <div className="flex gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                </div>
+                <div className="flex-1 bg-emerald-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-emerald-900">Final Agreed Rate</span>
+                    <span className="text-xs text-emerald-600">{selectedNegotiation.responded_at ? new Date(selectedNegotiation.responded_at).toLocaleString() : ''}</span>
+                  </div>
+                  <div className="text-lg font-bold text-emerald-900 mt-1">{formatCurrency(selectedNegotiation.final_rate)}</div>
+                  <div className="text-xs text-emerald-700 mt-1">
+                    Savings: {formatCurrency(Math.abs(selectedNegotiation.offered_rate - selectedNegotiation.final_rate))}
+                    {' '}({((Math.abs(selectedNegotiation.offered_rate - selectedNegotiation.final_rate) / selectedNegotiation.offered_rate) * 100).toFixed(1)}%)
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* New Counter-Offer Form (only for active negotiations) */}
+          {selectedNegotiation.status === 'sent' && (
+            <div className="border-t border-gray-200 pt-4">
+              <h5 className="text-sm font-medium text-gray-900 mb-3">Submit Counter-Offer</h5>
+              <div className="flex items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Counter Rate ($)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={counterOfferRate}
+                    onChange={(e) => setCounterOfferRate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="e.g., 2500.00"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-gray-500 mb-1">Notes (optional)</label>
+                  <input
+                    type="text"
+                    value={counterOfferNotes}
+                    onChange={(e) => setCounterOfferNotes(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 text-sm"
+                    placeholder="Reason for counter..."
+                  />
+                </div>
+                <button
+                  onClick={() => handleSubmitCounterOffer(selectedNegotiation.tender_id)}
+                  disabled={submitting || !counterOfferRate}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 text-sm whitespace-nowrap"
+                >
+                  {submitting ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Send Counter'}
+                </button>
+                <button
+                  onClick={() => handleAcceptCounter(selectedNegotiation.tender_id)}
+                  disabled={submitting}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 text-sm whitespace-nowrap"
+                >
+                  Accept
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

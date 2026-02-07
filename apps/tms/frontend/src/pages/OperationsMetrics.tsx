@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
-import type { OperationsMetrics as OperationsMetricsData } from '../types'
+import type {
+  OperationsMetrics as OperationsMetricsData,
+  VolumeForecast,
+  RateForecast,
+  DelayPrediction,
+} from '../types'
 import {
   Activity,
   Clock,
@@ -9,12 +14,26 @@ import {
   Handshake,
   BarChart3,
   Timer,
+  TrendingUp,
+  TrendingDown,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  MapPin,
+  Shield,
 } from 'lucide-react'
 
 export default function OperationsMetrics() {
   const [data, setData] = useState<OperationsMetricsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [days, setDays] = useState(30)
+  const [showPredictive, setShowPredictive] = useState(false)
+  const [predictiveTab, setPredictiveTab] = useState<'volume' | 'rates' | 'delays'>('volume')
+  const [volumeForecasts, setVolumeForecasts] = useState<VolumeForecast[]>([])
+  const [rateForecasts, setRateForecasts] = useState<RateForecast[]>([])
+  const [delayPredictions, setDelayPredictions] = useState<DelayPrediction[]>([])
+  const [highRiskCount, setHighRiskCount] = useState(0)
+  const [predictiveLoading, setPredictiveLoading] = useState(false)
 
   useEffect(() => {
     fetchData()
@@ -31,6 +50,33 @@ export default function OperationsMetrics() {
       setLoading(false)
     }
   }
+
+  const fetchPredictiveData = async () => {
+    setPredictiveLoading(true)
+    try {
+      if (predictiveTab === 'volume') {
+        const result = await api.getVolumeForecast({ days })
+        setVolumeForecasts(result.forecasts || [])
+      } else if (predictiveTab === 'rates') {
+        const result = await api.getRateForecast({ days })
+        setRateForecasts(result.lanes || [])
+      } else if (predictiveTab === 'delays') {
+        const result = await api.getDelayPredictions(30)
+        setDelayPredictions(result.predictions || [])
+        setHighRiskCount(result.high_risk_count || 0)
+      }
+    } catch (error) {
+      console.error('Failed to fetch predictive data:', error)
+    } finally {
+      setPredictiveLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showPredictive) {
+      fetchPredictiveData()
+    }
+  }, [showPredictive, predictiveTab, days])
 
   const formatHours = (hours: number) => {
     if (hours < 1) return `${Math.round(hours * 60)}m`
@@ -293,6 +339,258 @@ export default function OperationsMetrics() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Predictive Analytics Section */}
+      <div className="bg-white rounded-xl border border-gray-200">
+        <button
+          onClick={() => setShowPredictive(!showPredictive)}
+          className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors rounded-xl"
+        >
+          <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-indigo-600" />
+            Predictive Analytics
+            <span className="text-xs text-gray-400 font-normal ml-2">AI-powered forecasting</span>
+          </h2>
+          {showPredictive ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
+
+        {showPredictive && (
+          <div className="px-6 pb-6 space-y-4">
+            {/* Sub-tabs */}
+            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+              {[
+                { id: 'volume' as const, label: 'Volume Forecast', icon: BarChart3 },
+                { id: 'rates' as const, label: 'Rate Trends', icon: TrendingUp },
+                { id: 'delays' as const, label: 'Delay Predictions', icon: AlertTriangle },
+              ].map((tab) => {
+                const TabIcon = tab.icon
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setPredictiveTab(tab.id)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+                      predictiveTab === tab.id
+                        ? 'bg-indigo-600 text-white'
+                        : 'bg-white text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <TabIcon className="h-4 w-4" />
+                    {tab.label}
+                  </button>
+                )
+              })}
+            </div>
+
+            {predictiveLoading ? (
+              <div className="py-8 text-center text-gray-500">
+                <div className="animate-spin h-6 w-6 border-2 border-indigo-500 border-t-transparent rounded-full mx-auto mb-2" />
+                Generating predictions...
+              </div>
+            ) : (
+              <>
+                {/* Volume Forecast Tab */}
+                {predictiveTab === 'volume' && (
+                  <div className="space-y-4">
+                    {volumeForecasts.length === 0 ? (
+                      <div className="py-8 text-center text-gray-500">
+                        <BarChart3 className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                        <p>No volume forecast data available</p>
+                      </div>
+                    ) : (
+                      volumeForecasts.map((vf, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className={`p-2 rounded-lg ${
+                                vf.trend_direction === 'growing' ? 'bg-emerald-100' :
+                                vf.trend_direction === 'declining' ? 'bg-red-100' : 'bg-gray-100'
+                              }`}>
+                                {vf.trend_direction === 'growing' ? (
+                                  <TrendingUp className="h-4 w-4 text-emerald-600" />
+                                ) : vf.trend_direction === 'declining' ? (
+                                  <TrendingDown className="h-4 w-4 text-red-600" />
+                                ) : (
+                                  <BarChart3 className="h-4 w-4 text-gray-500" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">{vf.customer_name}</p>
+                                <p className="text-xs text-gray-500">
+                                  Avg: {vf.historical_avg_volume} loads/mo | ${(vf.historical_avg_revenue / 100).toLocaleString()} revenue
+                                </p>
+                              </div>
+                            </div>
+                            <span className={`text-sm font-medium px-2.5 py-1 rounded-full ${
+                              vf.trend_direction === 'growing' ? 'bg-emerald-100 text-emerald-700' :
+                              vf.trend_direction === 'declining' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {vf.trend_percent > 0 ? '+' : ''}{vf.trend_percent.toFixed(1)}% trend
+                            </span>
+                          </div>
+
+                          {vf.forecast && vf.forecast.length > 0 && (
+                            <div className="mt-3 grid grid-cols-3 lg:grid-cols-6 gap-2">
+                              {vf.forecast.slice(0, 6).map((f, i) => (
+                                <div key={i} className="bg-gray-50 rounded p-2 text-center">
+                                  <p className="text-xs text-gray-400">{f.month.slice(5)}</p>
+                                  <p className="text-sm font-semibold text-gray-900">{f.predicted_volume}</p>
+                                  <p className="text-xs text-gray-500">{(f.confidence * 100).toFixed(0)}% conf</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Rate Trends Tab */}
+                {predictiveTab === 'rates' && (
+                  <div className="space-y-4">
+                    {rateForecasts.length === 0 ? (
+                      <div className="py-8 text-center text-gray-500">
+                        <TrendingUp className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                        <p>No rate forecast data available</p>
+                      </div>
+                    ) : (
+                      rateForecasts.map((rf, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg p-5">
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-900">{rf.lane}</p>
+                                <p className="text-xs text-gray-500">{rf.total_volume} total loads</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-gray-500">Current Avg Rate</p>
+                              <p className="text-lg font-bold text-gray-900">${(rf.current_avg_rate / 100).toFixed(2)}</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 mb-3">
+                            {rf.trend_direction === 'increasing' ? (
+                              <TrendingUp className="h-4 w-4 text-red-500" />
+                            ) : rf.trend_direction === 'decreasing' ? (
+                              <TrendingDown className="h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <BarChart3 className="h-4 w-4 text-gray-400" />
+                            )}
+                            <span className={`text-sm font-medium ${
+                              rf.trend_direction === 'increasing' ? 'text-red-600' :
+                              rf.trend_direction === 'decreasing' ? 'text-emerald-600' : 'text-gray-600'
+                            }`}>
+                              {rf.rate_trend_percent > 0 ? '+' : ''}{rf.rate_trend_percent.toFixed(1)}% rate {rf.trend_direction}
+                            </span>
+                          </div>
+
+                          {rf.forecast && rf.forecast.length > 0 && (
+                            <div className="grid grid-cols-3 lg:grid-cols-6 gap-2">
+                              {rf.forecast.slice(0, 6).map((f, i) => (
+                                <div key={i} className="bg-gray-50 rounded p-2 text-center">
+                                  <p className="text-xs text-gray-400">{f.month.slice(5)}</p>
+                                  <p className="text-sm font-semibold text-gray-900">${(f.predicted_avg_rate / 100).toFixed(0)}</p>
+                                  <p className="text-xs text-gray-500">{(f.confidence * 100).toFixed(0)}%</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {rf.insights && rf.insights.length > 0 && (
+                            <div className="mt-3 bg-indigo-50 rounded-lg p-3">
+                              <p className="text-xs font-semibold text-indigo-700 mb-1">Insights</p>
+                              {rf.insights.map((insight, i) => (
+                                <p key={i} className="text-xs text-indigo-600">-- {insight}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Delay Predictions Tab */}
+                {predictiveTab === 'delays' && (
+                  <div className="space-y-4">
+                    {highRiskCount > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                        <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-semibold text-red-800">{highRiskCount} High-Risk Shipment{highRiskCount > 1 ? 's' : ''}</p>
+                          <p className="text-xs text-red-600">These shipments have a high probability of delay. Consider proactive intervention.</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {delayPredictions.length === 0 ? (
+                      <div className="py-8 text-center text-gray-500">
+                        <Shield className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                        <p>No delay predictions - all shipments look good</p>
+                      </div>
+                    ) : (
+                      <div className="border border-gray-200 rounded-lg overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Shipment</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Lane</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Risk</th>
+                              <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Est. Delay</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Risk Factors</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {delayPredictions.map((dp) => (
+                              <tr key={dp.shipment_id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3">
+                                  <p className="text-sm font-medium text-indigo-600">{dp.shipment_number}</p>
+                                  <p className="text-xs text-gray-500">{dp.status}</p>
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {dp.origin} → {dp.destination}
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    dp.risk_level === 'high' ? 'bg-red-100 text-red-700' :
+                                    dp.risk_level === 'medium' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'
+                                  }`}>
+                                    {dp.delay_risk_score}% {dp.risk_level}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-center text-sm font-medium text-gray-900">
+                                  {dp.estimated_delay_hours > 0 ? `${dp.estimated_delay_hours}h` : '-'}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex flex-wrap gap-1">
+                                    {dp.risk_factors.slice(0, 3).map((rf, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 rounded">
+                                        {rf}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )

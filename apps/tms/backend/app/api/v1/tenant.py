@@ -93,6 +93,32 @@ class InviteUserResponse(BaseModel):
     invited_at: datetime
 
 
+class WhiteLabelBrandingUpdate(BaseModel):
+    """Request schema for updating white-label branding."""
+    logo_url: Optional[str] = None
+    primary_color: Optional[str] = None
+    secondary_color: Optional[str] = None
+    company_name: Optional[str] = None
+    favicon_url: Optional[str] = None
+    custom_domain: Optional[str] = None
+    email_header_logo_url: Optional[str] = None
+    portal_title: Optional[str] = None
+    hide_powered_by: Optional[bool] = None
+
+
+class WhiteLabelBrandingResponse(BaseModel):
+    """Response schema for white-label branding."""
+    logo_url: Optional[str] = None
+    primary_color: str = "#3B82F6"
+    secondary_color: str = "#10B981"
+    company_name: Optional[str] = None
+    favicon_url: Optional[str] = None
+    custom_domain: Optional[str] = None
+    email_header_logo_url: Optional[str] = None
+    portal_title: Optional[str] = None
+    hide_powered_by: bool = False
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -306,4 +332,87 @@ async def invite_user(
         name=invite.name,
         status="pending",
         invited_at=now,
+    )
+
+
+# ---------------------------------------------------------------------------
+# White-Label Branding Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.get("/branding", response_model=WhiteLabelBrandingResponse)
+async def get_white_label_branding(
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """Get white-label branding settings for the tenant."""
+    if not org_id:
+        return WhiteLabelBrandingResponse()
+
+    db = get_database()
+    settings_doc = await db["tenant_settings"].find_one({"org_id": org_id})
+
+    if not settings_doc:
+        return WhiteLabelBrandingResponse()
+
+    branding = settings_doc.get("branding", {})
+    return WhiteLabelBrandingResponse(
+        logo_url=branding.get("logo_url"),
+        primary_color=branding.get("primary_color", "#3B82F6"),
+        secondary_color=branding.get("secondary_color", "#10B981"),
+        company_name=branding.get("company_name") or settings_doc.get("company_name"),
+        favicon_url=branding.get("favicon_url"),
+        custom_domain=branding.get("custom_domain"),
+        email_header_logo_url=branding.get("email_header_logo_url"),
+        portal_title=branding.get("portal_title"),
+        hide_powered_by=branding.get("hide_powered_by", False),
+    )
+
+
+@router.patch("/branding", response_model=WhiteLabelBrandingResponse)
+async def update_white_label_branding(
+    update: WhiteLabelBrandingUpdate,
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """Update white-label branding settings for the tenant.
+
+    Allows customization of logo, colors, company name, favicon,
+    custom domain, and portal title for white-label deployments.
+    """
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    db = get_database()
+
+    # Build branding update dict from non-None fields
+    branding_fields: Dict[str, Any] = {}
+    for field_name, value in update.model_dump(exclude_none=True).items():
+        branding_fields[f"branding.{field_name}"] = value
+
+    if not branding_fields:
+        raise HTTPException(status_code=400, detail="No branding fields to update")
+
+    branding_fields["updated_at"] = utc_now()
+
+    # Upsert the branding fields within the tenant settings document
+    result = await db["tenant_settings"].find_one_and_update(
+        {"org_id": org_id},
+        {"$set": branding_fields},
+        upsert=True,
+        return_document=True,
+    )
+
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to update branding")
+
+    branding = result.get("branding", {})
+    return WhiteLabelBrandingResponse(
+        logo_url=branding.get("logo_url"),
+        primary_color=branding.get("primary_color", "#3B82F6"),
+        secondary_color=branding.get("secondary_color", "#10B981"),
+        company_name=branding.get("company_name") or result.get("company_name"),
+        favicon_url=branding.get("favicon_url"),
+        custom_domain=branding.get("custom_domain"),
+        email_header_logo_url=branding.get("email_header_logo_url"),
+        portal_title=branding.get("portal_title"),
+        hide_powered_by=branding.get("hide_powered_by", False),
     )

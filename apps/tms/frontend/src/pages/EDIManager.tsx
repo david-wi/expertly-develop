@@ -99,7 +99,7 @@ const CONNECTION_TYPE_LABELS: Record<string, string> = {
   api: 'API',
 }
 
-type TabId = 'partners' | 'messages' | 'send'
+type TabId = 'partners' | 'messages' | 'send' | 'edi210' | 'edi990' | 'edi204'
 
 // ============================================================================
 // Component
@@ -134,6 +134,24 @@ export default function EDIManager() {
   // Stats
   const [stats, setStats] = useState<Record<string, unknown> | null>(null)
 
+  // EDI 210 state
+  const [edi210Messages, setEdi210Messages] = useState<any[]>([])
+  const [edi210InvoiceId, setEdi210InvoiceId] = useState('')
+  const [generating210, setGenerating210] = useState(false)
+
+  // EDI 990 state
+  const [edi990Messages, setEdi990Messages] = useState<any[]>([])
+  const [edi990TenderId, setEdi990TenderId] = useState('')
+  const [edi990ResponseType, setEdi990ResponseType] = useState('accept')
+  const [generating990, setGenerating990] = useState(false)
+
+  // EDI 204 Tender Acceptance state
+  const [edi204Tenders, setEdi204Tenders] = useState<any[]>([])
+  const [edi204StatusFilter, setEdi204StatusFilter] = useState('all')
+  const [edi204ActionLoading, setEdi204ActionLoading] = useState<string | null>(null)
+  const [edi204RejectReason, setEdi204RejectReason] = useState('')
+  const [showRejectModal, setShowRejectModal] = useState<string | null>(null)
+
   useEffect(() => {
     fetchData()
   }, [activeTab, messageTypeFilter, directionFilter, statusFilter])
@@ -155,6 +173,17 @@ export default function EDIManager() {
         // Load partners for the send form dropdown
         const data = await api.getEDITradingPartners()
         setPartners(data)
+      } else if (activeTab === 'edi210') {
+        const data = await api.getEDI210Status()
+        setEdi210Messages(data)
+      } else if (activeTab === 'edi990') {
+        const data = await api.getEDI990Status()
+        setEdi990Messages(data)
+      } else if (activeTab === 'edi204') {
+        const params: Record<string, string> = {}
+        if (edi204StatusFilter !== 'all') params.status = edi204StatusFilter
+        const data = await api.getEDI204Tenders(params)
+        setEdi204Tenders(data)
       }
       const statsData = await api.getEDIStats()
       setStats(statsData)
@@ -257,6 +286,74 @@ export default function EDIManager() {
   }
 
   // ============================================================================
+  // EDI 210 Actions
+  // ============================================================================
+
+  const handleGenerate210 = async () => {
+    if (!edi210InvoiceId.trim()) return
+    setGenerating210(true)
+    try {
+      await api.generateEDI210(edi210InvoiceId.trim())
+      setEdi210InvoiceId('')
+      setActiveTab('edi210')
+      await fetchData()
+    } catch (error) {
+      console.error('Failed to generate EDI 210:', error)
+    } finally {
+      setGenerating210(false)
+    }
+  }
+
+  // ============================================================================
+  // EDI 990 Actions
+  // ============================================================================
+
+  const handleGenerate990 = async () => {
+    if (!edi990TenderId.trim()) return
+    setGenerating990(true)
+    try {
+      await api.generateEDI990(edi990TenderId.trim(), { response_type: edi990ResponseType })
+      setEdi990TenderId('')
+      setActiveTab('edi990')
+      await fetchData()
+    } catch (error) {
+      console.error('Failed to generate EDI 990:', error)
+    } finally {
+      setGenerating990(false)
+    }
+  }
+
+  // ============================================================================
+  // EDI 204 Tender Actions
+  // ============================================================================
+
+  const handleAccept204 = async (tenderId: string) => {
+    setEdi204ActionLoading(tenderId)
+    try {
+      await api.acceptEDI204Tender(tenderId)
+      await fetchData()
+    } catch (error) {
+      console.error('Failed to accept 204 tender:', error)
+    } finally {
+      setEdi204ActionLoading(null)
+    }
+  }
+
+  const handleReject204 = async (tenderId: string) => {
+    setEdi204ActionLoading(tenderId)
+    try {
+      await api.rejectEDI204Tender(tenderId, { reason: edi204RejectReason || undefined })
+      setShowRejectModal(null)
+      setEdi204RejectReason('')
+      await fetchData()
+    } catch (error) {
+      console.error('Failed to reject 204 tender:', error)
+    } finally {
+      setEdi204ActionLoading(null)
+    }
+  }
+
+  // ============================================================================
   // Formatters
   // ============================================================================
 
@@ -346,6 +443,9 @@ export default function EDIManager() {
           { id: 'partners' as const, label: 'Trading Partners', icon: Settings },
           { id: 'messages' as const, label: 'Message Log', icon: FileText },
           { id: 'send' as const, label: 'Send Message', icon: Send },
+          { id: 'edi204' as const, label: '204 Tenders', icon: Inbox },
+          { id: 'edi210' as const, label: '210 Invoice', icon: FileText },
+          { id: 'edi990' as const, label: '990 Response', icon: FileText },
         ] as const).map((tab) => (
           <button
             key={tab.id}
@@ -705,6 +805,364 @@ export default function EDIManager() {
                   )}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* EDI 204 - Load Tender Acceptance Tab */}
+          {/* ============================================================ */}
+          {activeTab === 'edi204' && (
+            <div className="space-y-4">
+              {/* Status Filter */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-500">Status:</label>
+                  <select
+                    value={edi204StatusFilter}
+                    onChange={(e) => { setEdi204StatusFilter(e.target.value); fetchData() }}
+                    className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
+                  >
+                    <option value="all">All</option>
+                    <option value="received">Received</option>
+                    <option value="pending_review">Pending Review</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="auto_accepted">Auto-Accepted</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <button
+                  onClick={fetchData}
+                  className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Refresh
+                </button>
+              </div>
+
+              {/* 204 Tenders List */}
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">Inbound EDI 204 Load Tenders</h3>
+                  <p className="text-sm text-gray-500 mt-1">Accept or reject inbound load tenders from trading partners</p>
+                </div>
+                {edi204Tenders.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    No 204 load tenders found
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {edi204Tenders.map((tender: any) => (
+                      <div key={tender.id} className="p-5 hover:bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <ArrowDownLeft className="h-5 w-5 text-green-500" />
+                              <span className="font-semibold text-gray-900">204 Load Tender</span>
+                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                tender.status === 'accepted' || tender.status === 'auto_accepted' ? 'bg-green-100 text-green-700' :
+                                tender.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                tender.status === 'received' || tender.status === 'pending_review' ? 'bg-yellow-100 text-yellow-700' :
+                                'bg-gray-100 text-gray-600'
+                              }`}>
+                                {tender.status?.replace(/_/g, ' ')}
+                              </span>
+                              {tender.auto_accept_rule_id && (
+                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded">Auto-Rule Applied</span>
+                              )}
+                            </div>
+                            <div className="ml-7 space-y-1">
+                              {tender.shipper_name && (
+                                <p className="text-sm text-gray-600">
+                                  <span className="text-gray-400">Shipper:</span> {tender.shipper_name}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-4 text-sm text-gray-600">
+                                {tender.origin_city && tender.origin_state && (
+                                  <span>{tender.origin_city}, {tender.origin_state}</span>
+                                )}
+                                {tender.origin_city && tender.destination_city && (
+                                  <span className="text-gray-300">-&gt;</span>
+                                )}
+                                {tender.destination_city && tender.destination_state && (
+                                  <span>{tender.destination_city}, {tender.destination_state}</span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-4 text-xs text-gray-400">
+                                {tender.equipment_type && <span>Equipment: {tender.equipment_type}</span>}
+                                {tender.weight_lbs && <span>Weight: {Number(tender.weight_lbs).toLocaleString()} lbs</span>}
+                                {tender.rate_cents && <span>Rate: ${(tender.rate_cents / 100).toFixed(2)}</span>}
+                                {tender.pickup_date && <span>Pickup: {formatDate(tender.pickup_date)}</span>}
+                              </div>
+                              {tender.trading_partner_name && (
+                                <p className="text-xs text-gray-400">Partner: {tender.trading_partner_name} | Received: {formatDate(tender.received_at || tender.created_at)}</p>
+                              )}
+                              {tender.shipment_number && (
+                                <p className="text-xs text-emerald-600 font-medium">Shipment: {tender.shipment_number}</p>
+                              )}
+                              {tender.rejection_reason && (
+                                <p className="text-xs text-red-600">Reason: {tender.rejection_reason}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 ml-4">
+                            {(tender.status === 'received' || tender.status === 'pending_review') && (
+                              <>
+                                <button
+                                  onClick={() => handleAccept204(tender.id)}
+                                  disabled={edi204ActionLoading === tender.id}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                >
+                                  {edi204ActionLoading === tender.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3.5 w-3.5" />
+                                  )}
+                                  Accept
+                                </button>
+                                <button
+                                  onClick={() => setShowRejectModal(tender.id)}
+                                  disabled={edi204ActionLoading === tender.id}
+                                  className="flex items-center gap-1 px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                  Reject
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Reject Reason Modal */}
+              {showRejectModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                  <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Reject Load Tender</h3>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Rejection Reason (optional)</label>
+                        <textarea
+                          value={edi204RejectReason}
+                          onChange={(e) => setEdi204RejectReason(e.target.value)}
+                          rows={3}
+                          placeholder="Enter reason for rejection..."
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => { setShowRejectModal(null); setEdi204RejectReason('') }}
+                          className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleReject204(showRejectModal)}
+                          disabled={edi204ActionLoading === showRejectModal}
+                          className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {edi204ActionLoading === showRejectModal ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <X className="h-4 w-4" />
+                          )}
+                          Reject Tender
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* EDI 210 - Freight Invoice Tab */}
+          {/* ============================================================ */}
+          {activeTab === 'edi210' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Generate EDI 210 Freight Invoice</h3>
+                <p className="text-sm text-gray-500">Generate an EDI 210 message from a TMS invoice to transmit to trading partners.</p>
+
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Invoice ID</label>
+                    <input
+                      type="text"
+                      value={edi210InvoiceId}
+                      onChange={(e) => setEdi210InvoiceId(e.target.value)}
+                      placeholder="Enter Invoice ID"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <button
+                    onClick={handleGenerate210}
+                    disabled={!edi210InvoiceId.trim() || generating210}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {generating210 ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {generating210 ? 'Generating...' : 'Generate 210'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 210 Status List */}
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">EDI 210 Transmission Status</h3>
+                </div>
+                {edi210Messages.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    No EDI 210 messages generated yet
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {edi210Messages.map((msg: any) => (
+                      <div key={msg.id} className="p-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <ArrowUpRight className="h-5 w-5 text-amber-500" />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">210 - Freight Invoice</span>
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_COLORS[msg.status] || 'bg-gray-100 text-gray-600'}`}>
+                                  {msg.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
+                                <span>Invoice: {msg.invoice_number || msg.invoice_id}</span>
+                                {msg.trading_partner_name && <span>Partner: {msg.trading_partner_name}</span>}
+                                {msg.isa_control_number && <span>ISA: {msg.isa_control_number}</span>}
+                                <span>{formatDate(msg.sent_at || msg.created_at)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {msg.acknowledged_at && (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <Check className="h-3 w-3" />
+                                Acknowledged
+                              </span>
+                            )}
+                            {msg.error_messages?.length > 0 && (
+                              <AlertTriangle className="h-4 w-4 text-red-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ============================================================ */}
+          {/* EDI 990 - Tender Response Tab */}
+          {/* ============================================================ */}
+          {activeTab === 'edi990' && (
+            <div className="space-y-6">
+              <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Generate EDI 990 Tender Response</h3>
+                <p className="text-sm text-gray-500">Generate an EDI 990 message to accept, decline, or counter a load tender.</p>
+
+                <div className="flex gap-4 items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tender ID</label>
+                    <input
+                      type="text"
+                      value={edi990TenderId}
+                      onChange={(e) => setEdi990TenderId(e.target.value)}
+                      placeholder="Enter Tender ID"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    />
+                  </div>
+                  <div className="w-40">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Response</label>
+                    <select
+                      value={edi990ResponseType}
+                      onChange={(e) => setEdi990ResponseType(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="accept">Accept</option>
+                      <option value="decline">Decline</option>
+                      <option value="counter">Counter</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleGenerate990}
+                    disabled={!edi990TenderId.trim() || generating990}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    {generating990 ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {generating990 ? 'Generating...' : 'Generate 990'}
+                  </button>
+                </div>
+              </div>
+
+              {/* 990 Status List */}
+              <div className="bg-white rounded-xl border border-gray-200">
+                <div className="px-6 py-4 border-b border-gray-200">
+                  <h3 className="text-lg font-semibold text-gray-900">EDI 990 Transmission Status</h3>
+                </div>
+                {edi990Messages.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Inbox className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    No EDI 990 messages generated yet
+                  </div>
+                ) : (
+                  <div className="divide-y divide-gray-200">
+                    {edi990Messages.map((msg: any) => (
+                      <div key={msg.id} className="p-4 hover:bg-gray-50">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <ArrowUpRight className="h-5 w-5 text-amber-500" />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-900">990 - Tender Response</span>
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                  msg.response_type === 'accept' ? 'bg-green-100 text-green-700' :
+                                  msg.response_type === 'decline' ? 'bg-red-100 text-red-700' :
+                                  'bg-yellow-100 text-yellow-700'
+                                }`}>
+                                  {msg.response_type}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${STATUS_COLORS[msg.status] || 'bg-gray-100 text-gray-600'}`}>
+                                  {msg.status}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-400">
+                                <span>Tender: {msg.tender_id}</span>
+                                {msg.shipment_number && <span>Shipment: {msg.shipment_number}</span>}
+                                {msg.trading_partner_name && <span>Partner: {msg.trading_partner_name}</span>}
+                                <span>{formatDate(msg.sent_at || msg.created_at)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {msg.acknowledged_at && (
+                              <span className="text-xs text-green-600 flex items-center gap-1">
+                                <Check className="h-3 w-3" />
+                                Acknowledged
+                              </span>
+                            )}
+                            {msg.error_messages?.length > 0 && (
+                              <AlertTriangle className="h-4 w-4 text-red-500" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </>
