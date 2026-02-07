@@ -397,7 +397,7 @@ export default function ProductDetail() {
                               <Button variant="outline" onClick={() => setClearDialogOpen(false)}>
                                 Cancel
                               </Button>
-                              <Button variant="destructive" onClick={clearAllRequirements} disabled={clearing}>
+                              <Button onClick={clearAllRequirements} disabled={clearing} className="bg-red-600 text-white hover:bg-red-700">
                                 {clearing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                                 Clear all
                               </Button>
