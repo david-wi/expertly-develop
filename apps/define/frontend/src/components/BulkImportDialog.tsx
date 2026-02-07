@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -32,9 +32,12 @@ import {
   XCircle,
   Clock,
   RotateCcw,
+  FileText,
+  Link2,
+  Paperclip,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { aiApi, requirementsApi, ParsedRequirement } from '@/api/client'
+import { aiApi, requirementsApi, artifactsApi, ParsedRequirement, ArtifactWithVersions } from '@/api/client'
 import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface ExistingRequirement {
@@ -99,6 +102,48 @@ export function BulkImportDialog({
   const [editingId, setEditingId] = useState<string | null>(null)
   const [createProgress, setCreateProgress] = useState({ current: 0, total: 0 })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [artifacts, setArtifacts] = useState<ArtifactWithVersions[]>([])
+  const [selectedArtifactIds, setSelectedArtifactIds] = useState<Set<string>>(new Set())
+
+  // Fetch artifacts when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchArtifacts()
+    }
+  }, [open, productId])
+
+  async function fetchArtifacts() {
+    try {
+      const list = await artifactsApi.list(productId)
+      const details = await Promise.all(
+        list.map((a) => artifactsApi.get(a.id).catch(() => ({ ...a, versions: [] } as ArtifactWithVersions)))
+      )
+      setArtifacts(details)
+      // Auto-select artifacts that are ready and haven't had requirements generated
+      const ready = details.filter(
+        (a) => a.versions?.[0]?.conversion_status === 'completed' && !a.context?.requirements_generated
+      )
+      setSelectedArtifactIds(new Set(ready.map((a) => a.id)))
+    } catch {
+      // Non-critical - artifacts are optional
+    }
+  }
+
+  const readyArtifacts = artifacts.filter(
+    (a) => a.versions?.[0]?.conversion_status === 'completed'
+  )
+
+  const toggleArtifact = (artifactId: string) => {
+    setSelectedArtifactIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(artifactId)) {
+        next.delete(artifactId)
+      } else {
+        next.add(artifactId)
+      }
+      return next
+    })
+  }
 
   const resetDialog = useCallback(() => {
     setStep('input')
@@ -112,6 +157,7 @@ export function BulkImportDialog({
     setExpandedItems(new Set())
     setEditingId(null)
     setCreateProgress({ current: 0, total: 0 })
+    setSelectedArtifactIds(new Set())
   }, [])
 
   const handleClose = useCallback(
@@ -189,8 +235,8 @@ export function BulkImportDialog({
   }
 
   const handleGenerate = async () => {
-    if (!description.trim() && files.length === 0) {
-      setError('Please enter a description or upload files')
+    if (!description.trim() && files.length === 0 && selectedArtifactIds.size === 0) {
+      setError('Please enter a description, upload files, or select artifacts')
       return
     }
 
@@ -198,13 +244,37 @@ export function BulkImportDialog({
     setError('')
 
     try {
+      // Fetch markdown content from selected artifacts
+      const artifactFiles: Array<{ name: string; type: string; content: string }> = []
+      for (const artifactId of selectedArtifactIds) {
+        const artifact = artifacts.find((a) => a.id === artifactId)
+        if (!artifact) continue
+        const latestVersion = artifact.versions?.[0]
+        if (!latestVersion || latestVersion.conversion_status !== 'completed') continue
+        try {
+          const markdown = await artifactsApi.getMarkdown(artifactId, latestVersion.id)
+          if (markdown) {
+            artifactFiles.push({
+              name: artifact.name,
+              type: 'text/markdown',
+              content: markdown,
+            })
+          }
+        } catch {
+          // Skip artifacts we can't fetch
+        }
+      }
+
       const response = await aiApi.parseRequirements({
         description,
-        files: files.map((f) => ({
-          name: f.name,
-          type: f.type,
-          content: f.content,
-        })),
+        files: [
+          ...files.map((f) => ({
+            name: f.name,
+            type: f.type,
+            content: f.content,
+          })),
+          ...artifactFiles,
+        ],
         existing_requirements: existingRequirements.map((r) => ({
           id: r.id,
           stable_key: r.stable_key,
@@ -287,6 +357,20 @@ export function BulkImportDialog({
           parent_ref: req.parent_ref || targetParentId || undefined,
         })),
       })
+
+      // Mark selected artifacts as having had requirements generated
+      if (selectedArtifactIds.size > 0) {
+        await Promise.all(
+          Array.from(selectedArtifactIds).map((artifactId) =>
+            artifactsApi.update(artifactId, {
+              context: {
+                requirements_generated: true,
+                requirements_generated_at: new Date().toISOString(),
+              },
+            }).catch(() => {}) // Non-critical
+          )
+        )
+      }
 
       setCreateProgress({ current: approvedRequirements.length, total: approvedRequirements.length })
 
@@ -627,6 +711,53 @@ export function BulkImportDialog({
                   </div>
                 )}
               </div>
+
+              {readyArtifacts.length > 0 && (
+                <div>
+                  <label className="text-sm font-medium text-gray-700 mb-2 block flex items-center gap-2">
+                    <Paperclip className="h-4 w-4" />
+                    Include artifacts
+                  </label>
+                  <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                    {readyArtifacts.map((artifact) => {
+                      const isSelected = selectedArtifactIds.has(artifact.id)
+                      const alreadyGenerated = artifact.context?.requirements_generated
+
+                      return (
+                        <label
+                          key={artifact.id}
+                          className="flex items-center gap-3 px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleArtifact(artifact.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <div className="flex-1 min-w-0 flex items-center gap-2">
+                            {artifact.artifact_type === 'link' ? (
+                              <Link2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            ) : (
+                              <FileText className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            )}
+                            <span className="text-sm text-gray-900 truncate">
+                              {artifact.name}
+                            </span>
+                            {alreadyGenerated && (
+                              <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex-shrink-0">
+                                Previously used
+                              </Badge>
+                            )}
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {selectedArtifactIds.size} artifact{selectedArtifactIds.size !== 1 ? 's' : ''} selected — content will be included in AI analysis
+                  </p>
+                </div>
+              )}
 
               {existingRequirements.length > 0 && (
                 <div>
