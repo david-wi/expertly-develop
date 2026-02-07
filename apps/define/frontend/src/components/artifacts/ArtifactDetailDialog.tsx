@@ -185,11 +185,11 @@ export function ArtifactDetailDialog({
             <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
           </div>
         ) : artifact ? (
-          <div className="flex-1 overflow-hidden grid grid-cols-3 gap-4">
+          <div className="flex-1 overflow-hidden grid grid-cols-3 gap-3">
             {/* Left panel - Details and versions */}
-            <div className="col-span-1 overflow-y-auto space-y-4 pr-2">
+            <div className="col-span-1 overflow-y-auto space-y-3 pr-2">
               {/* Edit form */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 <div>
                   <label className="text-sm font-medium text-gray-700 mb-1 block">Name</label>
                   <div className="flex gap-2">
@@ -270,11 +270,11 @@ export function ArtifactDetailDialog({
 
               {/* Upload new version - only for file artifacts */}
               {artifact.artifact_type !== 'link' && (
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-3">Upload New Version</h4>
+                <div className="border-t pt-3">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Upload New Version</h4>
                   <div className="space-y-2">
                     <div
-                      className="border-2 border-dashed border-gray-200 rounded-lg p-3 text-center cursor-pointer hover:border-primary-300 transition-colors"
+                      className="border-2 border-dashed border-gray-200 rounded-lg p-2 text-center cursor-pointer hover:border-primary-300 transition-colors"
                       onClick={() => fileInputRef.current?.click()}
                     >
                       {uploadFile ? (
@@ -284,7 +284,7 @@ export function ArtifactDetailDialog({
                         </div>
                       ) : (
                         <>
-                          <Upload className="h-5 w-5 text-gray-400 mx-auto mb-1" />
+                          <Upload className="h-4 w-4 text-gray-400 mx-auto" />
                           <p className="text-xs text-gray-500">Click to select file</p>
                         </>
                       )}
@@ -323,7 +323,7 @@ export function ArtifactDetailDialog({
 
               {/* Version history - only for file artifacts */}
               {artifact.artifact_type !== 'link' && (
-                <div className="border-t pt-4">
+                <div className="border-t pt-3">
                   <ArtifactVersionHistory
                     artifactId={artifact.id}
                     versions={artifact.versions}

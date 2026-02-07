@@ -91,14 +91,14 @@ export function ArtifactCard({ artifact, latestVersion, onClick }: ArtifactCardP
       )}
       onClick={handleClick}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
+      <CardContent className="p-3">
+        <div className="flex items-start gap-2.5">
           <div className={cn(
-            'p-2 rounded-lg',
+            'p-1.5 rounded-lg',
             isLink ? 'bg-blue-50' : 'bg-gray-100'
           )}>
             <FileIcon className={cn(
-              'h-6 w-6',
+              'h-5 w-5',
               isLink ? 'text-blue-600' : 'text-gray-600'
             )} />
           </div>
@@ -118,7 +118,7 @@ export function ArtifactCard({ artifact, latestVersion, onClick }: ArtifactCardP
             <p className="text-sm text-gray-500 truncate">
               {isLink ? getDomainFromUrl(artifact.url || '') : artifact.original_filename}
             </p>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex items-center gap-2 mt-1.5">
               {isLink ? (
                 <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
                   Link
@@ -140,7 +140,7 @@ export function ArtifactCard({ artifact, latestVersion, onClick }: ArtifactCardP
           </div>
         </div>
         {artifact.description && (
-          <p className="text-sm text-gray-600 mt-3 line-clamp-2">{artifact.description}</p>
+          <p className="text-sm text-gray-600 mt-2 line-clamp-2">{artifact.description}</p>
         )}
       </CardContent>
     </Card>
