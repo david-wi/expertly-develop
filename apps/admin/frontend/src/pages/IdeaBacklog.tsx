@@ -471,7 +471,7 @@ function IdeaCard({
                 }}
                 className="px-3 py-1.5 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 rounded-lg text-sm font-medium hover:bg-yellow-200 dark:hover:bg-yellow-900/70 transition-colors"
               >
-                Start Exploring
+                Start Working
               </button>
             )}
             {idea.status === 'in_progress' && (
