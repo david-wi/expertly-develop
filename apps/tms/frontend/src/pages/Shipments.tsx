@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Shipment, BulkImportPreview, BulkImportResult, LoadTemplate, ConsolidationSuggestion, ImportMappingTemplate, Customer } from '../types'
+import type { Shipment, BulkImportPreview, BulkImportResult, LoadTemplate, ConsolidationSuggestion, Customer } from '../types'
 import { ArrowRight, AlertTriangle, Truck, Package, CheckCircle, Upload, FileSpreadsheet, X, Loader2, Repeat, Calendar, Play, Layers, Plus, Save, BookmarkCheck } from 'lucide-react'
 
 const statusColors: Record<string, string> = {
@@ -66,7 +66,6 @@ export default function Shipments() {
   const [consolidating, setConsolidating] = useState<string | null>(null)
 
   // Saved column mapping state
-  const [savedMappings, setSavedMappings] = useState<ImportMappingTemplate[]>([])
   const [savingMapping, setSavingMapping] = useState(false)
   const [mappingName, setMappingName] = useState('')
 

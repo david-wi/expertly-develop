@@ -12,15 +12,12 @@ import type {
   CashFlowProjection,
 } from '../types'
 import {
-  DollarSign,
-  FileText,
   ArrowDownRight,
   TrendingUp,
   AlertTriangle,
   Check,
   Loader2,
   Link2,
-  Clock,
   Truck,
   Zap,
   Building2,
