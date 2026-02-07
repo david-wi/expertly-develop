@@ -18,6 +18,7 @@ class ArtifactUpdate(BaseModel):
     description: Optional[str] = None
     status: Optional[str] = None
     url: Optional[str] = None
+    context: Optional[Dict[str, Any]] = None
 
 
 class ArtifactVersionResponse(BaseModel):

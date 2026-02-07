@@ -36,7 +36,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { aiApi, requirementsApi, ParsedRequirement, ArtifactWithVersions } from '@/api/client'
+import { aiApi, requirementsApi, artifactsApi, ParsedRequirement, ArtifactWithVersions } from '@/api/client'
 
 interface ExistingRequirement {
   id: string
@@ -110,9 +110,10 @@ export function GenerateFromArtifactsDialog({
     }
   }, [])
 
-  // Initialize selected artifacts when dialog opens
+  // Initialize selected artifacts when dialog opens — de-select already-generated ones
   const initializeSelection = useCallback(() => {
-    setSelectedArtifactIds(new Set(readyArtifacts.map((a) => a.id)))
+    const notYetGenerated = readyArtifacts.filter((a) => !a.context?.requirements_generated)
+    setSelectedArtifactIds(new Set(notYetGenerated.map((a) => a.id)))
   }, [artifacts])
 
   const resetDialog = useCallback(() => {
@@ -262,6 +263,18 @@ export function GenerateFromArtifactsDialog({
           parent_ref: req.parent_ref || targetParentId || undefined,
         })),
       })
+
+      // Mark selected artifacts as having had requirements generated
+      await Promise.all(
+        Array.from(selectedArtifactIds).map((artifactId) =>
+          artifactsApi.update(artifactId, {
+            context: {
+              requirements_generated: true,
+              requirements_generated_at: new Date().toISOString(),
+            },
+          })
+        )
+      )
 
       setCreateProgress({ current: approvedRequirements.length, total: approvedRequirements.length })
 
@@ -567,6 +580,11 @@ export function GenerateFromArtifactsDialog({
                               <span className="text-sm font-medium text-gray-900 truncate">
                                 {artifact.name}
                               </span>
+                              {artifact.context?.requirements_generated && (
+                                <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200 flex-shrink-0">
+                                  Previously generated
+                                </Badge>
+                              )}
                             </div>
                             {artifact.description && (
                               <p className="text-xs text-gray-500 mt-0.5 truncate ml-6">

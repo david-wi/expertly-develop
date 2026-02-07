@@ -141,6 +141,7 @@ export interface ParsedRequirement {
 export interface Artifact {
   id: string
   product_id: string
+  context: Record<string, any>
   name: string
   description: string | null
   artifact_type: 'file' | 'link'
@@ -337,7 +338,7 @@ export const artifactsApi = {
   createLink: (productId: string, name: string, url: string, description?: string) =>
     api.post<Artifact>('/artifacts/link', { name, url, description }, { params: { product_id: productId } }).then((r) => r.data),
 
-  update: (id: string, data: { name?: string; description?: string; status?: string; url?: string }) =>
+  update: (id: string, data: { name?: string; description?: string; status?: string; url?: string; context?: Record<string, any> }) =>
     api.patch<Artifact>(`/artifacts/${id}`, data).then((r) => r.data),
 
   delete: (id: string) => api.delete(`/artifacts/${id}`),
