@@ -24,7 +24,7 @@ COPY apps/aipocalypse/frontend ./apps/aipocalypse/frontend
 WORKDIR /app/apps/aipocalypse/frontend
 ARG VITE_BUILD_TIMESTAMP
 ARG VITE_GIT_COMMIT
-RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date +%s)} npm run build
+RUN VITE_BUILD_TIMESTAMP=${VITE_BUILD_TIMESTAMP:-$(date -u +%y%m%d.%H%M%S)} npm run build
 
 # Production stage - nginx to serve static files
 FROM nginx:alpine
