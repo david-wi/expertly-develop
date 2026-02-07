@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './stores/authStore';
 import Layout from './components/Layout';
 import {
+  LandingPage,
   LoginPage,
   IntakesListPage,
   CreateIntakePage,
@@ -71,6 +72,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
 
       {/* Protected — wrapped in Layout */}

@@ -97,3 +97,4 @@ Warns users before losing changes on modal close or page refresh.
 20260206 Add Expertly Intake to common sidebar EXPERTLY_PRODUCTS; re-alphabetize Command; alphabetize EXPERTLY_TOOLS; rename Expertly Chem to Chem; add alphabetization comments to all arrays
 20260206 Implement 'Generate Requirements from Artifacts' feature - backend endpoint POST /ai/generate-from-artifacts that gathers artifact markdown and feeds to AI parsing, frontend GenerateFromArtifactsDialog with artifact selection/preview/create flow, Sparkles button on ArtifactList, wired into ProductDetail
 20250207 Fix: Intake template creation fails with 'No intake types available' - caused by frontend/backend URL path mismatches (camelCase vs kebab-case)
+20250207 - Intake: About page not showing when clicked. Fixed by adding missing LandingPage component and /landing route.
