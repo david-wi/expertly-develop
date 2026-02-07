@@ -103,10 +103,9 @@ export default function LandingPage() {
               Client onboarding that runs itself
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-tight">
-              Stop Hiring{' '}
-              <span className="text-indigo-600">an Onboarding Manager</span>
+              Customer Onboarding
               <br />
-              for Every New Customer
+              <span className="text-indigo-600">Without the Slog</span>
             </h1>
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
               Every subscription and service business has the same problem: before you can
