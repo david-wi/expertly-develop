@@ -47,3 +47,13 @@ class ParsedRequirement(BaseModel):
     priority: str = "medium"
     tags: List[str] = []
     parent_ref: Optional[str] = None
+
+
+class GenerateJobStartResponse(BaseModel):
+    job_id: str
+
+
+class GenerateJobStatusResponse(BaseModel):
+    status: str  # "processing", "completed", "failed"
+    requirements: Optional[List[ParsedRequirement]] = None
+    error: Optional[str] = None
