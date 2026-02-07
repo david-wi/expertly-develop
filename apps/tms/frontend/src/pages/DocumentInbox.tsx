@@ -14,6 +14,8 @@ import {
   CheckCircle,
   Eye,
   X,
+  Image,
+  ScanLine,
 } from 'lucide-react'
 
 // ============================================================================
@@ -105,6 +107,15 @@ export default function DocumentInbox() {
   const [linkEntityType, setLinkEntityType] = useState('shipment')
   const [linkEntityId, setLinkEntityId] = useState('')
 
+  // Batch upload state
+  const [showBatchUpload, setShowBatchUpload] = useState(false)
+  const [batchUploading, setBatchUploading] = useState(false)
+  const [batchAutoClassify, setBatchAutoClassify] = useState(true)
+
+  // Image enhancement state
+  const [enhancingDoc, setEnhancingDoc] = useState<string | null>(null)
+  const [ocrLoading, setOcrLoading] = useState<string | null>(null)
+
   useEffect(() => {
     fetchData()
   }, [statusFilter, classificationFilter])
@@ -181,6 +192,43 @@ export default function DocumentInbox() {
     }
   }
 
+  const handleBatchUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files?.length) return
+    setBatchUploading(true)
+    try {
+      const files = Array.from(e.target.files)
+      await api.batchUploadDocuments(files, { auto_classify: batchAutoClassify })
+      setShowBatchUpload(false)
+      await fetchData()
+    } catch (error) {
+      console.error('Batch upload failed:', error)
+    } finally {
+      setBatchUploading(false)
+    }
+  }
+
+  const handleEnhanceImage = async (documentId: string) => {
+    setEnhancingDoc(documentId)
+    try {
+      await api.enhanceDocumentImage(documentId, { auto_deskew: true, brightness: 1.1, contrast: 1.2 })
+    } catch (error) {
+      console.error('Image enhancement failed:', error)
+    } finally {
+      setEnhancingDoc(null)
+    }
+  }
+
+  const handleOCR = async (documentId: string) => {
+    setOcrLoading(documentId)
+    try {
+      await api.extractOCR(documentId)
+    } catch (error) {
+      console.error('OCR extraction failed:', error)
+    } finally {
+      setOcrLoading(null)
+    }
+  }
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
@@ -209,6 +257,13 @@ export default function DocumentInbox() {
             Incoming documents with AI classification and entity linking
           </p>
         </div>
+        <button
+          onClick={() => setShowBatchUpload(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+        >
+          <Upload className="h-4 w-4" />
+          Batch Upload
+        </button>
       </div>
 
       {/* Stats Summary */}
@@ -471,6 +526,32 @@ export default function DocumentInbox() {
                         Link to Entity
                       </button>
                     )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleEnhanceImage(selectedItem.id)}
+                        disabled={enhancingDoc === selectedItem.id}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm"
+                      >
+                        {enhancingDoc === selectedItem.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Image className="h-4 w-4" />
+                        )}
+                        Enhance
+                      </button>
+                      <button
+                        onClick={() => handleOCR(selectedItem.id)}
+                        disabled={ocrLoading === selectedItem.id}
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 text-sm"
+                      >
+                        {ocrLoading === selectedItem.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <ScanLine className="h-4 w-4" />
+                        )}
+                        Run OCR
+                      </button>
+                    </div>
                     {selectedItem.status !== 'archived' && (
                       <button
                         onClick={() => handleArchive(selectedItem.id)}
@@ -538,6 +619,58 @@ export default function DocumentInbox() {
                   {actionLoading === selectedItem.id ? 'Linking...' : 'Link'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Batch Upload Modal */}
+      {showBatchUpload && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Batch Document Upload</h3>
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Upload multiple documents at once. AI classification will automatically identify document types
+                and extract relevant data.
+              </p>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={batchAutoClassify}
+                  onChange={(e) => setBatchAutoClassify(e.target.checked)}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                <span className="text-sm text-gray-700">Auto-classify with AI</span>
+              </label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                <label className="cursor-pointer">
+                  <span className="text-emerald-600 font-medium hover:text-emerald-700">Choose files</span>
+                  <span className="text-gray-500 text-sm"> or drag and drop</span>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleBatchUpload}
+                    className="hidden"
+                    disabled={batchUploading}
+                  />
+                </label>
+                <p className="text-xs text-gray-400 mt-2">PDF, images, and document files accepted</p>
+              </div>
+              {batchUploading && (
+                <div className="flex items-center justify-center gap-2 text-emerald-600">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-sm">Uploading and processing...</span>
+                </div>
+              )}
+              <button
+                onClick={() => setShowBatchUpload(false)}
+                disabled={batchUploading}
+                className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Shipment, Tender, TrackingEvent } from '../types'
+import type { Shipment, Tender, TrackingEvent, ShipmentPhoto, BOLGenerationResult, EquipmentItem, FuelSurchargeResult, SplitShipmentResult } from '../types'
 import ShipmentDocuments from '../components/ShipmentDocuments'
 import ShipmentConversation from '../components/ShipmentConversation'
 import {
@@ -15,6 +15,14 @@ import {
   Check,
   Send,
   Plus,
+  Camera,
+  Download,
+  Loader2,
+  Scissors,
+  Combine,
+  Wrench,
+  Fuel,
+  Save,
 } from 'lucide-react'
 
 const statusColors: Record<string, string> = {
@@ -50,6 +58,44 @@ export default function ShipmentDetail() {
     location: '',
     notes: '',
   })
+
+  // BOL Generation state
+  const [showBOLModal, setShowBOLModal] = useState(false)
+  const [bolGenerating, setBolGenerating] = useState(false)
+  const [bolResult, setBolResult] = useState<BOLGenerationResult | null>(null)
+
+  // Photo capture state
+  const [photos, setPhotos] = useState<ShipmentPhoto[]>([])
+  const [photoUploading, setPhotoUploading] = useState(false)
+  const [photoCategory, setPhotoCategory] = useState('delivery')
+
+  // Enhanced POD state
+  const [showPODModal, setShowPODModal] = useState(false)
+  const [podCapturing, setPodCapturing] = useState(false)
+  const [podForm, setPodForm] = useState({
+    received_by: '',
+    delivery_notes: '',
+    damage_reported: false,
+    damage_description: '',
+  })
+
+  // Split shipment state
+  const [showSplitModal, setShowSplitModal] = useState(false)
+  const [splitting, setSplitting] = useState(false)
+  const [splitResult, setSplitResult] = useState<SplitShipmentResult | null>(null)
+
+  // Equipment assignment state
+  const [showEquipmentPanel, setShowEquipmentPanel] = useState(false)
+  const [equipmentList, setEquipmentList] = useState<EquipmentItem[]>([])
+  const [trailerNumber, setTrailerNumber] = useState('')
+  const [assigningEquipment, setAssigningEquipment] = useState(false)
+
+  // Fuel surcharge state
+  const [fuelSurcharge, setFuelSurcharge] = useState<FuelSurchargeResult | null>(null)
+  const [loadingFuel, setLoadingFuel] = useState(false)
+
+  // Save as template state
+  const [savingTemplate, setSavingTemplate] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -108,6 +154,127 @@ export default function ShipmentDetail() {
       navigate(`/invoices/${invoice.id}`)
     } catch (error) {
       console.error('Failed to create invoice:', error)
+    }
+  }
+
+  const handleSplitShipment = async () => {
+    if (!id) return
+    setSplitting(true)
+    try {
+      const result = await api.splitShipment(id, {
+        split_type: 'by_weight',
+        max_weight_per_child: 40000,
+      })
+      setSplitResult(result)
+    } catch (error) {
+      console.error('Failed to split shipment:', error)
+    } finally {
+      setSplitting(false)
+    }
+  }
+
+  const handleAssignEquipment = async () => {
+    if (!id || !trailerNumber) return
+    setAssigningEquipment(true)
+    try {
+      const updated = await api.assignEquipment(id, {
+        shipment_id: id,
+        trailer_number: trailerNumber,
+        equipment_type: shipment?.equipment_type || 'van',
+      })
+      setShipment(updated)
+      setShowEquipmentPanel(false)
+      setTrailerNumber('')
+    } catch (error) {
+      console.error('Failed to assign equipment:', error)
+    } finally {
+      setAssigningEquipment(false)
+    }
+  }
+
+  const handleCalculateFuelSurcharge = async () => {
+    if (!shipment) return
+    setLoadingFuel(true)
+    try {
+      const result = await api.calculateFuelSurcharge({
+        line_haul_cents: shipment.customer_price || 0,
+        customer_id: shipment.customer_id,
+      })
+      setFuelSurcharge(result)
+    } catch (error) {
+      console.error('Failed to calculate fuel surcharge:', error)
+    } finally {
+      setLoadingFuel(false)
+    }
+  }
+
+  const handleSaveAsTemplate = async () => {
+    if (!shipment) return
+    setSavingTemplate(true)
+    try {
+      await api.createLoadTemplate({
+        name: `${shipment.origin_city}, ${shipment.origin_state} to ${shipment.destination_city}, ${shipment.destination_state}`,
+        customer_id: shipment.customer_id,
+        stops: shipment.stops,
+        equipment_type: shipment.equipment_type,
+        weight_lbs: shipment.weight_lbs,
+        commodity: shipment.commodity,
+        customer_price: shipment.customer_price,
+        carrier_cost: shipment.carrier_cost,
+      })
+    } catch (error) {
+      console.error('Failed to save template:', error)
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
+
+  const handleGenerateBOL = async () => {
+    if (!id) return
+    setBolGenerating(true)
+    try {
+      const result = await api.generateBOL(id)
+      setBolResult(result)
+    } catch (error) {
+      console.error('Failed to generate BOL:', error)
+    } finally {
+      setBolGenerating(false)
+    }
+  }
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!id || !e.target.files?.length) return
+    setPhotoUploading(true)
+    try {
+      const files = Array.from(e.target.files)
+      await api.uploadShipmentPhotos(id, files, photoCategory)
+      const updatedPhotos = await api.getShipmentPhotos(id)
+      setPhotos(updatedPhotos)
+    } catch (error) {
+      console.error('Failed to upload photos:', error)
+    } finally {
+      setPhotoUploading(false)
+    }
+  }
+
+  const handleCaptureEnhancedPOD = async () => {
+    if (!id) return
+    setPodCapturing(true)
+    try {
+      await api.captureEnhancedPOD(id, {
+        received_by: podForm.received_by,
+        delivery_notes: podForm.delivery_notes,
+        damage_reported: podForm.damage_reported,
+        damage_description: podForm.damage_reported ? podForm.damage_description : undefined,
+      })
+      setShowPODModal(false)
+      // Refresh shipment data
+      const updated = await api.getShipment(id)
+      setShipment(updated)
+    } catch (error) {
+      console.error('Failed to capture POD:', error)
+    } finally {
+      setPodCapturing(false)
     }
   }
 
@@ -175,8 +342,111 @@ export default function ShipmentDetail() {
               Create Invoice
             </button>
           )}
+          <button
+            onClick={() => setShowBOLModal(true)}
+            className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Generate BOL
+          </button>
+          {shipment.status === 'in_transit' && (
+            <button
+              onClick={() => setShowPODModal(true)}
+              className="px-4 py-2 border border-emerald-300 text-emerald-700 rounded-lg hover:bg-emerald-50 flex items-center gap-2"
+            >
+              <Camera className="h-4 w-4" />
+              Capture POD
+            </button>
+          )}
+          <button
+            onClick={() => setShowSplitModal(true)}
+            className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 text-sm"
+            title="Split Shipment"
+          >
+            <Scissors className="h-4 w-4" />
+            Split
+          </button>
+          <button
+            onClick={() => setShowEquipmentPanel(!showEquipmentPanel)}
+            className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 text-sm"
+            title="Assign Equipment"
+          >
+            <Wrench className="h-4 w-4" />
+            Equipment
+          </button>
+          <button
+            onClick={handleSaveAsTemplate}
+            disabled={savingTemplate}
+            className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center gap-1.5 text-sm disabled:opacity-50"
+            title="Save as Template"
+          >
+            {savingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Template
+          </button>
         </div>
       </div>
+
+      {/* Equipment Assignment Panel */}
+      {showEquipmentPanel && (
+        <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-gray-600" />
+              Equipment Assignment
+            </h3>
+          </div>
+          <div className="flex items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Trailer / Chassis Number</label>
+              <input
+                type="text"
+                value={trailerNumber}
+                onChange={(e) => setTrailerNumber(e.target.value)}
+                placeholder="e.g., TRL-12345"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <button
+              onClick={handleAssignEquipment}
+              disabled={!trailerNumber || assigningEquipment}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2 text-sm"
+            >
+              {assigningEquipment ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+              Assign
+            </button>
+            <button
+              onClick={handleCalculateFuelSurcharge}
+              disabled={loadingFuel}
+              className="px-4 py-2 border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-50 flex items-center gap-2 text-sm disabled:opacity-50"
+            >
+              {loadingFuel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fuel className="h-4 w-4" />}
+              Fuel Surcharge
+            </button>
+          </div>
+          {fuelSurcharge && (
+            <div className="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm">
+              <div className="grid grid-cols-4 gap-4">
+                <div>
+                  <span className="text-gray-500">Fuel Price:</span>
+                  <span className="ml-1 font-medium">${(fuelSurcharge.current_fuel_price).toFixed(2)}/gal</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Surcharge:</span>
+                  <span className="ml-1 font-medium text-amber-700">{fuelSurcharge.surcharge_percent.toFixed(1)}%</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Amount:</span>
+                  <span className="ml-1 font-medium">${(fuelSurcharge.surcharge_amount / 100).toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Total w/ FSC:</span>
+                  <span className="ml-1 font-bold text-gray-900">${(fuelSurcharge.total_with_surcharge / 100).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
@@ -439,6 +709,252 @@ export default function ShipmentDetail() {
 
       {activeTab === 'conversation' && id && (
         <ShipmentConversation shipmentId={id} />
+      )}
+
+      {/* Photo Capture Section (visible in tracking tab) */}
+      {activeTab === 'tracking' && id && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mt-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Camera className="h-5 w-5 text-gray-600" />
+              Shipment Photos
+            </h2>
+            <div className="flex items-center gap-3">
+              <select
+                value={photoCategory}
+                onChange={(e) => setPhotoCategory(e.target.value)}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm"
+              >
+                <option value="delivery">Delivery</option>
+                <option value="damage">Damage</option>
+                <option value="bol">BOL</option>
+                <option value="loading">Loading</option>
+                <option value="unloading">Unloading</option>
+                <option value="other">Other</option>
+              </select>
+              <label className="flex items-center gap-2 px-4 py-1.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 cursor-pointer text-sm">
+                {photoUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                {photoUploading ? 'Uploading...' : 'Upload Photos'}
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                  disabled={photoUploading}
+                />
+              </label>
+            </div>
+          </div>
+          {photos.length === 0 ? (
+            <p className="text-sm text-gray-500 text-center py-4">No photos uploaded yet</p>
+          ) : (
+            <div className="grid grid-cols-4 gap-3">
+              {photos.map((photo) => (
+                <div key={photo.id} className="border border-gray-200 rounded-lg p-2">
+                  <div className="aspect-video bg-gray-100 rounded flex items-center justify-center text-gray-400 mb-2">
+                    <Camera className="h-8 w-8" />
+                  </div>
+                  <p className="text-xs font-medium text-gray-900 truncate">{photo.filename}</p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{photo.category}</span>
+                    <span className="text-xs text-gray-400">{new Date(photo.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {photo.annotations.length > 0 && (
+                    <span className="text-xs text-blue-600 mt-1 block">{photo.annotations.length} annotation(s)</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* BOL Generation Modal */}
+      {showBOLModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Generate Bill of Lading</h3>
+            {bolResult ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-green-800 font-medium">BOL Generated Successfully</p>
+                  <p className="text-green-600 text-sm mt-1">BOL #{bolResult.bol_number}</p>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                  <p><span className="text-gray-500">Shipment:</span> {bolResult.bol_data.bol_number}</p>
+                  <p><span className="text-gray-500">Origin:</span> {JSON.stringify(bolResult.bol_data.origin)}</p>
+                  <p><span className="text-gray-500">Destination:</span> {JSON.stringify(bolResult.bol_data.destination)}</p>
+                  <p><span className="text-gray-500">Hazmat:</span> {bolResult.bol_data.hazmat ? 'Yes' : 'No'}</p>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => { setShowBOLModal(false); setBolResult(null) }}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Close
+                  </button>
+                  <button
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    Download PDF
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-gray-600 text-sm">
+                  Generate a Bill of Lading from the shipment data. The BOL will include shipper, consignee,
+                  carrier details, commodity info, and special instructions.
+                </p>
+                <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-1">
+                  <p><span className="text-gray-500">Shipment:</span> {shipment.shipment_number}</p>
+                  <p><span className="text-gray-500">Route:</span> {shipment.origin_city}, {shipment.origin_state} to {shipment.destination_city}, {shipment.destination_state}</p>
+                  <p><span className="text-gray-500">Equipment:</span> {shipment.equipment_type}</p>
+                  {shipment.weight_lbs && <p><span className="text-gray-500">Weight:</span> {shipment.weight_lbs.toLocaleString()} lbs</p>}
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={() => setShowBOLModal(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleGenerateBOL}
+                    disabled={bolGenerating}
+                    className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {bolGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+                    {bolGenerating ? 'Generating...' : 'Generate BOL'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Split Shipment Modal */}
+      {showSplitModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Scissors className="h-5 w-5 text-gray-600" />
+              Split Shipment
+            </h3>
+            {splitResult ? (
+              <div className="space-y-4">
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <p className="text-green-800 font-medium">Shipment Split Successfully</p>
+                  <p className="text-green-600 text-sm mt-1">{splitResult.child_shipments.length} child shipments created</p>
+                </div>
+                <div className="space-y-2">
+                  {splitResult.child_shipments.map((child) => (
+                    <div key={child.id} className="p-3 border border-gray-200 rounded-lg text-sm">
+                      <span className="font-medium">{child.shipment_number}</span>
+                      {child.weight_lbs && <span className="text-gray-500 ml-2">{child.weight_lbs.toLocaleString()} lbs</span>}
+                    </div>
+                  ))}
+                </div>
+                <button onClick={() => { setShowSplitModal(false); setSplitResult(null) }}
+                  className="w-full py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700">
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Split this shipment into smaller child shipments. A parent-child relationship will be maintained.
+                </p>
+                <div className="bg-gray-50 p-4 rounded-lg text-sm">
+                  <p><span className="text-gray-500">Current Weight:</span> {shipment.weight_lbs?.toLocaleString() || 'N/A'} lbs</p>
+                  <p><span className="text-gray-500">Route:</span> {shipment.origin_city}, {shipment.origin_state} to {shipment.destination_city}, {shipment.destination_state}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setShowSplitModal(false)}
+                    className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50">Cancel</button>
+                  <button onClick={handleSplitShipment} disabled={splitting}
+                    className="flex-1 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2">
+                    {splitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Scissors className="h-4 w-4" />}
+                    {splitting ? 'Splitting...' : 'Split by Weight (40k lbs)'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced POD Capture Modal */}
+      {showPODModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Capture Proof of Delivery</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Received By</label>
+                <input
+                  type="text"
+                  value={podForm.received_by}
+                  onChange={(e) => setPodForm({ ...podForm, received_by: e.target.value })}
+                  placeholder="Name of person who received delivery"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Notes</label>
+                <textarea
+                  value={podForm.delivery_notes}
+                  onChange={(e) => setPodForm({ ...podForm, delivery_notes: e.target.value })}
+                  rows={2}
+                  placeholder="Any notes about the delivery..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={podForm.damage_reported}
+                    onChange={(e) => setPodForm({ ...podForm, damage_reported: e.target.checked })}
+                    className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-sm text-gray-700">Report Damage</span>
+                </label>
+              </div>
+              {podForm.damage_reported && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Damage Description</label>
+                  <textarea
+                    value={podForm.damage_description}
+                    onChange={(e) => setPodForm({ ...podForm, damage_description: e.target.value })}
+                    rows={2}
+                    placeholder="Describe the damage..."
+                    className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+              )}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setShowPODModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleCaptureEnhancedPOD}
+                  disabled={podCapturing || !podForm.received_by}
+                  className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {podCapturing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  {podCapturing ? 'Capturing...' : 'Capture POD'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

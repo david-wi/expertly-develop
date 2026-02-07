@@ -709,3 +709,158 @@ async def mark_notification_read(notification_id: str, authorization: str = Head
     )
 
     return {"status": "read"}
+
+
+# ============================================================================
+# Enhanced Customer Tracking Dashboard
+# ============================================================================
+
+@router.get("/tracking-dashboard")
+async def get_customer_tracking_dashboard(authorization: str = Header(None)):
+    """Enhanced tracking dashboard with all active shipments, map data, and ETA confidence."""
+    customer = await get_current_customer(authorization)
+    db = get_database()
+    customer_id = customer["_id"]
+
+    # Get all active shipments
+    active_statuses = ["booked", "pending_pickup", "in_transit", "out_for_delivery"]
+    active_shipments = await db.shipments.find({
+        "customer_id": customer_id,
+        "status": {"$in": active_statuses}
+    }).sort("created_at", -1).to_list(100)
+
+    shipment_tracking = []
+    for s in active_shipments:
+        stops = s.get("stops", [])
+        origin = next((st for st in stops if st.get("stop_type") == "pickup"), {})
+        dest = next((st for st in stops if st.get("stop_type") == "delivery"), {})
+
+        # Get latest tracking event
+        latest_event = await db.tracking_events.find_one(
+            {"shipment_id": s["_id"]},
+            sort=[("event_timestamp", -1)]
+        )
+
+        # Calculate ETA confidence
+        eta_confidence = None
+        if s.get("eta") and s.get("delivery_date"):
+            # Higher confidence when GPS data is recent
+            last_check = s.get("last_check_call")
+            if last_check:
+                hours_since = (utc_now() - last_check).total_seconds() / 3600
+                if hours_since < 1:
+                    eta_confidence = 0.95
+                elif hours_since < 4:
+                    eta_confidence = 0.80
+                elif hours_since < 8:
+                    eta_confidence = 0.60
+                else:
+                    eta_confidence = 0.40
+
+        shipment_tracking.append({
+            "id": str(s["_id"]),
+            "shipment_number": s.get("shipment_number"),
+            "status": s.get("status"),
+            "origin_city": origin.get("city", ""),
+            "origin_state": origin.get("state", ""),
+            "destination_city": dest.get("city", ""),
+            "destination_state": dest.get("state", ""),
+            "pickup_date": s.get("pickup_date"),
+            "delivery_date": s.get("delivery_date"),
+            "eta": s.get("eta"),
+            "eta_confidence": eta_confidence,
+            "last_location": s.get("last_known_location"),
+            "last_update": s.get("last_check_call"),
+            "latest_event": {
+                "event_type": latest_event.get("event_type"),
+                "timestamp": latest_event.get("event_timestamp"),
+                "location": f"{latest_event.get('location_city', '')}, {latest_event.get('location_state', '')}".strip(", "),
+            } if latest_event else None,
+            "latitude": latest_event.get("latitude") if latest_event else None,
+            "longitude": latest_event.get("longitude") if latest_event else None,
+        })
+
+    # Get recently delivered (last 7 days)
+    from datetime import timedelta
+    seven_days_ago = utc_now() - timedelta(days=7)
+    recent_delivered = await db.shipments.find({
+        "customer_id": customer_id,
+        "status": "delivered",
+        "actual_delivery_date": {"$gte": seven_days_ago},
+    }).sort("actual_delivery_date", -1).limit(10).to_list(10)
+
+    return {
+        "customer_name": customer.get("name"),
+        "active_shipments": shipment_tracking,
+        "active_count": len(shipment_tracking),
+        "in_transit_count": len([s for s in shipment_tracking if s["status"] == "in_transit"]),
+        "pending_pickup_count": len([s for s in shipment_tracking if s["status"] == "pending_pickup"]),
+        "recent_deliveries": [
+            {
+                "id": str(s["_id"]),
+                "shipment_number": s.get("shipment_number"),
+                "delivered_at": s.get("actual_delivery_date"),
+            }
+            for s in recent_delivered
+        ],
+    }
+
+
+@router.get("/shipments/{shipment_id}/tracking-detail")
+async def get_customer_shipment_tracking_detail(shipment_id: str, authorization: str = Header(None)):
+    """Detailed tracking view for a single shipment with map data and ETA."""
+    customer = await get_current_customer(authorization)
+    db = get_database()
+
+    shipment = await db.shipments.find_one({
+        "_id": ObjectId(shipment_id),
+        "customer_id": customer["_id"]
+    })
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Get all tracking events with GPS coordinates
+    events = await db.tracking_events.find(
+        {"shipment_id": ObjectId(shipment_id)}
+    ).sort("event_timestamp", -1).to_list(100)
+
+    # Get POD
+    pod = await db.pod_captures.find_one({"shipment_id": ObjectId(shipment_id)})
+
+    # Get route points (GPS coordinates for map)
+    route_points = [
+        {"lat": e.get("latitude"), "lng": e.get("longitude"), "timestamp": e.get("event_timestamp")}
+        for e in events
+        if e.get("latitude") and e.get("longitude")
+    ]
+
+    stops = shipment.get("stops", [])
+    origin = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+    dest = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+
+    return {
+        "shipment_number": shipment.get("shipment_number"),
+        "status": shipment.get("status"),
+        "origin": {"city": origin.get("city"), "state": origin.get("state"), "lat": origin.get("latitude"), "lng": origin.get("longitude")},
+        "destination": {"city": dest.get("city"), "state": dest.get("state"), "lat": dest.get("latitude"), "lng": dest.get("longitude")},
+        "eta": shipment.get("eta"),
+        "last_location": shipment.get("last_known_location"),
+        "route_points": route_points,
+        "tracking_events": [
+            {
+                "event_type": e.get("event_type"),
+                "timestamp": e.get("event_timestamp"),
+                "location": f"{e.get('location_city', '')}, {e.get('location_state', '')}".strip(", "),
+                "latitude": e.get("latitude"),
+                "longitude": e.get("longitude"),
+                "notes": e.get("notes"),
+            }
+            for e in events
+        ],
+        "pod": {
+            "captured_at": pod.get("captured_at"),
+            "received_by": pod.get("received_by"),
+            "has_signature": bool(pod.get("signature_data")),
+            "photo_count": pod.get("photo_count", 0),
+        } if pod else None,
+    }
