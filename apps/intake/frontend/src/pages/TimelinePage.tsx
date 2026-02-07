@@ -14,7 +14,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { api } from '@/api/client';
-import type { Contributor, IntakeSectionInstance } from '@/types';
+
 import { format } from 'date-fns';
 
 // ── API helpers ──

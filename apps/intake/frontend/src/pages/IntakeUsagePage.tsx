@@ -8,7 +8,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { api } from '@/api/client';
-import type { Session } from '@/types';
+
 import { format } from 'date-fns';
 
 // ── API helpers ──
