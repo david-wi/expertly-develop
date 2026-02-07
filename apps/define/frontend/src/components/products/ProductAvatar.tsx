@@ -26,24 +26,24 @@ function getInitials(name: string): string {
   return words.slice(0, 2).map(w => w[0]).join('').toUpperCase()
 }
 
-function getColorFromName(name: string): string {
+function getGradientFromName(name: string): string {
   let hash = 0
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash)
   }
 
-  const colors = [
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-purple-500',
-    'bg-pink-500',
-    'bg-indigo-500',
-    'bg-teal-500',
-    'bg-orange-500',
-    'bg-cyan-500',
+  const gradients = [
+    'bg-gradient-to-br from-blue-500 to-purple-600',
+    'bg-gradient-to-br from-green-500 to-teal-600',
+    'bg-gradient-to-br from-purple-500 to-pink-600',
+    'bg-gradient-to-br from-pink-500 to-rose-600',
+    'bg-gradient-to-br from-indigo-500 to-blue-600',
+    'bg-gradient-to-br from-teal-500 to-cyan-600',
+    'bg-gradient-to-br from-orange-500 to-amber-600',
+    'bg-gradient-to-br from-cyan-500 to-blue-600',
   ]
 
-  return colors[Math.abs(hash) % colors.length]
+  return gradients[Math.abs(hash) % gradients.length]
 }
 
 export function ProductAvatar({
@@ -62,7 +62,7 @@ export function ProductAvatar({
       className={cn(
         'relative rounded-lg overflow-hidden flex items-center justify-center font-semibold text-white select-none',
         sizeClasses[size],
-        showInitials && getColorFromName(name),
+        getGradientFromName(name),
         onClick && 'cursor-pointer hover:opacity-80 transition-opacity',
         className
       )}
@@ -76,7 +76,7 @@ export function ProductAvatar({
         <img
           src={avatarUrl!}
           alt={`${name} avatar`}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover mix-blend-screen"
           onError={() => setImageError(true)}
         />
       )}
