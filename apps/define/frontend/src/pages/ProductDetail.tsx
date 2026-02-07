@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -160,6 +160,9 @@ function RequirementTreeItem({
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const activeTab = location.pathname.endsWith('/artifacts') ? 'artifacts' : 'requirements'
   const [product, setProduct] = useState<Product | null>(null)
   const [requirements, setRequirements] = useState<Requirement[]>([])
   const [loading, setLoading] = useState(true)
@@ -330,7 +333,9 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        <Tabs defaultValue="requirements">
+        <Tabs value={activeTab} onValueChange={(value) => {
+          navigate(value === 'artifacts' ? `/products/${id}/artifacts` : `/products/${id}`, { replace: false })
+        }}>
           <TabsList>
             <TabsTrigger value="requirements" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
