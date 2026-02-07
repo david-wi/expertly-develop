@@ -12,6 +12,7 @@ import {
   formatBuildTimestamp,
   useCurrentUser,
   createDefaultUserMenu,
+  type CurrentUser,
 } from '@expertly/ui';
 import { api } from '../../api/client';
 
@@ -27,7 +28,10 @@ export function Sidebar() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const fetchCurrentUser = useCallback(() => api.auth.me(), []);
+  const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
+    const user = await api.auth.me();
+    return { id: user.userId, name: user.name, email: user.email ?? '', role: user.role };
+  }, []);
   const { sidebarUser } = useCurrentUser(fetchCurrentUser);
 
   const handleLogout = useCallback(() => {
