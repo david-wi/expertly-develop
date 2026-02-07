@@ -60,3 +60,4 @@ class GenerateJobStatusResponse(BaseModel):
     requirements: Optional[List[ParsedRequirement]] = None
     error: Optional[str] = None
     progress: Optional[str] = None
+    created_count: int = 0

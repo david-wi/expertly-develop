@@ -195,38 +195,48 @@ export function GenerateFromArtifactsDialog({
         target_parent_id: targetParentId || undefined,
       })
 
-      // Poll for results every 2 seconds
+      // Poll for results every 2 seconds with retry logic
+      let consecutiveErrors = 0
+      const MAX_POLL_RETRIES = 5
+
       pollingRef.current = setInterval(async () => {
         try {
           const status = await aiApi.getGenerationStatus(job_id)
+          consecutiveErrors = 0 // Reset on success
 
-          if (status.status === 'completed' && status.requirements) {
+          if (status.status === 'completed') {
             stopPolling()
             setGenerating(false)
             setGeneratingStartTime(null)
             setProgressMessage(null)
-            const requirementsWithApproval: ParsedReqWithApproval[] = status.requirements.map((req) => ({
-              ...req,
-              approval_status: 'pending' as ApprovalStatus,
-            }))
-            setParsedRequirements(requirementsWithApproval)
-            setStep('preview')
-            setExpandedItems(new Set(requirementsWithApproval.map((r) => r.temp_id)))
+
+            // Nodes are already saved to DB — just close and refresh
+            handleClose(false)
+            onSuccess()
           } else if (status.status === 'failed') {
             stopPolling()
             setGenerating(false)
             setGeneratingStartTime(null)
             setProgressMessage(null)
             setError(status.error || 'Generation failed')
-          } else if (status.progress) {
-            setProgressMessage(status.progress)
+          } else {
+            // Processing — update progress
+            if (status.progress) {
+              setProgressMessage(status.progress)
+            }
           }
-          // status === 'processing' → keep polling
         } catch {
-          stopPolling()
-          setGenerating(false)
-          setGeneratingStartTime(null)
-          setError('Lost connection while generating requirements. Please try again.')
+          consecutiveErrors++
+          if (consecutiveErrors >= MAX_POLL_RETRIES) {
+            stopPolling()
+            setGenerating(false)
+            setGeneratingStartTime(null)
+            setError(
+              'Lost connection while generating requirements. ' +
+              'Generation may still be running — refresh the page to see any created nodes.'
+            )
+          }
+          // Otherwise silently retry on next interval
         }
       }, 2000)
     } catch (err: unknown) {
