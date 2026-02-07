@@ -150,9 +150,12 @@ async def generate_from_artifacts(
 
     combined_description = "\n\n".join(combined_parts)
 
-    # Fetch existing requirements for context
+    # Fetch existing requirements for context (exclude soft-deleted)
     req_result = await db.execute(
-        select(Requirement).where(Requirement.product_id == data.product_id)
+        select(Requirement).where(
+            Requirement.product_id == data.product_id,
+            Requirement.deleted_at.is_(None),
+        )
     )
     existing_reqs = req_result.scalars().all()
     existing_requirements = [
@@ -161,6 +164,7 @@ async def generate_from_artifacts(
             stable_key=r.stable_key,
             title=r.title,
             parent_id=r.parent_id,
+            node_type=r.node_type,
         )
         for r in existing_reqs
     ]

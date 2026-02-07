@@ -28,12 +28,13 @@ async def list_products(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """List all products with requirement counts."""
-    # Subquery for requirement counts
+    # Subquery for requirement counts (exclude soft-deleted)
     count_subq = (
         select(
             Requirement.product_id,
             func.count(Requirement.id).label("requirement_count")
         )
+        .where(Requirement.deleted_at.is_(None))
         .group_by(Requirement.product_id)
         .subquery()
     )

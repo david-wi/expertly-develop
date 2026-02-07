@@ -35,7 +35,10 @@ async def list_requirements(
     """List requirements for a product."""
     stmt = (
         select(Requirement)
-        .where(Requirement.product_id == product_id)
+        .where(
+            Requirement.product_id == product_id,
+            Requirement.deleted_at.is_(None),
+        )
         .order_by(Requirement.order_index)
     )
     result = await db.execute(stmt)
@@ -92,6 +95,7 @@ async def create_requirement(
         parent_id=data.parent_id,
         stable_key=stable_key,
         title=data.title.strip(),
+        node_type=data.node_type,
         what_this_does=data.what_this_does.strip() if data.what_this_does else None,
         why_this_exists=data.why_this_exists.strip() if data.why_this_exists else None,
         not_included=data.not_included.strip() if data.not_included else None,
@@ -114,6 +118,7 @@ async def create_requirement(
         version_number=1,
         snapshot=json.dumps({
             "title": requirement.title,
+            "node_type": requirement.node_type,
             "what_this_does": requirement.what_this_does,
             "why_this_exists": requirement.why_this_exists,
             "not_included": requirement.not_included,
@@ -142,7 +147,10 @@ async def get_requirement(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Get a single requirement by ID."""
-    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    stmt = select(Requirement).where(
+        Requirement.id == requirement_id,
+        Requirement.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     requirement = result.scalar_one_or_none()
     if not requirement:
@@ -158,7 +166,10 @@ async def update_requirement(
     current_user: CurrentUser = Depends(get_current_user),
 ):
     """Update a requirement."""
-    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    stmt = select(Requirement).where(
+        Requirement.id == requirement_id,
+        Requirement.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     requirement = result.scalar_one_or_none()
     if not requirement:
@@ -168,6 +179,9 @@ async def update_requirement(
     if data.title is not None:
         requirement.title = data.title.strip()
         changes.append("title")
+    if data.node_type is not None:
+        requirement.node_type = data.node_type if data.node_type else None
+        changes.append("node_type")
     if data.what_this_does is not None:
         requirement.what_this_does = data.what_this_does.strip() if data.what_this_does else None
         changes.append("what_this_does")
@@ -208,6 +222,7 @@ async def update_requirement(
             version_number=requirement.current_version,
             snapshot=json.dumps({
                 "title": requirement.title,
+                "node_type": requirement.node_type,
                 "what_this_does": requirement.what_this_does,
                 "why_this_exists": requirement.why_this_exists,
                 "not_included": requirement.not_included,
@@ -248,16 +263,64 @@ async def delete_requirement(
     db: AsyncSession = Depends(get_db),
     current_user: CurrentUser = Depends(get_current_user),
 ):
-    """Delete a requirement and all related data."""
-    stmt = select(Requirement).where(Requirement.id == requirement_id)
+    """Soft-delete a requirement."""
+    stmt = select(Requirement).where(
+        Requirement.id == requirement_id,
+        Requirement.deleted_at.is_(None),
+    )
     result = await db.execute(stmt)
     requirement = result.scalar_one_or_none()
     if not requirement:
         raise HTTPException(status_code=404, detail="Requirement not found")
 
-    await db.delete(requirement)
+    now = datetime.utcnow().isoformat()
+    requirement.deleted_at = now
 
+    # Also soft-delete children
+    children_stmt = select(Requirement).where(
+        Requirement.parent_id == requirement_id,
+        Requirement.deleted_at.is_(None),
+    )
+    children_result = await db.execute(children_stmt)
+    for child in children_result.scalars().all():
+        child.deleted_at = now
+
+    await db.flush()
     return None
+
+
+@router.post("/clear", status_code=200)
+async def clear_requirements(
+    product_id: str = Query(..., description="Product ID to clear requirements for"),
+    db: AsyncSession = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    """Soft-delete all requirements for a product."""
+    # Verify product exists
+    stmt = select(Product).where(Product.id == product_id)
+    result = await db.execute(stmt)
+    product = result.scalar_one_or_none()
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    now = datetime.utcnow().isoformat()
+    stmt = (
+        select(Requirement)
+        .where(
+            Requirement.product_id == product_id,
+            Requirement.deleted_at.is_(None),
+        )
+    )
+    result = await db.execute(stmt)
+    requirements = result.scalars().all()
+
+    count = 0
+    for req in requirements:
+        req.deleted_at = now
+        count += 1
+
+    await db.flush()
+    return {"cleared": count}
 
 
 @router.post("/batch", response_model=List[RequirementResponse], status_code=201)
@@ -290,6 +353,7 @@ async def create_requirements_batch(
             parent_id=None,  # Set in second pass
             stable_key=stable_key,
             title=item.title.strip(),
+            node_type=item.node_type,
             what_this_does=item.what_this_does.strip() if item.what_this_does else None,
             why_this_exists=item.why_this_exists.strip() if item.why_this_exists else None,
             not_included=item.not_included.strip() if item.not_included else None,
@@ -358,6 +422,7 @@ async def create_requirements_batch(
             version_number=1,
             snapshot=json.dumps({
                 "title": requirement.title,
+                "node_type": requirement.node_type,
                 "what_this_does": requirement.what_this_does,
                 "why_this_exists": requirement.why_this_exists,
                 "not_included": requirement.not_included,
