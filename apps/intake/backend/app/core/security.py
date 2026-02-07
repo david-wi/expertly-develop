@@ -1,32 +1,90 @@
-"""Authentication, authorization, and security utilities."""
+"""Authentication, authorization, and security utilities.
+
+Authentication is delegated to the centralized Identity service via the
+shared ``identity-client`` package.  The ``get_current_user`` dependency
+returns a **dict** with the same keys the rest of the codebase expects
+(``userId``, ``accountId``, ``email``, ``role``, ``name``), so existing
+route files require zero changes.
+"""
 
 import secrets
 import string
-from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from fastapi import Depends, HTTPException, Request, status
 from passlib.context import CryptContext
+
+from identity_client import IdentityAuth, IdentityClient
 
 from ..config import settings
 
 # ---------------------------------------------------------------------------
-# Password hashing
+# Identity service singletons
 # ---------------------------------------------------------------------------
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_identity_client: Optional[IdentityClient] = None
+_identity_auth: Optional[IdentityAuth] = None
 
 
-def hash_password(plain: str) -> str:
-    """Hash a plain-text password using bcrypt."""
-    return pwd_context.hash(plain)
+def get_identity_client() -> IdentityClient:
+    global _identity_client
+    if _identity_client is None:
+        _identity_client = IdentityClient(base_url=settings.identity_api_url)
+    return _identity_client
 
 
-def verify_password(plain: str, hashed: str) -> bool:
-    """Verify a plain-text password against a bcrypt hash."""
-    return pwd_context.verify(plain, hashed)
+def get_identity_auth() -> IdentityAuth:
+    global _identity_auth
+    if _identity_auth is None:
+        _identity_auth = IdentityAuth(
+            identity_url=settings.identity_api_url,
+            client=get_identity_client(),
+        )
+    return _identity_auth
+
+
+# ---------------------------------------------------------------------------
+# Role mapping: Identity roles → Intake roles
+# ---------------------------------------------------------------------------
+
+_IDENTITY_TO_INTAKE_ROLE = {
+    "owner": "admin",
+    "admin": "admin",
+    "member": "editor",
+    "viewer": "viewer",
+}
+
+
+def _map_role(identity_role: str) -> str:
+    return _IDENTITY_TO_INTAKE_ROLE.get(identity_role, "viewer")
+
+
+# ---------------------------------------------------------------------------
+# FastAPI dependency — current user (compat dict)
+# ---------------------------------------------------------------------------
+
+
+async def get_current_user(request: Request) -> dict:
+    """Validate the Identity session and return a backward-compatible dict.
+
+    Keys returned: ``userId``, ``accountId``, ``email``, ``role``, ``name``.
+    """
+    auth = get_identity_auth()
+    identity_user = await auth.get_current_user(request)
+
+    if not identity_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is disabled",
+        )
+
+    return {
+        "userId": str(identity_user.id),
+        "accountId": str(identity_user.organization_id),
+        "email": identity_user.email,
+        "role": _map_role(identity_user.role),
+        "name": identity_user.name,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -69,94 +127,6 @@ def verify_intake_code(plain: str, hashed: str) -> bool:
 def generate_pin() -> str:
     """Generate a 4-digit numeric PIN."""
     return f"{secrets.randbelow(10000):04d}"
-
-
-# ---------------------------------------------------------------------------
-# JWT helpers
-# ---------------------------------------------------------------------------
-
-
-def create_access_token(
-    data: dict,
-    expires_delta: Optional[timedelta] = None,
-) -> str:
-    """Create a signed JWT access token.
-
-    Args:
-        data: Claims to embed in the token.  Must include at least ``sub``.
-        expires_delta: Custom lifetime.  Defaults to ``settings.access_token_expire_minutes``.
-
-    Returns:
-        Encoded JWT string.
-    """
-    to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + (
-        expires_delta
-        if expires_delta is not None
-        else timedelta(minutes=settings.access_token_expire_minutes)
-    )
-    to_encode.update({"exp": expire, "iat": datetime.now(timezone.utc)})
-    return jwt.encode(
-        to_encode,
-        settings.jwt_secret_key,
-        algorithm=settings.jwt_algorithm,
-    )
-
-
-def decode_access_token(token: str) -> dict:
-    """Decode and verify a JWT access token.
-
-    Raises:
-        JWTError: When the token is invalid, expired, or tampered with.
-
-    Returns:
-        The decoded claims dictionary.
-    """
-    return jwt.decode(
-        token,
-        settings.jwt_secret_key,
-        algorithms=[settings.jwt_algorithm],
-    )
-
-
-# ---------------------------------------------------------------------------
-# FastAPI dependencies
-# ---------------------------------------------------------------------------
-
-_bearer_scheme = HTTPBearer(auto_error=True)
-
-
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
-) -> dict:
-    """Extract and validate the current user from the bearer token.
-
-    Returns a dict with at least ``userId``, ``accountId``, ``email``, ``role``.
-    """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = decode_access_token(credentials.credentials)
-        user_id: Optional[str] = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    # Build a lightweight user dict from token claims.
-    user = {
-        "userId": user_id,
-        "accountId": payload.get("accountId"),
-        "email": payload.get("email"),
-        "role": payload.get("role"),
-        "name": payload.get("name"),
-    }
-    if not user["accountId"]:
-        raise credentials_exception
-    return user
 
 
 # ---------------------------------------------------------------------------

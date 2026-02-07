@@ -9,10 +9,6 @@ from .common import (
     TimestampMixin,
 )
 from .auth import (
-    AccountResponse,
-    CreateUserRequest,
-    LoginRequest,
-    LoginResponse,
     UserResponse,
 )
 from .voice_profile import (
@@ -138,10 +134,6 @@ __all__ = [
     "ResponseEnvelope",
     "TimestampMixin",
     # auth
-    "AccountResponse",
-    "CreateUserRequest",
-    "LoginRequest",
-    "LoginResponse",
     "UserResponse",
     # voice_profile
     "VoiceProfileCreate",

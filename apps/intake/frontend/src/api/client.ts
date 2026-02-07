@@ -2,7 +2,6 @@ import axios, { type AxiosInstance, type AxiosResponse } from 'axios';
 
 import type {
   User,
-  Account,
   VoiceProfile,
   IntakeType,
   TemplateVersion,
@@ -26,43 +25,35 @@ import type {
 } from '../types';
 
 // ---------------------------------------------------------------------------
-// Axios instance
+// Constants
 // ---------------------------------------------------------------------------
 
 const API_URL = import.meta.env.VITE_API_URL || '/api/v1';
+export const IDENTITY_URL =
+  import.meta.env.VITE_IDENTITY_URL || 'https://identity.ai.devintensive.com';
+
+// ---------------------------------------------------------------------------
+// Axios instance — sends cookies (Identity session) cross-origin
+// ---------------------------------------------------------------------------
 
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 // ---------------------------------------------------------------------------
-// Request interceptor — attach auth token
-// ---------------------------------------------------------------------------
-
-axiosInstance.interceptors.request.use((config) => {
-  const token = localStorage.getItem('intake_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// ---------------------------------------------------------------------------
-// Response interceptor — handle 401
+// Response interceptor — redirect to Identity login on 401
 // ---------------------------------------------------------------------------
 
 axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('intake_token');
-      // Only redirect if we are not already on the login page
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+      const returnUrl = encodeURIComponent(window.location.href);
+      window.location.href = `${IDENTITY_URL}/login?returnUrl=${returnUrl}`;
     }
     return Promise.reject(error);
   },
@@ -80,36 +71,9 @@ function unwrap<T>(res: AxiosResponse<T>): T {
 // Auth
 // ---------------------------------------------------------------------------
 
-interface LoginResponse {
-  token: string;
-  tokenType: string;
-  expiresAt: string;
-  user: User;
-}
-
 const auth = {
-  login(email: string, password: string): Promise<LoginResponse> {
-    return axiosInstance.post('/auth/login', { email, password }).then(unwrap);
-  },
-
   me(): Promise<User> {
     return axiosInstance.get('/me').then(unwrap);
-  },
-
-  getAccount(): Promise<Account> {
-    return axiosInstance.get('/accounts/current').then(unwrap);
-  },
-
-  listUsers(): Promise<User[]> {
-    return axiosInstance.get('/users').then(unwrap);
-  },
-
-  createUser(data: {
-    email: string;
-    name: string;
-    role?: string;
-  }): Promise<User> {
-    return axiosInstance.post('/users', data).then(unwrap);
   },
 };
 

@@ -532,6 +532,7 @@ services:
     environment:
       - MONGODB_URL=mongodb://expertly-shared-mongo:27017
       - MONGODB_DATABASE=expertly_intake
+      - IDENTITY_API_URL=https://identity-api.ai.devintensive.com
     networks:
       - traefik
       - default
@@ -557,6 +558,7 @@ services:
       dockerfile: ./apps/intake/frontend/Dockerfile
       args:
         VITE_API_URL: https://intake-api.ai.devintensive.com/api/v1
+        VITE_IDENTITY_URL: https://identity.ai.devintensive.com
     depends_on:
       - intake-backend
     networks:

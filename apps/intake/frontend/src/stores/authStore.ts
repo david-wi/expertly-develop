@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { api } from '../api/client';
+import { api, IDENTITY_URL } from '../api/client';
 import type { User } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -9,26 +9,16 @@ import type { User } from '../types';
 export interface AuthState {
   /** Currently authenticated user (null when logged out or not yet loaded). */
   user: User | null;
-  /** JWT bearer token. */
-  token: string | null;
-  /** Whether the initial token check / user fetch is still in progress. */
+  /** Whether the initial session check is still in progress. */
   isLoading: boolean;
-  /** Convenience getter backed by user + token presence. */
+  /** Convenience getter backed by user presence. */
   isAuthenticated: boolean;
 
-  /** Authenticate with email + password. Stores token in localStorage. */
-  login: (email: string, password: string) => Promise<void>;
-  /** Clear token, user state, and localStorage. */
+  /** Clear user state and redirect to Identity logout. */
   logout: () => void;
-  /** Attempt to restore a session from a token saved in localStorage. */
+  /** Attempt to restore a session from the Identity session cookie. */
   loadUser: () => Promise<void>;
 }
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const TOKEN_KEY = 'intake_token';
 
 // ---------------------------------------------------------------------------
 // Store
@@ -36,55 +26,34 @@ const TOKEN_KEY = 'intake_token';
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  token: localStorage.getItem(TOKEN_KEY),
   isLoading: true,
   isAuthenticated: false,
 
-  // ── login ───────────────────────────────────────────────────────────
-  async login(email: string, password: string) {
-    const response = await api.auth.login(email, password);
-    localStorage.setItem(TOKEN_KEY, response.token);
-    set({
-      user: response.user,
-      token: response.token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-  },
-
   // ── logout ──────────────────────────────────────────────────────────
   logout() {
-    localStorage.removeItem(TOKEN_KEY);
     set({
       user: null,
-      token: null,
       isAuthenticated: false,
       isLoading: false,
     });
+    const returnUrl = encodeURIComponent(window.location.origin);
+    window.location.href = `${IDENTITY_URL}/logout?returnUrl=${returnUrl}`;
   },
 
   // ── loadUser ────────────────────────────────────────────────────────
   async loadUser() {
-    const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-      return;
-    }
-
     try {
       const user = await api.auth.me();
       set({
         user,
-        token,
         isAuthenticated: true,
         isLoading: false,
       });
     } catch {
-      // Token expired or invalid
-      localStorage.removeItem(TOKEN_KEY);
+      // No valid session — the 401 interceptor will redirect to Identity
+      // login if needed. Here we just clear state.
       set({
         user: null,
-        token: null,
         isAuthenticated: false,
         isLoading: false,
       });
