@@ -41,11 +41,11 @@ export function ArtifactVersionHistory({
 }: ArtifactVersionHistoryProps) {
   return (
     <div className="space-y-2">
-      <h4 className="text-sm font-medium text-gray-700 mb-3">Version History</h4>
+      <h4 className="text-sm font-medium text-gray-700 mb-2">Version History</h4>
       {versions.map((version) => (
         <div
           key={version.id}
-          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+          className={`p-2.5 rounded-lg border cursor-pointer transition-colors ${
             selectedVersionId === version.id
               ? 'border-primary-300 bg-primary-50'
               : 'border-gray-200 hover:border-gray-300'
@@ -71,7 +71,7 @@ export function ArtifactVersionHistory({
           {version.conversion_error && (
             <p className="text-xs text-red-600 mt-1">{version.conversion_error}</p>
           )}
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2 mt-1.5">
             <a
               href={artifactsApi.downloadOriginalUrl(artifactId, version.id)}
               onClick={(e) => e.stopPropagation()}

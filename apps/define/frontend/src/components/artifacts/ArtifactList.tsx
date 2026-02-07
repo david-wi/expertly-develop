@@ -87,7 +87,7 @@ export function ArtifactList({ productId, productName, existingRequirements, onR
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-lg font-medium text-gray-900">
           Artifacts ({artifacts.length})
         </h3>
@@ -95,6 +95,7 @@ export function ArtifactList({ productId, productName, existingRequirements, onR
           {productName && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setGenerateDialogOpen(true)}
               disabled={hasReadyArtifacts === false}
               title={hasReadyArtifacts ? 'Generate requirements from artifacts' : 'No artifacts with completed conversion'}
@@ -103,11 +104,11 @@ export function ArtifactList({ productId, productName, existingRequirements, onR
               Generate Requirements
             </Button>
           )}
-          <Button variant="outline" onClick={() => setLinkDialogOpen(true)}>
+          <Button variant="outline" size="sm" onClick={() => setLinkDialogOpen(true)}>
             <Link2 className="h-4 w-4 mr-2" />
             Add Link
           </Button>
-          <Button onClick={() => setUploadDialogOpen(true)}>
+          <Button size="sm" onClick={() => setUploadDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Upload File
           </Button>

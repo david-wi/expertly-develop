@@ -273,8 +273,8 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50">
-      <div className="px-6 py-8 max-w-7xl mx-auto">
-        <div className="mb-2">
+      <div className="px-6 py-4 max-w-7xl mx-auto">
+        <div className="mb-1">
           <Link
             to="/products"
             className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
@@ -283,17 +283,17 @@ export default function ProductDetail() {
             Products
           </Link>
         </div>
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex items-center gap-3 mb-3">
           <ProductAvatar
             name={product.name}
             avatarUrl={product.avatar_url}
-            size="lg"
+            size="md"
             onClick={() => setAvatarDialogOpen(true)}
             className="cursor-pointer hover:ring-2 hover:ring-primary-500 hover:ring-offset-2 transition-all"
           />
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{product.name}</h1>
               <Button
                 variant="ghost"
                 size="sm"
