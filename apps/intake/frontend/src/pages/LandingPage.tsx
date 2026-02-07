@@ -1,0 +1,291 @@
+import { Link } from 'react-router-dom'
+import {
+  ArrowRight,
+  Check,
+  ClipboardList,
+  Brain,
+  FileText,
+  Users,
+  Zap,
+  Shield,
+  BarChart3,
+  MessageSquare,
+} from 'lucide-react'
+
+function ExpertlyLogo({ className = 'w-8 h-8' }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14.8379 24.9606C16.6714 22.9391 17.9566 20.4822 18.571 17.8238L24.2667 20.4657C24.3728 20.4481 24.4733 20.4064 24.5606 20.3436C24.6478 20.2809 24.7194 20.1989 24.7698 20.104C24.8201 20.0091 24.8479 19.9039 24.8509 19.7965C24.8539 19.6892 24.832 19.5826 24.7871 19.485L19.4266 8.14301C19.3632 8.00575 19.2699 7.88442 19.1535 7.78793C19.037 7.69144 18.9004 7.62224 18.7537 7.58542C18.607 7.5486 18.4539 7.54509 18.3057 7.57515C18.1574 7.60521 18.0178 7.66808 17.897 7.75913L7.63363 15.6497C7.10981 16.0196 7.36125 16.9409 7.98285 16.92L14.0452 16.6931C14.0452 16.6931 13.2106 20.2912 8.35301 22.0047L8.27269 22.0326C2.61541 23.4285 -0.000202179 18.7452 -0.000202179 15.7509C-0.00718689 7.22169 7.2006 0.699166 15.1173 0.0570345C17.8181 -0.167956 20.5328 0.274916 23.0218 1.34656C25.5108 2.41821 27.6976 4.08568 29.3891 6.2018C31.0806 8.31791 32.2249 10.8176 32.7209 13.4803C33.2169 16.1429 33.0494 18.8867 32.2332 21.4693C31.4169 24.0519 29.9771 26.3941 28.0407 28.289C26.1043 30.184 23.7309 31.5734 21.13 32.3347C18.5291 33.096 15.7807 33.2058 13.1273 32.6544C10.4738 32.103 7.99705 30.9073 5.91549 29.1728C9.17716 28.7959 12.4772 27.6408 14.8379 24.9606Z" fill="url(#paint0_linear_expertly_intake)"/>
+      <defs>
+        <linearGradient id="paint0_linear_expertly_intake" x1="32.9998" y1="33" x2="-6.71734" y2="18.8377" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#6366F1"/>
+          <stop offset="1" stopColor="#4F46E5"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  )
+}
+
+const features = [
+  {
+    icon: Brain,
+    title: 'AI-Powered Questions',
+    description: 'AI generates intelligent, context-aware questions tailored to your intake type and industry.',
+  },
+  {
+    icon: ClipboardList,
+    title: 'Structured Templates',
+    description: 'Create reusable intake templates with customizable sections and question flows.',
+  },
+  {
+    icon: MessageSquare,
+    title: 'AI Voice & Tone',
+    description: 'Configure AI voices to match your brand — professional, friendly, technical, or custom.',
+  },
+  {
+    icon: FileText,
+    title: 'Document Management',
+    description: 'Attach and organize supporting documents alongside each intake for complete context.',
+  },
+  {
+    icon: Users,
+    title: 'People & Stakeholders',
+    description: 'Track contacts and stakeholders involved in each intake with roles and responsibilities.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Usage Analytics',
+    description: 'Monitor AI usage, track intake progress, and gain insights into your intake pipeline.',
+  },
+]
+
+const benefits = [
+  'AI-generated questions',
+  'Customizable templates',
+  'Document management',
+  'Stakeholder tracking',
+  'Usage analytics',
+  'Proposal generation',
+]
+
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Navigation */}
+      <nav className="bg-white border-b border-gray-100 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
+              <ExpertlyLogo className="w-8 h-8" />
+              <span className="text-xl font-bold text-gray-900">Expertly Intake</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link to="/" className="text-gray-600 hover:text-gray-900 font-medium">
+                Sign In
+              </Link>
+              <Link
+                to="/"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
+              >
+                Get Started
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-b from-indigo-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24 lg:pt-24">
+          <div className="text-center max-w-4xl mx-auto">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium mb-6">
+              <Zap className="w-4 h-4" />
+              AI-Powered Intake Management
+            </div>
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-tight">
+              Smarter Intakes,{' '}
+              <span className="text-indigo-600">Better Outcomes</span>
+            </h1>
+            <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
+              Transform your intake process with AI-generated questions, structured templates,
+              and intelligent workflows that capture the right information every time.
+            </p>
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+              <Link
+                to="/"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-semibold text-lg shadow-lg shadow-indigo-600/25"
+              >
+                Start Building Intakes
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <a
+                href="#features"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-gray-700 rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all font-semibold text-lg"
+              >
+                Explore Features
+              </a>
+            </div>
+          </div>
+
+          {/* Hero Image Placeholder */}
+          <div className="mt-16 relative max-w-5xl mx-auto">
+            <div className="rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gray-100">
+              <div className="w-full h-[400px] bg-gradient-to-br from-indigo-100 to-indigo-50 flex items-center justify-center">
+                <div className="text-center">
+                  <div className="w-24 h-24 mx-auto mb-4 bg-indigo-200 rounded-2xl flex items-center justify-center">
+                    <ClipboardList className="w-12 h-12 text-indigo-600" />
+                  </div>
+                  <p className="text-indigo-700 font-medium">AI-Powered Intake Dashboard</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Benefits Bar */}
+      <div className="bg-gray-900 py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4">
+            {benefits.map((benefit) => (
+              <div key={benefit} className="flex items-center gap-2 text-white">
+                <Check className="w-5 h-5 text-indigo-400" />
+                <span className="text-sm font-medium">{benefit}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div id="features" className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Everything you need for intelligent intakes
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              From AI-generated questions to proposal creation, streamline your entire intake workflow.
+            </p>
+          </div>
+
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {features.map((feature) => (
+              <div
+                key={feature.title}
+                className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+              >
+                <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <feature.icon className="w-6 h-6 text-indigo-600" />
+                </div>
+                <h3 className="mt-4 text-lg font-semibold text-gray-900">
+                  {feature.title}
+                </h3>
+                <p className="mt-2 text-gray-600">{feature.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* How It Works */}
+      <div className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center max-w-2xl mx-auto">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
+              Simple yet powerful
+            </h2>
+            <p className="mt-4 text-lg text-gray-600">
+              Get from raw requirements to structured intakes in minutes.
+            </p>
+          </div>
+
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
+                1
+              </div>
+              <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                Choose a Template
+              </h3>
+              <p className="mt-3 text-gray-600">
+                Select from existing templates or create a new one tailored to your needs.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
+                2
+              </div>
+              <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                AI Generates Questions
+              </h3>
+              <p className="mt-3 text-gray-600">
+                AI creates intelligent, context-aware questions that capture the right details.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto text-white text-2xl font-bold">
+                3
+              </div>
+              <h3 className="mt-6 text-xl font-semibold text-gray-900">
+                Review & Deliver
+              </h3>
+              <p className="mt-3 text-gray-600">
+                Review responses, attach documents, and generate proposals — all in one place.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="bg-indigo-600 py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white">
+            Ready to transform your intake process?
+          </h2>
+          <p className="mt-4 text-lg text-indigo-100">
+            Start capturing better requirements with AI-powered intakes.
+          </p>
+          <Link
+            to="/"
+            className="mt-8 inline-flex items-center gap-2 px-6 py-3 bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors font-medium text-lg"
+          >
+            Get Started
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+        </div>
+      </div>
+
+      {/* Security */}
+      <div className="py-12 bg-white border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8">
+            <div className="flex items-center gap-3">
+              <Shield className="w-8 h-8 text-gray-400" />
+              <div>
+                <div className="font-semibold text-gray-900">Secure & Private</div>
+                <div className="text-sm text-gray-500">Your data is encrypted and protected</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex items-center gap-2">
+              <ExpertlyLogo className="w-8 h-8" />
+              <span className="text-lg font-bold text-white">Expertly Intake</span>
+            </div>
+            <p className="text-gray-400 text-sm">
+              Part of the Expertly suite of products.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )
+}

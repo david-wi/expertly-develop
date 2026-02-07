@@ -1,3 +1,4 @@
+export { default as LandingPage } from './LandingPage';
 export { default as LoginPage } from './LoginPage';
 export { default as IntakesListPage } from './IntakesListPage';
 export { default as CreateIntakePage } from './CreateIntakePage';
