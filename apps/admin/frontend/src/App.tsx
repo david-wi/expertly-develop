@@ -36,7 +36,7 @@ function App() {
         <Route path="/idea-catalog" element={<IdeaBacklog />} />
         <Route path="/idea-backlog" element={<Navigate to="/idea-catalog" replace />} />
         <Route path="/dev-backlog" element={<IdeaBacklog />} />
-        <Route path="/work-backlog" element={<IdeaBacklog />} />
+        <Route path="/work-backlog" element={<Navigate to="/dev-backlog" replace />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

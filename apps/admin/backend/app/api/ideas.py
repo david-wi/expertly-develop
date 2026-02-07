@@ -68,15 +68,13 @@ async def list_ideas(
     include_archived: bool = Query(False, description="Include archived ideas"),
     user_email: Optional[str] = Query(None, description="Current user email for vote status"),
     organization_id: Optional[str] = Query(None, description="Filter by organization ID (UUID)"),
-    backlog_type: Optional[str] = Query(None, description="'work' to return items with any org_id"),
     item_type: Optional[str] = Query(None, description="Filter by item type ('idea' or 'feature')"),
     service: IdeaService = Depends(get_idea_service),
 ):
     """List ideas with optional filters.
 
-    When organization_id is provided, returns org-specific backlog items.
-    When backlog_type='work' (without organization_id), returns all items for the product.
-    When neither is provided, returns only product-wide ideas (org_id=NULL).
+    When organization_id is provided, returns org-specific items.
+    When not provided, returns only product-wide ideas (org_id=NULL).
     """
     ideas = await service.get_ideas(
         product=product,
@@ -84,7 +82,6 @@ async def list_ideas(
         priority=priority,
         include_archived=include_archived,
         organization_id=organization_id,
-        backlog_type=backlog_type,
         item_type=item_type,
     )
 

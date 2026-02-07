@@ -23,7 +23,6 @@ const pageTitles: Record<string, string> = {
   '/idea-catalog': 'Idea Catalog',
   '/idea-backlog': 'Idea Catalog',
   '/dev-backlog': 'Dev Backlog',
-  '/work-backlog': 'Work Backlog',
   '/error-logs': 'Error Logs',
   '/monitoring': 'Monitoring',
   '/monitor': 'Live Monitor',

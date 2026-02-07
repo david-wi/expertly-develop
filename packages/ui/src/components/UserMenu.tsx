@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState, type ComponentType, type ReactNode, type MouseEvent as ReactMouseEvent } from 'react'
-import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, ClipboardList, Info, Building2, FlaskConical, Activity, Bug, Code } from 'lucide-react'
+import { ChevronRight, User, AlertTriangle, FileText, LogOut, Wrench, Lightbulb, Info, Building2, FlaskConical, Activity, Bug, Code } from 'lucide-react'
 
 export interface Organization {
   id: string
@@ -380,13 +380,6 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
     })
   }
 
-  // Build backlog URL - go directly to Admin instead of routing through Command
-  const backlogParams = new URLSearchParams()
-  if (currentAppCode) backlogParams.set('product', currentAppCode)
-  if (organizations?.currentId) backlogParams.set('organization_id', organizations.currentId)
-  const backlogQuery = backlogParams.toString()
-  const backlogUrl = `https://admin.ai.devintensive.com/work-backlog${backlogQuery ? `?${backlogQuery}` : ''}`
-
   // Idea catalog URL - product filter only, no org (shows cross-org ideas)
   const ideaCatalogUrl = currentAppCode
     ? `https://admin.ai.devintensive.com/idea-catalog?product=${currentAppCode}`
@@ -406,14 +399,6 @@ export function createDefaultUserMenu(options: CreateDefaultUserMenuOptions): Us
         icon: Wrench,
         type: 'submenu',
         children: [
-          {
-            id: 'backlog',
-            label: 'Backlog',
-            icon: ClipboardList,
-            type: 'link',
-            href: backlogUrl,
-            external: true,
-          },
           {
             id: 'changelog',
             label: 'Change Log',
