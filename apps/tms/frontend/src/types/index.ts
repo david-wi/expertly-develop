@@ -1489,3 +1489,1161 @@ export const ROLLOUT_STAGE_LABELS: Record<RolloutStage, string> = {
   partial: 'Partial',
   full: 'Full',
 }
+
+// ============================================================================
+// Quote Versioning Types
+// ============================================================================
+
+export type QuoteApprovalStatus = 'not_required' | 'pending' | 'approved' | 'rejected' | 'auto_approved'
+
+export interface QuoteRevisionSnapshot {
+  version: number
+  revised_at: string
+  revised_by?: string
+  change_summary?: string
+  line_items: QuoteLineItem[]
+  total_price: number
+  estimated_cost: number
+  margin_percent: number
+  origin_city?: string
+  origin_state?: string
+  destination_city?: string
+  destination_state?: string
+  equipment_type?: string
+  weight_lbs?: number
+  special_requirements?: string
+  internal_notes?: string
+}
+
+export interface CustomerPricingApplied {
+  rate_table_id?: string
+  rate_table_name?: string
+  playbook_id?: string
+  playbook_name?: string
+  discount_percent: number
+  contract_rate_per_mile?: number
+  contract_flat_rate?: number
+  applied_at: string
+  auto_applied: boolean
+}
+
+export interface QuoteWithVersioning extends Quote {
+  version_number: number
+  parent_quote_id?: string
+  revision_history: QuoteRevisionSnapshot[]
+  is_current_version: boolean
+  customer_pricing_applied?: CustomerPricingApplied
+  approval_status: QuoteApprovalStatus
+  approval_required: boolean
+  approved_by?: string
+  approved_at?: string
+  rejection_reason?: string
+  approval_id?: string
+}
+
+// ============================================================================
+// Customer Pricing Rule Types
+// ============================================================================
+
+export interface CustomerPricingRule {
+  rule_name: string
+  discount_percent: number
+  volume_discount_tiers: { min_shipments: number; discount_pct: number }[]
+  contract_rate_per_mile?: number
+  contract_flat_rate?: number
+  fuel_surcharge_override?: number
+  min_margin_percent: number
+  auto_apply: boolean
+  notes?: string
+}
+
+export const QUOTE_APPROVAL_STATUS_LABELS: Record<QuoteApprovalStatus, string> = {
+  not_required: 'No Approval Needed',
+  pending: 'Pending Approval',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  auto_approved: 'Auto-Approved',
+}
+
+// ============================================================================
+// Billing & Invoicing Types (Batch, Aging, Quick Pay, Factoring, etc.)
+// ============================================================================
+
+// Auto-Invoice from POD
+export interface AutoInvoiceFromPODResponse {
+  id: string
+  invoice_number: string
+  customer_id: string
+  total: number
+  accessorial_charges: { type: string; description: string; amount: number }[]
+  pod_notes?: string
+  due_date?: string
+  status: string
+  ai_detected_accessorials: string[]
+}
+
+// Batch Invoicing
+export interface BatchInvoiceResult {
+  shipment_id: string
+  invoice_id?: string
+  invoice_number?: string
+  total?: number
+  status: string
+  message: string
+}
+
+export interface BatchInvoiceResponse {
+  total_processed: number
+  created: number
+  skipped: number
+  errors: number
+  results: BatchInvoiceResult[]
+}
+
+// Aging Report
+export interface AgingBucket {
+  bucket: string
+  label: string
+  total_amount: number
+  count: number
+  items: {
+    id: string
+    invoice_number?: string
+    bill_number?: string
+    billing_name?: string
+    carrier_name?: string
+    amount_due?: number
+    amount?: number
+    due_date?: string
+    days_past_due: number
+    status: string
+  }[]
+}
+
+export interface AgingReportResponse {
+  report_type: string
+  as_of_date: string
+  total_outstanding: number
+  total_count: number
+  buckets: AgingBucket[]
+  by_entity: {
+    entity_id: string
+    entity_name: string
+    total_outstanding: number
+    invoice_count?: number
+    bill_count?: number
+    current: number
+    [key: string]: unknown
+  }[]
+}
+
+// Payables Aging
+export interface CashFlowProjection {
+  week_start: string
+  week_end: string
+  expected_outflow: number
+  bill_count: number
+}
+
+export interface PayablesAgingResponse extends AgingReportResponse {
+  by_carrier: {
+    entity_id: string
+    entity_name: string
+    total_outstanding: number
+    bill_count: number
+    current: number
+    [key: string]: unknown
+  }[]
+  cash_flow_projection: CashFlowProjection[]
+}
+
+// Quick Pay
+export interface QuickPayTier {
+  name: string
+  days: number
+  discount_percent: number
+  net_payment: number
+}
+
+export interface QuickPayOffer {
+  id: string
+  carrier_id: string
+  carrier_name: string
+  bill_id: string
+  bill_amount: number
+  tiers: QuickPayTier[]
+  standard_payment_date?: string
+  status: string
+  selected_tier?: string
+  savings?: number
+  created_at?: string
+}
+
+// Factoring
+export interface FactoringAssignment {
+  id: string
+  carrier_id: string
+  carrier_name: string
+  factoring_company_name: string
+  factoring_company_id?: string
+  noa_reference?: string
+  noa_date?: string
+  noa_status: string
+  payment_email?: string
+  fee_percent?: number
+  total_factored_amount: number
+  factored_invoice_count: number
+  created_at?: string
+}
+
+// Carrier Invoice Processing
+export interface CarrierInvoiceRecord {
+  id: string
+  carrier_id: string
+  carrier_name: string
+  shipment_id?: string
+  shipment_number?: string
+  invoice_number?: string
+  extracted_amount?: number
+  matched_amount?: number
+  variance?: number
+  status: string
+  match_confidence?: number
+  discrepancy_flags: string[]
+  created_at?: string
+}
+
+// Rate Confirmation Match
+export interface RateConfirmationMatchResult {
+  shipment_id: string
+  shipment_number?: string
+  carrier_id?: string
+  carrier_name?: string
+  rate_con_amount?: number
+  carrier_bill_amount?: number
+  variance?: number
+  variance_percent?: number
+  match_status: string
+  flags: string[]
+  auto_approved: boolean
+}
+
+export const AGING_BUCKET_LABELS: Record<string, string> = {
+  current: 'Current',
+  '1_30': '1-30 Days',
+  '31_60': '31-60 Days',
+  '61_90': '61-90 Days',
+  '91_120': '91-120 Days',
+  '120_plus': '120+ Days',
+  '90_plus': '90+ Days',
+}
+
+export const QUICK_PAY_STATUS_LABELS: Record<string, string> = {
+  offered: 'Offered',
+  accepted: 'Accepted',
+  declined: 'Declined',
+  expired: 'Expired',
+}
+
+export const FACTORING_NOA_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending',
+  active: 'Active',
+  expired: 'Expired',
+  revoked: 'Revoked',
+}
+
+export const CARRIER_INVOICE_STATUS_LABELS: Record<string, string> = {
+  uploaded: 'Uploaded',
+  extracted: 'Extracted',
+  matched: 'Matched',
+  discrepancy: 'Discrepancy',
+  approved: 'Approved',
+}
+
+export const RATE_MATCH_STATUS_LABELS: Record<string, string> = {
+  exact_match: 'Exact Match',
+  within_tolerance: 'Within Tolerance',
+  over_billed: 'Over-Billed',
+  under_billed: 'Under-Billed',
+  no_bill: 'No Bill Found',
+  no_rate_con: 'No Rate Con',
+}
+
+// ============================================================================
+// Carrier Capacity Types
+// ============================================================================
+
+export interface CapacityPosting {
+  id: string
+  carrier_id: string
+  carrier_name: string
+  equipment_type: string
+  truck_count: number
+  available_date?: string
+  origin_city?: string
+  origin_state?: string
+  origin_radius_miles: number
+  destination_city?: string
+  destination_state?: string
+  destination_radius_miles: number
+  notes?: string
+  rate_per_mile_target?: number
+  expires_at?: string
+  is_active: boolean
+  ai_matched_loads: number
+  created_at: string
+}
+
+export interface CapacityHeatmapItem {
+  state: string
+  total_trucks: number
+  posting_count: number
+  equipment_types: string[]
+}
+
+// ============================================================================
+// Counter-Offer & Negotiation Types
+// ============================================================================
+
+export interface CounterOffer {
+  id: string
+  tender_id: string
+  round_number: number
+  offered_by: 'carrier' | 'broker'
+  original_rate: number
+  counter_rate: number
+  notes?: string
+  status: 'pending' | 'accepted' | 'rejected'
+  auto_accepted: boolean
+  created_at: string
+}
+
+export interface NegotiationRecord {
+  tender_id: string
+  shipment_id: string
+  carrier_id: string
+  carrier_name: string
+  status: TenderStatus
+  offered_rate: number
+  counter_offer_rate?: number
+  final_rate?: number
+  origin: string
+  destination: string
+  lane: string
+  counter_offers: CounterOffer[]
+  negotiation_rounds: number
+  created_at: string
+  responded_at?: string
+}
+
+export interface NegotiationHistory {
+  total_negotiations: number
+  accepted_count: number
+  average_rounds: number
+  total_savings_cents: number
+  negotiations: NegotiationRecord[]
+}
+
+// ============================================================================
+// Waterfall Types
+// ============================================================================
+
+export interface WaterfallStep {
+  step: number
+  carrier_id?: string
+  carrier_name: string
+  rate: number
+  status: 'pending' | 'waiting' | 'accepted' | 'declined' | 'timed_out'
+  sent_at?: string
+  responded_at?: string
+}
+
+export interface WaterfallStatus {
+  waterfall_id: string
+  shipment_id: string
+  status: 'active' | 'completed' | 'cancelled' | 'all_declined'
+  current_step: number
+  total_carriers: number
+  current_rate: number
+  base_rate: number
+  countdown_seconds: number
+  winning_carrier_id?: string
+  started_at?: string
+  completed_at?: string
+  steps: WaterfallStep[]
+}
+
+export interface WaterfallConfig {
+  timeout_minutes: number
+  max_rounds: number
+  auto_accept_counter_range_percent: number
+  auto_post_to_loadboard: boolean
+  carrier_ranking_method: 'ai' | 'performance' | 'rate' | 'manual'
+}
+
+// ============================================================================
+// Spot Market Types
+// ============================================================================
+
+export interface SpotRateData {
+  provider: string
+  origin: string
+  destination: string
+  equipment_type: string
+  rate_per_mile_low?: number
+  rate_per_mile_avg?: number
+  rate_per_mile_high?: number
+  flat_rate_low?: number
+  flat_rate_avg?: number
+  flat_rate_high?: number
+  load_count?: number
+  truck_count?: number
+  fetched_at: string
+}
+
+export interface ContractRateData {
+  rate_table_name: string
+  customer_id: string
+  rate_per_mile?: number
+  flat_rate?: number
+  effective_date?: string
+  expiration_date?: string
+}
+
+export interface SpotRateComparison {
+  lane: string
+  equipment_type: string
+  spot_rates: SpotRateData[]
+  contract_rates: ContractRateData[]
+  market_average: {
+    rate_per_mile: number
+    flat_rate: number
+  }
+  recommendation: 'spot' | 'contract'
+}
+
+export interface RateTrendPoint {
+  date: string
+  provider: string
+  rate_per_mile_avg?: number
+  rate_per_mile_low?: number
+  rate_per_mile_high?: number
+  flat_rate_avg?: number
+  load_count?: number
+  truck_count?: number
+}
+
+export interface RateTrends {
+  lane: string
+  equipment_type: string
+  days: number
+  data_points: RateTrendPoint[]
+  total_points: number
+}
+
+// ============================================================================
+// Onboarding Dashboard Types
+// ============================================================================
+
+export interface OnboardingDashboardItem {
+  id: string
+  company_name: string
+  contact_name: string
+  contact_email: string
+  mc_number?: string
+  dot_number?: string
+  status: OnboardingStatus
+  current_step: number
+  total_steps: number
+  progress_percent: number
+  created_at: string
+  updated_at: string
+}
+
+export interface OnboardingDashboard {
+  total: number
+  status_counts: Record<string, number>
+  onboardings: OnboardingDashboardItem[]
+}
+
+// ============================================================================
+// Scheduled Reports Types
+// ============================================================================
+
+export interface ScheduledReport {
+  id: string
+  report_type: string
+  report_name: string
+  recipients: string[]
+  frequency: string
+  format: string
+  filters?: Record<string, unknown>
+  day_of_week?: number
+  day_of_month?: number
+  time_of_day: string
+  timezone: string
+  is_active: boolean
+  last_sent_at?: string
+  next_run_at?: string
+  created_at: string
+  ai_suggested_defaults?: Record<string, unknown>
+}
+
+export interface ReportHistoryEntry {
+  id: string
+  scheduled_report_id: string
+  report_name: string
+  generated_at: string
+  format: string
+  recipients: string[]
+  status: string
+  download_url?: string
+  file_size_bytes?: number
+  error_message?: string
+}
+
+export const REPORT_TYPE_LABELS: Record<string, string> = {
+  margin_report: 'Margin Report',
+  shipment_summary: 'Shipment Summary',
+  carrier_performance: 'Carrier Performance',
+  ar_aging: 'AR Aging',
+}
+
+export const REPORT_FREQUENCY_LABELS: Record<string, string> = {
+  daily: 'Daily',
+  weekly: 'Weekly',
+  monthly: 'Monthly',
+}
+
+export const REPORT_FORMAT_LABELS: Record<string, string> = {
+  pdf: 'PDF',
+  csv: 'CSV',
+  excel: 'Excel',
+}
+
+// ============================================================================
+// Custom Report Builder Types
+// ============================================================================
+
+export interface ReportBuildResult {
+  columns: string[]
+  rows: Record<string, unknown>[]
+  total_rows: number
+  aggregations?: Record<string, number>
+  chart_data?: {
+    labels?: string[]
+    datasets?: { label: string; data: number[] }[]
+    data?: number[]
+  }
+  generated_at: string
+}
+
+export interface SavedReport {
+  id: string
+  name: string
+  description?: string
+  config: Record<string, unknown>
+  is_shared: boolean
+  created_by?: string
+  created_at: string
+  updated_at: string
+}
+
+// ============================================================================
+// Customer Profitability Types
+// ============================================================================
+
+export interface CustomerProfitabilityDetail {
+  customer_id: string
+  customer_name: string
+  period: string
+  total_revenue: number
+  cost_breakdown: {
+    carrier_cost: number
+    accessorial_cost: number
+    quick_pay_discount: number
+    other_cost: number
+    total_cost: number
+  }
+  total_margin: number
+  margin_percent: number
+  shipment_count: number
+  avg_revenue_per_shipment: number
+  avg_margin_per_shipment: number
+  trend_direction: 'improving' | 'stable' | 'declining'
+  trend_change_percent: number
+  monthly_data: {
+    month: string
+    revenue: number
+    cost: number
+    margin: number
+    margin_percent: number
+    shipment_count: number
+  }[]
+  ai_insights: string[]
+}
+
+// ============================================================================
+// AI Auto-Assign Types
+// ============================================================================
+
+export interface CarrierAssignmentSuggestion {
+  carrier_id: string
+  carrier_name: string
+  confidence_score: number
+  reasoning: string[]
+  estimated_rate: number
+  lane_history_count: number
+  on_time_rate: number
+  avg_rate_on_lane?: number
+  performance_score: number
+  meets_insurance_requirements: boolean
+  meets_performance_minimum: boolean
+}
+
+export interface AutoAssignResult {
+  shipment_id: string
+  suggestions: CarrierAssignmentSuggestion[]
+  auto_assigned: boolean
+  assigned_carrier_id?: string
+  assigned_carrier_name?: string
+  assignment_confidence?: number
+  rules_applied: string[]
+}
+
+// ============================================================================
+// ML Optimization Types
+// ============================================================================
+
+export interface PricingOptimization {
+  lane: string
+  equipment_type: string
+  shipment_count: number
+  current_avg_carrier_rate: number
+  current_avg_customer_rate: number
+  suggested_optimal_rate: number
+  rate_range: { min: number; max: number }
+  current_margin_percent: number
+  target_margin_percent: number
+  potential_savings_per_shipment: number
+  confidence: number
+  insights: string[]
+  avg_miles: number
+}
+
+export interface DelayPrediction {
+  shipment_id: string
+  shipment_number: string
+  origin: string
+  destination: string
+  status: string
+  pickup_date?: string
+  delivery_date?: string
+  delay_risk_score: number
+  risk_level: 'low' | 'medium' | 'high'
+  risk_factors: string[]
+  recommendations: string[]
+  estimated_delay_hours: number
+}
+
+// ============================================================================
+// Predictive Analytics Types
+// ============================================================================
+
+export interface VolumeForecast {
+  customer_id?: string
+  customer_name: string
+  historical_avg_volume: number
+  historical_avg_revenue: number
+  trend_percent: number
+  trend_direction: 'growing' | 'stable' | 'declining'
+  historical_data: { year: number; month: number; volume: number; revenue: number }[]
+  forecast: { month: string; predicted_volume: number; predicted_revenue: number; confidence: number }[]
+}
+
+export interface RateForecast {
+  lane: string
+  historical_data: { month: string; avg_rate: number; min_rate: number; max_rate: number; volume: number }[]
+  current_avg_rate: number
+  rate_trend_percent: number
+  trend_direction: 'increasing' | 'stable' | 'decreasing'
+  forecast: { month: string; predicted_avg_rate: number; confidence: number }[]
+  total_volume: number
+  insights: string[]
+}
+
+// ============================================================================
+// DOT Compliance Types
+// ============================================================================
+
+export interface DOTCompliance {
+  carrier_id: string
+  carrier_name: string
+  dot_number?: string
+  mc_number?: string
+  fmcsa_safety_rating?: string
+  fmcsa_status?: string
+  csa_scores?: Record<string, number>
+  authority_status?: string
+  insurance_on_file: boolean
+  operating_status?: string
+  drug_testing_enrolled: boolean
+  drug_testing_last_test?: string
+  drug_testing_compliant: boolean
+  hos_violation_count: number
+  inspection_count: number
+  out_of_service_rate: number
+  crash_count: number
+  compliance_alerts: string[]
+  last_checked_at?: string
+  overall_compliance_score: number
+}
+
+// ============================================================================
+// Notification Center Types
+// ============================================================================
+
+export interface NotificationItem {
+  id: string
+  user_id: string
+  title: string
+  message: string
+  notification_type: string
+  link_url?: string
+  is_read: boolean
+  created_at: string
+}
+
+export interface NotificationCenterData {
+  notifications: NotificationItem[]
+  unread_count: number
+  total_count: number
+  categories: Record<string, number>
+}
+
+export interface NotificationPreferences {
+  email_enabled: boolean
+  push_enabled: boolean
+  sms_enabled: boolean
+  new_quote_request: boolean
+  tender_response: boolean
+  shipment_status_change: boolean
+  exception_alert: boolean
+  invoice_due: boolean
+  check_call_due: boolean
+  document_uploaded: boolean
+  approval_needed: boolean
+  carrier_update: boolean
+  billing_alert: boolean
+  edi_transmission: boolean
+  load_board_activity: boolean
+}
+
+// ============================================================================
+// White-Label Branding Types
+// ============================================================================
+
+export interface WhiteLabelBranding {
+  logo_url?: string
+  primary_color: string
+  secondary_color: string
+  company_name?: string
+  favicon_url?: string
+  custom_domain?: string
+  email_header_logo_url?: string
+  portal_title?: string
+  hide_powered_by: boolean
+}
+
+// ============================================================================
+// EDI 210 / 990 Types
+// ============================================================================
+
+export interface EDI210Status {
+  id: string
+  invoice_id: string
+  invoice_number?: string
+  message_type: string
+  status: string
+  trading_partner_name?: string
+  isa_control_number?: string
+  sent_at?: string
+  acknowledged_at?: string
+  error_messages: string[]
+  created_at: string
+}
+
+export interface EDI990Status {
+  id: string
+  tender_id: string
+  shipment_number?: string
+  message_type: string
+  response_type: string
+  status: string
+  trading_partner_name?: string
+  isa_control_number?: string
+  sent_at?: string
+  acknowledged_at?: string
+  error_messages: string[]
+  created_at: string
+}
+
+// ============================================================================
+// QuickBooks Sync Types
+// ============================================================================
+
+export interface QuickBooksSyncInvoice {
+  status: string
+  invoice_id: string
+  quickbooks_invoice_id?: string
+  quickbooks_invoice_number?: string
+  sync_timestamp: string
+  amount_synced: number
+  customer_name?: string
+  message: string
+}
+
+export interface QuickBooksSyncStatus {
+  connection_status: string
+  company_name?: string
+  last_sync_at?: string
+  sync_summary: {
+    customers: { synced: number; pending: number; errors: number }
+    invoices: { synced: number; pending: number; errors: number }
+    payments: { synced: number; pending: number; errors: number }
+    vendors: { synced: number; pending: number; errors: number }
+  }
+  recent_syncs: {
+    id: string
+    entity_type: string
+    status: string
+    synced_at: string
+    error?: string
+  }[]
+  next_scheduled_sync?: string
+}
+
+export interface CustomerMapping {
+  id: string
+  tms_customer_id: string
+  tms_customer_name: string
+  quickbooks_customer_id: string
+  quickbooks_customer_name: string
+  last_synced_at?: string
+  sync_status: string
+  created_at: string
+}
+
+// ============================================================================
+// Enhanced POD Capture Types
+// ============================================================================
+
+export interface EnhancedPODPhoto {
+  url: string
+  category: string
+  annotation?: string
+  caption?: string
+}
+
+export interface EnhancedPODCaptureRequest {
+  signature_data?: string
+  signer_name?: string
+  signer_title?: string
+  photos?: EnhancedPODPhoto[]
+  received_by?: string
+  recipient_name?: string
+  delivery_notes?: string
+  latitude?: number
+  longitude?: number
+  gps_accuracy_meters?: number
+  damage_reported?: boolean
+  damage_description?: string
+  pieces_delivered?: number
+  pieces_expected?: number
+}
+
+export interface EnhancedPODResponse {
+  id: string
+  shipment_id: string
+  capture_type: string
+  signer_name?: string
+  signer_title?: string
+  received_by?: string
+  recipient_name?: string
+  delivery_notes?: string
+  photo_count: number
+  photos?: Record<string, unknown>[]
+  captured_at: string
+  is_verified: boolean
+  has_signature: boolean
+  latitude?: number
+  longitude?: number
+  damage_reported: boolean
+  damage_description?: string
+  pieces_delivered?: number
+  pieces_expected?: number
+  pdf_available: boolean
+}
+
+export interface PODPdfData {
+  status: string
+  shipment_id: string
+  pod_data: {
+    shipment_number: string
+    origin: string
+    destination: string
+    pickup_date: string
+    delivery_date: string
+    received_by?: string
+    signer_name?: string
+    delivery_notes?: string
+    photo_count: number
+    has_signature: boolean
+    damage_reported: boolean
+    damage_description?: string
+    pieces_delivered?: number
+    commodity?: string
+    weight_lbs?: number
+  }
+}
+
+// ============================================================================
+// Geofence Enhanced Types
+// ============================================================================
+
+export interface GeofenceDwellTime {
+  geofence_id: string
+  geofence_name: string
+  shipment_id: string
+  arrival_time?: string
+  departure_time?: string
+  dwell_minutes?: number
+  is_currently_inside: boolean
+}
+
+export interface GeofenceAnalytics {
+  total_events: number
+  total_geofences: number
+  avg_dwell_minutes?: number
+  events_by_type: Record<string, number>
+  events_by_geofence: {
+    geofence_id: string
+    geofence_name: string
+    event_count: number
+  }[]
+  recent_events: {
+    event_id: string
+    geofence_name: string
+    event_type: string
+    shipment_id: string
+    timestamp: string
+  }[]
+}
+
+export interface GeofenceAlertConfig {
+  alert_dispatcher?: boolean
+  alert_customer?: boolean
+  alert_carrier?: boolean
+  alert_emails?: string[]
+  alert_sms_numbers?: string[]
+  auto_update_status?: boolean
+}
+
+// ============================================================================
+// Automated Tracking Types
+// ============================================================================
+
+export interface AutoTrackingRequest {
+  shipment_id: string
+  gps_points: {
+    latitude: number
+    longitude: number
+    timestamp: string
+    speed_mph?: number
+  }[]
+}
+
+export interface AutoTrackingResponse {
+  shipment_id: string
+  events_generated: number
+  detected_states: string[]
+  current_state?: string
+  next_check_call_at?: string
+  eta?: string
+  distance_remaining_miles?: number
+}
+
+// ============================================================================
+// BOL Generation Types
+// ============================================================================
+
+export interface BOLGenerationResult {
+  status: string
+  bol_id: string
+  shipment_id: string
+  bol_number: string
+  bol_data: {
+    bol_number: string
+    date: string
+    shipper: Record<string, unknown>
+    consignee: Record<string, unknown>
+    carrier: Record<string, unknown>
+    shipment_details: Record<string, unknown>
+    origin: Record<string, unknown>
+    destination: Record<string, unknown>
+    special_instructions?: string
+    hazmat: boolean
+    [key: string]: unknown
+  }
+  generated_at: string
+}
+
+export interface BOLTemplate {
+  id: string
+  name: string
+  customer_id?: string
+  template_fields: Record<string, unknown>
+  is_default: boolean
+  created_at: string
+}
+
+// ============================================================================
+// Document Classification Types
+// ============================================================================
+
+export interface DocumentClassificationResult {
+  document_id: string
+  original_type?: string
+  ai_classified_type: string
+  confidence: number
+  suggested_workflow?: string
+  extracted_fields?: Record<string, unknown>[]
+}
+
+// ============================================================================
+// Batch Upload Types
+// ============================================================================
+
+export interface BatchUploadResult {
+  status: string
+  total_files: number
+  files: {
+    id: string
+    filename: string
+    status: string
+    auto_classify: boolean
+  }[]
+}
+
+// ============================================================================
+// Photo/Document Capture Types
+// ============================================================================
+
+export type PhotoCategory = 'delivery' | 'damage' | 'bol' | 'loading' | 'unloading' | 'other'
+
+export interface ShipmentPhoto {
+  id: string
+  category: string
+  filename: string
+  size_bytes: number
+  notes?: string
+  annotations: PhotoAnnotation[]
+  created_at: string
+}
+
+export interface PhotoAnnotation {
+  type: string
+  x: number
+  y: number
+  width?: number
+  height?: number
+  text: string
+  color: string
+  created_at: string
+}
+
+// ============================================================================
+// Image Enhancement Types
+// ============================================================================
+
+export interface ImageEnhancement {
+  rotation_degrees?: number
+  crop?: { x: number; y: number; width: number; height: number }
+  brightness?: number
+  contrast?: number
+  auto_deskew?: boolean
+}
+
+// ============================================================================
+// Customer Tracking Dashboard Types
+// ============================================================================
+
+export interface CustomerTrackingShipment {
+  id: string
+  shipment_number: string
+  status: string
+  origin_city: string
+  origin_state: string
+  destination_city: string
+  destination_state: string
+  pickup_date?: string
+  delivery_date?: string
+  eta?: string
+  eta_confidence?: number
+  last_location?: string
+  last_update?: string
+  latest_event?: {
+    event_type: string
+    timestamp: string
+    location: string
+  }
+  latitude?: number
+  longitude?: number
+}
+
+export interface CustomerTrackingDashboard {
+  customer_name: string
+  active_shipments: CustomerTrackingShipment[]
+  active_count: number
+  in_transit_count: number
+  pending_pickup_count: number
+  recent_deliveries: {
+    id: string
+    shipment_number: string
+    delivered_at: string
+  }[]
+}
+
+export interface CustomerShipmentTrackingDetail {
+  shipment_number: string
+  status: string
+  origin: { city: string; state: string; lat?: number; lng?: number }
+  destination: { city: string; state: string; lat?: number; lng?: number }
+  eta?: string
+  last_location?: string
+  route_points: { lat: number; lng: number; timestamp: string }[]
+  tracking_events: {
+    event_type: string
+    timestamp: string
+    location: string
+    latitude?: number
+    longitude?: number
+    notes?: string
+  }[]
+  pod?: {
+    captured_at: string
+    received_by: string
+    has_signature: boolean
+    photo_count: number
+  }
+}
+
+// ============================================================================
+// OCR Extraction Types
+// ============================================================================
+
+export interface OCRExtractionResult {
+  status: string
+  document_id: string
+  message: string
+}

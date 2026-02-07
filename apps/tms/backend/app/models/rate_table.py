@@ -22,6 +22,19 @@ class LaneRate(BaseModel):
     notes: Optional[str] = None
 
 
+class CustomerPricingRule(BaseModel):
+    """Customer-specific pricing rule for overrides and discounts."""
+    rule_name: str
+    discount_percent: float = 0.0  # Overall discount percentage
+    volume_discount_tiers: list[dict] = []  # e.g., [{"min_shipments": 10, "discount_pct": 5.0}, ...]
+    contract_rate_per_mile: Optional[int] = None  # Override rate in cents
+    contract_flat_rate: Optional[int] = None  # Override flat rate in cents
+    fuel_surcharge_override: Optional[float] = None  # Override FSC percentage
+    min_margin_percent: float = 0.0  # Minimum acceptable margin
+    auto_apply: bool = True  # Auto-apply when creating quotes for this customer
+    notes: Optional[str] = None
+
+
 class RateTable(MongoModel):
     """A rate table containing contracted rates for a customer."""
 
@@ -41,6 +54,9 @@ class RateTable(MongoModel):
 
     # Lane rates
     lanes: list[LaneRate] = []
+
+    # Customer-specific pricing rules
+    customer_pricing_rules: list[CustomerPricingRule] = []
 
     # Metadata
     currency: str = "USD"

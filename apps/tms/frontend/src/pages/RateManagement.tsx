@@ -102,7 +102,19 @@ const EQUIPMENT_TYPES = [
   { value: 'container', label: 'Container' },
 ]
 
-type TabId = 'tables' | 'lookup' | 'expiring'
+interface CustomerPricingRuleItem {
+  rule_name: string
+  discount_percent: number
+  volume_discount_tiers: { min_shipments: number; discount_pct: number }[]
+  contract_rate_per_mile?: number
+  contract_flat_rate?: number
+  fuel_surcharge_override?: number
+  min_margin_percent: number
+  auto_apply: boolean
+  notes?: string
+}
+
+type TabId = 'tables' | 'lookup' | 'expiring' | 'customer-pricing'
 
 // ============================================================================
 // Component
@@ -298,6 +310,7 @@ export default function RateManagement() {
       <div className="flex gap-1 border-b border-gray-200">
         {([
           { id: 'tables' as const, label: 'Rate Tables', icon: Table },
+          { id: 'customer-pricing' as const, label: 'Customer Pricing', icon: DollarSign },
           { id: 'lookup' as const, label: 'Rate Lookup', icon: Search },
           { id: 'expiring' as const, label: 'Expiring Contracts', icon: Clock },
         ] as const).map((tab) => (
@@ -630,6 +643,18 @@ export default function RateManagement() {
           )}
 
           {/* ============================================================ */}
+          {/* Customer Pricing Tab */}
+          {/* ============================================================ */}
+          {activeTab === 'customer-pricing' && (
+            <CustomerPricingTab
+              rateTables={rateTables}
+              customers={customers}
+              formatCents={formatCents}
+              onRefresh={fetchData}
+            />
+          )}
+
+          {/* ============================================================ */}
           {/* Expiring Contracts Tab */}
           {/* ============================================================ */}
           {activeTab === 'expiring' && (
@@ -799,6 +824,354 @@ function RateTableFormModal({
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+
+// ============================================================================
+// Customer Pricing Tab Component
+// ============================================================================
+
+function CustomerPricingTab({
+  rateTables,
+  customers,
+  formatCents,
+  onRefresh,
+}: {
+  rateTables: RateTableItem[]
+  customers: { id: string; name: string }[]
+  formatCents: (cents?: number) => string
+  onRefresh: () => void
+}) {
+  const [selectedCustomer, setSelectedCustomer] = useState('')
+  const [showAddRule, setShowAddRule] = useState<string | null>(null)
+
+  // New rule form state
+  const [ruleName, setRuleName] = useState('')
+  const [discountPercent, setDiscountPercent] = useState('')
+  const [contractRpm, setContractRpm] = useState('')
+  const [contractFlat, setContractFlat] = useState('')
+  const [fscOverride, setFscOverride] = useState('')
+  const [minMargin, setMinMargin] = useState('')
+  const [autoApply, setAutoApply] = useState(true)
+  const [ruleNotes, setRuleNotes] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  // Filter rate tables by selected customer
+  const filteredTables = selectedCustomer
+    ? rateTables.filter(t => t.customer_id === selectedCustomer)
+    : rateTables
+
+  const tablesWithRules = filteredTables.filter(t =>
+    (t as any).customer_pricing_rules && (t as any).customer_pricing_rules.length > 0
+  )
+
+  const handleAddRule = async (tableId: string) => {
+    if (!ruleName.trim()) return
+    setSaving(true)
+    try {
+      const table = rateTables.find(t => t.id === tableId)
+      if (!table) return
+
+      const existingRules = (table as any).customer_pricing_rules || []
+      const newRule: CustomerPricingRuleItem = {
+        rule_name: ruleName,
+        discount_percent: discountPercent ? parseFloat(discountPercent) : 0,
+        volume_discount_tiers: [],
+        contract_rate_per_mile: contractRpm ? parseInt(contractRpm) : undefined,
+        contract_flat_rate: contractFlat ? parseInt(contractFlat) : undefined,
+        fuel_surcharge_override: fscOverride ? parseFloat(fscOverride) : undefined,
+        min_margin_percent: minMargin ? parseFloat(minMargin) : 0,
+        auto_apply: autoApply,
+        notes: ruleNotes || undefined,
+      }
+
+      await api.updateRateTable(tableId, {
+        customer_pricing_rules: [...existingRules, newRule],
+      })
+
+      // Reset form
+      setRuleName('')
+      setDiscountPercent('')
+      setContractRpm('')
+      setContractFlat('')
+      setFscOverride('')
+      setMinMargin('')
+      setAutoApply(true)
+      setRuleNotes('')
+      setShowAddRule(null)
+      onRefresh()
+    } catch (error) {
+      console.error('Failed to add pricing rule:', error)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDeleteRule = async (tableId: string, ruleIndex: number) => {
+    if (!confirm('Delete this pricing rule?')) return
+    try {
+      const table = rateTables.find(t => t.id === tableId)
+      if (!table) return
+      const rules = [...((table as any).customer_pricing_rules || [])]
+      rules.splice(ruleIndex, 1)
+      await api.updateRateTable(tableId, { customer_pricing_rules: rules })
+      onRefresh()
+    } catch (error) {
+      console.error('Failed to delete rule:', error)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Customer Filter */}
+      <div className="flex items-center gap-4">
+        <label className="text-sm font-medium text-gray-700">Filter by Customer:</label>
+        <select
+          value={selectedCustomer}
+          onChange={(e) => setSelectedCustomer(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm min-w-[200px]"
+        >
+          <option value="">All Customers</option>
+          {customers.map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* Summary of customer pricing */}
+      <div className="bg-gradient-to-br from-teal-50 to-white rounded-xl border border-teal-100 p-5">
+        <h3 className="text-sm font-semibold text-teal-800 mb-2">Customer-Specific Pricing</h3>
+        <p className="text-xs text-teal-600 mb-3">
+          Configure per-customer rate overrides, volume discounts, and contract pricing.
+          These rules auto-apply when creating quotes for the customer.
+        </p>
+        <div className="flex gap-6 text-sm">
+          <div>
+            <span className="text-teal-500 text-xs">Rate Tables</span>
+            <p className="font-bold text-teal-800">{filteredTables.length}</p>
+          </div>
+          <div>
+            <span className="text-teal-500 text-xs">With Pricing Rules</span>
+            <p className="font-bold text-teal-800">{tablesWithRules.length}</p>
+          </div>
+          <div>
+            <span className="text-teal-500 text-xs">Total Rules</span>
+            <p className="font-bold text-teal-800">
+              {filteredTables.reduce((sum, t) => sum + ((t as any).customer_pricing_rules?.length || 0), 0)}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Rate Tables with pricing rules */}
+      {filteredTables.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+          <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-900 font-medium">No rate tables found</p>
+          <p className="text-gray-500 mt-1">Create rate tables first, then add customer pricing rules</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredTables.map(table => {
+            const rules: CustomerPricingRuleItem[] = (table as any).customer_pricing_rules || []
+            return (
+              <div key={table.id} className="bg-white rounded-xl border border-gray-200">
+                <div className="p-5 flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900">{table.name}</h3>
+                    <p className="text-sm text-gray-500">
+                      {table.customer_name || 'Unknown Customer'} - {table.lane_count} lanes
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setShowAddRule(showAddRule === table.id ? null : table.id)}
+                    className="flex items-center gap-1 text-sm text-teal-600 hover:text-teal-700 font-medium"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Rule
+                  </button>
+                </div>
+
+                {/* Existing Pricing Rules */}
+                {rules.length > 0 && (
+                  <div className="border-t border-gray-100">
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="bg-gray-50 text-left">
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500">Rule Name</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500 text-right">Discount %</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500 text-right">Rate/Mile</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500 text-right">Flat Rate</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500 text-right">FSC Override</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500 text-right">Min Margin</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500">Auto-Apply</th>
+                            <th className="px-4 py-2 text-xs font-medium text-gray-500"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {rules.map((rule, idx) => (
+                            <tr key={idx} className="hover:bg-gray-50">
+                              <td className="px-4 py-2 text-sm font-medium text-gray-900">{rule.rule_name}</td>
+                              <td className="px-4 py-2 text-sm text-right">
+                                {rule.discount_percent > 0 ? (
+                                  <span className="text-emerald-600 font-medium">{rule.discount_percent}%</span>
+                                ) : '-'}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-right font-medium">
+                                {formatCents(rule.contract_rate_per_mile)}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-right">
+                                {formatCents(rule.contract_flat_rate)}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-right">
+                                {rule.fuel_surcharge_override != null ? `${rule.fuel_surcharge_override}%` : '-'}
+                              </td>
+                              <td className="px-4 py-2 text-sm text-right">
+                                {rule.min_margin_percent > 0 ? `${rule.min_margin_percent}%` : '-'}
+                              </td>
+                              <td className="px-4 py-2 text-sm">
+                                <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${rule.auto_apply ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                                  {rule.auto_apply ? 'Yes' : 'No'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-2">
+                                <button
+                                  onClick={() => handleDeleteRule(table.id, idx)}
+                                  className="p-1 text-gray-400 hover:text-red-500"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {rules.length === 0 && showAddRule !== table.id && (
+                  <div className="border-t border-gray-100 px-5 py-4 text-center text-sm text-gray-500">
+                    No pricing rules configured. Add rules for per-customer rate overrides.
+                  </div>
+                )}
+
+                {/* Add Rule Form */}
+                {showAddRule === table.id && (
+                  <div className="border-t border-gray-100 p-5 bg-gray-50">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3">New Pricing Rule</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Rule Name *</label>
+                        <input
+                          type="text"
+                          value={ruleName}
+                          onChange={(e) => setRuleName(e.target.value)}
+                          placeholder="e.g., Q1 2026 Volume Discount"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Discount %</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={discountPercent}
+                          onChange={(e) => setDiscountPercent(e.target.value)}
+                          placeholder="e.g., 5.0"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Contract Rate/Mile (cents)</label>
+                        <input
+                          type="number"
+                          value={contractRpm}
+                          onChange={(e) => setContractRpm(e.target.value)}
+                          placeholder="e.g., 250"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Contract Flat Rate (cents)</label>
+                        <input
+                          type="number"
+                          value={contractFlat}
+                          onChange={(e) => setContractFlat(e.target.value)}
+                          placeholder="e.g., 150000"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">FSC Override %</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={fscOverride}
+                          onChange={(e) => setFscOverride(e.target.value)}
+                          placeholder="e.g., 5.5"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Min Margin %</label>
+                        <input
+                          type="number"
+                          step="0.1"
+                          value={minMargin}
+                          onChange={(e) => setMinMargin(e.target.value)}
+                          placeholder="e.g., 10.0"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                        <input
+                          type="text"
+                          value={ruleNotes}
+                          onChange={(e) => setRuleNotes(e.target.value)}
+                          placeholder="Optional notes about this pricing rule"
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={autoApply}
+                            onChange={(e) => setAutoApply(e.target.checked)}
+                            className="rounded"
+                          />
+                          <span className="text-sm text-gray-700">Auto-apply when creating quotes for this customer</span>
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => setShowAddRule(null)}
+                        className="px-3 py-1.5 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => handleAddRule(table.id)}
+                        disabled={!ruleName.trim() || saving}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+                      >
+                        <Plus className="h-3 w-3" />
+                        {saving ? 'Saving...' : 'Add Rule'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
