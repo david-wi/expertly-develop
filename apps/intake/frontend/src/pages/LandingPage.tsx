@@ -36,32 +36,32 @@ const features = [
   {
     icon: Mic,
     title: 'Voice-First Capture',
-    description: 'Customers call a phone number and speak naturally. The AI agent asks smart follow-ups while mapping every answer to structured questions.',
+    description: 'New customers call a dedicated number and talk naturally about their business. The AI agent asks the right follow-ups and maps every answer to your onboarding template.',
   },
   {
     icon: Brain,
     title: 'AI That Understands Context',
-    description: 'The agent captures "their real language" so downstream systems sound like them, not like a generic script. Off-topic answers get stored for later sorting.',
+    description: 'The agent captures how your customer actually describes their business — their terminology, their edge cases — so your configuration reflects reality, not a sanitized form.',
   },
   {
     icon: Upload,
     title: 'Document & URL Ingestion',
-    description: 'Upload PDFs, Word docs, or images. Add URLs as living sources. AI extracts answers and proposes updates — never silently overwrites.',
+    description: 'Customers can upload contracts, org charts, or policy docs. AI extracts onboarding details and proposes answers — never silently overwrites what the customer already told you.',
   },
   {
     icon: Users,
-    title: 'Multi-Person Collaboration',
-    description: 'Multiple people contribute across multiple calls. Every answer has a full revision history, evidence links, and conflict resolution.',
+    title: 'Multi-Person Onboarding',
+    description: 'The billing contact starts the call, then hands off to IT for technical details and ops for workflow questions. Everyone contributes across separate calls — the record stays unified.',
   },
   {
     icon: RefreshCw,
     title: 'Living URL Sources',
-    description: 'Link to menus, policies, or service pages. The system detects changes on refresh and creates proposals for review — your intake stays current.',
+    description: 'Link to the customer\'s website, service catalog, or policy pages. The system detects changes on refresh and flags what needs updating in your onboarding record.',
   },
   {
     icon: BarChart3,
     title: 'Time & Usage Tracking',
-    description: 'Call duration rolls up by intake, section, and contributor. Track time for billing and see where the work is happening.',
+    description: 'See exactly how much time each onboarding takes — by section, by contributor, by call. Track your cost-per-onboarding and identify where customers get stuck.',
   },
 ]
 
@@ -76,7 +76,7 @@ export default function LandingPage() {
               <ExpertlyLogo className="w-8 h-8" />
               <div className="flex flex-col">
                 <span className="text-xl font-bold text-gray-900 leading-tight">Expertly Intake</span>
-                <span className="text-xs text-indigo-600 font-medium -mt-0.5">Voice-First Requirements Capture</span>
+                <span className="text-xs text-indigo-600 font-medium -mt-0.5">Voice-First Client Onboarding</span>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -100,28 +100,29 @@ export default function LandingPage() {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium mb-6">
               <Zap className="w-4 h-4" />
-              Requirements capture that actually works
+              Client onboarding that runs itself
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 tracking-tight leading-tight">
-              Stop Sending{' '}
-              <span className="text-indigo-600">50-Page Word Docs</span>
+              Stop Hiring{' '}
+              <span className="text-indigo-600">an Onboarding Manager</span>
               <br />
-              to Your Customers
+              for Every New Customer
             </h1>
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-              Requirements gathering has always been an afterthought to project management.
-              Expertly Intake replaces long intake documents with a voice-first experience
-              that captures structured answers, evidence, and real language — across
-              multiple people and multiple calls.
+              Every subscription and service business has the same problem: before you can
+              start serving a new customer, someone has to sit down with them and capture
+              their details. Expertly Intake replaces that manual onboarding process with a
+              voice-first AI agent that your customers call directly — so you get structured
+              data without the back-and-forth.
             </p>
 
             {/* Visual flow */}
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-              <span className="px-5 py-2.5 bg-gray-900 text-white rounded-full font-semibold text-lg">Customer calls in</span>
+              <span className="px-5 py-2.5 bg-gray-900 text-white rounded-full font-semibold text-lg">New customer signs up</span>
               <ChevronRight className="hidden sm:block w-5 h-5 text-gray-400" />
-              <span className="px-5 py-2.5 bg-indigo-100 text-indigo-700 rounded-full font-semibold text-lg">AI captures answers</span>
+              <span className="px-5 py-2.5 bg-indigo-100 text-indigo-700 rounded-full font-semibold text-lg">They call in and talk</span>
               <ChevronRight className="hidden sm:block w-5 h-5 text-gray-400" />
-              <span className="px-5 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-lg">Structured intake complete</span>
+              <span className="px-5 py-2.5 bg-indigo-600 text-white rounded-full font-semibold text-lg">Onboarding data captured</span>
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
@@ -129,14 +130,14 @@ export default function LandingPage() {
                 to="/"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-semibold text-lg shadow-lg shadow-indigo-600/25 hover:shadow-xl hover:shadow-indigo-600/30"
               >
-                Start Your First Intake
+                Automate Your Onboarding
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a
                 href="#problem"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-gray-700 rounded-xl border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all font-semibold text-lg"
               >
-                See the Problem
+                See How It Works
               </a>
             </div>
           </div>
@@ -149,7 +150,7 @@ export default function LandingPage() {
                   <div className="w-24 h-24 mx-auto mb-4 bg-indigo-200 rounded-2xl flex items-center justify-center">
                     <Phone className="w-12 h-12 text-indigo-600" />
                   </div>
-                  <p className="text-indigo-700 font-medium">Voice-First Intake Dashboard</p>
+                  <p className="text-indigo-700 font-medium">Voice-First Onboarding Dashboard</p>
                 </div>
               </div>
             </div>
@@ -163,19 +164,19 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-4xl sm:text-5xl font-bold text-white">Voice</div>
-              <div className="mt-2 text-gray-400 font-medium">Natural conversation, not forms</div>
+              <div className="mt-2 text-gray-400 font-medium">Customers talk, AI captures</div>
             </div>
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-white">100+</div>
-              <div className="mt-2 text-gray-400 font-medium">Questions per intake</div>
+              <div className="text-4xl sm:text-5xl font-bold text-white">0</div>
+              <div className="mt-2 text-gray-400 font-medium">Staff hours per onboarding</div>
             </div>
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-white">Multi</div>
-              <div className="mt-2 text-gray-400 font-medium">People, calls, and sources</div>
+              <div className="text-4xl sm:text-5xl font-bold text-white">24/7</div>
+              <div className="mt-2 text-gray-400 font-medium">Customers onboard on their schedule</div>
             </div>
             <div>
-              <div className="text-4xl sm:text-5xl font-bold text-white">Every</div>
-              <div className="mt-2 text-gray-400 font-medium">Answer has evidence</div>
+              <div className="text-4xl sm:text-5xl font-bold text-white">100%</div>
+              <div className="mt-2 text-gray-400 font-medium">Structured, every time</div>
             </div>
           </div>
         </div>
@@ -186,13 +187,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Requirements gathering is{' '}
-              <span className="text-red-500">broken</span>
+              Client onboarding is{' '}
+              <span className="text-red-500">stuck in the past</span>
             </h2>
             <p className="mt-4 text-xl text-gray-600">
-              Every project management tool tracks tasks beautifully. But the hardest part —
-              actually capturing what people need — is still done with Word docs, spreadsheets,
-              and emails that people forget to fill out.
+              You signed a new customer. Now someone on your team has to schedule a call,
+              walk through a checklist, type up the answers, chase what they missed, and do
+              it all again next week for the next customer.
             </p>
           </div>
 
@@ -205,31 +206,31 @@ export default function LandingPage() {
                   <span className="mt-1 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
                   </span>
-                  <span className="text-gray-600">Send a 50-page Word doc nobody wants to fill out</span>
+                  <span className="text-gray-600">Schedule onboarding calls, block calendars, coordinate across time zones</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
                   </span>
-                  <span className="text-gray-600">Chase multiple people across weeks of follow-up emails</span>
+                  <span className="text-gray-600">Walk through a checklist and manually type up the answers</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
                   </span>
-                  <span className="text-gray-600">Lose context when different people give conflicting answers</span>
+                  <span className="text-gray-600">Chase missing details across follow-up emails and Slack threads</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
                   </span>
-                  <span className="text-gray-600">No audit trail of who said what and when</span>
+                  <span className="text-gray-600">Repeat the entire process for every new customer that signs up</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1 w-5 h-5 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
                     <span className="w-2 h-2 bg-red-500 rounded-full" />
                   </span>
-                  <span className="text-gray-600">Answers go stale as menus, policies, and services change</span>
+                  <span className="text-gray-600">Hire dedicated onboarding staff as you grow — or watch quality drop</span>
                 </li>
               </ul>
             </div>
@@ -242,31 +243,31 @@ export default function LandingPage() {
                   <span className="mt-1">
                     <Check className="w-5 h-5 text-indigo-200" />
                   </span>
-                  <span>Customer calls in and speaks naturally — AI maps answers to questions</span>
+                  <span>Send the customer a phone number — they call and talk on their schedule</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1">
                     <Check className="w-5 h-5 text-indigo-200" />
                   </span>
-                  <span>Multiple people contribute across multiple sessions, resume any time</span>
+                  <span>AI asks the right questions and captures structured onboarding data</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1">
                     <Check className="w-5 h-5 text-indigo-200" />
                   </span>
-                  <span>Every answer has a revision history with evidence and timestamps</span>
+                  <span>Customer can call back anytime — or hand off to a colleague for their part</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1">
                     <Check className="w-5 h-5 text-indigo-200" />
                   </span>
-                  <span>Upload docs and link URLs — AI proposes answers, never silently overwrites</span>
+                  <span>Upload docs to fill gaps — AI proposes answers, never silently overwrites</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1">
                     <Check className="w-5 h-5 text-indigo-200" />
                   </span>
-                  <span>Living sources refresh automatically and flag what changed</span>
+                  <span>Get a structured onboarding record ready for configuration</span>
                 </li>
               </ul>
             </div>
@@ -279,11 +280,11 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              Built for the messy reality of requirements capture
+              Built for the messy reality of client onboarding
             </h2>
             <p className="mt-4 text-xl text-gray-600">
-              Not another form builder. A complete system for capturing, validating,
-              and maintaining structured answers from real people.
+              Not another form builder. A complete system for onboarding new customers
+              with structured data capture — across voice, documents, and multiple people.
             </p>
           </div>
 
@@ -308,33 +309,33 @@ export default function LandingPage() {
             How it works
           </h2>
           <p className="text-xl text-gray-600 text-center mb-16 max-w-2xl mx-auto">
-            From template to completed intake — across however many people and calls it takes
+            From signup to configured — across however many people and calls it takes
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
               {
                 num: '1',
-                title: 'Create an Intake',
-                desc: 'Choose a template for your industry. The system generates an intake code and a phone number for your customer to call.',
+                title: 'Create an Onboarding',
+                desc: 'Pick a template for your service, get a dedicated phone number. Send it to your new customer with their onboarding link.',
                 icon: FileText,
               },
               {
                 num: '2',
                 title: 'Customer Calls In',
-                desc: 'They speak naturally. The AI agent asks smart questions, captures answers with evidence, and handles "skip" and "not applicable."',
+                desc: 'They talk naturally about their business. The AI agent asks smart follow-ups, captures structured answers, and handles "I\'ll get back to you on that."',
                 icon: Phone,
               },
               {
                 num: '3',
-                title: 'Resume & Collaborate',
-                desc: 'Multiple people can contribute across multiple calls. Upload documents and link URLs to fill in more answers automatically.',
+                title: 'Multiple People, Multiple Calls',
+                desc: 'The main contact starts, then hands off to colleagues for their areas. Upload documents to fill gaps. Everyone contributes on their own time.',
                 icon: Users,
               },
               {
                 num: '4',
-                title: 'Review & Complete',
-                desc: 'Track progress by section. Resolve conflicts. Accept or reject AI proposals. Export when ready.',
+                title: 'Review & Go Live',
+                desc: 'Get a structured onboarding summary with every answer sourced and timestamped. Push the data to your configuration workflow.',
                 icon: History,
               },
             ].map((step, i) => (
@@ -358,14 +359,14 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <Quote className="w-12 h-12 text-indigo-200 mx-auto mb-6" />
           <blockquote className="text-2xl sm:text-3xl font-medium text-gray-900 leading-relaxed">
-            "We used to email a 60-page Word document and wait weeks for incomplete answers.
-            Now customers just call in and talk. The intake is{' '}
-            <span className="text-indigo-600">structured, evidenced, and done faster</span>{' '}
-            than we ever thought possible."
+            "We used to block two hours per new customer just to walk through an onboarding checklist.
+            Now we send them a phone number and the{' '}
+            <span className="text-indigo-600">onboarding runs itself</span>.{' '}
+            Structured data, every time, without tying up our team."
           </blockquote>
           <div className="mt-8">
-            <div className="font-semibold text-gray-900">Onboarding Manager</div>
-            <div className="text-gray-500">Hospitality Services Provider</div>
+            <div className="font-semibold text-gray-900">Operations Lead</div>
+            <div className="text-gray-500">SaaS Platform Provider</div>
           </div>
         </div>
       </div>
@@ -374,18 +375,18 @@ export default function LandingPage() {
       <div className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
-            <h3 className="text-2xl font-bold text-gray-900">Template-driven, reusable across industries</h3>
-            <p className="mt-2 text-gray-600">One system, infinite intake types</p>
+            <h3 className="text-2xl font-bold text-gray-900">One platform, every onboarding use case</h3>
+            <p className="mt-2 text-gray-600">Template-driven and reusable across industries</p>
           </div>
           <div className="flex flex-wrap justify-center gap-4">
             {[
-              'Hotel Front Desk',
-              'Restaurant Operations',
-              'Salon Services',
-              'Group Sales',
-              'IT Onboarding',
-              'Vendor Assessment',
-              'Property Management',
+              'SaaS Customer Onboarding',
+              'Law Firm Client Intake',
+              'Medical Patient Intake',
+              'Insurance Policy Capture',
+              'Consulting Engagement Scoping',
+              'Financial Services KYC',
+              'Property Management Tenants',
               '+ Your Industry',
             ].map((useCase) => (
               <div key={useCase} className="flex items-center gap-2 px-5 py-3 bg-gray-50 rounded-xl border border-gray-200">
@@ -439,10 +440,10 @@ export default function LandingPage() {
             <Mic className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white">
-            Requirements capture should be a conversation, not a form
+            Customer onboarding should run itself
           </h2>
           <p className="mt-6 text-xl text-indigo-100 max-w-xl mx-auto">
-            Replace the documents nobody fills out with a system that captures what people actually say.
+            Give your new customers a phone number instead of a project manager.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -464,7 +465,7 @@ export default function LandingPage() {
               <ExpertlyLogo className="w-8 h-8" />
               <div className="flex flex-col">
                 <span className="text-lg font-bold text-white leading-tight">Expertly Intake</span>
-                <span className="text-xs text-indigo-400 font-medium -mt-0.5">Voice-First Requirements Capture</span>
+                <span className="text-xs text-indigo-400 font-medium -mt-0.5">Voice-First Client Onboarding</span>
               </div>
             </div>
             <p className="text-gray-400 text-sm">
