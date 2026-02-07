@@ -90,7 +90,7 @@ const PRIORITY_ORDER: Record<string, number> = {
 }
 
 type SortOption = 'priority' | 'date' | 'loves'
-type GroupByOption = 'none' | 'category'
+type GroupByOption = 'none' | 'category' | 'product'
 
 interface IdeaCreate {
   product: string
@@ -205,25 +205,21 @@ const ideasApi = {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString)
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })
+  return `${date.getMonth() + 1}/${date.getDate()}/${String(date.getFullYear()).slice(-2)}`
 }
 
 function getStatusBadgeColor(status: Idea['status']): string {
   switch (status) {
     case 'new':
-      return 'bg-primary-100 text-primary-800 dark:bg-primary-900/50 dark:text-primary-300'
+      return 'bg-primary-50 text-primary-600/80 dark:bg-primary-900/30 dark:text-primary-400/80'
     case 'in_progress':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+      return 'bg-yellow-50 text-yellow-600/80 dark:bg-yellow-900/30 dark:text-yellow-400/80'
     case 'done':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300'
+      return 'bg-green-50 text-green-600/80 dark:bg-green-900/30 dark:text-green-400/80'
     case 'archived':
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300'
+      return 'bg-gray-50 text-gray-500/80 dark:bg-gray-900/30 dark:text-gray-400/80'
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300'
+      return 'bg-gray-50 text-gray-500/80 dark:bg-gray-900/30 dark:text-gray-400/80'
   }
 }
 
@@ -245,13 +241,13 @@ function formatStatus(status: Idea['status']): string {
 function getPriorityBadgeColor(priority: Idea['priority']): string {
   switch (priority) {
     case 'high':
-      return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+      return 'bg-red-50 text-red-500/80 dark:bg-red-900/30 dark:text-red-400/80'
     case 'medium':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
+      return 'bg-yellow-50 text-yellow-600/80 dark:bg-yellow-900/30 dark:text-yellow-400/80'
     case 'low':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+      return 'bg-blue-50 text-blue-500/80 dark:bg-blue-900/30 dark:text-blue-400/80'
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300'
+      return 'bg-gray-50 text-gray-500/80 dark:bg-gray-900/30 dark:text-gray-400/80'
   }
 }
 
@@ -340,44 +336,26 @@ function IdeaCard({
         className="px-4 py-2.5 cursor-pointer hover:bg-theme-bg-elevated transition-colors"
         onClick={() => setExpanded(!expanded)}
       >
-        <div className="flex items-start justify-between gap-3">
-          {selectMode && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleSelect?.()
-              }}
-              className="mt-0.5 p-1 text-theme-text-secondary hover:text-primary-500 transition-colors"
-            >
-              {isSelected ? (
-                <CheckSquare className="w-4 h-4 text-primary-500" />
-              ) : (
-                <Square className="w-4 h-4" />
-              )}
-            </button>
-          )}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-1.5 flex-wrap mb-1">
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeColor(idea.status)}`}>
-                {formatStatus(idea.status)}
-              </span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getPriorityBadgeColor(idea.priority)}`}>
-                {idea.priority}
-              </span>
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-theme-bg-elevated rounded text-theme-text-secondary">
-                {ProductIcon && <ProductIcon className="w-3 h-3" />}
-                {getProductDisplayName(idea.product)}
-              </span>
-              {idea.category && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
-                  {idea.category}
-                </span>
-              )}
-            </div>
-            <h3 className="text-base font-semibold text-theme-text-primary">{idea.title}</h3>
-          </div>
-          <div className="flex flex-col items-end gap-1">
-            <div className="flex items-center gap-2">
+        <div className="space-y-1.5">
+          {/* Title row: checkbox + title + date + actions */}
+          <div className="flex items-center gap-2">
+            {selectMode && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onToggleSelect?.()
+                }}
+                className="p-1 text-theme-text-secondary hover:text-primary-500 transition-colors flex-shrink-0"
+              >
+                {isSelected ? (
+                  <CheckSquare className="w-4 h-4 text-primary-500" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+              </button>
+            )}
+            <h3 className="text-base font-semibold text-theme-text-primary truncate flex-1 min-w-0">{idea.title}</h3>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
               <span className="text-xs text-theme-text-muted whitespace-nowrap">
                 {formatDate(idea.created_at)}
               </span>
@@ -398,8 +376,28 @@ function IdeaCard({
                 <ChevronDown className="w-4 h-4 text-theme-text-muted" />
               )}
             </div>
+          </div>
+          {/* Badges + meta row */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getStatusBadgeColor(idea.status)}`}>
+                {formatStatus(idea.status)}
+              </span>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getPriorityBadgeColor(idea.priority)}`}>
+                {idea.priority}
+              </span>
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-theme-bg-elevated rounded text-theme-text-secondary">
+                {ProductIcon && <ProductIcon className="w-3 h-3" />}
+                {getProductDisplayName(idea.product)}
+              </span>
+              {idea.category && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400">
+                  {idea.category}
+                </span>
+              )}
+            </div>
             {/* Vote and comment counts */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               {onVote && (
                 <button
                   onClick={(e) => {
@@ -1058,13 +1056,15 @@ export function IdeaBacklog() {
     })
   }, [ideas, sortBy])
 
-  // Group ideas by category
+  // Group ideas by category or product
   const groupedIdeas = useMemo(() => {
-    if (groupBy !== 'category') return null
+    if (groupBy === 'none') return null
 
     const groups: Record<string, Idea[]> = {}
     for (const idea of sortedIdeas) {
-      const key = idea.category || 'Uncategorized'
+      const key = groupBy === 'product'
+        ? getProductDisplayName(idea.product)
+        : (idea.category || 'Uncategorized')
       if (!groups[key]) groups[key] = []
       groups[key].push(idea)
     }
@@ -1377,6 +1377,7 @@ export function IdeaBacklog() {
           >
             <option value="none">None</option>
             <option value="category">Category</option>
+            <option value="product">Product</option>
           </select>
         </div>
 
@@ -1406,6 +1407,26 @@ export function IdeaBacklog() {
         )}
       </div>
 
+      {/* Group navigation bar */}
+      {groupedIdeas && groupedIdeas.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2 bg-theme-bg-surface rounded-xl border border-theme-border p-3">
+          <span className="text-xs font-medium text-theme-text-muted mr-1">Jump to:</span>
+          {groupedIdeas.map(({ category, ideas: groupIdeas }) => (
+            <button
+              key={category}
+              onClick={() => {
+                const el = document.getElementById(`group-${category.replace(/\s+/g, '-').toLowerCase()}`)
+                el?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-theme-bg-elevated text-theme-text-secondary hover:bg-primary-100 hover:text-primary-700 dark:hover:bg-primary-900/30 dark:hover:text-primary-300 transition-colors"
+            >
+              {category}
+              <span className="text-theme-text-muted">({groupIdeas.length})</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Ideas list */}
       {isLoading ? (
         <div className="bg-theme-bg-surface rounded-xl border border-theme-border p-8 text-center text-theme-text-muted">
@@ -1430,15 +1451,15 @@ export function IdeaBacklog() {
         </div>
       ) : groupedIdeas ? (
         // Grouped view
-        <div className="space-y-6">
+        <div className="space-y-10">
           {groupedIdeas.map(({ category, ideas: groupIdeas }) => (
             <div key={category}>
-              <div className="flex items-center gap-2 mb-3">
-                <span className="inline-flex items-center px-3 py-1 rounded-lg text-sm font-semibold bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300">
+              <div id={`group-${category.replace(/\s+/g, '-').toLowerCase()}`} className="flex items-center gap-3 mb-3 pb-2 border-b-2 border-theme-border scroll-mt-4">
+                <h3 className="text-base font-bold text-theme-text-primary">
                   {category}
-                </span>
-                <span className="text-sm text-theme-text-muted">
-                  ({groupIdeas.length})
+                </h3>
+                <span className="inline-flex items-center justify-center min-w-[24px] px-1.5 py-0.5 rounded-full text-xs font-semibold bg-theme-bg-elevated text-theme-text-secondary">
+                  {groupIdeas.length}
                 </span>
               </div>
               <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4">
