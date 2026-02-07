@@ -52,15 +52,6 @@ export default function Settings() {
     phone: '',
   })
 
-  const [notifications, setNotifications] = useState({
-    emailNewQuoteRequest: true,
-    emailShipmentUpdate: true,
-    emailExceptions: true,
-    emailInvoicePaid: false,
-    emailCarrierTenderResponse: true,
-    emailDailyDigest: false,
-  })
-
   const [company, setCompany] = useState({
     name: 'Your Brokerage',
     mc_number: '',
