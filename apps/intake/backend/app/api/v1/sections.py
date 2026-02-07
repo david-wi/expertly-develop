@@ -211,7 +211,7 @@ async def get_section(
     return _serialize_section_instance(doc)
 
 
-@router.post("/intakes/{intakeId}/sections/{intakeSectionInstanceId}/markComplete")
+@router.post("/intakes/{intakeId}/sections/{intakeSectionInstanceId}/mark-complete")
 async def mark_section_complete(
     intakeId: str,
     intakeSectionInstanceId: str,
@@ -276,21 +276,27 @@ async def mark_section_complete(
     return _serialize_section_instance(updated)
 
 
-@router.post("/intakes/{intakeId}/sections/{templateSectionId}/addRepeatInstance")
+@router.post("/intakes/{intakeId}/sections/repeat")
 async def add_repeat_instance(
     intakeId: str,
-    templateSectionId: str,
     body: dict | None = None,
     current_user: dict = Depends(get_current_user),
 ):
     """Create a new repeat instance of a repeatable section.
 
     Clones the section and its questions from the template, with a new
-    ``repeatInstanceIndex``. Optionally accepts a ``repeatInstanceLabel``
-    in the body (e.g., "Vehicle #2").
+    ``repeatInstanceIndex``. Expects ``templateSectionId`` in the body.
+    Optionally accepts ``instanceLabel`` (e.g., "Vehicle #2").
     """
     intake_doc = await _verify_intake_access(intakeId, current_user["accountId"])
     body = body or {}
+
+    templateSectionId = body.get("templateSectionId")
+    if not templateSectionId:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="templateSectionId is required",
+        )
 
     # Verify the template section is repeatable
     template_sections_col = get_collection("template_sections")
@@ -325,7 +331,7 @@ async def add_repeat_instance(
     )
 
     now = datetime.now(timezone.utc)
-    repeat_label = body.get("repeatInstanceLabel")
+    repeat_label = body.get("instanceLabel") or body.get("repeatInstanceLabel")
 
     section_instance = {
         "intakeId": intakeId,

@@ -5,7 +5,7 @@ Covers:
 - GET /api/v1/intakes (list with filtering)
 - GET /api/v1/intakes/{id} (get with progress)
 - PATCH /api/v1/intakes/{id} (update)
-- POST /api/v1/intakes/{id}/rotateCode
+- POST /api/v1/intakes/{id}/rotate-code
 """
 
 from datetime import datetime, timezone
@@ -288,7 +288,7 @@ class TestUpdateIntake:
 
 
 # =========================================================================
-# POST /api/v1/intakes/{intakeId}/rotateCode
+# POST /api/v1/intakes/{intakeId}/rotate-code
 # =========================================================================
 
 
@@ -306,7 +306,7 @@ class TestRotateCode:
         )
 
         resp = await client.post(
-            f"/api/v1/intakes/{INTAKE_ID}/rotateCode",
+            f"/api/v1/intakes/{INTAKE_ID}/rotate-code",
             headers=auth_headers(admin_token),
         )
         assert resp.status_code == 200
@@ -320,7 +320,7 @@ class TestRotateCode:
         mock_collections["intakes"].find_one = AsyncMock(return_value=None)
 
         resp = await client.post(
-            f"/api/v1/intakes/{INTAKE_ID}/rotateCode",
+            f"/api/v1/intakes/{INTAKE_ID}/rotate-code",
             headers=auth_headers(admin_token),
         )
         assert resp.status_code == 404
@@ -328,7 +328,7 @@ class TestRotateCode:
     async def test_invalid_id(self, client, mock_collections, admin_token):
         """Invalid ObjectId returns 400."""
         resp = await client.post(
-            "/api/v1/intakes/bad-id/rotateCode",
+            "/api/v1/intakes/bad-id/rotate-code",
             headers=auth_headers(admin_token),
         )
         assert resp.status_code == 400

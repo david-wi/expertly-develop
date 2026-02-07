@@ -45,7 +45,7 @@ def _serialize_intake_type(doc: dict) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/intakeTypes", response_model=list[IntakeTypeResponse])
+@router.get("/intake-types", response_model=list[IntakeTypeResponse])
 async def list_intake_types(
     current_user: dict = Depends(get_current_user),
     limit: int = Query(default=50, ge=1, le=200),
@@ -72,7 +72,7 @@ async def list_intake_types(
 
 
 @router.post(
-    "/intakeTypes",
+    "/intake-types",
     response_model=IntakeTypeResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -104,7 +104,7 @@ async def create_intake_type(
     return IntakeTypeResponse(**_serialize_intake_type(doc))
 
 
-@router.get("/intakeTypes/{intakeTypeId}", response_model=IntakeTypeResponse)
+@router.get("/intake-types/{intakeTypeId}", response_model=IntakeTypeResponse)
 async def get_intake_type(
     intakeTypeId: str,
     current_user: dict = Depends(get_current_user),
@@ -132,7 +132,7 @@ async def get_intake_type(
     return IntakeTypeResponse(**_serialize_intake_type(doc))
 
 
-@router.patch("/intakeTypes/{intakeTypeId}", response_model=IntakeTypeResponse)
+@router.patch("/intake-types/{intakeTypeId}", response_model=IntakeTypeResponse)
 async def update_intake_type(
     intakeTypeId: str,
     body: IntakeTypeUpdate,

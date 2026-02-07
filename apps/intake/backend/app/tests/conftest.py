@@ -296,13 +296,18 @@ async def client():
     """Provide an httpx.AsyncClient wired to the FastAPI app.
 
     The identity auth is mocked so requests use the session set via fixtures.
+    Uses FastAPI dependency_overrides to properly mock get_current_user
+    (including for require_admin and other role-based dependencies).
     """
     with (
         patch("app.core.database.init_db", new_callable=AsyncMock),
         patch("app.core.database.close_db", new_callable=AsyncMock),
-        patch("app.core.security.get_current_user", new=_make_mock_get_current_user()),
     ):
         from app.main import app
+        from app.core.security import get_current_user
+
+        mock_get_current_user = _make_mock_get_current_user()
+        app.dependency_overrides[get_current_user] = mock_get_current_user
 
         transport = ASGITransport(app=app)
         async with AsyncClient(
@@ -310,6 +315,8 @@ async def client():
             base_url="http://testserver",
         ) as ac:
             yield ac
+
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 # ---------------------------------------------------------------------------

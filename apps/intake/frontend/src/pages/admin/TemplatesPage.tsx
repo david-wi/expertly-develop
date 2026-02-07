@@ -40,8 +40,15 @@ export default function TemplatesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data: { templateName: string; intakeTypeId: string; versionLabel: string }) =>
-      api.templates.create(data),
+    mutationFn: async (data: { templateName: string; versionLabel: string }) => {
+      let typeId = intakeTypes[0]?.intakeTypeId;
+      if (!typeId) {
+        const newType = await api.intakeTypes.create({ intakeTypeName: 'General' });
+        typeId = newType.intakeTypeId;
+        queryClient.invalidateQueries({ queryKey: ['intake-types'] });
+      }
+      return api.templates.create({ ...data, intakeTypeId: typeId });
+    },
     onSuccess: (res: TemplateVersion) => {
       queryClient.invalidateQueries({ queryKey: ['templates'] });
       navigate(`/admin/templates/${res.templateVersionId}`);
@@ -66,14 +73,8 @@ export default function TemplatesPage() {
           onClick={() => {
             const name = prompt('Template name:');
             if (!name) return;
-            const typeId = intakeTypes[0]?.intakeTypeId;
-            if (!typeId) {
-              alert('No intake types available. Please create one first.');
-              return;
-            }
             createMutation.mutate({
               templateName: name,
-              intakeTypeId: typeId,
               versionLabel: 'v1.0',
             });
           }}
