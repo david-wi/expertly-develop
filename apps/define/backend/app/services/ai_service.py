@@ -244,10 +244,17 @@ Respond with ONLY the JSON array, no other text."""
             images=images if images else None,
         )
 
+        # Guard against None/empty responses
+        if not text or not text.strip():
+            raise ValueError(
+                "AI returned an empty response. This may be a temporary issue — please try again. "
+                "If the problem persists, the document may be too large for the current model's token limit."
+            )
+
         # Parse JSON response
         json_match = re.search(r"\[[\s\S]*\]", text)
         if not json_match:
-            raise ValueError(f"Failed to parse AI response: {text[:200]}")
+            raise ValueError(f"Failed to parse AI response: {text[:500]}")
 
         parsed = json.loads(json_match.group(0))
         if not isinstance(parsed, list):
