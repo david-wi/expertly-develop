@@ -126,7 +126,7 @@ export default function LandingPage() {
               <span className="text-indigo-600">That Runs Itself</span>
             </h1>
             <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-              Voice-first AI onboarding for subscription and service businesses.
+              Voice-AI onboarding for subscription and service businesses.
             </p>
             <p className="mt-3 text-xl font-medium text-gray-900 max-w-2xl mx-auto">
               Cut onboarding time by <span className="text-indigo-600">80%</span>. No forms. No scheduling. No follow-ups.
