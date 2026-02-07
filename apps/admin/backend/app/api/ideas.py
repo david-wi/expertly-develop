@@ -42,6 +42,14 @@ async def list_products_with_ideas(
     return await service.get_products_with_ideas()
 
 
+@router.get("/categories", response_model=list[str])
+async def list_categories(
+    service: IdeaService = Depends(get_idea_service),
+):
+    """List distinct categories for typeahead suggestions."""
+    return await service.get_distinct_categories()
+
+
 @router.post("", response_model=IdeaResponse, status_code=201)
 async def create_idea(
     data: IdeaCreate,
@@ -61,6 +69,7 @@ async def list_ideas(
     user_email: Optional[str] = Query(None, description="Current user email for vote status"),
     organization_id: Optional[str] = Query(None, description="Filter by organization ID (UUID)"),
     backlog_type: Optional[str] = Query(None, description="'work' to return items with any org_id"),
+    item_type: Optional[str] = Query(None, description="Filter by item type ('idea' or 'feature')"),
     service: IdeaService = Depends(get_idea_service),
 ):
     """List ideas with optional filters.
@@ -76,6 +85,7 @@ async def list_ideas(
         include_archived=include_archived,
         organization_id=organization_id,
         backlog_type=backlog_type,
+        item_type=item_type,
     )
 
     # Enrich with user_voted and comment_count
@@ -90,6 +100,8 @@ async def list_ideas(
             "priority": idea.priority,
             "tags": idea.tags,
             "created_by_email": idea.created_by_email,
+            "category": idea.category,
+            "item_type": idea.item_type,
             "organization_id": idea.organization_id,
             "created_at": idea.created_at,
             "updated_at": idea.updated_at,

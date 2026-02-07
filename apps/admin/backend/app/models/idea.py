@@ -53,6 +53,12 @@ class Idea(Base, TimestampMixin):
     # Tags for categorization
     tags = Column(JSONB, nullable=True, default=list)
 
+    # Category for grouping (extracted from [Category] prefix in titles)
+    category = Column(String(100), nullable=True)
+
+    # Item type: 'idea' for product-wide ideas, 'feature' for dev backlog items
+    item_type = Column(String(20), nullable=False, default="idea")
+
     # Creator tracking
     created_by_email = Column(String(255), nullable=True)
 
@@ -68,6 +74,8 @@ class Idea(Base, TimestampMixin):
         Index('ix_ideas_priority', 'priority'),
         Index('ix_ideas_product_status', 'product', 'status'),
         Index('ix_ideas_org_status', 'organization_id', 'status'),
+        Index('ix_ideas_category', 'category'),
+        Index('ix_ideas_item_type', 'item_type'),
     )
 
     def __repr__(self) -> str:
