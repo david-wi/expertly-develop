@@ -10,6 +10,8 @@ from app.database import get_database
 from app.services.ai_extraction import AIExtractionService
 from app.services.ai_communications import get_ai_communications_service
 from app.services.exception_detection import ExceptionDetectionService
+from app.services.carrier_matching import CarrierMatchingService
+from app.services.predictive_service import PredictiveService
 
 router = APIRouter()
 
@@ -1089,6 +1091,124 @@ async def get_rate_forecast(lane: Optional[str] = None, days: int = 180):
         "period_days": days,
         "generated_at": now.isoformat(),
     }
+
+
+# ==========================================
+# ML Carrier Ranking
+# ==========================================
+
+@router.get("/carrier-ranking/{shipment_id}")
+async def get_carrier_ranking(shipment_id: str):
+    """Get ML-optimized carrier ranking for a shipment.
+
+    Ranks carriers based on weighted scoring of:
+    - Lane experience and historical performance
+    - On-time delivery percentage (weighted by recency)
+    - Claims ratio
+    - Rate competitiveness
+    - Tender acceptance rate
+    - Recency of activity
+    - Insurance/compliance status
+    """
+    service = CarrierMatchingService()
+    try:
+        result = await service.get_ml_carrier_ranking(shipment_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/rate-suggestion")
+async def get_rate_suggestion(
+    origin_state: str,
+    destination_state: str,
+    equipment_type: str = "van",
+    weight_lbs: Optional[int] = None,
+):
+    """Get AI rate suggestion for a lane.
+
+    Analyzes historical shipment data to suggest:
+    - Optimal carrier rate
+    - Recommended customer rate (with target margin)
+    - Rate confidence based on data availability
+    - Market trend insights
+    """
+    service = CarrierMatchingService()
+    result = await service.suggest_rate(
+        origin_state=origin_state,
+        destination_state=destination_state,
+        equipment_type=equipment_type,
+        weight_lbs=weight_lbs,
+    )
+    return result
+
+
+# ==========================================
+# Predictive Analytics
+# ==========================================
+
+@router.get("/predictions/late-delivery/{shipment_id}")
+async def predict_late_delivery(shipment_id: str):
+    """Predict late delivery risk for a specific shipment.
+
+    Analyzes multiple risk factors including:
+    - Carrier assignment status
+    - Time to pickup/delivery
+    - Carrier historical performance on lane
+    - Check call freshness
+    - Equipment scarcity
+    - Lane historical delay rates
+    """
+    try:
+        return await PredictiveService.predict_late_delivery(shipment_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.get("/predictions/late-deliveries")
+async def predict_late_deliveries(limit: int = 20):
+    """Get late delivery predictions for all active shipments."""
+    return await PredictiveService.get_predictions_dashboard(limit=limit)
+
+
+@router.get("/predictions/rate-forecast")
+async def predict_rate_forecast(
+    origin_state: str,
+    destination_state: str,
+    equipment_type: str = "van",
+    days: int = 180,
+):
+    """Forecast rate trends for a specific lane.
+
+    Uses weighted moving average with trend dampening for
+    3-month forward projections.
+    """
+    return await PredictiveService.forecast_rate_trend(
+        origin_state=origin_state,
+        destination_state=destination_state,
+        equipment_type=equipment_type,
+        days=days,
+    )
+
+
+@router.get("/predictions/capacity")
+async def predict_capacity(
+    origin_state: str,
+    destination_state: str,
+    target_date: Optional[str] = None,
+    equipment_type: str = "van",
+):
+    """Predict capacity constraints for a lane.
+
+    Analyzes carrier pool size, historical demand, and current
+    unassigned loads to predict capacity availability.
+    """
+    return await PredictiveService.predict_capacity(
+        origin_state=origin_state,
+        destination_state=destination_state,
+        target_date=target_date,
+        equipment_type=equipment_type,
+    )
 
 
 @router.get("/what-if")

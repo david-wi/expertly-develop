@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from . import customers, carriers, facilities, quote_requests, quotes, shipments, tenders, tracking, documents, invoices, work_items, ai, analytics, emails, customs, loadboards, accounting, carrier_portal, customer_portal, automation, notifications, desks, approvals, automations, customer_contacts, customer_facilities, pricing_playbooks, carrier_compliance, document_inbox, billing, edi, rate_tables, communications, rbac, driver_app, search, tenant, shipment_ops
+from . import customers, carriers, facilities, quote_requests, quotes, shipments, tenders, tracking, documents, invoices, work_items, ai, analytics, emails, customs, loadboards, accounting, carrier_portal, customer_portal, automation, notifications, desks, approvals, automations, customer_contacts, customer_facilities, pricing_playbooks, carrier_compliance, document_inbox, billing, edi, rate_tables, communications, rbac, driver_app, search, tenant, shipment_ops, carrier_payables
 
 router = APIRouter()
 
@@ -42,3 +42,4 @@ router.include_router(driver_app.router, prefix="/driver-app", tags=["driver-app
 router.include_router(search.router, prefix="/search", tags=["search"])
 router.include_router(tenant.router, prefix="/tenant", tags=["tenant"])
 router.include_router(shipment_ops.router, prefix="/shipments", tags=["shipment-ops"])
+router.include_router(carrier_payables.router, prefix="/carrier-payables", tags=["carrier-payables"])

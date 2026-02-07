@@ -1,5 +1,7 @@
+import logging
+import secrets
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from bson import ObjectId
@@ -8,6 +10,8 @@ from app.database import get_database
 from app.models.tracking import TrackingEvent, TrackingEventType
 from app.models.geofence import Geofence, GeofenceType, GeofenceTrigger, TrackingLink, PODCapture
 from app.services.tracking_service import TrackingService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -767,6 +771,14 @@ async def capture_enhanced_pod(shipment_id: str, data: EnhancedPODCaptureRequest
             "is_read": False, "created_at": datetime.utcnow(), "updated_at": datetime.utcnow(),
         })
 
+    # Auto-generate invoice from POD (Feature: e07899c0)
+    try:
+        from app.services.invoice_automation_service import InvoiceAutomationService
+        await InvoiceAutomationService.trigger_invoice_from_pod(shipment_id)
+    except Exception as e:
+        # Log but don't fail POD capture if invoice generation fails
+        logger.warning(f"Auto-invoice from POD failed for shipment {shipment_id}: {e}")
+
     return EnhancedPODResponse(
         id=str(pod_doc["_id"]), shipment_id=shipment_id, capture_type=capture_type,
         signer_name=data.signer_name, signer_title=data.signer_title,
@@ -880,10 +892,201 @@ async def get_geofence_dwell_time(geofence_id: str, shipment_id: Optional[str] =
     return results
 
 
+# ============================================================================
+# Driver Location Update (GPS from driver's device)
+# ============================================================================
+
+class DriverLocationUpdateRequest(BaseModel):
+    """GPS location update from a driver's device or tracking link."""
+    shipment_id: str
+    latitude: float
+    longitude: float
+    city: Optional[str] = None
+    state: Optional[str] = None
+    heading: Optional[float] = None
+    speed_mph: Optional[float] = None
+    source: str = "driver_app"
+
+
+class DriverLocationUpdateResponse(BaseModel):
+    tracking_event_id: str
+    location: Optional[str] = None
+    latitude: float
+    longitude: float
+    eta: Optional[datetime] = None
+    distance_remaining_miles: Optional[float] = None
+    triggered_geofences: List[dict] = []
+
+
+@router.post("/location-update", response_model=DriverLocationUpdateResponse)
+async def driver_location_update(data: DriverLocationUpdateRequest):
+    """Receive GPS update from a driver's device. Updates shipment location,
+    calculates ETA to delivery, and checks geofences."""
+    db = get_database()
+    shipment_oid = ObjectId(data.shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Record location in driver_checkins collection for live map
+    checkin_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "driver_id": f"driver_{data.shipment_id}",
+        "latitude": data.latitude,
+        "longitude": data.longitude,
+        "city": data.city,
+        "state": data.state,
+        "heading": data.heading,
+        "speed_mph": data.speed_mph,
+        "source": data.source,
+        "created_at": datetime.utcnow(),
+    }
+    await db.driver_checkins.insert_one(checkin_doc)
+
+    # Use TrackingService to update shipment location and check geofences
+    result = await TrackingService.update_shipment_location(
+        shipment_id=data.shipment_id,
+        latitude=data.latitude,
+        longitude=data.longitude,
+        city=data.city,
+        state=data.state,
+        source=data.source,
+    )
+
+    # Calculate ETA to delivery stop
+    eta = None
+    distance_remaining = None
+    stops = shipment.get("stops", [])
+    delivery_stop = next(
+        (s for s in stops if s.get("stop_type") == "delivery"),
+        None,
+    )
+    if delivery_stop and delivery_stop.get("latitude") and delivery_stop.get("longitude"):
+        eta_dt, dist = TrackingService.calculate_eta(
+            data.latitude, data.longitude,
+            delivery_stop["latitude"], delivery_stop["longitude"],
+        )
+        eta = eta_dt
+        distance_remaining = round(dist, 1)
+
+        # Update ETA on shipment
+        await db.shipments.update_one(
+            {"_id": shipment_oid},
+            {"$set": {"eta": eta, "updated_at": datetime.utcnow()}}
+        )
+
+    location_str = f"{data.city}, {data.state}" if data.city and data.state else None
+
+    return DriverLocationUpdateResponse(
+        tracking_event_id=result["tracking_event_id"],
+        location=location_str,
+        latitude=data.latitude,
+        longitude=data.longitude,
+        eta=eta,
+        distance_remaining_miles=distance_remaining,
+        triggered_geofences=result.get("triggered_geofences", []),
+    )
+
+
+class LiveMapResponse(BaseModel):
+    """Response for live map with all in-transit shipment locations."""
+    total_active: int
+    in_transit_count: int
+    pending_pickup_count: int
+    locations: List[DriverLocationResponse]
+
+
+@router.get("/live-map", response_model=LiveMapResponse)
+async def get_live_map():
+    """Get all in-transit shipment locations with ETA info for the live map.
+    Aggregates data from driver checkins and tracking events."""
+    db = get_database()
+
+    # Get driver locations (reuses existing logic)
+    locations = await get_driver_locations()
+
+    in_transit = len([d for d in locations if d.shipment_status == "in_transit"])
+    pending = len([d for d in locations if d.shipment_status == "pending_pickup"])
+
+    return LiveMapResponse(
+        total_active=len(locations),
+        in_transit_count=in_transit,
+        pending_pickup_count=pending,
+        locations=locations,
+    )
+
+
+class RequestLocationRequest(BaseModel):
+    """Request to send a tracking/location-sharing link to a driver."""
+    driver_phone: Optional[str] = None
+    driver_email: Optional[str] = None
+    message: Optional[str] = None
+
+
+class RequestLocationResponse(BaseModel):
+    tracking_link_token: str
+    tracking_url: str
+    sent_to: Optional[str] = None
+    message: str
+
+
+@router.post("/request-location/{shipment_id}", response_model=RequestLocationResponse)
+async def request_driver_location(shipment_id: str, data: RequestLocationRequest):
+    """Generate and send a location-sharing link to the driver for a shipment.
+    The driver can use this link to share their GPS location in real-time."""
+    db = get_database()
+    shipment_oid = ObjectId(shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Create a tracking link specifically for driver location sharing
+    import secrets
+    token = secrets.token_urlsafe(32)
+
+    link_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "token": token,
+        "link_type": "driver_location",
+        "driver_phone": data.driver_phone,
+        "driver_email": data.driver_email,
+        "is_active": True,
+        "expires_at": datetime.utcnow() + timedelta(days=7),
+        "view_count": 0,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.tracking_links.insert_one(link_doc)
+
+    tracking_url = f"/driver-track/{token}"
+    sent_to = data.driver_phone or data.driver_email or "link generated"
+
+    # Log the request as a tracking event
+    event = TrackingEvent(
+        shipment_id=shipment_oid,
+        event_type=TrackingEventType.NOTE,
+        event_timestamp=datetime.utcnow(),
+        reported_at=datetime.utcnow(),
+        description=f"Location sharing link sent to {sent_to}",
+        source="system",
+    )
+    await db.tracking_events.insert_one(event.model_dump_mongo())
+
+    return RequestLocationResponse(
+        tracking_link_token=token,
+        tracking_url=tracking_url,
+        sent_to=sent_to,
+        message=f"Location sharing link generated for shipment {shipment.get('shipment_number', shipment_id)}",
+    )
+
+
 @router.get("/geofence-analytics")
 async def get_geofence_analytics(days: int = 30):
     """Get geofence analytics: event counts, dwell time, recent events."""
-    from datetime import timedelta
     db = get_database()
     cutoff = datetime.utcnow() - timedelta(days=days)
 
@@ -970,7 +1173,6 @@ class AutoTrackingResponse(BaseModel):
 @router.post("/auto-update", response_model=AutoTrackingResponse)
 async def automated_tracking_update(data: AutoTrackingRequest):
     """Auto-generate tracking events from GPS data. Detects state transitions."""
-    from datetime import timedelta
     db = get_database()
     shipment_oid = ObjectId(data.shipment_id)
 
@@ -1061,6 +1263,661 @@ async def automated_tracking_update(data: AutoTrackingRequest):
         detected_states=detected_states, current_state=current_state,
         next_check_call_at=next_check, eta=eta, distance_remaining_miles=distance_remaining,
     )
+
+
+# ============================================================================
+# Mobile POD Capture Link (Feature: 01f966a4 - Proof of Delivery Capture)
+# No-install mobile POD via shareable web link with signature pad and photo capture
+# ============================================================================
+
+class MobilePODLinkCreate(BaseModel):
+    """Create a mobile POD capture link for a shipment."""
+    shipment_id: str
+    driver_name: Optional[str] = None
+    driver_phone: Optional[str] = None
+    driver_email: Optional[str] = None
+    expires_in_hours: int = 72
+
+
+class MobilePODLinkResponse(BaseModel):
+    id: str
+    shipment_id: str
+    token: str
+    pod_capture_url: str
+    driver_name: Optional[str] = None
+    expires_at: datetime
+    is_active: bool
+    created_at: datetime
+
+
+class MobilePODLinkInfo(BaseModel):
+    """Info returned when driver opens the POD link (no auth)."""
+    shipment_number: str
+    status: str
+    origin: Optional[str] = None
+    destination: Optional[str] = None
+    pickup_date: Optional[str] = None
+    delivery_date: Optional[str] = None
+    commodity: Optional[str] = None
+    weight_lbs: Optional[float] = None
+    piece_count: Optional[int] = None
+    customer_name: Optional[str] = None
+    driver_name: Optional[str] = None
+    special_instructions: Optional[str] = None
+    already_captured: bool = False
+
+
+class MobilePODSubmission(BaseModel):
+    """POD submission from mobile web link."""
+    signature_data: Optional[str] = None  # Base64 PNG from canvas signature pad
+    signer_name: Optional[str] = None
+    signer_title: Optional[str] = None
+    photos: Optional[List[dict]] = None  # [{url, category, caption}]
+    received_by: Optional[str] = None
+    delivery_notes: Optional[str] = None
+    damage_reported: bool = False
+    damage_description: Optional[str] = None
+    pieces_delivered: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    gps_accuracy_meters: Optional[float] = None
+    captured_at_device: Optional[str] = None  # ISO timestamp from device
+
+
+class MobilePODSubmissionResponse(BaseModel):
+    pod_id: str
+    shipment_id: str
+    status: str
+    message: str
+    has_signature: bool
+    photo_count: int
+    captured_at: datetime
+
+
+@router.post("/pod-link", response_model=MobilePODLinkResponse)
+async def create_mobile_pod_link(data: MobilePODLinkCreate):
+    """Create a shareable link for mobile POD capture. Drivers can open this in any
+    mobile browser to capture signature, photos, and delivery details without installing an app."""
+    db = get_database()
+    shipment_oid = ObjectId(data.shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(hours=data.expires_in_hours)
+
+    link_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "token": token,
+        "link_type": "pod_capture",
+        "driver_name": data.driver_name,
+        "driver_phone": data.driver_phone,
+        "driver_email": data.driver_email,
+        "is_active": True,
+        "expires_at": expires_at,
+        "view_count": 0,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.tracking_links.insert_one(link_doc)
+
+    # Log as tracking event
+    event = TrackingEvent(
+        shipment_id=shipment_oid,
+        event_type=TrackingEventType.NOTE,
+        event_timestamp=datetime.utcnow(),
+        reported_at=datetime.utcnow(),
+        description=f"Mobile POD capture link created for {data.driver_name or 'driver'}",
+        source="system",
+    )
+    await db.tracking_events.insert_one(event.model_dump_mongo())
+
+    return MobilePODLinkResponse(
+        id=str(link_doc["_id"]),
+        shipment_id=data.shipment_id,
+        token=token,
+        pod_capture_url=f"/pod-capture/{token}",
+        driver_name=data.driver_name,
+        expires_at=expires_at,
+        is_active=True,
+        created_at=link_doc["created_at"],
+    )
+
+
+@router.get("/pod-link/{token}/info", response_model=MobilePODLinkInfo)
+async def get_pod_link_info(token: str):
+    """Get shipment info for a mobile POD capture link (no auth required).
+    This is what the driver sees when opening the link."""
+    db = get_database()
+
+    link = await db.tracking_links.find_one({
+        "token": token,
+        "link_type": "pod_capture",
+        "is_active": True,
+    })
+    if not link:
+        raise HTTPException(status_code=404, detail="POD link not found or expired")
+
+    if link.get("expires_at") and link["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="POD link has expired")
+
+    # Increment view count
+    await db.tracking_links.update_one(
+        {"_id": link["_id"]},
+        {"$inc": {"view_count": 1}, "$set": {"last_viewed_at": datetime.utcnow()}}
+    )
+
+    shipment = await db.shipments.find_one({"_id": link["shipment_id"]})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    stops = shipment.get("stops", [])
+    pickup = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+    delivery = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+
+    # Check if POD already captured
+    existing_pod = await db.pod_captures.find_one({"shipment_id": link["shipment_id"]})
+
+    # Get customer name
+    customer_name = None
+    if shipment.get("customer_id"):
+        customer = await db.customers.find_one({"_id": shipment["customer_id"]})
+        if customer:
+            customer_name = customer.get("name")
+
+    return MobilePODLinkInfo(
+        shipment_number=shipment.get("shipment_number", ""),
+        status=shipment.get("status", "unknown"),
+        origin=f"{pickup.get('city', '')}, {pickup.get('state', '')}".strip(", ") or None,
+        destination=f"{delivery.get('city', '')}, {delivery.get('state', '')}".strip(", ") or None,
+        pickup_date=str(shipment.get("pickup_date", "")) if shipment.get("pickup_date") else None,
+        delivery_date=str(shipment.get("delivery_date", "")) if shipment.get("delivery_date") else None,
+        commodity=shipment.get("commodity"),
+        weight_lbs=shipment.get("weight_lbs"),
+        piece_count=shipment.get("piece_count"),
+        customer_name=customer_name,
+        driver_name=link.get("driver_name"),
+        special_instructions=shipment.get("special_requirements"),
+        already_captured=existing_pod is not None,
+    )
+
+
+@router.post("/pod-link/{token}/submit", response_model=MobilePODSubmissionResponse)
+async def submit_mobile_pod(token: str, data: MobilePODSubmission):
+    """Submit POD via mobile web link (no auth required). Accepts signature,
+    photos, delivery notes, and GPS data from the driver's mobile browser."""
+    db = get_database()
+
+    link = await db.tracking_links.find_one({
+        "token": token,
+        "link_type": "pod_capture",
+        "is_active": True,
+    })
+    if not link:
+        raise HTTPException(status_code=404, detail="POD link not found or expired")
+
+    if link.get("expires_at") and link["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="POD link has expired")
+
+    shipment_oid = link["shipment_id"]
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Determine capture type
+    capture_type = "signature"
+    if data.signature_data and data.photos:
+        capture_type = "both"
+    elif data.photos:
+        capture_type = "photo"
+
+    photo_urls = []
+    photo_data = []
+    if data.photos:
+        for p in data.photos:
+            photo_urls.append(p.get("url", ""))
+            photo_data.append({
+                "url": p.get("url", ""),
+                "category": p.get("category", "delivery"),
+                "caption": p.get("caption"),
+                "gps_latitude": data.latitude,
+                "gps_longitude": data.longitude,
+                "timestamp": data.captured_at_device or datetime.utcnow().isoformat(),
+            })
+
+    pod_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "capture_type": capture_type,
+        "signature_data": data.signature_data,
+        "signer_name": data.signer_name,
+        "signer_title": data.signer_title,
+        "photo_urls": photo_urls,
+        "photo_data": photo_data,
+        "photo_count": len(photo_urls),
+        "received_by": data.received_by,
+        "delivery_notes": data.delivery_notes,
+        "latitude": data.latitude,
+        "longitude": data.longitude,
+        "gps_accuracy_meters": data.gps_accuracy_meters,
+        "damage_reported": data.damage_reported,
+        "damage_description": data.damage_description,
+        "pieces_delivered": data.pieces_delivered,
+        "pieces_expected": shipment.get("piece_count"),
+        "captured_at": datetime.utcnow(),
+        "captured_via": "mobile_pod_link",
+        "pod_link_token": token,
+        "is_verified": False,
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow(),
+    }
+    await db.pod_captures.insert_one(pod_doc)
+
+    # Create tracking event
+    event = TrackingEvent(
+        shipment_id=shipment_oid,
+        event_type=TrackingEventType.POD_RECEIVED,
+        event_timestamp=datetime.utcnow(),
+        reported_at=datetime.utcnow(),
+        latitude=data.latitude,
+        longitude=data.longitude,
+        description=f"POD captured via mobile link. Signed by: {data.signer_name or data.received_by or 'Unknown'}. Photos: {len(photo_urls)}",
+        source="mobile_pod_link",
+    )
+    await db.tracking_events.insert_one(event.model_dump_mongo())
+
+    # Update shipment status to delivered if not already
+    if shipment.get("status") != "delivered":
+        await db.shipments.update_one(
+            {"_id": shipment_oid},
+            {"$set": {
+                "status": "delivered",
+                "actual_delivery_date": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }}
+        )
+
+    # Deactivate the POD link after use
+    await db.tracking_links.update_one(
+        {"_id": link["_id"]},
+        {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+    )
+
+    # Notify customer
+    if shipment.get("customer_id"):
+        await db.portal_notifications.insert_one({
+            "_id": ObjectId(),
+            "portal_type": "customer",
+            "entity_id": shipment["customer_id"],
+            "title": "Delivery Confirmed",
+            "message": f"Shipment {shipment.get('shipment_number')} has been delivered. POD is available.",
+            "notification_type": "shipment",
+            "shipment_id": shipment_oid,
+            "is_read": False,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        })
+
+    # Auto-generate invoice from POD
+    try:
+        from app.services.invoice_automation_service import InvoiceAutomationService
+        await InvoiceAutomationService.trigger_invoice_from_pod(str(shipment_oid))
+    except Exception as e:
+        logger.warning(f"Auto-invoice from mobile POD failed for shipment {shipment_oid}: {e}")
+
+    return MobilePODSubmissionResponse(
+        pod_id=str(pod_doc["_id"]),
+        shipment_id=str(shipment_oid),
+        status="captured",
+        message="Proof of delivery captured successfully",
+        has_signature=bool(data.signature_data),
+        photo_count=len(photo_urls),
+        captured_at=pod_doc["captured_at"],
+    )
+
+
+# ============================================================================
+# Auto-Create Geofences from Shipment Stops (Feature: fb2a56eb - Geofence Alerts)
+# Automatically creates pickup and delivery geofences for a shipment
+# ============================================================================
+
+class AutoGeofenceRequest(BaseModel):
+    """Request to auto-create geofences from shipment stops."""
+    radius_meters: int = 500
+    alert_dispatcher: bool = True
+    alert_customer: bool = False
+    auto_update_status: bool = True
+
+
+class AutoGeofenceResponse(BaseModel):
+    shipment_id: str
+    geofences_created: int
+    geofences: List[GeofenceResponse]
+
+
+@router.post("/geofences/auto-create/{shipment_id}", response_model=AutoGeofenceResponse)
+async def auto_create_geofences(shipment_id: str, data: AutoGeofenceRequest):
+    """Automatically create geofences for all stops in a shipment.
+    Pickup stops get ENTER triggers, delivery stops get ENTER triggers,
+    and auto_update_status will auto-transition shipment status on geofence triggers."""
+    db = get_database()
+    shipment_oid = ObjectId(shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    stops = shipment.get("stops", [])
+    if not stops:
+        raise HTTPException(status_code=400, detail="Shipment has no stops")
+
+    # Remove existing auto-created geofences for this shipment
+    await db.geofences.delete_many({
+        "shipment_id": shipment_oid,
+        "geofence_type": {"$in": ["pickup", "delivery"]},
+    })
+
+    created_geofences = []
+    for stop in stops:
+        lat = stop.get("latitude")
+        lng = stop.get("longitude")
+        if not lat or not lng:
+            continue
+
+        stop_type = stop.get("stop_type", "stop")
+        gf_type = GeofenceType.PICKUP if stop_type == "pickup" else GeofenceType.DELIVERY
+        trigger = GeofenceTrigger.ENTER if stop_type in ("pickup", "delivery") else GeofenceTrigger.BOTH
+
+        gf_name = f"{stop_type.capitalize()} - {stop.get('city', '')}, {stop.get('state', '')}"
+        gf = Geofence(
+            name=gf_name,
+            geofence_type=gf_type,
+            latitude=lat,
+            longitude=lng,
+            radius_meters=data.radius_meters,
+            trigger=trigger,
+            shipment_id=shipment_oid,
+            facility_id=ObjectId(stop["facility_id"]) if stop.get("facility_id") else None,
+            customer_id=shipment.get("customer_id"),
+            address=stop.get("address"),
+            city=stop.get("city"),
+            state=stop.get("state"),
+            zip_code=stop.get("zip_code"),
+            alert_push=data.alert_dispatcher,
+        )
+        await db.geofences.insert_one(gf.model_dump_mongo())
+        created_geofences.append(geofence_to_response(gf))
+
+    # Store auto-update-status preference on the shipment
+    if data.auto_update_status:
+        await db.shipments.update_one(
+            {"_id": shipment_oid},
+            {"$set": {"geofence_auto_status": True, "updated_at": datetime.utcnow()}}
+        )
+
+    return AutoGeofenceResponse(
+        shipment_id=shipment_id,
+        geofences_created=len(created_geofences),
+        geofences=created_geofences,
+    )
+
+
+# ============================================================================
+# Location Sharing via Token (Feature: f00e8a95 - Automated Tracking Updates)
+# Public endpoint for drivers to share GPS location via tracking link
+# ============================================================================
+
+class LocationShareUpdate(BaseModel):
+    """GPS location update submitted via location-sharing link (no auth)."""
+    latitude: float
+    longitude: float
+    city: Optional[str] = None
+    state: Optional[str] = None
+    heading: Optional[float] = None
+    speed_mph: Optional[float] = None
+    accuracy_meters: Optional[float] = None
+
+
+class LocationShareResponse(BaseModel):
+    status: str
+    shipment_number: Optional[str] = None
+    eta: Optional[datetime] = None
+    distance_remaining_miles: Optional[float] = None
+    message: str
+
+
+@router.get("/location-share/{token}/info")
+async def get_location_share_info(token: str):
+    """Get info for a location-sharing link (no auth). Shows the driver
+    what shipment they are sharing location for."""
+    db = get_database()
+
+    link = await db.tracking_links.find_one({
+        "token": token,
+        "link_type": "driver_location",
+        "is_active": True,
+    })
+    if not link:
+        raise HTTPException(status_code=404, detail="Location sharing link not found or expired")
+
+    if link.get("expires_at") and link["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="Location sharing link has expired")
+
+    shipment = await db.shipments.find_one({"_id": link["shipment_id"]})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    stops = shipment.get("stops", [])
+    pickup = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+    delivery = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+
+    return {
+        "shipment_number": shipment.get("shipment_number"),
+        "status": shipment.get("status"),
+        "origin": f"{pickup.get('city', '')}, {pickup.get('state', '')}".strip(", ") or None,
+        "destination": f"{delivery.get('city', '')}, {delivery.get('state', '')}".strip(", ") or None,
+        "driver_name": link.get("driver_name"),
+        "is_sharing_active": True,
+    }
+
+
+@router.post("/location-share/{token}", response_model=LocationShareResponse)
+async def submit_location_share(token: str, data: LocationShareUpdate):
+    """Submit a GPS location update via a location-sharing link (no auth required).
+    Used by drivers who received a tracking link via SMS/email to share their location."""
+    db = get_database()
+
+    link = await db.tracking_links.find_one({
+        "token": token,
+        "link_type": "driver_location",
+        "is_active": True,
+    })
+    if not link:
+        raise HTTPException(status_code=404, detail="Location sharing link not found or expired")
+
+    if link.get("expires_at") and link["expires_at"] < datetime.utcnow():
+        raise HTTPException(status_code=410, detail="Location sharing link has expired")
+
+    shipment_oid = link["shipment_id"]
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Record in driver_checkins for live map
+    checkin_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "driver_id": f"link_{token[:8]}",
+        "latitude": data.latitude,
+        "longitude": data.longitude,
+        "city": data.city,
+        "state": data.state,
+        "heading": data.heading,
+        "speed_mph": data.speed_mph,
+        "accuracy_meters": data.accuracy_meters,
+        "source": "location_share_link",
+        "created_at": datetime.utcnow(),
+    }
+    await db.driver_checkins.insert_one(checkin_doc)
+
+    # Use TrackingService for location update + geofence check
+    result = await TrackingService.update_shipment_location(
+        shipment_id=str(shipment_oid),
+        latitude=data.latitude,
+        longitude=data.longitude,
+        city=data.city,
+        state=data.state,
+        source="location_share_link",
+    )
+
+    # Update link usage
+    await db.tracking_links.update_one(
+        {"_id": link["_id"]},
+        {"$inc": {"view_count": 1}, "$set": {"last_viewed_at": datetime.utcnow()}}
+    )
+
+    # Calculate ETA
+    eta = None
+    distance_remaining = None
+    stops = shipment.get("stops", [])
+    delivery_stop = next((s for s in stops if s.get("stop_type") == "delivery"), None)
+    if delivery_stop and delivery_stop.get("latitude") and delivery_stop.get("longitude"):
+        eta, dist = TrackingService.calculate_eta(
+            data.latitude, data.longitude,
+            delivery_stop["latitude"], delivery_stop["longitude"],
+        )
+        distance_remaining = round(dist, 1)
+        await db.shipments.update_one(
+            {"_id": shipment_oid},
+            {"$set": {"eta": eta, "updated_at": datetime.utcnow()}}
+        )
+
+    return LocationShareResponse(
+        status="received",
+        shipment_number=shipment.get("shipment_number"),
+        eta=eta,
+        distance_remaining_miles=distance_remaining,
+        message="Location updated successfully",
+    )
+
+
+# ============================================================================
+# Photo Capture with GPS/Timestamp Auto-Tagging (Feature: b62dffac)
+# Enhanced photo capture endpoint with metadata
+# ============================================================================
+
+class PhotoCaptureRequest(BaseModel):
+    """Photo capture with automatic GPS and timestamp tagging."""
+    shipment_id: str
+    photo_url: str
+    category: str = "delivery"  # delivery, damage, bol, cargo, seal, other
+    caption: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    gps_accuracy_meters: Optional[float] = None
+    device_timestamp: Optional[str] = None  # ISO timestamp from device
+
+
+class PhotoCaptureResponse(BaseModel):
+    id: str
+    shipment_id: str
+    photo_url: str
+    category: str
+    caption: Optional[str] = None
+    gps_tagged: bool
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    timestamp_tagged: bool
+    captured_at: datetime
+    device_timestamp: Optional[str] = None
+
+
+@router.post("/photos/capture", response_model=PhotoCaptureResponse)
+async def capture_photo_with_metadata(data: PhotoCaptureRequest):
+    """Capture a photo with automatic GPS coordinates and timestamp tagging.
+    Photos are categorized and associated with the shipment for POD documentation."""
+    db = get_database()
+    shipment_oid = ObjectId(data.shipment_id)
+
+    shipment = await db.shipments.find_one({"_id": shipment_oid})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    photo_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_oid,
+        "photo_url": data.photo_url,
+        "category": data.category,
+        "caption": data.caption,
+        "latitude": data.latitude,
+        "longitude": data.longitude,
+        "gps_accuracy_meters": data.gps_accuracy_meters,
+        "gps_tagged": data.latitude is not None and data.longitude is not None,
+        "device_timestamp": data.device_timestamp,
+        "timestamp_tagged": True,
+        "captured_at": datetime.utcnow(),
+        "created_at": datetime.utcnow(),
+    }
+    await db.shipment_photos.insert_one(photo_doc)
+
+    # Log as tracking event for damage photos
+    if data.category == "damage":
+        event = TrackingEvent(
+            shipment_id=shipment_oid,
+            event_type=TrackingEventType.NOTE,
+            event_timestamp=datetime.utcnow(),
+            reported_at=datetime.utcnow(),
+            latitude=data.latitude,
+            longitude=data.longitude,
+            description=f"Damage photo captured: {data.caption or 'No description'}",
+            source="photo_capture",
+            is_exception=True,
+        )
+        await db.tracking_events.insert_one(event.model_dump_mongo())
+
+    return PhotoCaptureResponse(
+        id=str(photo_doc["_id"]),
+        shipment_id=data.shipment_id,
+        photo_url=data.photo_url,
+        category=data.category,
+        caption=data.caption,
+        gps_tagged=photo_doc["gps_tagged"],
+        latitude=data.latitude,
+        longitude=data.longitude,
+        timestamp_tagged=True,
+        captured_at=photo_doc["captured_at"],
+        device_timestamp=data.device_timestamp,
+    )
+
+
+@router.get("/photos/{shipment_id}", response_model=List[PhotoCaptureResponse])
+async def get_shipment_photos_tagged(shipment_id: str, category: Optional[str] = None):
+    """Get all GPS/timestamp-tagged photos for a shipment, optionally filtered by category."""
+    db = get_database()
+    query: dict = {"shipment_id": ObjectId(shipment_id)}
+    if category:
+        query["category"] = category
+
+    photos = await db.shipment_photos.find(query).sort("captured_at", -1).to_list(100)
+    return [
+        PhotoCaptureResponse(
+            id=str(p["_id"]),
+            shipment_id=shipment_id,
+            photo_url=p.get("photo_url", ""),
+            category=p.get("category", "other"),
+            caption=p.get("caption"),
+            gps_tagged=p.get("gps_tagged", False),
+            latitude=p.get("latitude"),
+            longitude=p.get("longitude"),
+            timestamp_tagged=p.get("timestamp_tagged", False),
+            captured_at=p.get("captured_at", datetime.utcnow()),
+            device_timestamp=p.get("device_timestamp"),
+        )
+        for p in photos
+    ]
 
 
 # ============================================================================

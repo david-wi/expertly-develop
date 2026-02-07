@@ -9,7 +9,7 @@ from bson import ObjectId
 from app.database import get_database
 from app.models.edi_message import EDIMessage, EDIMessageType, EDIDirection, EDIMessageStatus
 from app.models.edi_trading_partner import EDITradingPartner, ConnectionType
-from app.services.edi_parser import parse_edi_message, generate_997_acknowledgment
+from app.services.edi_parser import parse_edi_message, generate_997_acknowledgment, generate_edi_210, generate_edi_990
 from app.models.base import utc_now
 
 router = APIRouter()
@@ -576,27 +576,46 @@ async def generate_edi_210(invoice_id: str, data: EDI210GenerateRequest = EDI210
                 trading_partner_id = partner["_id"]
                 partner_name = partner.get("partner_name")
 
-    # Build simulated EDI 210 content
-    # TODO: Replace with real EDI 210 generation using proper segment builders
+    # Build EDI 210 content using the proper generation function
     invoice_number = invoice.get("invoice_number", "INV-000")
     total_cents = invoice.get("total", 0)
     total_dollars = total_cents / 100 if isinstance(total_cents, (int, float)) and total_cents > 100 else total_cents
 
     control_number = str(int(utc_now().timestamp()))[-9:]
 
-    edi_210_content = (
-        f"ISA*00*          *00*          *ZZ*SENDER         *ZZ*RECEIVER       "
-        f"*{utc_now().strftime('%y%m%d')}*{utc_now().strftime('%H%M')}*U*00401*{control_number}*0*P*:~"
-        f"GS*IM*SENDER*RECEIVER*{utc_now().strftime('%Y%m%d')}*{utc_now().strftime('%H%M')}*{control_number}*X*004010~"
-        f"ST*210*{control_number}~"
-        f"B3**{invoice_number}*PP*{total_dollars:.2f}*{utc_now().strftime('%Y%m%d')}*NET30*COLLECT~"
-        f"N1*SH*{invoice.get('billing_name', 'Shipper')}~"
-        f"N1*CN*{invoice.get('billing_name', 'Consignee')}~"
-        f"LX*1~"
-        f"L1*1*{total_dollars:.2f}*FR~"
-        f"SE*8*{control_number}~"
-        f"GE*1*{control_number}~"
-        f"IEA*1*{control_number}~"
+    # Build line items from invoice
+    line_items_data = []
+    for item in invoice.get("line_items", []):
+        line_items_data.append({
+            "description": item.get("description", "Freight charges"),
+            "amount": item.get("quantity", 1) * item.get("unit_price", 0) / 100 if item.get("unit_price", 0) > 100 else item.get("quantity", 1) * item.get("unit_price", 0),
+            "rate": item.get("unit_price", 0) / 100 if item.get("unit_price", 0) > 100 else item.get("unit_price", 0),
+        })
+
+    # Determine sender/receiver from partner config
+    sender_id = "SENDER"
+    receiver_id = "RECEIVER"
+    if trading_partner_id:
+        partner_doc = await db.edi_trading_partners.find_one({"_id": trading_partner_id})
+        if partner_doc:
+            receiver_id = partner_doc.get("isa_id", "RECEIVER")
+
+    edi_210_content = generate_edi_210(
+        invoice_data={
+            "invoice_number": invoice_number,
+            "total_amount": total_dollars,
+            "invoice_date": invoice.get("invoice_date", utc_now()),
+            "payment_method": "PP",
+            "payment_terms": invoice.get("payment_terms", "NET30"),
+            "shipper_name": invoice.get("billing_name", "Shipper"),
+            "consignee_name": invoice.get("consignee_name", "Consignee"),
+            "bol_number": invoice.get("bol_number", ""),
+            "line_items": line_items_data,
+            "total_weight": invoice.get("weight_lbs", ""),
+        },
+        sender_id=sender_id,
+        receiver_id=receiver_id,
+        control_number=control_number,
     )
 
     # Determine initial status
@@ -751,8 +770,7 @@ async def generate_edi_990(tender_id: str, data: EDI990GenerateRequest = EDI990G
             trading_partner_id = ObjectId(data.trading_partner_id)
             partner_name = partner.get("partner_name")
 
-    # Build simulated EDI 990 content
-    # TODO: Replace with real EDI 990 generation using proper segment builders
+    # Build EDI 990 content using the proper generation function
     control_number = str(int(utc_now().timestamp()))[-9:]
     shipment_id = tender.get("shipment_id")
 
@@ -763,25 +781,23 @@ async def generate_edi_990(tender_id: str, data: EDI990GenerateRequest = EDI990G
         if shipment:
             shipment_ref = shipment.get("shipment_number", "")
 
-    edi_990_content = (
-        f"ISA*00*          *00*          *ZZ*CARRIER        *ZZ*BROKER         "
-        f"*{utc_now().strftime('%y%m%d')}*{utc_now().strftime('%H%M')}*U*00401*{control_number}*0*P*:~"
-        f"GS*GF*CARRIER*BROKER*{utc_now().strftime('%Y%m%d')}*{utc_now().strftime('%H%M')}*{control_number}*X*004010~"
-        f"ST*990*{control_number}~"
-        f"B1*{shipment_ref}*{response_code}*{utc_now().strftime('%Y%m%d')}~"
-    )
+    # Determine sender/receiver from partner config
+    sender_id = "CARRIER"
+    receiver_id = "BROKER"
+    if trading_partner_id:
+        partner_doc = await db.edi_trading_partners.find_one({"_id": trading_partner_id})
+        if partner_doc:
+            receiver_id = partner_doc.get("isa_id", "BROKER")
 
-    if data.response_type == "counter" and data.counter_rate:
-        edi_990_content += f"L1*1*{data.counter_rate:.2f}*FR~"
-
-    if data.decline_reason:
-        edi_990_content += f"K1*{data.decline_reason[:80]}~"
-
-    segment_count = 4 + (1 if data.counter_rate else 0) + (1 if data.decline_reason else 0)
-    edi_990_content += (
-        f"SE*{segment_count}*{control_number}~"
-        f"GE*1*{control_number}~"
-        f"IEA*1*{control_number}~"
+    edi_990_content = generate_edi_990(
+        response_code=response_code,
+        shipment_reference=shipment_ref,
+        scac="CARR",
+        counter_rate=data.counter_rate,
+        decline_reason=data.decline_reason,
+        sender_id=sender_id,
+        receiver_id=receiver_id,
+        control_number=control_number,
     )
 
     message = EDIMessage(
@@ -1229,3 +1245,109 @@ async def list_auto_accept_rules():
              "min_rate": r.get("min_rate"), "max_weight_lbs": r.get("max_weight_lbs"),
              "equipment_types": r.get("equipment_types", []), "is_active": r.get("is_active", True)}
             for r in rules]
+
+
+# ============================================================================
+# EDI & Integrations Dashboard
+# ============================================================================
+
+
+@router.get("/integrations-dashboard")
+async def get_integrations_dashboard():
+    """
+    Get a comprehensive EDI & Integrations dashboard summary.
+
+    Provides a unified view of all EDI activity, load board posting status,
+    and accounting integration health for the integrations overview page.
+    """
+    db = get_database()
+
+    # EDI Stats
+    total_messages = await db.edi_messages.count_documents({})
+    active_partners = await db.edi_trading_partners.count_documents({"is_active": True})
+
+    edi_by_type = {}
+    for msg_type in ["204", "214", "210", "990"]:
+        edi_by_type[msg_type] = await db.edi_messages.count_documents({"message_type": msg_type})
+
+    edi_errors = await db.edi_messages.count_documents({"status": "error"})
+    edi_pending = await db.edi_messages.count_documents({"status": {"$in": ["received", "parsing", "parsed"]}})
+
+    # EDI 204 Tender stats
+    pending_tenders = await db.edi_204_tenders.count_documents({"status": "pending"})
+    accepted_tenders = await db.edi_204_tenders.count_documents({"status": "accepted"})
+    rejected_tenders = await db.edi_204_tenders.count_documents({"status": "rejected"})
+
+    # EDI 210 Invoice stats
+    edi_210_sent = await db.edi_messages.count_documents({"message_type": "210", "direction": "outbound", "status": "sent"})
+    edi_210_acknowledged = await db.edi_messages.count_documents({"message_type": "210", "status": "acknowledged"})
+    edi_210_errors = await db.edi_messages.count_documents({"message_type": "210", "status": "error"})
+
+    # EDI 990 Response stats
+    edi_990_sent = await db.edi_messages.count_documents({"message_type": "990", "direction": "outbound", "status": "sent"})
+
+    # Load Board stats
+    posted_loads = await db.loadboard_postings.count_documents({"status": "posted"})
+    booked_loads = await db.loadboard_postings.count_documents({"status": "booked"})
+    total_postings = await db.loadboard_postings.count_documents({})
+
+    # Provider breakdown for posted loads
+    lb_by_provider = {}
+    provider_pipeline = [
+        {"$match": {"status": "posted"}},
+        {"$unwind": "$providers"},
+        {"$group": {"_id": "$providers", "count": {"$sum": 1}}},
+    ]
+    async for doc in db.loadboard_postings.aggregate(provider_pipeline):
+        lb_by_provider[doc["_id"]] = doc["count"]
+
+    # QuickBooks connection status
+    qb_connection = await db.accounting_connections.find_one({"provider": "quickbooks"})
+    qb_connected = bool(qb_connection and qb_connection.get("is_connected"))
+    qb_last_sync = qb_connection.get("last_sync_at") if qb_connection else None
+
+    synced_customers = 0
+    synced_invoices = 0
+    if qb_connected:
+        synced_customers = await db.accounting_mappings.count_documents({
+            "entity_type": "customer", "provider": "quickbooks"
+        })
+        synced_invoices = await db.accounting_mappings.count_documents({
+            "entity_type": "invoice", "provider": "quickbooks"
+        })
+
+    return {
+        "edi": {
+            "total_messages": total_messages,
+            "active_trading_partners": active_partners,
+            "by_type": edi_by_type,
+            "errors": edi_errors,
+            "pending": edi_pending,
+            "tenders": {
+                "pending": pending_tenders,
+                "accepted": accepted_tenders,
+                "rejected": rejected_tenders,
+            },
+            "invoices_210": {
+                "sent": edi_210_sent,
+                "acknowledged": edi_210_acknowledged,
+                "errors": edi_210_errors,
+            },
+            "responses_990": {
+                "sent": edi_990_sent,
+            },
+        },
+        "load_boards": {
+            "total_postings": total_postings,
+            "posted": posted_loads,
+            "booked": booked_loads,
+            "by_provider": lb_by_provider,
+        },
+        "quickbooks": {
+            "connected": qb_connected,
+            "company_name": qb_connection.get("company_name") if qb_connection else None,
+            "last_sync_at": qb_last_sync,
+            "synced_customers": synced_customers,
+            "synced_invoices": synced_invoices,
+        },
+    }

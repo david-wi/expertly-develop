@@ -10,6 +10,7 @@ import {
   Receipt,
   BarChart3,
   Settings,
+  CreditCard,
 } from 'lucide-react'
 
 const navigation = [
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Customers', href: '/customers', icon: Users },
   { name: 'Carriers', href: '/carriers', icon: Building2 },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
+  { name: 'Carrier Payables', href: '/carrier-payables', icon: CreditCard },
   { name: 'Margins', href: '/margins', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]

@@ -786,3 +786,296 @@ async def get_accounting_stats():
             for job in recent_jobs
         ]
     }
+
+
+# ==================== Per-Entity-Type Sync Endpoints ====================
+
+
+class EntitySyncResponse(BaseModel):
+    """Response for a per-entity-type sync operation."""
+    entity_type: str
+    status: str
+    total_records: int = 0
+    synced_count: int = 0
+    failed_count: int = 0
+    skipped_count: int = 0
+    error_message: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+@router.post("/sync/customers", response_model=EntitySyncResponse)
+async def sync_customers():
+    """
+    Sync all TMS customers to QuickBooks Online.
+
+    Iterates through active customers and creates or updates their
+    corresponding QuickBooks Customer entities. Customers are matched
+    by existing entity mappings or created as new.
+    """
+    db = await get_database()
+    service = QuickBooksService(db)
+
+    connection = await service.get_connection()
+    if not connection or not connection.is_connected:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+
+    started_at = datetime.utcnow()
+    total = 0
+    synced = 0
+    failed = 0
+    error_msg = None
+
+    try:
+        cursor = db.customers.find({"status": "active"})
+        async for customer_doc in cursor:
+            total += 1
+            try:
+                entry = await service.sync_entity(EntityType.CUSTOMER, str(customer_doc["_id"]))
+                if entry.status == SyncStatus.COMPLETED:
+                    synced += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                failed += 1
+                error_msg = str(e)
+    except Exception as e:
+        error_msg = str(e)
+
+    return EntitySyncResponse(
+        entity_type="customer",
+        status="completed" if failed == 0 else "partial",
+        total_records=total,
+        synced_count=synced,
+        failed_count=failed,
+        error_message=error_msg,
+        started_at=started_at,
+        completed_at=datetime.utcnow(),
+    )
+
+
+@router.post("/sync/invoices", response_model=EntitySyncResponse)
+async def sync_invoices():
+    """
+    Sync all sent/pending TMS invoices to QuickBooks Online.
+
+    Iterates through invoices in sent/pending/partial status and creates
+    or updates their corresponding QuickBooks Invoice entities. Customer
+    mappings are auto-created if they don't exist.
+    """
+    db = await get_database()
+    service = QuickBooksService(db)
+
+    connection = await service.get_connection()
+    if not connection or not connection.is_connected:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+
+    started_at = datetime.utcnow()
+    total = 0
+    synced = 0
+    failed = 0
+    error_msg = None
+
+    try:
+        cursor = db.invoices.find({"status": {"$in": ["sent", "pending", "partial"]}})
+        async for invoice_doc in cursor:
+            total += 1
+            try:
+                entry = await service.sync_entity(EntityType.INVOICE, str(invoice_doc["_id"]))
+                if entry.status == SyncStatus.COMPLETED:
+                    synced += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                failed += 1
+                error_msg = str(e)
+    except Exception as e:
+        error_msg = str(e)
+
+    return EntitySyncResponse(
+        entity_type="invoice",
+        status="completed" if failed == 0 else "partial",
+        total_records=total,
+        synced_count=synced,
+        failed_count=failed,
+        error_message=error_msg,
+        started_at=started_at,
+        completed_at=datetime.utcnow(),
+    )
+
+
+@router.post("/sync/payments", response_model=EntitySyncResponse)
+async def sync_payments():
+    """
+    Sync payments from QuickBooks Online to TMS.
+
+    Payments are typically entered in QuickBooks. This endpoint fetches
+    payment records and updates the corresponding TMS invoice payment status.
+
+    Note: Currently simulated - real integration requires QuickBooks API tokens.
+    """
+    db = await get_database()
+    service = QuickBooksService(db)
+
+    connection = await service.get_connection()
+    if not connection or not connection.is_connected:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+
+    started_at = datetime.utcnow()
+
+    # Count invoices that have QB mappings but might need payment sync
+    synced_invoice_count = await db.accounting_mappings.count_documents({
+        "entity_type": "invoice",
+        "provider": "quickbooks",
+    })
+
+    # Simulated payment sync - in production this would query QuickBooks
+    # for payments against synced invoices and update TMS invoice records
+    synced = 0
+    total = synced_invoice_count
+
+    return EntitySyncResponse(
+        entity_type="payment",
+        status="completed",
+        total_records=total,
+        synced_count=synced,
+        failed_count=0,
+        error_message=None,
+        started_at=started_at,
+        completed_at=datetime.utcnow(),
+    )
+
+
+@router.post("/sync/vendors", response_model=EntitySyncResponse)
+async def sync_vendors():
+    """
+    Sync all TMS carriers as vendors to QuickBooks Online.
+
+    Iterates through active carriers and creates or updates their
+    corresponding QuickBooks Vendor entities.
+    """
+    db = await get_database()
+    service = QuickBooksService(db)
+
+    connection = await service.get_connection()
+    if not connection or not connection.is_connected:
+        raise HTTPException(status_code=400, detail="QuickBooks not connected")
+
+    started_at = datetime.utcnow()
+    total = 0
+    synced = 0
+    failed = 0
+    error_msg = None
+
+    try:
+        cursor = db.carriers.find({"status": "active"})
+        async for carrier_doc in cursor:
+            total += 1
+            try:
+                entry = await service.sync_entity(EntityType.VENDOR, str(carrier_doc["_id"]))
+                if entry.status == SyncStatus.COMPLETED:
+                    synced += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                failed += 1
+                error_msg = str(e)
+    except Exception as e:
+        error_msg = str(e)
+
+    return EntitySyncResponse(
+        entity_type="vendor",
+        status="completed" if failed == 0 else "partial",
+        total_records=total,
+        synced_count=synced,
+        failed_count=failed,
+        error_message=error_msg,
+        started_at=started_at,
+        completed_at=datetime.utcnow(),
+    )
+
+
+# ==================== Integration Dashboard ====================
+
+
+class IntegrationDashboardResponse(BaseModel):
+    """Comprehensive dashboard for all integrations."""
+    # QuickBooks
+    quickbooks_connected: bool = False
+    quickbooks_company_name: Optional[str] = None
+    quickbooks_last_sync: Optional[datetime] = None
+    quickbooks_synced_customers: int = 0
+    quickbooks_synced_invoices: int = 0
+    quickbooks_synced_payments: int = 0
+    quickbooks_synced_vendors: int = 0
+    quickbooks_pending_invoices: int = 0
+    quickbooks_auto_sync: bool = False
+    quickbooks_recent_errors: List[dict] = []
+
+
+@router.get("/dashboard", response_model=IntegrationDashboardResponse)
+async def get_integration_dashboard():
+    """
+    Get comprehensive integration dashboard data.
+
+    Returns unified status of all accounting integrations including
+    QuickBooks connection health, sync counts, pending items, and errors.
+    """
+    db = await get_database()
+
+    # QuickBooks connection
+    connection = await db.accounting_connections.find_one({"provider": "quickbooks"})
+    qb_connected = bool(connection and connection.get("is_connected"))
+
+    # Entity counts
+    synced_customers = 0
+    synced_invoices = 0
+    synced_payments = 0
+    synced_vendors = 0
+    pending_invoices = 0
+    recent_errors: List[dict] = []
+
+    if qb_connected:
+        synced_customers = await db.accounting_mappings.count_documents({
+            "entity_type": "customer", "provider": "quickbooks"
+        })
+        synced_invoices = await db.accounting_mappings.count_documents({
+            "entity_type": "invoice", "provider": "quickbooks"
+        })
+        synced_payments = await db.accounting_mappings.count_documents({
+            "entity_type": "payment", "provider": "quickbooks"
+        })
+        synced_vendors = await db.accounting_mappings.count_documents({
+            "entity_type": "vendor", "provider": "quickbooks"
+        })
+
+        all_invoices = await db.invoices.count_documents({"status": {"$in": ["sent", "paid"]}})
+        pending_invoices = max(0, all_invoices - synced_invoices)
+
+        error_docs = await db.accounting_mappings.find({
+            "provider": "quickbooks",
+            "sync_error": {"$ne": None},
+        }).sort("updated_at", -1).limit(5).to_list(5)
+
+        recent_errors = [
+            {
+                "entity_type": m.get("entity_type"),
+                "entity_name": m.get("tms_entity_name"),
+                "error": m.get("sync_error"),
+                "occurred_at": m.get("updated_at"),
+            }
+            for m in error_docs
+        ]
+
+    return IntegrationDashboardResponse(
+        quickbooks_connected=qb_connected,
+        quickbooks_company_name=connection.get("company_name") if connection else None,
+        quickbooks_last_sync=connection.get("last_sync_at") if connection else None,
+        quickbooks_synced_customers=synced_customers,
+        quickbooks_synced_invoices=synced_invoices,
+        quickbooks_synced_payments=synced_payments,
+        quickbooks_synced_vendors=synced_vendors,
+        quickbooks_pending_invoices=pending_invoices,
+        quickbooks_auto_sync=connection.get("auto_sync_enabled", False) if connection else False,
+        quickbooks_recent_errors=recent_errors,
+    )

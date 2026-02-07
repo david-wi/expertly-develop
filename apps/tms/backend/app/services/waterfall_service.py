@@ -22,6 +22,14 @@ class WaterfallConfig:
         rate_increase_percent: float = 0.0,  # Increase rate on each step
         max_escalations: int = 3,
         notes: Optional[str] = None,
+        # Configurable priority ranking
+        carrier_ranking_method: str = "manual",  # "manual", "performance", "rate", "ai"
+        # Auto-post to load boards after all carriers exhausted
+        auto_post_to_loadboard: bool = True,
+        # Auto-accept counter-offers within threshold
+        auto_accept_counter_range_percent: float = 5.0,
+        # Timeout escalation per tier (minutes added per tier)
+        timeout_escalation_minutes: int = 0,
     ):
         self.carrier_ids = carrier_ids
         self.shipment_id = shipment_id
@@ -31,6 +39,10 @@ class WaterfallConfig:
         self.rate_increase_percent = rate_increase_percent
         self.max_escalations = max_escalations
         self.notes = notes
+        self.carrier_ranking_method = carrier_ranking_method
+        self.auto_post_to_loadboard = auto_post_to_loadboard
+        self.auto_accept_counter_range_percent = auto_accept_counter_range_percent
+        self.timeout_escalation_minutes = timeout_escalation_minutes
 
 
 class WaterfallService:
@@ -64,6 +76,10 @@ class WaterfallService:
             "rate_increase_percent": config.rate_increase_percent,
             "max_escalations": config.max_escalations,
             "notes": config.notes,
+            "carrier_ranking_method": config.carrier_ranking_method,
+            "auto_post_to_loadboard": config.auto_post_to_loadboard,
+            "auto_accept_counter_range_percent": config.auto_accept_counter_range_percent,
+            "timeout_escalation_minutes": config.timeout_escalation_minutes,
             "status": "active",  # active, completed, cancelled, exhausted
             "started_at": utc_now(),
             "current_tender_id": None,
@@ -116,12 +132,55 @@ class WaterfallService:
                 }
             )
 
+            # Auto-post to load boards if configured
+            if waterfall.get("auto_post_to_loadboard", True):
+                shipment = await db.shipments.find_one({"_id": waterfall["shipment_id"]})
+                if shipment:
+                    stops = shipment.get("stops", [])
+                    origin = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+                    dest = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+
+                    from bson import ObjectId as BsonObjectId
+                    import uuid
+                    count = await db.loadboard_postings.count_documents({})
+                    posting_number = f"LBP-WF-{count + 1:05d}"
+
+                    posting = {
+                        "_id": BsonObjectId(),
+                        "posting_number": posting_number,
+                        "shipment_id": waterfall["shipment_id"],
+                        "status": "posted",
+                        "providers": ["dat", "truckstop"],
+                        "provider_post_ids": {
+                            "dat": f"DAT-WF-{uuid.uuid4().hex[:8].upper()}",
+                            "truckstop": f"TS-WF-{uuid.uuid4().hex[:8].upper()}",
+                        },
+                        "origin_city": origin.get("city", ""),
+                        "origin_state": origin.get("state", ""),
+                        "destination_city": dest.get("city", ""),
+                        "destination_state": dest.get("state", ""),
+                        "equipment_type": shipment.get("equipment_type", "van"),
+                        "weight_lbs": shipment.get("weight_lbs"),
+                        "posted_rate": waterfall.get("current_rate"),
+                        "rate_type": "flat",
+                        "posted_at": utc_now(),
+                        "expires_at": utc_now() + timedelta(days=7),
+                        "view_count": 0,
+                        "call_count": 0,
+                        "bid_count": 0,
+                        "notes": f"Auto-posted after waterfall exhausted ({len(carrier_ids)} carriers)",
+                        "created_at": utc_now(),
+                        "updated_at": utc_now(),
+                    }
+                    await db.loadboard_postings.insert_one(posting)
+
             # Create work item for manual intervention
             await db.work_items.insert_one({
                 "work_type": WorkItemType.SHIPMENT_NEEDS_CARRIER.value,
                 "status": WorkItemStatus.OPEN.value,
                 "title": f"Waterfall exhausted - manual carrier selection needed",
-                "description": f"All carriers in waterfall declined. Manual selection required.",
+                "description": f"All {len(carrier_ids)} carriers in waterfall declined or timed out. "
+                               f"{'Load auto-posted to DAT/Truckstop.' if waterfall.get('auto_post_to_loadboard', True) else 'Manual selection required.'}",
                 "shipment_id": waterfall["shipment_id"],
                 "priority": 1,  # High priority
                 "is_overdue": False,
@@ -132,24 +191,40 @@ class WaterfallService:
 
             return None
 
-        # Calculate rate for this step
+        # Calculate rate for this step (rate escalation per tier)
         rate_increase = waterfall.get("rate_increase_percent", 0) / 100
         current_rate = int(waterfall["base_rate"] * (1 + rate_increase * current_step))
 
+        # Calculate timeout for this step (escalating timeouts)
+        base_timeout = waterfall["timeout_minutes"]
+        timeout_escalation = waterfall.get("timeout_escalation_minutes", 0)
+        step_timeout = base_timeout + (timeout_escalation * current_step)
+
         # Create tender
         carrier_id = carrier_ids[current_step]
+        now = utc_now()
+        negotiation_event = {
+            "timestamp": now,
+            "action": "tender_sent",
+            "amount": current_rate,
+            "party": "broker",
+            "notes": f"Waterfall step {current_step + 1}",
+            "auto_action": True,
+        }
+
         tender = {
             "shipment_id": waterfall["shipment_id"],
             "carrier_id": carrier_id,
             "status": TenderStatus.SENT.value,
             "offered_rate": current_rate,
             "notes": waterfall.get("notes"),
-            "sent_at": utc_now(),
-            "expires_at": utc_now() + timedelta(minutes=waterfall["timeout_minutes"]),
+            "sent_at": now,
+            "expires_at": now + timedelta(minutes=step_timeout),
             "waterfall_id": ObjectId(waterfall_id),
             "waterfall_step": current_step,
-            "created_at": utc_now(),
-            "updated_at": utc_now(),
+            "negotiation_history": [negotiation_event],
+            "created_at": now,
+            "updated_at": now,
         }
 
         tender_result = await db.tenders.insert_one(tender)

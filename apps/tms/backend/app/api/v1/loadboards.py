@@ -509,6 +509,101 @@ async def cancel_posting(posting_id: str):
     return {"message": "Posting cancelled"}
 
 
+class QuickPostRequest(BaseModel):
+    """One-click post to all configured load boards."""
+    shipment_id: str
+    posted_rate: Optional[int] = None  # in cents
+    rate_per_mile: Optional[float] = None
+    providers: Optional[List[LoadBoardProvider]] = None  # default: all configured
+
+
+@router.post("/postings/quick-post", response_model=PostingResponse)
+async def quick_post_to_boards(data: QuickPostRequest):
+    """
+    One-click post a shipment to all configured load boards (DAT + Truckstop).
+    Auto-populates from shipment data. Auto-removes when load is covered.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    shipment = await db.shipments.find_one({"_id": ObjectId(data.shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Check if already posted
+    existing = await db.loadboard_postings.find_one({
+        "shipment_id": ObjectId(data.shipment_id),
+        "status": {"$in": ["draft", "posted"]},
+    })
+    if existing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Shipment already posted (posting #{existing.get('posting_number', '')})"
+        )
+
+    # Determine providers
+    providers = data.providers or [LoadBoardProvider.DAT, LoadBoardProvider.TRUCKSTOP]
+
+    # Get next posting number
+    count = await db.loadboard_postings.count_documents({})
+    posting_number = f"LBP-{datetime.utcnow().year}-{count + 1:05d}"
+
+    # Extract origin/destination from shipment stops
+    stops = shipment.get("stops", [])
+    origin = next((s for s in stops if s.get("stop_type") == "pickup"), stops[0] if stops else {})
+    dest = next((s for s in stops if s.get("stop_type") == "delivery"), stops[-1] if len(stops) > 1 else {})
+
+    posting = LoadBoardPosting(
+        posting_number=posting_number,
+        shipment_id=ObjectId(data.shipment_id),
+        status=PostingStatus.DRAFT,
+        origin_city=origin.get("city", ""),
+        origin_state=origin.get("state", ""),
+        origin_zip=origin.get("zip_code"),
+        destination_city=dest.get("city", ""),
+        destination_state=dest.get("state", ""),
+        destination_zip=dest.get("zip_code"),
+        equipment_type=shipment.get("equipment_type", "van"),
+        weight_lbs=shipment.get("weight_lbs"),
+        commodity=shipment.get("commodity"),
+        pickup_date_start=shipment.get("pickup_date"),
+        delivery_date=shipment.get("delivery_date"),
+        posted_rate=data.posted_rate or shipment.get("carrier_cost"),
+        rate_per_mile=data.rate_per_mile,
+        rate_type="flat",
+        notes=f"Quick-posted from dispatch. Shipment #{shipment.get('shipment_number', '')}",
+    )
+
+    result = await service.post_load(posting, providers)
+
+    return PostingResponse(
+        id=str(result.id),
+        posting_number=result.posting_number,
+        shipment_id=str(result.shipment_id),
+        status=result.status.value,
+        providers=[p.value for p in result.providers],
+        provider_post_ids=result.provider_post_ids,
+        origin_city=result.origin_city,
+        origin_state=result.origin_state,
+        destination_city=result.destination_city,
+        destination_state=result.destination_state,
+        equipment_type=result.equipment_type,
+        weight_lbs=result.weight_lbs,
+        pickup_date_start=result.pickup_date_start,
+        pickup_date_end=result.pickup_date_end,
+        delivery_date=result.delivery_date,
+        posted_rate=result.posted_rate,
+        rate_per_mile=result.rate_per_mile,
+        rate_type=result.rate_type,
+        posted_at=result.posted_at,
+        expires_at=result.expires_at,
+        view_count=result.view_count,
+        call_count=result.call_count,
+        bid_count=result.bid_count,
+        created_at=result.created_at,
+    )
+
+
 @router.get("/postings/stats/summary")
 async def get_posting_stats():
     """Get load board posting statistics."""

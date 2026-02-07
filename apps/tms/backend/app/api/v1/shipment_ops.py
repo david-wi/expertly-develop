@@ -424,6 +424,126 @@ async def get_import_template():
 
 
 # ============================================================================
+# 2. Saved Column Mapping Templates (per customer)
+# ============================================================================
+
+class ColumnMappingTemplate(MongoModel):
+    """Saved column mapping for a specific customer's CSV imports."""
+    name: str
+    customer_id: PyObjectId
+    column_mapping: dict[str, str] = {}  # source_column -> target_field
+    notes: Optional[str] = None
+
+
+class MappingTemplateRequest(BaseModel):
+    name: str
+    customer_id: str
+    column_mapping: dict[str, str]
+    notes: Optional[str] = None
+
+
+class MappingTemplateResponse(BaseModel):
+    id: str
+    name: str
+    customer_id: str
+    column_mapping: dict[str, str]
+    notes: Optional[str]
+    created_at: datetime
+
+
+@router.post("/import-mappings")
+async def save_import_mapping(data: MappingTemplateRequest):
+    """Save a column mapping template for a customer."""
+    db = get_database()
+
+    template = ColumnMappingTemplate(
+        name=data.name,
+        customer_id=ObjectId(data.customer_id),
+        column_mapping=data.column_mapping,
+        notes=data.notes,
+    )
+    await db.import_mapping_templates.insert_one(template.model_dump_mongo())
+
+    return MappingTemplateResponse(
+        id=str(template.id),
+        name=template.name,
+        customer_id=str(template.customer_id),
+        column_mapping=template.column_mapping,
+        notes=template.notes,
+        created_at=template.created_at,
+    )
+
+
+@router.get("/import-mappings")
+async def list_import_mappings(customer_id: Optional[str] = None):
+    """List saved column mapping templates, optionally filtered by customer."""
+    db = get_database()
+    query: dict = {}
+    if customer_id:
+        query["customer_id"] = ObjectId(customer_id)
+
+    cursor = db.import_mapping_templates.find(query).sort("created_at", -1)
+    templates = await cursor.to_list(100)
+
+    return [
+        MappingTemplateResponse(
+            id=str(t["_id"]),
+            name=t["name"],
+            customer_id=str(t["customer_id"]),
+            column_mapping=t.get("column_mapping", {}),
+            notes=t.get("notes"),
+            created_at=t.get("created_at", utc_now()),
+        )
+        for t in templates
+    ]
+
+
+@router.delete("/import-mappings/{template_id}")
+async def delete_import_mapping(template_id: str):
+    """Delete a saved column mapping template."""
+    db = get_database()
+    result = await db.import_mapping_templates.delete_one({"_id": ObjectId(template_id)})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Mapping template not found")
+    return {"status": "deleted", "id": template_id}
+
+
+@router.post("/bulk-import/validate")
+async def validate_bulk_import(data: BulkImportRequest):
+    """Validate import data without actually importing. Returns validation errors per row."""
+    errors = []
+    valid_count = 0
+
+    for i, row in enumerate(data.rows):
+        mapped = {}
+        for source_col, target_field in data.column_mapping.items():
+            if source_col in row and row[source_col]:
+                mapped[target_field] = row[source_col]
+
+        row_errors = []
+        if not mapped.get("origin_city"):
+            row_errors.append("Missing origin city")
+        if not mapped.get("origin_state"):
+            row_errors.append("Missing origin state")
+        if not mapped.get("destination_city"):
+            row_errors.append("Missing destination city")
+        if not mapped.get("destination_state"):
+            row_errors.append("Missing destination state")
+
+        if row_errors:
+            errors.append({"row": i + 1, "errors": row_errors, "data": row})
+        else:
+            valid_count += 1
+
+    return {
+        "total_rows": len(data.rows),
+        "valid_rows": valid_count,
+        "error_rows": len(errors),
+        "validation_errors": errors[:50],
+    }
+
+
+# ============================================================================
 # 3. Split Shipments
 # ============================================================================
 
@@ -1355,6 +1475,17 @@ async def optimize_route(data: RouteOptimizeRequest):
             "estimated_hours": round(_estimate_transit_hours(leg_distance), 1),
         })
 
+    # Estimate fuel cost (avg 6.5 mpg, using DOE price)
+    fuel_price = 4.00
+    try:
+        latest_doe = await db.doe_fuel_prices.find_one(sort=[("date", -1)])
+        if latest_doe:
+            fuel_price = latest_doe.get("price", 4.00)
+    except Exception:
+        pass
+    estimated_fuel_gallons = round(optimized_distance / 6.5, 1)
+    estimated_fuel_cost = round(estimated_fuel_gallons * fuel_price, 2)
+
     return {
         "optimized_stop_order": optimized_order,
         "optimized_stops": [
@@ -1373,6 +1504,380 @@ async def optimize_route(data: RouteOptimizeRequest):
         "distance_saved_miles": round(deadhead_saved, 1),
         "estimated_transit_hours": round(transit_hours, 1),
         "estimated_transit_days": math.ceil(transit_hours / 24) if transit_hours > 11 else 1,
+        "estimated_fuel_gallons": estimated_fuel_gallons,
+        "estimated_fuel_cost": estimated_fuel_cost,
+        "fuel_price_per_gallon": fuel_price,
         "legs": legs,
         "optimization_applied": optimized_distance < original_distance,
+    }
+
+
+# ============================================================================
+# 10. Simple Route Calculate (two-point)
+# ============================================================================
+
+@router.get("/route/calculate")
+async def calculate_route(
+    origin_lat: float,
+    origin_lon: float,
+    dest_lat: float,
+    dest_lon: float,
+    origin_city: Optional[str] = None,
+    origin_state: Optional[str] = None,
+    dest_city: Optional[str] = None,
+    dest_state: Optional[str] = None,
+):
+    """Calculate a simple route between two points with mileage,
+    estimated transit time, and fuel cost."""
+    db = get_database()
+
+    distance_miles = _haversine_distance(origin_lat, origin_lon, dest_lat, dest_lon)
+    # Add 15% buffer for actual road distance vs straight line
+    practical_distance = distance_miles * 1.15
+    transit_hours = _estimate_transit_hours(practical_distance)
+
+    # Fuel cost estimate (avg 6.5 mpg)
+    fuel_price = 4.00
+    try:
+        latest_doe = await db.doe_fuel_prices.find_one(sort=[("date", -1)])
+        if latest_doe:
+            fuel_price = latest_doe.get("price", 4.00)
+    except Exception:
+        pass
+    fuel_gallons = practical_distance / 6.5
+    fuel_cost = round(fuel_gallons * fuel_price, 2)
+
+    return {
+        "origin": {
+            "latitude": origin_lat,
+            "longitude": origin_lon,
+            "city": origin_city,
+            "state": origin_state,
+        },
+        "destination": {
+            "latitude": dest_lat,
+            "longitude": dest_lon,
+            "city": dest_city,
+            "state": dest_state,
+        },
+        "straight_line_miles": round(distance_miles, 1),
+        "practical_miles": round(practical_distance, 1),
+        "estimated_transit_hours": round(transit_hours, 1),
+        "estimated_transit_days": math.ceil(transit_hours / 24) if transit_hours > 11 else 1,
+        "estimated_fuel_gallons": round(fuel_gallons, 1),
+        "estimated_fuel_cost": fuel_cost,
+        "fuel_price_per_gallon": fuel_price,
+        "avg_speed_mph": 50,
+        "route_type": "practical_truck_route",
+    }
+
+
+# ============================================================================
+# 11. DOE Fuel Price
+# ============================================================================
+
+@router.get("/fuel-surcharge/doe-rate")
+async def get_doe_fuel_rate():
+    """Get the current DOE national average diesel fuel price.
+    Returns stored price or a representative default."""
+    db = get_database()
+
+    latest = await db.doe_fuel_prices.find_one(sort=[("date", -1)])
+
+    if latest:
+        return {
+            "current_price": latest.get("price"),
+            "date": latest.get("date"),
+            "source": "doe_stored",
+            "region": latest.get("region", "national"),
+        }
+
+    # Return representative default if no DOE data stored
+    return {
+        "current_price": 4.00,
+        "date": utc_now().isoformat(),
+        "source": "default",
+        "region": "national",
+        "note": "No DOE data stored. Using default price. Update via POST /fuel-surcharge/doe-rate.",
+    }
+
+
+class DOEPriceUpdateRequest(BaseModel):
+    price: float
+    region: str = "national"
+    date: Optional[str] = None
+
+
+@router.post("/fuel-surcharge/doe-rate")
+async def update_doe_fuel_rate(data: DOEPriceUpdateRequest):
+    """Store/update DOE fuel price. Can be called manually or by a scheduled job."""
+    db = get_database()
+
+    doc = {
+        "_id": ObjectId(),
+        "price": data.price,
+        "region": data.region,
+        "date": data.date or utc_now().isoformat(),
+        "created_at": utc_now(),
+    }
+    await db.doe_fuel_prices.insert_one(doc)
+
+    # Update all active fuel surcharge schedules with new DOE price
+    await db.fuel_surcharge_schedules.update_many(
+        {"is_active": True},
+        {"$set": {"current_doe_price": data.price, "last_doe_update": utc_now()}}
+    )
+
+    return {
+        "status": "updated",
+        "price": data.price,
+        "region": data.region,
+        "schedules_updated": True,
+    }
+
+
+# ============================================================================
+# 12. Equipment CRUD
+# ============================================================================
+
+class EquipmentCreateRequest(BaseModel):
+    equipment_number: str
+    equipment_type: str  # van, reefer, flatbed, etc.
+    status: str = "available"
+    current_location: Optional[str] = None
+    carrier_id: Optional[str] = None
+    length_ft: Optional[int] = None
+    width_ft: Optional[int] = None
+    height_ft: Optional[int] = None
+    max_weight_lbs: Optional[int] = None
+    temperature_min: Optional[float] = None
+    temperature_max: Optional[float] = None
+    notes: Optional[str] = None
+
+
+class EquipmentResponse(BaseModel):
+    id: str
+    equipment_number: str
+    equipment_type: str
+    status: str
+    current_location: Optional[str] = None
+    current_shipment_id: Optional[str] = None
+    current_shipment_number: Optional[str] = None
+    carrier_id: Optional[str] = None
+    carrier_name: Optional[str] = None
+    length_ft: Optional[int] = None
+    width_ft: Optional[int] = None
+    height_ft: Optional[int] = None
+    max_weight_lbs: Optional[int] = None
+    temperature_min: Optional[float] = None
+    temperature_max: Optional[float] = None
+    notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+@router.get("/equipment")
+async def list_equipment(
+    equipment_type: Optional[str] = None,
+    status: Optional[str] = None,
+    carrier_id: Optional[str] = None,
+):
+    """List all equipment with optional filters."""
+    db = get_database()
+
+    query: dict = {}
+    if equipment_type:
+        query["equipment_type"] = equipment_type
+    if status:
+        query["status"] = status
+    if carrier_id:
+        query["carrier_id"] = ObjectId(carrier_id)
+
+    equipment_docs = await db.equipment.find(query).sort("equipment_number", 1).to_list(500)
+
+    result = []
+    for e in equipment_docs:
+        item = {
+            "id": str(e["_id"]),
+            "equipment_number": e["equipment_number"],
+            "equipment_type": e.get("equipment_type", "van"),
+            "status": e.get("status", "available"),
+            "current_location": e.get("current_location"),
+            "current_shipment_id": str(e["current_shipment_id"]) if e.get("current_shipment_id") else None,
+            "carrier_id": str(e["carrier_id"]) if e.get("carrier_id") else None,
+            "length_ft": e.get("length_ft"),
+            "width_ft": e.get("width_ft"),
+            "height_ft": e.get("height_ft"),
+            "max_weight_lbs": e.get("max_weight_lbs"),
+            "temperature_min": e.get("temperature_min"),
+            "temperature_max": e.get("temperature_max"),
+            "notes": e.get("notes"),
+            "created_at": e.get("created_at"),
+        }
+
+        # Enrich with shipment info
+        if e.get("current_shipment_id"):
+            shipment = await db.shipments.find_one({"_id": e["current_shipment_id"]})
+            if shipment:
+                item["current_shipment_number"] = shipment.get("shipment_number")
+
+        # Enrich with carrier info
+        if e.get("carrier_id"):
+            carrier = await db.carriers.find_one({"_id": e["carrier_id"]})
+            if carrier:
+                item["carrier_name"] = carrier.get("name")
+
+        result.append(item)
+
+    return {
+        "total": len(result),
+        "equipment": result,
+    }
+
+
+@router.post("/equipment")
+async def create_equipment(data: EquipmentCreateRequest):
+    """Add a new piece of equipment to the database."""
+    db = get_database()
+
+    # Check for duplicate equipment number
+    existing = await db.equipment.find_one({"equipment_number": data.equipment_number})
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Equipment {data.equipment_number} already exists")
+
+    equipment = Equipment(
+        equipment_number=data.equipment_number,
+        equipment_type=data.equipment_type,
+        status=data.status,
+        current_location=data.current_location,
+        carrier_id=ObjectId(data.carrier_id) if data.carrier_id else None,
+        length_ft=data.length_ft,
+        width_ft=data.width_ft,
+        height_ft=data.height_ft,
+        max_weight_lbs=data.max_weight_lbs,
+        temperature_min=data.temperature_min,
+        temperature_max=data.temperature_max,
+        notes=data.notes,
+    )
+
+    await db.equipment.insert_one(equipment.model_dump_mongo())
+
+    return {
+        "id": str(equipment.id),
+        "equipment_number": equipment.equipment_number,
+        "equipment_type": equipment.equipment_type,
+        "status": equipment.status,
+        "created": True,
+    }
+
+
+@router.get("/equipment/{equipment_id}")
+async def get_equipment(equipment_id: str):
+    """Get a single equipment item by ID."""
+    db = get_database()
+
+    equip = await db.equipment.find_one({"_id": ObjectId(equipment_id)})
+    if not equip:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    item = {
+        "id": str(equip["_id"]),
+        "equipment_number": equip["equipment_number"],
+        "equipment_type": equip.get("equipment_type", "van"),
+        "status": equip.get("status", "available"),
+        "current_location": equip.get("current_location"),
+        "current_shipment_id": str(equip["current_shipment_id"]) if equip.get("current_shipment_id") else None,
+        "carrier_id": str(equip["carrier_id"]) if equip.get("carrier_id") else None,
+        "length_ft": equip.get("length_ft"),
+        "width_ft": equip.get("width_ft"),
+        "height_ft": equip.get("height_ft"),
+        "max_weight_lbs": equip.get("max_weight_lbs"),
+        "temperature_min": equip.get("temperature_min"),
+        "temperature_max": equip.get("temperature_max"),
+        "notes": equip.get("notes"),
+        "created_at": equip.get("created_at"),
+    }
+
+    if equip.get("current_shipment_id"):
+        shipment = await db.shipments.find_one({"_id": equip["current_shipment_id"]})
+        if shipment:
+            item["current_shipment_number"] = shipment.get("shipment_number")
+
+    if equip.get("carrier_id"):
+        carrier = await db.carriers.find_one({"_id": equip["carrier_id"]})
+        if carrier:
+            item["carrier_name"] = carrier.get("name")
+
+    return item
+
+
+@router.patch("/equipment/{equipment_id}")
+async def update_equipment(equipment_id: str, data: dict):
+    """Update equipment details."""
+    db = get_database()
+
+    equip = await db.equipment.find_one({"_id": ObjectId(equipment_id)})
+    if not equip:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    allowed_fields = {
+        "equipment_type", "status", "current_location", "notes",
+        "length_ft", "width_ft", "height_ft", "max_weight_lbs",
+        "temperature_min", "temperature_max",
+    }
+
+    update = {k: v for k, v in data.items() if k in allowed_fields}
+    if "carrier_id" in data:
+        update["carrier_id"] = ObjectId(data["carrier_id"]) if data["carrier_id"] else None
+
+    update["updated_at"] = utc_now()
+
+    await db.equipment.update_one(
+        {"_id": ObjectId(equipment_id)},
+        {"$set": update}
+    )
+
+    return {"status": "updated", "equipment_id": equipment_id}
+
+
+@router.post("/{shipment_id}/release-equipment")
+async def release_equipment(shipment_id: str):
+    """Release all equipment assigned to a shipment (e.g., after delivery)."""
+    db = get_database()
+
+    shipment = await db.shipments.find_one({"_id": ObjectId(shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    # Find equipment assigned to this shipment
+    equipment_list = await db.equipment.find(
+        {"current_shipment_id": ObjectId(shipment_id)}
+    ).to_list(20)
+
+    released = []
+    for equip in equipment_list:
+        # Get last known location from shipment
+        location = shipment.get("last_known_location")
+
+        await db.equipment.update_one(
+            {"_id": equip["_id"]},
+            {"$set": {
+                "status": "available",
+                "current_shipment_id": None,
+                "current_location": location,
+                "updated_at": utc_now(),
+            }}
+        )
+        released.append(equip["equipment_number"])
+
+    # Clear equipment info from shipment
+    await db.shipments.update_one(
+        {"_id": ObjectId(shipment_id)},
+        {"$set": {"assigned_equipment": None, "updated_at": utc_now()}}
+    )
+
+    return {
+        "status": "released",
+        "shipment_id": shipment_id,
+        "released_equipment": released,
+        "count": len(released),
     }

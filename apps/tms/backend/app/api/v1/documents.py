@@ -11,6 +11,11 @@ import uuid
 from app.database import get_database
 from app.models.document import Document, DocumentType, ExtractionStatus, ExtractedDocumentField
 from app.services.document_processing import get_document_processor
+from app.services.document_classification import (
+    classify_document as classify_by_pattern,
+    get_workflow_routing,
+    get_supported_classifications,
+)
 
 router = APIRouter()
 
@@ -211,9 +216,31 @@ async def upload_document(
         content = await file.read()
         await f.write(content)
 
+    # Auto-classify document by filename if type is "other"
+    actual_document_type = document_type.value
+    classification_confidence = None
+    ai_classified_type = None
+
+    if document_type == DocumentType.OTHER:
+        classification, confidence, _extracted = classify_by_pattern(
+            filename=file.filename or "unknown",
+            file_type=file.content_type or "application/octet-stream",
+        )
+        if classification != "unknown" and confidence >= 0.7:
+            # Map classification string to DocumentType enum if possible
+            try:
+                mapped_type = DocumentType(classification)
+                actual_document_type = mapped_type.value
+                ai_classified_type = classification
+                classification_confidence = confidence
+            except ValueError:
+                # Classification doesn't map to DocumentType enum, store as ai_classified
+                ai_classified_type = classification
+                classification_confidence = confidence
+
     # Create document record
     doc_data = {
-        "document_type": document_type.value,
+        "document_type": actual_document_type,
         "filename": filename,
         "original_filename": file.filename or "unknown",
         "mime_type": file.content_type or "application/octet-stream",
@@ -229,6 +256,8 @@ async def upload_document(
         "is_verified": False,
         "needs_review": False,
         "auto_matched": False,
+        "ai_classified_type": ai_classified_type,
+        "classification_confidence": classification_confidence,
         "created_at": datetime.utcnow(),
     }
 
@@ -390,11 +419,14 @@ async def generate_bol(shipment_id: str, data: Optional[BOLGenerateRequest] = No
     elif customer:
         template = await db.bol_templates.find_one({"customer_id": customer["_id"], "is_default": True})
 
-    # Build BOL data
+    # Build standard Straight BOL data with all required fields
     bol_data = {
         "shipment_number": shipment.get("shipment_number"),
         "bol_number": shipment.get("bol_number") or f"BOL-{shipment.get('shipment_number', '')}",
         "date": datetime.utcnow().strftime("%Y-%m-%d"),
+        "bol_type": "straight",  # "straight" or "order"
+
+        # Shipper (Ship From)
         "shipper": {
             "name": pickup_stop.get("name") or (customer.get("name") if customer else ""),
             "address": pickup_stop.get("address", ""),
@@ -403,7 +435,11 @@ async def generate_bol(shipment_id: str, data: Optional[BOLGenerateRequest] = No
             "zip": pickup_stop.get("zip_code", ""),
             "contact": pickup_stop.get("contact_name", ""),
             "phone": pickup_stop.get("contact_phone", ""),
+            "sid_number": "",  # Shipper ID Number
+            "fob": "origin",  # FOB: "origin" or "destination"
         },
+
+        # Consignee (Ship To)
         "consignee": {
             "name": delivery_stop.get("name", ""),
             "address": delivery_stop.get("address", ""),
@@ -412,11 +448,48 @@ async def generate_bol(shipment_id: str, data: Optional[BOLGenerateRequest] = No
             "zip": delivery_stop.get("zip_code", ""),
             "contact": delivery_stop.get("contact_name", ""),
             "phone": delivery_stop.get("contact_phone", ""),
+            "location_number": "",
         },
+
+        # Third Party / Bill To
+        "third_party": {
+            "name": customer.get("name") if customer else "",
+            "address": customer.get("address_line1", "") if customer else "",
+            "city": customer.get("city", "") if customer else "",
+            "state": customer.get("state", "") if customer else "",
+            "zip": customer.get("zip_code", "") if customer else "",
+        },
+
+        # Carrier Information
         "carrier": {
             "name": carrier.get("name") if carrier else "",
             "mc_number": carrier.get("mc_number") if carrier else "",
+            "dot_number": carrier.get("dot_number", "") if carrier else "",
+            "scac_code": carrier.get("scac_code", "") if carrier else "",
+            "trailer_number": shipment.get("trailer_number", ""),
+            "seal_number": shipment.get("seal_number", ""),
+            "pro_number": shipment.get("pro_number", ""),
         },
+
+        # Commodity / Freight Details (line items)
+        "freight_items": [
+            {
+                "handling_unit_qty": shipment.get("pieces") or 1,
+                "handling_unit_type": shipment.get("packaging_type", "PLT"),  # PLT, CTN, DRM, etc.
+                "package_qty": shipment.get("pieces") or 1,
+                "package_type": shipment.get("packaging_type", "PLT"),
+                "weight_lbs": shipment.get("weight_lbs"),
+                "hazmat": shipment.get("hazmat", False),
+                "hazmat_class": shipment.get("hazmat_class", ""),
+                "hazmat_un_number": shipment.get("hazmat_un_number", ""),
+                "hazmat_packing_group": shipment.get("hazmat_packing_group", ""),
+                "commodity_description": shipment.get("commodity", ""),
+                "nmfc_number": shipment.get("nmfc_number", ""),
+                "freight_class": shipment.get("freight_class", ""),
+            },
+        ],
+
+        # Summary fields
         "commodity": shipment.get("commodity", ""),
         "weight_lbs": shipment.get("weight_lbs"),
         "equipment_type": shipment.get("equipment_type", ""),
@@ -426,6 +499,13 @@ async def generate_bol(shipment_id: str, data: Optional[BOLGenerateRequest] = No
         "reference_numbers": shipment.get("reference_numbers", []),
         "pieces": shipment.get("pieces"),
         "template_name": template.get("name") if template else "Standard BOL",
+
+        # Additional BOL fields
+        "prepaid_or_collect": "prepaid",  # "prepaid", "collect", "third_party"
+        "cod_amount": None,
+        "declared_value": None,
+        "emergency_contact": shipment.get("emergency_contact", ""),
+        "hazmat": shipment.get("hazmat", False),
     }
 
     # Merge custom fields
@@ -452,6 +532,44 @@ async def generate_bol(shipment_id: str, data: Optional[BOLGenerateRequest] = No
         "bol_data": bol_data,
         "download_url": f"/api/v1/documents/bol/{bol_record['_id']}/download",
     }
+
+
+@router.get("/bol/{bol_id}")
+async def get_bol(bol_id: str):
+    """Get a generated BOL by ID for viewing/printing."""
+    db = get_database()
+
+    bol_record = await db.generated_bols.find_one({"_id": ObjectId(bol_id)})
+    if not bol_record:
+        raise HTTPException(status_code=404, detail="BOL not found")
+
+    return {
+        "bol_id": str(bol_record["_id"]),
+        "shipment_id": str(bol_record["shipment_id"]),
+        "bol_data": bol_record["bol_data"],
+        "generated_at": bol_record.get("generated_at"),
+    }
+
+
+@router.get("/bol-history/{shipment_id}")
+async def get_bol_history(shipment_id: str):
+    """Get all generated BOLs for a shipment."""
+    db = get_database()
+
+    cursor = db.generated_bols.find(
+        {"shipment_id": ObjectId(shipment_id)}
+    ).sort("generated_at", -1)
+    bols = await cursor.to_list(50)
+
+    return [
+        {
+            "bol_id": str(b["_id"]),
+            "bol_number": b.get("bol_data", {}).get("bol_number", ""),
+            "generated_at": b.get("generated_at"),
+            "template_name": b.get("bol_data", {}).get("template_name", "Standard BOL"),
+        }
+        for b in bols
+    ]
 
 
 @router.get("/bol-templates")
@@ -602,6 +720,22 @@ async def classify_document_ai(data: dict):
             confidence=confidence,
             suggested_workflow=None,
         )
+
+
+@router.get("/classification-types")
+async def get_classification_types():
+    """Get supported document classification types and their workflow routing."""
+    classifications = get_supported_classifications()
+    routing = {}
+    for cls in classifications:
+        route = get_workflow_routing(cls["value"])
+        if route:
+            routing[cls["value"]] = route
+
+    return {
+        "classifications": classifications,
+        "workflow_routing": routing,
+    }
 
 
 # ============================================================================
@@ -827,6 +961,121 @@ async def enhance_document_image(document_id: str, data: dict):
         "document_id": document_id,
         "enhancements_applied": enhancements,
     }
+
+
+# ============================================================================
+# Mobile Document Scanning / Camera Capture
+# ============================================================================
+
+
+class ScanUploadRequest(BaseModel):
+    """Upload a scanned/captured document image."""
+    image_data: str  # Base64-encoded image data
+    filename: Optional[str] = None
+    document_type: Optional[str] = "other"
+    shipment_id: Optional[str] = None
+    carrier_id: Optional[str] = None
+    source: str = "mobile"
+    auto_process: bool = True
+
+
+@router.post("/scan-upload")
+async def upload_scanned_document(
+    data: ScanUploadRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Upload a document captured via mobile camera/scanner.
+
+    Accepts base64-encoded image data, stores it, and queues for AI processing.
+    """
+    import base64 as b64
+
+    db = get_database()
+
+    # Decode base64 image
+    try:
+        # Handle data URL format: "data:image/jpeg;base64,..."
+        image_b64 = data.image_data
+        mime_type = "image/jpeg"
+        if image_b64.startswith("data:"):
+            header, image_b64 = image_b64.split(",", 1)
+            # Extract mime type from header
+            mime_parts = header.split(";")[0].split(":")
+            if len(mime_parts) > 1:
+                mime_type = mime_parts[1]
+
+        image_bytes = b64.b64decode(image_b64)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image data: {str(e)}")
+
+    # Determine file extension from mime type
+    ext_map = {
+        "image/jpeg": ".jpg",
+        "image/png": ".png",
+        "image/webp": ".webp",
+        "image/gif": ".gif",
+    }
+    ext = ext_map.get(mime_type, ".jpg")
+
+    # Generate unique filename
+    filename = f"scan_{uuid.uuid4()}{ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    # Save file
+    async with aiofiles.open(filepath, 'wb') as f:
+        await f.write(image_bytes)
+
+    # Auto-classify by filename if provided
+    original_filename = data.filename or f"scan{ext}"
+    doc_type = data.document_type or "other"
+    ai_classified_type = None
+    classification_confidence = None
+
+    if doc_type == "other" and original_filename:
+        classification, confidence, _extracted = classify_by_pattern(
+            filename=original_filename,
+            file_type=mime_type,
+        )
+        if classification != "unknown" and confidence >= 0.7:
+            try:
+                mapped_type = DocumentType(classification)
+                doc_type = mapped_type.value
+                ai_classified_type = classification
+                classification_confidence = confidence
+            except ValueError:
+                ai_classified_type = classification
+                classification_confidence = confidence
+
+    # Create document record
+    doc_data = {
+        "document_type": doc_type,
+        "filename": filename,
+        "original_filename": original_filename,
+        "mime_type": mime_type,
+        "size_bytes": len(image_bytes),
+        "storage_path": filepath,
+        "storage_provider": "local",
+        "shipment_id": ObjectId(data.shipment_id) if data.shipment_id else None,
+        "carrier_id": ObjectId(data.carrier_id) if data.carrier_id else None,
+        "source": data.source,
+        "extraction_status": ExtractionStatus.PENDING.value if data.auto_process else ExtractionStatus.SKIPPED.value,
+        "is_verified": False,
+        "needs_review": False,
+        "auto_matched": False,
+        "ai_classified_type": ai_classified_type,
+        "classification_confidence": classification_confidence,
+        "created_at": datetime.utcnow(),
+    }
+
+    result = await db.documents.insert_one(doc_data)
+    doc_data["_id"] = result.inserted_id
+
+    # Queue AI processing in background
+    if data.auto_process:
+        background_tasks.add_task(process_document_background, str(result.inserted_id))
+
+    return doc_to_response(doc_data)
 
 
 @router.post("/{document_id}/ocr")

@@ -68,6 +68,9 @@ class ShipmentResponse(BaseModel):
     special_requirements: Optional[str] = None
     customer_price: int
     carrier_cost: int
+    fuel_surcharge: int = 0
+    fuel_surcharge_schedule_id: Optional[str] = None
+    assigned_equipment: Optional[dict] = None
     margin: int
     margin_percent: float
     pickup_date: Optional[datetime] = None
@@ -82,5 +85,9 @@ class ShipmentResponse(BaseModel):
     customer_notes: Optional[str] = None
     assigned_to: Optional[str] = None
     created_by: Optional[str] = None
+    # Split shipment parent-child relationship
+    split_parent_id: Optional[str] = None
+    split_children: list[str] = []
+    consolidated_into: Optional[str] = None
     created_at: datetime
     updated_at: datetime

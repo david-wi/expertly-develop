@@ -1,0 +1,8 @@
+20260207 - Implement Carrier Management + Tendering & Procurement (7 items)
+1. Carrier onboarding workflow (d4d932f3) - enhanced step-by-step wizard
+2. Carrier capacity tracking (98ee7871) - available trucks, heat map, AI matching
+3. Carrier portal for tenders (67591cf8) - enhanced tender management
+4. Spot market integration (6db49e03) - DAT/Truckstop rate lookups
+5. Counter-offer workflows (54f4fc76) - multi-round negotiation
+6. Carrier rate negotiation tracking (f999ff81) - historical rate tracking
+7. Automated tender waterfall (e02f04e2) - waterfall rules, AI-ranked carriers

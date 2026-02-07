@@ -416,3 +416,200 @@ async def update_white_label_branding(
         portal_title=branding.get("portal_title"),
         hide_powered_by=branding.get("hide_powered_by", False),
     )
+
+
+# ---------------------------------------------------------------------------
+# Customizable Email Template Endpoints (White-Label)
+# ---------------------------------------------------------------------------
+
+
+class EmailTemplateCreate(BaseModel):
+    """Request schema for creating/updating a custom email template."""
+    template_name: str = Field(..., description="Template identifier (e.g. quote_confirmation)")
+    subject: Optional[str] = Field(default=None, description="Custom subject line")
+    header_html: Optional[str] = Field(default=None, description="Custom header HTML")
+    footer_html: Optional[str] = Field(default=None, description="Custom footer HTML")
+    body_template: Optional[str] = Field(default=None, description="Custom body HTML template")
+    is_active: bool = True
+
+
+class EmailTemplateResponse(BaseModel):
+    """Response schema for an email template."""
+    template_name: str
+    subject: Optional[str] = None
+    header_html: Optional[str] = None
+    footer_html: Optional[str] = None
+    body_template: Optional[str] = None
+    is_active: bool = True
+
+
+# Available template names for reference
+AVAILABLE_EMAIL_TEMPLATES = [
+    "quote_confirmation",
+    "quote_declined",
+    "shipment_booked",
+    "shipment_update",
+    "shipment_delivered",
+    "invoice_sent",
+    "tender_sent",
+    "tender_accepted",
+    "tender_declined",
+    "carrier_welcome",
+    "customer_welcome",
+    "rate_confirmation",
+    "pickup_reminder",
+    "delivery_notification",
+]
+
+
+@router.get("/email-templates", response_model=List[EmailTemplateResponse])
+async def list_email_templates(
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """List all custom email template overrides for the tenant.
+
+    Returns the tenant's customized email templates. Templates not listed
+    here will use the system defaults.
+    """
+    if not org_id:
+        return []
+
+    db = get_database()
+    settings_doc = await db["tenant_settings"].find_one({"org_id": org_id})
+
+    if not settings_doc:
+        return []
+
+    templates = settings_doc.get("email_templates", [])
+    return [
+        EmailTemplateResponse(
+            template_name=t.get("template_name", ""),
+            subject=t.get("subject"),
+            header_html=t.get("header_html"),
+            footer_html=t.get("footer_html"),
+            body_template=t.get("body_template"),
+            is_active=t.get("is_active", True),
+        )
+        for t in templates
+    ]
+
+
+@router.get("/email-templates/available")
+async def list_available_templates():
+    """List all available email template names that can be customized."""
+    return {
+        "templates": AVAILABLE_EMAIL_TEMPLATES,
+        "placeholders": [
+            "{{company_name}}",
+            "{{customer_name}}",
+            "{{carrier_name}}",
+            "{{shipment_number}}",
+            "{{origin_city}}",
+            "{{origin_state}}",
+            "{{destination_city}}",
+            "{{destination_state}}",
+            "{{pickup_date}}",
+            "{{delivery_date}}",
+            "{{tracking_url}}",
+            "{{invoice_number}}",
+            "{{amount}}",
+            "{{portal_url}}",
+        ],
+    }
+
+
+@router.put("/email-templates/{template_name}", response_model=EmailTemplateResponse)
+async def upsert_email_template(
+    template_name: str,
+    data: EmailTemplateCreate,
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """Create or update a custom email template for the tenant.
+
+    This allows enterprise customers to customize the content and branding
+    of system-generated emails. Template variables use {{variable}} syntax.
+    """
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    if template_name not in AVAILABLE_EMAIL_TEMPLATES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid template name. Must be one of: {', '.join(AVAILABLE_EMAIL_TEMPLATES)}",
+        )
+
+    db = get_database()
+    now = utc_now()
+
+    template_doc = {
+        "template_name": template_name,
+        "subject": data.subject,
+        "header_html": data.header_html,
+        "footer_html": data.footer_html,
+        "body_template": data.body_template,
+        "is_active": data.is_active,
+        "updated_at": now,
+    }
+
+    # Find existing settings
+    settings_doc = await db["tenant_settings"].find_one({"org_id": org_id})
+
+    if not settings_doc:
+        # Create settings with this template
+        from app.models.tenant_settings import TenantSettings
+        default_settings = TenantSettings.default_for_org(org_id)
+        doc = default_settings.model_dump_mongo()
+        doc["email_templates"] = [template_doc]
+        await db["tenant_settings"].insert_one(doc)
+    else:
+        # Update or add the template
+        templates = settings_doc.get("email_templates", [])
+        found = False
+        for i, t in enumerate(templates):
+            if t.get("template_name") == template_name:
+                templates[i] = template_doc
+                found = True
+                break
+        if not found:
+            templates.append(template_doc)
+
+        await db["tenant_settings"].update_one(
+            {"org_id": org_id},
+            {"$set": {"email_templates": templates, "updated_at": now}},
+        )
+
+    return EmailTemplateResponse(
+        template_name=template_name,
+        subject=data.subject,
+        header_html=data.header_html,
+        footer_html=data.footer_html,
+        body_template=data.body_template,
+        is_active=data.is_active,
+    )
+
+
+@router.delete("/email-templates/{template_name}")
+async def delete_email_template(
+    template_name: str,
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """Delete a custom email template, reverting to system default."""
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    db = get_database()
+    now = utc_now()
+
+    settings_doc = await db["tenant_settings"].find_one({"org_id": org_id})
+    if not settings_doc:
+        raise HTTPException(status_code=404, detail="No settings found")
+
+    templates = settings_doc.get("email_templates", [])
+    templates = [t for t in templates if t.get("template_name") != template_name]
+
+    await db["tenant_settings"].update_one(
+        {"org_id": org_id},
+        {"$set": {"email_templates": templates, "updated_at": now}},
+    )
+
+    return {"success": True, "message": f"Template '{template_name}' deleted, system default will be used"}

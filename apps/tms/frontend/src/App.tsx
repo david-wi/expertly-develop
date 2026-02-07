@@ -26,6 +26,7 @@ import CustomerDetail from './pages/CustomerDetail'
 import CarrierDetail from './pages/CarrierDetail'
 import DocumentInbox from './pages/DocumentInbox'
 import BillingQueue from './pages/BillingQueue'
+import CarrierPayables from './pages/CarrierPayables'
 import EDIManager from './pages/EDIManager'
 import RateManagement from './pages/RateManagement'
 import Communications from './pages/Communications'
@@ -35,6 +36,9 @@ import DriverApp from './pages/DriverApp'
 import DriverLoadDetail from './pages/DriverLoadDetail'
 import GlobalSearch from './pages/GlobalSearch'
 import TenantSettings from './pages/TenantSettings'
+import ScheduledReports from './pages/ScheduledReports'
+import ReportBuilder from './pages/ReportBuilder'
+import CustomerProfitability from './pages/CustomerProfitability'
 import Layout from './components/layout/Layout'
 
 function App() {
@@ -62,6 +66,7 @@ function App() {
           <Route path="carriers/:id" element={<CarrierDetail />} />
           <Route path="document-inbox" element={<DocumentInbox />} />
           <Route path="billing" element={<BillingQueue />} />
+          <Route path="carrier-payables" element={<CarrierPayables />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="margins" element={<MarginDashboard />} />
           <Route path="carrier-performance" element={<CarrierPerformance />} />
@@ -80,6 +85,9 @@ function App() {
           <Route path="search" element={<GlobalSearch />} />
           <Route path="tenant-settings" element={<TenantSettings />} />
           <Route path="compare" element={<ProductComparison />} />
+          <Route path="scheduled-reports" element={<ScheduledReports />} />
+          <Route path="report-builder" element={<ReportBuilder />} />
+          <Route path="customer-profitability" element={<CustomerProfitability />} />
         </Route>
       </Routes>
     </BrowserRouter>

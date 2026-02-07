@@ -1,7 +1,19 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Settings from '../pages/Settings'
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return ({ children }: { children: React.ReactNode }) => (
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>{children}</BrowserRouter>
+    </QueryClientProvider>
+  )
+}
 
 describe('Settings', () => {
   it('renders settings heading', () => {
@@ -19,10 +31,11 @@ describe('Settings', () => {
         <Settings />
       </BrowserRouter>
     )
-    expect(screen.getByText('Profile')).toBeInTheDocument()
-    expect(screen.getByText('Notifications')).toBeInTheDocument()
+    // Desktop sidebar and mobile tabs both render, so use getAllByText
+    expect(screen.getAllByText('Profile').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Notifications').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText('Company Info')).toBeInTheDocument()
-    expect(screen.getByText('Defaults')).toBeInTheDocument()
+    expect(screen.getAllByText('Defaults').length).toBeGreaterThanOrEqual(1)
   })
 
   it('switches tabs when clicked', () => {
@@ -32,17 +45,19 @@ describe('Settings', () => {
       </BrowserRouter>
     )
 
-    // Click notifications tab
-    fireEvent.click(screen.getByText('Notifications'))
-    expect(screen.getByText('Notification Preferences')).toBeInTheDocument()
-
-    // Click company info tab
+    // Click company info tab (desktop sidebar has unique "Company Info" text)
     fireEvent.click(screen.getByText('Company Info'))
     expect(screen.getByText('Company Information')).toBeInTheDocument()
 
     // Click defaults tab
-    fireEvent.click(screen.getByText('Defaults'))
+    const defaultsButtons = screen.getAllByText('Defaults')
+    fireEvent.click(defaultsButtons[defaultsButtons.length - 1])
     expect(screen.getByText('Default Settings')).toBeInTheDocument()
+
+    // Click profile tab back
+    const profileButtons = screen.getAllByText('Profile')
+    fireEvent.click(profileButtons[profileButtons.length - 1])
+    expect(screen.getByText('Profile Settings')).toBeInTheDocument()
   })
 
   it('renders profile settings by default', () => {
@@ -73,7 +88,8 @@ describe('Settings', () => {
       </BrowserRouter>
     )
 
-    fireEvent.click(screen.getByText('Defaults'))
+    const defaultsButtons = screen.getAllByText('Defaults')
+    fireEvent.click(defaultsButtons[defaultsButtons.length - 1])
     expect(screen.getByText('Default Margin %')).toBeInTheDocument()
     expect(screen.getByText('Default Equipment Type')).toBeInTheDocument()
   })

@@ -1019,6 +1019,82 @@ async def list_scheduled_reports():
     ]
 
 
+class ScheduledReportUpdate(BaseModel):
+    report_name: Optional[str] = None
+    recipients: Optional[List[str]] = None
+    frequency: Optional[str] = None
+    format: Optional[str] = None
+    filters: Optional[dict] = None
+    day_of_week: Optional[int] = None
+    day_of_month: Optional[int] = None
+    time_of_day: Optional[str] = None
+    timezone: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+@router.patch("/scheduled-reports/{report_id}", response_model=ScheduledReportResponse)
+async def update_scheduled_report(report_id: str, data: ScheduledReportUpdate):
+    """Update a scheduled report."""
+    db = get_database()
+    now = datetime.utcnow()
+
+    update_fields: dict = {"updated_at": now}
+    if data.report_name is not None:
+        update_fields["report_name"] = data.report_name
+    if data.recipients is not None:
+        update_fields["recipients"] = data.recipients
+    if data.frequency is not None:
+        update_fields["frequency"] = data.frequency
+    if data.format is not None:
+        update_fields["format"] = data.format
+    if data.filters is not None:
+        update_fields["filters"] = data.filters
+    if data.day_of_week is not None:
+        update_fields["day_of_week"] = data.day_of_week
+    if data.day_of_month is not None:
+        update_fields["day_of_month"] = data.day_of_month
+    if data.time_of_day is not None:
+        update_fields["time_of_day"] = data.time_of_day
+    if data.timezone is not None:
+        update_fields["timezone"] = data.timezone
+    if data.is_active is not None:
+        update_fields["is_active"] = data.is_active
+
+    # Recalculate next_run if schedule changed
+    existing = await db.scheduled_reports.find_one({"_id": ObjectId(report_id)})
+    if not existing:
+        return {"status": "not_found"}
+
+    frequency = data.frequency or existing.get("frequency", "daily")
+    time_of_day = data.time_of_day or existing.get("time_of_day", "08:00")
+    day_of_week = data.day_of_week if data.day_of_week is not None else existing.get("day_of_week")
+    day_of_month = data.day_of_month if data.day_of_month is not None else existing.get("day_of_month")
+
+    if any(f is not None for f in [data.frequency, data.time_of_day, data.day_of_week, data.day_of_month]):
+        update_fields["next_run_at"] = _calculate_next_run(frequency, time_of_day, day_of_week, day_of_month)
+
+    await db.scheduled_reports.update_one({"_id": ObjectId(report_id)}, {"$set": update_fields})
+
+    updated = await db.scheduled_reports.find_one({"_id": ObjectId(report_id)})
+    return ScheduledReportResponse(
+        id=str(updated["_id"]),
+        report_type=updated.get("report_type", ""),
+        report_name=updated.get("report_name", ""),
+        recipients=updated.get("recipients", []),
+        frequency=updated.get("frequency", ""),
+        format=updated.get("format", "pdf"),
+        filters=updated.get("filters"),
+        day_of_week=updated.get("day_of_week"),
+        day_of_month=updated.get("day_of_month"),
+        time_of_day=updated.get("time_of_day", "08:00"),
+        timezone=updated.get("timezone", "America/New_York"),
+        is_active=updated.get("is_active", True),
+        last_sent_at=updated["last_sent_at"].isoformat() if updated.get("last_sent_at") else None,
+        next_run_at=updated["next_run_at"].isoformat() if updated.get("next_run_at") else None,
+        created_at=updated.get("created_at", datetime.utcnow()).isoformat(),
+    )
+
+
 @router.delete("/scheduled-reports/{report_id}")
 async def delete_scheduled_report(report_id: str):
     """Delete a scheduled report."""
@@ -1027,6 +1103,52 @@ async def delete_scheduled_report(report_id: str):
     if result.deleted_count == 0:
         return {"status": "not_found"}
     return {"status": "deleted"}
+
+
+@router.post("/scheduled-reports/{report_id}/run-now")
+async def run_scheduled_report_now(report_id: str):
+    """Trigger immediate execution of a scheduled report."""
+    db = get_database()
+    now = datetime.utcnow()
+
+    report = await db.scheduled_reports.find_one({"_id": ObjectId(report_id)})
+    if not report:
+        return {"status": "not_found"}
+
+    # Create a history entry for this run
+    history_doc = {
+        "scheduled_report_id": ObjectId(report_id),
+        "report_name": report.get("report_name", ""),
+        "generated_at": now,
+        "format": report.get("format", "pdf"),
+        "recipients": report.get("recipients", []),
+        "status": "sent",
+        "download_url": None,
+        "file_size_bytes": None,
+        "error_message": None,
+    }
+
+    result = await db.report_history.insert_one(history_doc)
+
+    # Update last_sent_at and next_run_at on the schedule
+    next_run = _calculate_next_run(
+        report.get("frequency", "daily"),
+        report.get("time_of_day", "08:00"),
+        report.get("day_of_week"),
+        report.get("day_of_month"),
+    )
+    await db.scheduled_reports.update_one(
+        {"_id": ObjectId(report_id)},
+        {"$set": {"last_sent_at": now, "next_run_at": next_run, "updated_at": now}},
+    )
+
+    return {
+        "status": "sent",
+        "history_id": str(result.inserted_id),
+        "report_name": report.get("report_name", ""),
+        "recipients": report.get("recipients", []),
+        "generated_at": now.isoformat(),
+    }
 
 
 @router.get("/scheduled-reports/history", response_model=List[ReportHistoryEntry])
@@ -1092,6 +1214,93 @@ class ReportBuildResult(BaseModel):
     aggregations: Optional[dict] = None
     chart_data: Optional[dict] = None
     generated_at: str
+
+
+@router.get("/report-fields")
+async def get_report_fields():
+    """Get available fields by entity type for the report builder."""
+    return {
+        "entities": {
+            "shipments": {
+                "label": "Shipments",
+                "fields": [
+                    {"name": "shipment_number", "label": "Shipment Number", "type": "string"},
+                    {"name": "status", "label": "Status", "type": "string"},
+                    {"name": "customer_price", "label": "Customer Price", "type": "currency"},
+                    {"name": "carrier_cost", "label": "Carrier Cost", "type": "currency"},
+                    {"name": "margin", "label": "Margin", "type": "currency"},
+                    {"name": "margin_percent", "label": "Margin %", "type": "percentage"},
+                    {"name": "equipment_type", "label": "Equipment Type", "type": "string"},
+                    {"name": "total_miles", "label": "Total Miles", "type": "number"},
+                    {"name": "weight", "label": "Weight (lbs)", "type": "number"},
+                    {"name": "created_at", "label": "Created Date", "type": "date"},
+                    {"name": "pickup_date", "label": "Pickup Date", "type": "date"},
+                    {"name": "delivery_date", "label": "Delivery Date", "type": "date"},
+                    {"name": "actual_delivery_date", "label": "Actual Delivery", "type": "date"},
+                    {"name": "commodity", "label": "Commodity", "type": "string"},
+                    {"name": "temperature_min", "label": "Temp Min", "type": "number"},
+                    {"name": "temperature_max", "label": "Temp Max", "type": "number"},
+                ],
+            },
+            "invoices": {
+                "label": "Invoices",
+                "fields": [
+                    {"name": "invoice_number", "label": "Invoice Number", "type": "string"},
+                    {"name": "status", "label": "Status", "type": "string"},
+                    {"name": "total", "label": "Total", "type": "currency"},
+                    {"name": "amount_paid", "label": "Amount Paid", "type": "currency"},
+                    {"name": "amount_due", "label": "Amount Due", "type": "currency"},
+                    {"name": "invoice_date", "label": "Invoice Date", "type": "date"},
+                    {"name": "due_date", "label": "Due Date", "type": "date"},
+                    {"name": "paid_date", "label": "Paid Date", "type": "date"},
+                    {"name": "days_outstanding", "label": "Days Outstanding", "type": "number"},
+                ],
+            },
+            "carriers": {
+                "label": "Carriers",
+                "fields": [
+                    {"name": "name", "label": "Carrier Name", "type": "string"},
+                    {"name": "mc_number", "label": "MC Number", "type": "string"},
+                    {"name": "dot_number", "label": "DOT Number", "type": "string"},
+                    {"name": "status", "label": "Status", "type": "string"},
+                    {"name": "total_loads", "label": "Total Loads", "type": "number"},
+                    {"name": "on_time_percentage", "label": "On-Time %", "type": "percentage"},
+                    {"name": "claims_count", "label": "Claims Count", "type": "number"},
+                    {"name": "insurance_expiry", "label": "Insurance Expiry", "type": "date"},
+                    {"name": "created_at", "label": "Created Date", "type": "date"},
+                ],
+            },
+            "customers": {
+                "label": "Customers",
+                "fields": [
+                    {"name": "name", "label": "Customer Name", "type": "string"},
+                    {"name": "status", "label": "Status", "type": "string"},
+                    {"name": "total_shipments", "label": "Total Shipments", "type": "number"},
+                    {"name": "total_revenue", "label": "Total Revenue", "type": "currency"},
+                    {"name": "payment_terms", "label": "Payment Terms", "type": "string"},
+                    {"name": "credit_limit", "label": "Credit Limit", "type": "currency"},
+                    {"name": "credit_used", "label": "Credit Used", "type": "currency"},
+                    {"name": "created_at", "label": "Created Date", "type": "date"},
+                ],
+            },
+        },
+        "calculated_fields": [
+            {"name": "margin", "label": "Margin (Revenue - Cost)", "formula": "customer_price - carrier_cost"},
+            {"name": "margin_percent", "label": "Margin %", "formula": "(customer_price - carrier_cost) / customer_price * 100"},
+            {"name": "cost_per_mile", "label": "Cost per Mile", "formula": "carrier_cost / total_miles"},
+            {"name": "revenue_per_mile", "label": "Revenue per Mile", "formula": "customer_price / total_miles"},
+        ],
+        "operators": [
+            {"value": "equals", "label": "Equals", "types": ["string", "number", "currency"]},
+            {"value": "not_equals", "label": "Not Equals", "types": ["string", "number", "currency"]},
+            {"value": "greater_than", "label": "Greater Than", "types": ["number", "currency", "percentage"]},
+            {"value": "less_than", "label": "Less Than", "types": ["number", "currency", "percentage"]},
+            {"value": "contains", "label": "Contains", "types": ["string"]},
+            {"value": "in", "label": "In List", "types": ["string"]},
+            {"value": "date_after", "label": "After Date", "types": ["date"]},
+            {"value": "date_before", "label": "Before Date", "types": ["date"]},
+        ],
+    }
 
 
 @router.post("/custom-reports/build", response_model=ReportBuildResult)

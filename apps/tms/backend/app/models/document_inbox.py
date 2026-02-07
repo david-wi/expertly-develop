@@ -26,8 +26,10 @@ class InboxClassification(str, Enum):
     BOL = "bol"
     POD = "pod"
     RATE_CONFIRMATION = "rate_confirmation"
+    CARRIER_INVOICE = "carrier_invoice"
     INVOICE = "invoice"
     INSURANCE_CERT = "insurance_cert"
+    W9 = "w9"
     CUSTOMS_DOC = "customs_doc"
     UNKNOWN = "unknown"
 
