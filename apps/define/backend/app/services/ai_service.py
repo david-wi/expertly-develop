@@ -1,7 +1,9 @@
+import asyncio
 import json
+import logging
 import re
 import base64
-from typing import List, Optional
+from typing import List, Optional, Callable, Awaitable
 from pypdf import PdfReader
 from io import BytesIO
 
@@ -9,6 +11,14 @@ from app.schemas.ai import FileContent, ExistingRequirement, ParsedRequirement, 
 from app.services.decomposition_guide import DECOMPOSITION_GUIDE
 from artifacts import reflow_pdf_text
 from app.utils.ai_config import get_ai_client
+
+logger = logging.getLogger(__name__)
+
+# Batch size for parallel enrichment calls
+ENRICHMENT_BATCH_SIZE = 10
+
+# Progress callback type: async fn(phase, detail) -> None
+ProgressCallback = Callable[[str, str], Awaitable[None]]
 
 
 class AIService:
@@ -55,7 +65,24 @@ class AIService:
 
         return render(roots, 0) if roots else "(No existing requirements)"
 
-    async def parse_requirements(
+    def _parse_json_array(self, text: str) -> list:
+        """Extract and parse a JSON array from AI response text."""
+        if not text or not text.strip():
+            raise ValueError(
+                "AI returned an empty response. This may be a temporary issue — please try again. "
+                "If the problem persists, the document may be too large for the current model's token limit."
+            )
+
+        json_match = re.search(r"\[[\s\S]*\]", text)
+        if not json_match:
+            raise ValueError(f"Failed to parse AI response: {text[:500]}")
+
+        parsed = json.loads(json_match.group(0))
+        if not isinstance(parsed, list):
+            raise ValueError("Response is not an array")
+        return parsed
+
+    def _build_input_context(
         self,
         description: str,
         files: Optional[List[FileContent]],
@@ -64,13 +91,10 @@ class AIService:
         product_name: str,
         context_urls: Optional[List[ContextUrl]] = None,
         related_requirement_ids: Optional[List[str]] = None,
-    ) -> List[ParsedRequirement]:
-        """Parse requirements from description and files using AI."""
-
-        # Build context about existing tree structure
+    ) -> tuple:
+        """Build shared context used by both phases. Returns (tree_text, file_context, images, url_context, related_reqs_context, target_info)."""
         tree_text = self._build_tree_text(existing_requirements)
 
-        # Process files
         file_context = ""
         images = []
 
@@ -87,7 +111,6 @@ class AIService:
                 else:
                     file_context += f"\n\n--- File: {file.name} ---\n{file.content}"
 
-        # Build URL context section
         url_context = ""
         if context_urls:
             url_context = "\n\n--- External Context (from URLs) ---"
@@ -96,7 +119,6 @@ class AIService:
                 if len(url_item.content) > 3000:
                     url_context += "\n... (content truncated)"
 
-        # Build related requirements context section
         related_reqs_context = ""
         if related_requirement_ids and existing_requirements:
             related_reqs = [r for r in existing_requirements if r.id in related_requirement_ids]
@@ -106,188 +128,253 @@ class AIService:
                 for req in related_reqs:
                     related_reqs_context += f"\n[{req.stable_key}] {req.title}"
 
-        # Build system prompt with decomposition guide
-        system_prompt = f"""You are an expert requirements analyst. Your job is to decompose concept documents and user descriptions into a well-structured tree of products, modules, features, requirements, and guardrails.
+        target_info = (
+            f'\nTarget parent: Place new requirements under the requirement with ID "{target_parent_id}"'
+            if target_parent_id
+            else "\nTarget: Create at root level (no parent) unless the structure suggests nesting."
+        )
+
+        return tree_text, file_context, images, url_context, related_reqs_context, target_info
+
+    async def _generate_skeleton(
+        self,
+        description: str,
+        tree_text: str,
+        file_context: str,
+        images: list,
+        url_context: str,
+        related_reqs_context: str,
+        target_info: str,
+        product_name: str,
+    ) -> list:
+        """Phase 1: Generate a lightweight tree skeleton (titles + hierarchy only)."""
+
+        system_prompt = f"""You are an expert requirements analyst. Your job is to decompose concept documents into a well-structured tree of products, modules, features, requirements, and guardrails.
 
 {DECOMPOSITION_GUIDE}
 
-## Output format rules
+## Output rules for this step
 
-For every node you create:
-1. Set "node_type" to one of: "product", "module", "feature", "requirement", "guardrail"
-2. Title should be clear and actionable
-3. "what_this_does" should describe the capability in plain English. For requirements, start with "Users can..." or "The system..."
-4. "why_this_exists" explains the reason in 1-2 sentences
-5. "not_included" lists scope exclusions as bullet points (use \\n between bullets). Most useful for product/module/feature nodes. Requirements can omit this if not needed.
-6. "acceptance_criteria" lists testable criteria as bullet points (use \\n between bullets). Required at every level. Product-level criteria are broad (4-8 items). Requirement-level criteria are specific and independently testable.
-7. Priority should be: critical, high, medium, or low
-8. Tags should be from: functional, nonfunctional, security, performance, usability, invariant
+You are generating a SKELETON — titles and hierarchy only. Do NOT write descriptions or acceptance criteria yet.
 
-For hierarchical structure:
-- Use parent_ref to build the tree: product at root, modules under product, features under modules, requirements under features
-- parent_ref can be an existing requirement ID from the tree or a temp_id from another node you are creating in this batch
-- Guardrails are separate root-level or module-level nodes. They should be tagged with "invariant".
+For every node, output ONLY these fields:
+- "temp_id": sequential ID like "temp-1", "temp-2", etc.
+- "node_type": one of "product", "module", "feature", "requirement", "guardrail"
+- "title": clear, actionable title
+- "parent_ref": null for root, or another temp_id / existing requirement ID
+- "priority": "critical", "high", "medium", or "low"
+- "tags": array from ["functional", "nonfunctional", "security", "performance", "usability", "invariant"]
 
-When provided with external context (URLs or related requirements):
-- Use the terminology and patterns from the context
-- Ensure new nodes complement rather than conflict with existing ones
-
-IMPORTANT — Deduplication rules:
-- Carefully review the existing requirements tree before generating new ones
-- Do NOT create nodes that duplicate or substantially overlap with existing ones
+IMPORTANT — Deduplication:
+- Review the existing requirements tree and do NOT duplicate what's already there
 - Only generate nodes for functionality NOT already covered
-- If an artifact describes something already captured in existing requirements, skip it
-- When in doubt, err on the side of NOT creating a duplicate
 
-IMPORTANT — Completeness rules:
-- Read the ENTIRE input before generating nodes
-- Cover every section, screen, API group, data entity, stated goal, edge case, and guardrail in the input
-- Check your output against the sizing guide: a 500-1000 line document should produce 40-80 nodes; a 1000-2000 line document should produce 80-150 nodes
-- If your output is significantly below the expected range, you have missed categories — go back and check
+IMPORTANT — Completeness:
+- Cover every section, screen, API group, data entity, goal, edge case, and guardrail
+- A 500-1000 line document should produce 40-80 nodes; 1000-2000 lines should produce 80-150 nodes
 
-Respond ONLY with a valid JSON array. No explanation or markdown."""
+Respond with ONLY a JSON array. No explanation, no markdown fences."""
 
-        target_info = (
-            f'\\nTarget parent: Place new requirements under the requirement with ID "{target_parent_id}"'
-            if target_parent_id
-            else "\\nTarget: Create at root level (no parent) unless the structure suggests nesting."
-        )
+        user_prompt = f"""Product: "{product_name}"
 
-        user_prompt_text = f"""Product: "{product_name}"
-
-Existing requirements tree (DO NOT duplicate these — only create NEW requirements for uncovered functionality):
+Existing requirements tree (DO NOT duplicate):
 {tree_text}
 {target_info}
 {url_context}
 {related_reqs_context}
 
-User's description of new requirements:
+Document to decompose:
 {description}
 {'\\n\\nAdditional context from files:' + file_context if file_context else ''}
 {'\\n\\n(See attached images for additional context)' if images else ''}
 
-Decompose the input into a structured tree. Return a JSON array with this exact structure:
-[
-  {{
-    "temp_id": "temp-1",
-    "node_type": "product",
-    "title": "...",
-    "what_this_does": "...",
-    "why_this_exists": "...",
-    "not_included": "- Point 1\\n- Point 2",
-    "acceptance_criteria": "- Criterion 1\\n- Criterion 2",
-    "priority": "critical",
-    "tags": ["functional"],
-    "parent_ref": null
-  }},
-  {{
-    "temp_id": "temp-2",
-    "node_type": "module",
-    "title": "...",
-    "what_this_does": "...",
-    "why_this_exists": "...",
-    "not_included": "- ...",
-    "acceptance_criteria": "- ...",
-    "priority": "high",
-    "tags": ["functional"],
-    "parent_ref": "temp-1"
-  }},
-  {{
-    "temp_id": "temp-3",
-    "node_type": "feature",
-    "title": "...",
-    "what_this_does": "...",
-    "why_this_exists": "...",
-    "acceptance_criteria": "- ...",
-    "priority": "high",
-    "tags": ["functional"],
-    "parent_ref": "temp-2"
-  }},
-  {{
-    "temp_id": "temp-4",
-    "node_type": "requirement",
-    "title": "...",
-    "what_this_does": "Users can...",
-    "why_this_exists": "...",
-    "acceptance_criteria": "- Criterion 1\\n- Criterion 2",
-    "priority": "medium",
-    "tags": ["functional"],
-    "parent_ref": "temp-3"
-  }},
-  {{
-    "temp_id": "temp-5",
-    "node_type": "guardrail",
-    "title": "...",
-    "what_this_does": "...",
-    "why_this_exists": "...",
-    "acceptance_criteria": "- ...",
-    "priority": "critical",
-    "tags": ["invariant"],
-    "parent_ref": "temp-1"
-  }}
-]
+Return a JSON array of skeleton nodes:
+[{{"temp_id": "temp-1", "node_type": "product", "title": "...", "parent_ref": null, "priority": "critical", "tags": ["functional"]}}, ...]"""
 
-node_type must be one of: "product", "module", "feature", "requirement", "guardrail".
-
-For parent_ref, use either:
-- An existing requirement ID from the tree above
-- Another temp_id from this batch (e.g., "temp-1" if this is a child of the first node)
-- null for root-level nodes
-
-Respond with ONLY the JSON array, no other text."""
-
-        # Call AI using multi-provider client
         text = await self.client.complete(
             use_case="requirements_parsing",
             system_prompt=system_prompt,
-            user_content=user_prompt_text,
+            user_content=user_prompt,
             images=images if images else None,
         )
 
-        # Guard against None/empty responses
-        if not text or not text.strip():
-            raise ValueError(
-                "AI returned an empty response. This may be a temporary issue — please try again. "
-                "If the problem persists, the document may be too large for the current model's token limit."
+        return self._parse_json_array(text)
+
+    async def _enrich_batch(
+        self,
+        description: str,
+        full_skeleton: list,
+        batch_nodes: list,
+        product_name: str,
+    ) -> list:
+        """Phase 2: Enrich a batch of skeleton nodes with full details."""
+
+        # Build skeleton summary for context
+        skeleton_summary = "\n".join(
+            f"  {n.get('temp_id', '?')}: [{n.get('node_type', '?')}] {n.get('title', '?')} (parent: {n.get('parent_ref', 'root')})"
+            for n in full_skeleton
+        )
+
+        # Build list of nodes to enrich
+        batch_ids = [n.get("temp_id", f"temp-{i}") for i, n in enumerate(batch_nodes)]
+        batch_list = "\n".join(
+            f"  - {n.get('temp_id', '?')}: [{n.get('node_type', '?')}] {n.get('title', '?')}"
+            for n in batch_nodes
+        )
+
+        system_prompt = """You are an expert requirements analyst. You will be given a tree skeleton and a subset of nodes to enrich with full details.
+
+For each node, add:
+1. "what_this_does" — plain English description. For requirements: "Users can..." or "The system..."
+2. "why_this_exists" — 1-2 sentence explanation
+3. "not_included" — scope exclusions as bullet points (use \\n between bullets). Most useful for product/module/feature nodes. Requirements can omit or set null.
+4. "acceptance_criteria" — testable criteria as bullet points (use \\n between bullets). Product-level: 4-8 broad items. Requirement-level: specific, independently testable.
+
+Keep all existing fields (temp_id, node_type, title, parent_ref, priority, tags) unchanged.
+
+Respond with ONLY a JSON array of the enriched nodes. No other text."""
+
+        user_prompt = f"""Product: "{product_name}"
+
+Full tree skeleton for context:
+{skeleton_summary}
+
+Source document (reference for writing descriptions):
+{description[:6000]}
+{f'... (document truncated, {len(description)} chars total)' if len(description) > 6000 else ''}
+
+Enrich ONLY these {len(batch_nodes)} nodes (return them with all fields filled in):
+{batch_list}
+
+Return a JSON array with the enriched nodes:
+[{{"temp_id": "...", "node_type": "...", "title": "...", "parent_ref": ..., "priority": "...", "tags": [...], "what_this_does": "...", "why_this_exists": "...", "not_included": "...", "acceptance_criteria": "- ..."}}]"""
+
+        text = await self.client.complete(
+            use_case="requirements_parsing",
+            system_prompt=system_prompt,
+            user_content=user_prompt,
+        )
+
+        return self._parse_json_array(text)
+
+    async def parse_requirements(
+        self,
+        description: str,
+        files: Optional[List[FileContent]],
+        existing_requirements: List[ExistingRequirement],
+        target_parent_id: Optional[str],
+        product_name: str,
+        context_urls: Optional[List[ContextUrl]] = None,
+        related_requirement_ids: Optional[List[str]] = None,
+        on_progress: Optional[ProgressCallback] = None,
+    ) -> List[ParsedRequirement]:
+        """Parse requirements using two-phase approach:
+        Phase 1: Generate tree skeleton (titles + hierarchy)
+        Phase 2: Enrich details in parallel batches
+        """
+
+        # Build shared context
+        tree_text, file_context, images, url_context, related_reqs_context, target_info = \
+            self._build_input_context(
+                description, files, existing_requirements, target_parent_id,
+                product_name, context_urls, related_requirement_ids,
             )
 
-        # Parse JSON response
-        json_match = re.search(r"\[[\s\S]*\]", text)
-        if not json_match:
-            raise ValueError(f"Failed to parse AI response: {text[:500]}")
+        # --- Phase 1: Generate skeleton ---
+        if on_progress:
+            await on_progress("skeleton", "Generating requirement tree structure...")
 
-        parsed = json.loads(json_match.group(0))
-        if not isinstance(parsed, list):
-            raise ValueError("Response is not an array")
+        logger.info("Phase 1: Generating skeleton")
+        skeleton = await self._generate_skeleton(
+            description=description,
+            tree_text=tree_text,
+            file_context=file_context,
+            images=images,
+            url_context=url_context,
+            related_reqs_context=related_reqs_context,
+            target_info=target_info,
+            product_name=product_name,
+        )
+        logger.info(f"Phase 1 complete: {len(skeleton)} nodes in skeleton")
 
-        # Validate and convert to Pydantic models
+        # Assign temp_ids if missing
+        for i, node in enumerate(skeleton):
+            if not node.get("temp_id"):
+                node["temp_id"] = f"temp-{i + 1}"
+
+        # --- Phase 2: Enrich in parallel batches ---
+        batches = [
+            skeleton[i:i + ENRICHMENT_BATCH_SIZE]
+            for i in range(0, len(skeleton), ENRICHMENT_BATCH_SIZE)
+        ]
+        total_batches = len(batches)
+        logger.info(f"Phase 2: Enriching {len(skeleton)} nodes in {total_batches} batches")
+
+        if on_progress:
+            await on_progress("enriching", f"Adding details to {len(skeleton)} requirements (0/{total_batches} batches)...")
+
+        enriched_by_id = {}
+        completed_batches = 0
+
+        async def enrich_and_track(batch_nodes: list) -> None:
+            nonlocal completed_batches
+            result = await self._enrich_batch(
+                description=description,
+                full_skeleton=skeleton,
+                batch_nodes=batch_nodes,
+                product_name=product_name,
+            )
+            for node in result:
+                if node.get("temp_id"):
+                    enriched_by_id[node["temp_id"]] = node
+            completed_batches += 1
+            if on_progress:
+                await on_progress(
+                    "enriching",
+                    f"Adding details to {len(skeleton)} requirements ({completed_batches}/{total_batches} batches)..."
+                )
+
+        # Run all batches concurrently
+        await asyncio.gather(*(enrich_and_track(batch) for batch in batches))
+
+        logger.info(f"Phase 2 complete: {len(enriched_by_id)} nodes enriched")
+
+        # --- Merge: skeleton + enrichment ---
         valid_node_types = {"product", "module", "feature", "requirement", "guardrail"}
         requirements = []
-        for i, item in enumerate(parsed):
-            if not item.get("temp_id"):
-                item["temp_id"] = f"temp-{i + 1}"
-            if not item.get("title"):
-                raise ValueError(f"Requirement {i} missing title")
-            if not item.get("priority"):
-                item["priority"] = "medium"
-            if not item.get("tags"):
-                item["tags"] = ["functional"]
-            # Default node_type to "requirement" if missing or invalid
-            node_type = item.get("node_type", "requirement")
+
+        for i, skel_node in enumerate(skeleton):
+            temp_id = skel_node.get("temp_id", f"temp-{i + 1}")
+            enriched = enriched_by_id.get(temp_id, {})
+
+            # Merge: enrichment overrides skeleton, skeleton provides defaults
+            merged = {**skel_node, **enriched}
+
+            if not merged.get("title"):
+                continue  # skip nodes without title
+            if not merged.get("priority"):
+                merged["priority"] = "medium"
+            if not merged.get("tags"):
+                merged["tags"] = ["functional"]
+
+            node_type = merged.get("node_type", "requirement")
             if node_type not in valid_node_types:
                 node_type = "requirement"
 
             requirements.append(ParsedRequirement(
-                temp_id=item["temp_id"],
+                temp_id=temp_id,
                 node_type=node_type,
-                title=item["title"],
-                what_this_does=item.get("what_this_does"),
-                why_this_exists=item.get("why_this_exists"),
-                not_included=item.get("not_included"),
-                acceptance_criteria=item.get("acceptance_criteria"),
-                priority=item["priority"],
-                tags=item["tags"],
-                parent_ref=item.get("parent_ref"),
+                title=merged["title"],
+                what_this_does=merged.get("what_this_does"),
+                why_this_exists=merged.get("why_this_exists"),
+                not_included=merged.get("not_included"),
+                acceptance_criteria=merged.get("acceptance_criteria"),
+                priority=merged["priority"],
+                tags=merged["tags"],
+                parent_ref=merged.get("parent_ref"),
             ))
+
+        if on_progress:
+            await on_progress("complete", f"Generated {len(requirements)} requirements")
 
         return requirements

@@ -59,3 +59,4 @@ class GenerateJobStatusResponse(BaseModel):
     status: str  # "processing", "completed", "failed"
     requirements: Optional[List[ParsedRequirement]] = None
     error: Optional[str] = None
+    progress: Optional[str] = None

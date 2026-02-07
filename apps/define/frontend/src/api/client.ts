@@ -313,7 +313,7 @@ export const aiApi = {
   ).then((r) => r.data),
 
   getGenerationStatus: (jobId: string) =>
-    api.get<{ status: string; requirements: ParsedRequirement[] | null; error: string | null }>(
+    api.get<{ status: string; requirements: ParsedRequirement[] | null; error: string | null; progress: string | null }>(
       `/ai/generate-from-artifacts/${jobId}`
     ).then((r) => r.data),
 }
