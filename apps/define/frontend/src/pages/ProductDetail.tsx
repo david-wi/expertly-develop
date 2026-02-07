@@ -33,6 +33,8 @@ import {
   Paperclip,
   Sparkles,
   Pencil,
+  List,
+  BookOpen,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
@@ -41,6 +43,7 @@ import { BulkImportDialog } from '@/components/BulkImportDialog'
 import { ProductAvatar } from '@/components/products/ProductAvatar'
 import { AvatarDialog } from '@/components/products/AvatarDialog'
 import { ProductEditDialog } from '@/components/products/ProductEditDialog'
+import { DocumentView } from '@/components/DocumentView'
 import { InlineVoiceTranscription } from '@expertly/ui'
 
 interface TreeNode extends Requirement {
@@ -178,6 +181,7 @@ export default function ProductDetail() {
   const [bulkImportOpen, setBulkImportOpen] = useState(false)
   const [avatarDialogOpen, setAvatarDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [viewMode, setViewMode] = useState<'tree' | 'document'>('tree')
 
   useEffect(() => {
     if (id) fetchProduct()
@@ -322,6 +326,35 @@ export default function ProductDetail() {
           </TabsList>
 
           <TabsContent value="requirements">
+            {/* View mode toggle */}
+            <div className="flex items-center justify-end mb-4 gap-1">
+              <Button
+                size="sm"
+                variant={viewMode === 'tree' ? 'default' : 'outline'}
+                onClick={() => setViewMode('tree')}
+                title="Tree view"
+              >
+                <List className="h-4 w-4 mr-1.5" />
+                Tree
+              </Button>
+              <Button
+                size="sm"
+                variant={viewMode === 'document' ? 'default' : 'outline'}
+                onClick={() => setViewMode('document')}
+                title="Document view"
+              >
+                <BookOpen className="h-4 w-4 mr-1.5" />
+                Document
+              </Button>
+            </div>
+
+            {viewMode === 'document' ? (
+              <Card>
+                <CardContent className="py-6">
+                  <DocumentView requirements={requirements} productName={product.name} />
+                </CardContent>
+              </Card>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Tree sidebar */}
               <Card className="lg:col-span-1">
@@ -610,6 +643,7 @@ export default function ProductDetail() {
                 )}
               </Card>
             </div>
+            )}
           </TabsContent>
 
           <TabsContent value="artifacts">
