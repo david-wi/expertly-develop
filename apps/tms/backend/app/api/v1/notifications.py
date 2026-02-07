@@ -336,6 +336,85 @@ async def delete_notification(notification_id: str):
 # Notification Preferences
 # ============================================================================
 
+# ============================================================================
+# Notification Center (aggregated view with actions)
+# ============================================================================
+
+
+class NotificationCenterResponse(BaseModel):
+    """Aggregated notification center response."""
+    notifications: List[NotificationResponse]
+    unread_count: int
+    total_count: int
+    categories: dict
+
+
+@router.get("/center", response_model=NotificationCenterResponse)
+async def get_notification_center(
+    user_id: str,
+    limit: int = 50,
+    category: Optional[str] = None,
+):
+    """
+    Get notification center with aggregated counts by category.
+
+    Provides the full notification center experience with unread counts,
+    categorization, and one-click action URLs for each notification.
+    """
+    db = get_database()
+
+    # Build query
+    query: dict = {"user_id": user_id}
+    if category and category != "all":
+        query["notification_type"] = category
+
+    # Get all notifications
+    notifications_cursor = db.notifications.find(query).sort("created_at", -1).limit(limit)
+    notifications_list = await notifications_cursor.to_list(limit)
+
+    # Count unread
+    unread_count = await db.notifications.count_documents({"user_id": user_id, "is_read": False})
+    total_count = await db.notifications.count_documents({"user_id": user_id})
+
+    # Count by category
+    categories: dict = {}
+    for ntype in ["info", "success", "warning", "error", "alert",
+                  "shipment_update", "approval_needed", "exception", "billing"]:
+        count = await db.notifications.count_documents({
+            "user_id": user_id,
+            "notification_type": ntype,
+            "is_read": False,
+        })
+        if count > 0:
+            categories[ntype] = count
+
+    notification_responses = [
+        NotificationResponse(
+            id=str(n["_id"]),
+            user_id=n["user_id"],
+            title=n["title"],
+            message=n["message"],
+            notification_type=n.get("notification_type", "info"),
+            link_url=n.get("link_url"),
+            is_read=n.get("is_read", False),
+            created_at=n["created_at"],
+        )
+        for n in notifications_list
+    ]
+
+    return NotificationCenterResponse(
+        notifications=notification_responses,
+        unread_count=unread_count,
+        total_count=total_count,
+        categories=categories,
+    )
+
+
+# ============================================================================
+# Notification Preferences
+# ============================================================================
+
+
 class NotificationPreferences(BaseModel):
     email_enabled: bool = True
     push_enabled: bool = True
@@ -349,6 +428,13 @@ class NotificationPreferences(BaseModel):
     invoice_due: bool = True
     check_call_due: bool = True
     document_uploaded: bool = True
+
+    # Additional notification categories
+    approval_needed: bool = True
+    carrier_update: bool = True
+    billing_alert: bool = True
+    edi_transmission: bool = False
+    load_board_activity: bool = False
 
 
 @router.get("/preferences/{user_id}", response_model=NotificationPreferences)

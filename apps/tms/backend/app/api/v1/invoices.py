@@ -187,6 +187,81 @@ async def record_payment(invoice_id: str, data: InvoicePaymentCreate):
     return invoice_to_response(invoice)
 
 
+@router.get("/aging-report")
+async def get_invoice_aging_report(customer_id: Optional[str] = None):
+    """
+    Get AR aging report from invoices endpoint.
+    Redirects to the billing aging-report endpoint logic.
+    Buckets: Current, 30, 60, 90, 120+ days.
+    """
+    from app.models.base import utc_now as _utc_now
+    db = get_database()
+    now = _utc_now()
+
+    query = {"status": {"$in": ["sent", "partial"]}}
+    if customer_id:
+        query["customer_id"] = ObjectId(customer_id)
+
+    invoices_list = await db.invoices.find(query).sort("due_date", 1).to_list(5000)
+
+    buckets = {
+        "current": {"label": "Current", "total": 0, "count": 0},
+        "1_30": {"label": "1-30 Days", "total": 0, "count": 0},
+        "31_60": {"label": "31-60 Days", "total": 0, "count": 0},
+        "61_90": {"label": "61-90 Days", "total": 0, "count": 0},
+        "91_120": {"label": "91-120 Days", "total": 0, "count": 0},
+        "120_plus": {"label": "120+ Days", "total": 0, "count": 0},
+    }
+
+    for inv_doc in invoices_list:
+        inv = Invoice(**inv_doc)
+        amount_due = inv.amount_due
+        if amount_due <= 0:
+            continue
+
+        due_date = inv.due_date or inv.invoice_date
+        days_past = (now - due_date).days if due_date else 0
+
+        if days_past <= 0:
+            key = "current"
+        elif days_past <= 30:
+            key = "1_30"
+        elif days_past <= 60:
+            key = "31_60"
+        elif days_past <= 90:
+            key = "61_90"
+        elif days_past <= 120:
+            key = "91_120"
+        else:
+            key = "120_plus"
+
+        buckets[key]["total"] += amount_due
+        buckets[key]["count"] += 1
+
+    return {
+        "as_of_date": now.isoformat(),
+        "total_outstanding": sum(b["total"] for b in buckets.values()),
+        "buckets": buckets,
+    }
+
+
+@router.post("/auto-from-pod/{shipment_id}", response_model=InvoiceResponse)
+async def auto_invoice_from_pod_via_invoices(shipment_id: str):
+    """
+    Auto-generate invoice from POD via the invoices endpoint.
+    Delegates to the billing auto-from-pod logic.
+    """
+    from app.api.v1.billing import auto_invoice_from_pod
+    result = await auto_invoice_from_pod(shipment_id)
+
+    # Re-read the created invoice to return full InvoiceResponse
+    invoice_doc = await get_database().invoices.find_one({"_id": ObjectId(result.id)})
+    if not invoice_doc:
+        raise HTTPException(status_code=500, detail="Invoice created but not found")
+
+    return invoice_to_response(Invoice(**invoice_doc))
+
+
 @router.post("/from-shipment/{shipment_id}", response_model=InvoiceResponse)
 async def create_invoice_from_shipment(shipment_id: str):
     """Create an invoice from a delivered shipment."""

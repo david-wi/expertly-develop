@@ -19,7 +19,6 @@ import {
   Download,
   Loader2,
   Scissors,
-  Combine,
   Wrench,
   Fuel,
   Save,
@@ -86,7 +85,7 @@ export default function ShipmentDetail() {
 
   // Equipment assignment state
   const [showEquipmentPanel, setShowEquipmentPanel] = useState(false)
-  const [equipmentList, setEquipmentList] = useState<EquipmentItem[]>([])
+  const [_equipmentList, _setEquipmentList] = useState<EquipmentItem[]>([])
   const [trailerNumber, setTrailerNumber] = useState('')
   const [assigningEquipment, setAssigningEquipment] = useState(false)
 

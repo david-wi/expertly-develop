@@ -18,6 +18,10 @@ import {
   Mail,
   Star,
   MapPin,
+  BarChart3,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
 } from 'lucide-react'
 import { api } from '../services/api'
 import {
@@ -27,11 +31,14 @@ import {
   RateIndex,
   LoadBoardProvider,
   PostingStatus,
+  SpotRateComparison,
+  RateTrends,
+  RateTrendPoint,
   LOADBOARD_PROVIDER_LABELS,
   POSTING_STATUS_LABELS,
 } from '../types'
 
-type TabType = 'postings' | 'search' | 'rates' | 'settings'
+type TabType = 'postings' | 'search' | 'rates' | 'spot_market' | 'dat' | 'truckstop' | 'settings'
 
 export default function LoadBoards() {
   const [activeTab, setActiveTab] = useState<TabType>('postings')
@@ -53,6 +60,9 @@ export default function LoadBoards() {
             { id: 'postings', label: 'My Postings', icon: Radio },
             { id: 'search', label: 'Find Carriers', icon: Search },
             { id: 'rates', label: 'Market Rates', icon: TrendingUp },
+            { id: 'spot_market', label: 'Spot vs Contract', icon: BarChart3 },
+            { id: 'dat', label: 'DAT', icon: ExternalLink },
+            { id: 'truckstop', label: 'Truckstop', icon: ExternalLink },
             { id: 'settings', label: 'Settings', icon: Settings },
           ].map((tab) => (
             <button
@@ -76,6 +86,9 @@ export default function LoadBoards() {
         {activeTab === 'postings' && <PostingsTab />}
         {activeTab === 'search' && <CarrierSearchTab />}
         {activeTab === 'rates' && <MarketRatesTab />}
+        {activeTab === 'spot_market' && <SpotMarketTab />}
+        {activeTab === 'dat' && <DATIntegrationTab />}
+        {activeTab === 'truckstop' && <TruckstopIntegrationTab />}
         {activeTab === 'settings' && <SettingsTab />}
       </div>
     </div>
@@ -643,6 +656,576 @@ function MarketRatesTab() {
           <p className="mt-1 text-sm text-gray-500">
             Enter a lane to see current market rates from DAT and Truckstop.
           </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ==================== DAT Integration Tab ====================
+
+function DATIntegrationTab() {
+  const [postForm, setPostForm] = useState({
+    shipment_id: '',
+    origin_city: '',
+    origin_state: '',
+    destination_city: '',
+    destination_state: '',
+    equipment_type: 'van',
+    posted_rate: '',
+  })
+  const [searchForm, setSearchForm] = useState({
+    origin_city: '',
+    origin_state: '',
+    destination_city: '',
+    destination_state: '',
+    equipment_type: 'van',
+  })
+  const [postResult, setPostResult] = useState<any>(null)
+  const [searchResults, setSearchResults] = useState<any>(null)
+  const [rateResults, setRateResults] = useState<any[]>([])
+
+  const postMutation = useMutation({
+    mutationFn: () => api.datPostLoad({
+      ...postForm,
+      posted_rate: postForm.posted_rate ? Number(postForm.posted_rate) * 100 : undefined,
+    }),
+    onSuccess: (data) => setPostResult(data),
+  })
+
+  const searchMutation = useMutation({
+    mutationFn: () => api.datSearchCarriers(searchForm),
+    onSuccess: (data) => setSearchResults(data),
+  })
+
+  const rateMutation = useMutation({
+    mutationFn: () => api.datRateLookup(searchForm),
+    onSuccess: (data) => setRateResults(data),
+  })
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <span className="text-blue-700 font-bold text-sm">DAT</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">DAT Power Integration</h3>
+            <p className="text-sm text-gray-500">Post loads, search carriers, and get RateView data from DAT</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Post Load to DAT */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 className="text-md font-medium text-gray-900 mb-4">Post Load to DAT</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Shipment ID</label>
+            <input type="text" value={postForm.shipment_id} onChange={(e) => setPostForm({ ...postForm, shipment_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="SHP-..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+            <input type="text" value={postForm.origin_city} onChange={(e) => setPostForm({ ...postForm, origin_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Chicago" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin State</label>
+            <input type="text" value={postForm.origin_state} onChange={(e) => setPostForm({ ...postForm, origin_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="IL" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rate ($)</label>
+            <input type="number" value={postForm.posted_rate} onChange={(e) => setPostForm({ ...postForm, posted_rate: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="2500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest City</label>
+            <input type="text" value={postForm.destination_city} onChange={(e) => setPostForm({ ...postForm, destination_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Dallas" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest State</label>
+            <input type="text" value={postForm.destination_state} onChange={(e) => setPostForm({ ...postForm, destination_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="TX" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Equipment</label>
+            <select value={postForm.equipment_type} onChange={(e) => setPostForm({ ...postForm, equipment_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+              <option value="van">Van</option><option value="reefer">Reefer</option><option value="flatbed">Flatbed</option>
+            </select>
+          </div>
+        </div>
+        <button onClick={() => postMutation.mutate()} disabled={postMutation.isPending || !postForm.shipment_id}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">
+          {postMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}
+          Post to DAT
+        </button>
+        {postResult && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+            Load posted successfully. Posting #{postResult.posting_number} - Status: {postResult.status}
+          </div>
+        )}
+      </div>
+
+      {/* Search Carriers on DAT */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 className="text-md font-medium text-gray-900 mb-4">Search DAT Carriers</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+            <input type="text" value={searchForm.origin_city} onChange={(e) => setSearchForm({ ...searchForm, origin_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Chicago" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin State</label>
+            <input type="text" value={searchForm.origin_state} onChange={(e) => setSearchForm({ ...searchForm, origin_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="IL" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest City</label>
+            <input type="text" value={searchForm.destination_city} onChange={(e) => setSearchForm({ ...searchForm, destination_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Dallas" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest State</label>
+            <input type="text" value={searchForm.destination_state} onChange={(e) => setSearchForm({ ...searchForm, destination_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="TX" maxLength={2} />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => searchMutation.mutate()} disabled={searchMutation.isPending || !searchForm.origin_state}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm">
+            {searchMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            Search Carriers
+          </button>
+          <button onClick={() => rateMutation.mutate()} disabled={rateMutation.isPending || !searchForm.origin_city}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 text-sm">
+            {rateMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+            Rate Lookup
+          </button>
+        </div>
+        {searchResults && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm font-medium text-gray-900">{searchResults.result_count} carriers found on DAT</p>
+            {searchResults.results?.map((c: any, i: number) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                <div><span className="font-medium text-sm">{c.carrier_name}</span> {c.mc_number && <span className="text-xs text-gray-500 ml-2">MC#{c.mc_number}</span>}</div>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  {c.truck_count && <span>{c.truck_count} trucks</span>}
+                  {c.contact_phone && <span>{c.contact_phone}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {rateResults.length > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            {rateResults.map((r: any, i: number) => (
+              <div key={i} className="p-4 bg-blue-50 rounded-lg text-center">
+                <p className="text-xs text-gray-500">DAT Rate/Mile</p>
+                <p className="text-lg font-bold text-blue-700">${r.rate_per_mile_avg?.toFixed(2) || '-'}</p>
+                <p className="text-xs text-gray-400">{r.load_count || 0} loads, {r.truck_count || 0} trucks</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ==================== Truckstop Integration Tab ====================
+
+function TruckstopIntegrationTab() {
+  const [postForm, setPostForm] = useState({
+    shipment_id: '',
+    origin_city: '',
+    origin_state: '',
+    destination_city: '',
+    destination_state: '',
+    equipment_type: 'van',
+    posted_rate: '',
+  })
+  const [searchForm, setSearchForm] = useState({
+    origin_city: '',
+    origin_state: '',
+    destination_city: '',
+    destination_state: '',
+    equipment_type: 'van',
+  })
+  const [postResult, setPostResult] = useState<any>(null)
+  const [searchResults, setSearchResults] = useState<any>(null)
+  const [rateResults, setRateResults] = useState<any[]>([])
+
+  const postMutation = useMutation({
+    mutationFn: () => api.truckstopPostLoad({
+      ...postForm,
+      posted_rate: postForm.posted_rate ? Number(postForm.posted_rate) * 100 : undefined,
+    }),
+    onSuccess: (data) => setPostResult(data),
+  })
+
+  const searchMutation = useMutation({
+    mutationFn: () => api.truckstopSearch(searchForm),
+    onSuccess: (data) => setSearchResults(data),
+  })
+
+  const rateMutation = useMutation({
+    mutationFn: () => api.truckstopRates(searchForm),
+    onSuccess: (data) => setRateResults(data),
+  })
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+            <span className="text-orange-700 font-bold text-sm">TS</span>
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900">Truckstop.com Integration</h3>
+            <p className="text-sm text-gray-500">Post loads, search carriers, and get rate data from Truckstop</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Post Load to Truckstop */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 className="text-md font-medium text-gray-900 mb-4">Post Load to Truckstop</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Shipment ID</label>
+            <input type="text" value={postForm.shipment_id} onChange={(e) => setPostForm({ ...postForm, shipment_id: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="SHP-..." />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+            <input type="text" value={postForm.origin_city} onChange={(e) => setPostForm({ ...postForm, origin_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Chicago" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin State</label>
+            <input type="text" value={postForm.origin_state} onChange={(e) => setPostForm({ ...postForm, origin_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="IL" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rate ($)</label>
+            <input type="number" value={postForm.posted_rate} onChange={(e) => setPostForm({ ...postForm, posted_rate: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="2500" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest City</label>
+            <input type="text" value={postForm.destination_city} onChange={(e) => setPostForm({ ...postForm, destination_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Dallas" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest State</label>
+            <input type="text" value={postForm.destination_state} onChange={(e) => setPostForm({ ...postForm, destination_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="TX" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Equipment</label>
+            <select value={postForm.equipment_type} onChange={(e) => setPostForm({ ...postForm, equipment_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+              <option value="van">Van</option><option value="reefer">Reefer</option><option value="flatbed">Flatbed</option>
+            </select>
+          </div>
+        </div>
+        <button onClick={() => postMutation.mutate()} disabled={postMutation.isPending || !postForm.shipment_id}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 text-sm">
+          {postMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Radio className="w-4 h-4" />}
+          Post to Truckstop
+        </button>
+        {postResult && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-700">
+            Load posted successfully. Posting #{postResult.posting_number} - Status: {postResult.status}
+          </div>
+        )}
+      </div>
+
+      {/* Search Carriers on Truckstop */}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h4 className="text-md font-medium text-gray-900 mb-4">Search Truckstop Carriers</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+            <input type="text" value={searchForm.origin_city} onChange={(e) => setSearchForm({ ...searchForm, origin_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Chicago" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin State</label>
+            <input type="text" value={searchForm.origin_state} onChange={(e) => setSearchForm({ ...searchForm, origin_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="IL" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest City</label>
+            <input type="text" value={searchForm.destination_city} onChange={(e) => setSearchForm({ ...searchForm, destination_city: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="Dallas" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest State</label>
+            <input type="text" value={searchForm.destination_state} onChange={(e) => setSearchForm({ ...searchForm, destination_state: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm" placeholder="TX" maxLength={2} />
+          </div>
+        </div>
+        <div className="flex gap-3">
+          <button onClick={() => searchMutation.mutate()} disabled={searchMutation.isPending || !searchForm.origin_state}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 disabled:opacity-50 text-sm">
+            {searchMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+            Search Carriers
+          </button>
+          <button onClick={() => rateMutation.mutate()} disabled={rateMutation.isPending || !searchForm.origin_city}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50 text-sm">
+            {rateMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+            Rate Lookup
+          </button>
+        </div>
+        {searchResults && (
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <p className="text-sm font-medium text-gray-900">{searchResults.result_count} carriers found on Truckstop</p>
+            {searchResults.results?.map((c: any, i: number) => (
+              <div key={i} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-0">
+                <div><span className="font-medium text-sm">{c.carrier_name}</span> {c.mc_number && <span className="text-xs text-gray-500 ml-2">MC#{c.mc_number}</span>}</div>
+                <div className="flex items-center gap-4 text-sm text-gray-500">
+                  {c.truck_count && <span>{c.truck_count} trucks</span>}
+                  {c.contact_phone && <span>{c.contact_phone}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {rateResults.length > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            {rateResults.map((r: any, i: number) => (
+              <div key={i} className="p-4 bg-orange-50 rounded-lg text-center">
+                <p className="text-xs text-gray-500">Truckstop Rate/Mile</p>
+                <p className="text-lg font-bold text-orange-700">${r.rate_per_mile_avg?.toFixed(2) || '-'}</p>
+                <p className="text-xs text-gray-400">{r.load_count || 0} loads, {r.truck_count || 0} trucks</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ==================== Spot Market Tab ====================
+
+function SpotMarketTab() {
+  const [spotParams, setSpotParams] = useState({
+    origin_city: '',
+    origin_state: '',
+    destination_city: '',
+    destination_state: '',
+    equipment_type: 'van',
+  })
+  const [comparison, setComparison] = useState<SpotRateComparison | null>(null)
+  const [trends, setTrends] = useState<RateTrends | null>(null)
+
+  const spotMutation = useMutation({
+    mutationFn: async () => {
+      const spotData = await api.getSpotRates(spotParams)
+      const lane = `${spotParams.origin_city}, ${spotParams.origin_state} -> ${spotParams.destination_city}, ${spotParams.destination_state}`
+      const trendData = await api.getRateTrends({
+        lane,
+        equipment_type: spotParams.equipment_type,
+        days: 90,
+      })
+      return { spot: spotData, trends: trendData }
+    },
+    onSuccess: ({ spot, trends: trendData }) => {
+      setComparison(spot)
+      setTrends(trendData)
+    },
+  })
+
+  const formatDollar = (cents: number) => `$${(cents / 100).toFixed(2)}`
+  const formatRpm = (rpm?: number) => (rpm ? `$${rpm.toFixed(2)}/mi` : '-')
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-2">Spot vs Contract Rate Comparison</h3>
+        <p className="text-sm text-gray-500 mb-4">Compare real-time spot market rates against your contract rates</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin City</label>
+            <input type="text" value={spotParams.origin_city} onChange={(e) => setSpotParams({ ...spotParams, origin_city: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" placeholder="Chicago" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Origin State</label>
+            <input type="text" value={spotParams.origin_state} onChange={(e) => setSpotParams({ ...spotParams, origin_state: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" placeholder="IL" maxLength={2} />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest City</label>
+            <input type="text" value={spotParams.destination_city} onChange={(e) => setSpotParams({ ...spotParams, destination_city: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" placeholder="Dallas" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Dest State</label>
+            <input type="text" value={spotParams.destination_state} onChange={(e) => setSpotParams({ ...spotParams, destination_state: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500" placeholder="TX" maxLength={2} />
+          </div>
+        </div>
+        <div className="mt-4 flex items-center justify-between">
+          <select value={spotParams.equipment_type} onChange={(e) => setSpotParams({ ...spotParams, equipment_type: e.target.value })} className="px-3 py-2 border border-gray-300 rounded-md focus:ring-emerald-500 focus:border-emerald-500">
+            <option value="van">Van</option>
+            <option value="reefer">Reefer</option>
+            <option value="flatbed">Flatbed</option>
+            <option value="step_deck">Step Deck</option>
+          </select>
+          <button onClick={() => spotMutation.mutate()} disabled={spotMutation.isPending || !spotParams.origin_city || !spotParams.destination_city} className="inline-flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 disabled:opacity-50">
+            {spotMutation.isPending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <BarChart3 className="w-4 h-4" />}
+            Compare Rates
+          </button>
+        </div>
+      </div>
+
+      {comparison && (
+        <div className={`rounded-lg border p-4 ${comparison.recommendation === 'spot' ? 'bg-blue-50 border-blue-200' : 'bg-emerald-50 border-emerald-200'}`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${comparison.recommendation === 'spot' ? 'bg-blue-100' : 'bg-emerald-100'}`}>
+              {comparison.recommendation === 'spot' ? <TrendingUp className="w-5 h-5 text-blue-600" /> : <CheckCircle className="w-5 h-5 text-emerald-600" />}
+            </div>
+            <div>
+              <div className="font-medium text-gray-900">AI Recommendation: Use {comparison.recommendation === 'spot' ? 'Spot Market' : 'Contract Rate'}</div>
+              <div className="text-sm text-gray-600">
+                {comparison.recommendation === 'spot'
+                  ? `Spot rates are lower for ${comparison.lane}. Market avg: ${formatRpm(comparison.market_average.rate_per_mile)}`
+                  : `Contract rate is more favorable for ${comparison.lane}. Market avg: ${formatRpm(comparison.market_average.rate_per_mile)}`}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {comparison && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingUp className="w-5 h-5 text-blue-600" />
+              <h4 className="text-lg font-semibold text-gray-900">Spot Market Rates</h4>
+            </div>
+            {comparison.spot_rates.length > 0 ? (
+              <div className="space-y-4">
+                {comparison.spot_rates.map((sr, idx) => (
+                  <div key={idx} className="border border-gray-100 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">{LOADBOARD_PROVIDER_LABELS[sr.provider as LoadBoardProvider] || sr.provider}</span>
+                      <span className="text-xs text-gray-500">{new Date(sr.fetched_at).toLocaleDateString()}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                      <div><div className="text-xs text-gray-500">Low</div><div className="text-lg font-medium text-red-600">{formatRpm(sr.rate_per_mile_low)}</div></div>
+                      <div><div className="text-xs text-gray-500">Average</div><div className="text-xl font-bold text-blue-600">{formatRpm(sr.rate_per_mile_avg)}</div></div>
+                      <div><div className="text-xs text-gray-500">High</div><div className="text-lg font-medium text-emerald-600">{formatRpm(sr.rate_per_mile_high)}</div></div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                      <span>{sr.load_count || 0} loads</span>
+                      <span>{sr.truck_count || 0} trucks</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500 text-sm">No spot rate data available</div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
+              <h4 className="text-lg font-semibold text-gray-900">Contract Rates</h4>
+            </div>
+            {comparison.contract_rates.length > 0 ? (
+              <div className="space-y-4">
+                {comparison.contract_rates.map((cr, idx) => (
+                  <div key={idx} className="border border-gray-100 rounded-lg p-4">
+                    <div className="font-medium text-gray-900 mb-2">{cr.rate_table_name}</div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {cr.rate_per_mile && <div><div className="text-xs text-gray-500">Rate/Mile</div><div className="text-xl font-bold text-emerald-600">${cr.rate_per_mile.toFixed(2)}/mi</div></div>}
+                      {cr.flat_rate && <div><div className="text-xs text-gray-500">Flat Rate</div><div className="text-xl font-bold text-emerald-600">{formatDollar(cr.flat_rate)}</div></div>}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                      {cr.effective_date && <span>Effective: {new Date(cr.effective_date).toLocaleDateString()}</span>}
+                      {cr.expiration_date && <span>Expires: {new Date(cr.expiration_date).toLocaleDateString()}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6 text-gray-500 text-sm">No contract rates on file for this lane</div>
+            )}
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="text-sm font-medium text-gray-700 mb-2">Market Average</div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><div className="text-xs text-gray-500">Per Mile</div><div className="text-lg font-bold text-gray-900">{formatRpm(comparison.market_average.rate_per_mile)}</div></div>
+                <div><div className="text-xs text-gray-500">Flat Rate</div><div className="text-lg font-bold text-gray-900">{comparison.market_average.flat_rate ? formatDollar(comparison.market_average.flat_rate) : '-'}</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {trends && trends.data_points.length > 0 && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900">Rate Trends (Last {trends.days} Days)</h4>
+              <p className="text-sm text-gray-500">{trends.lane} - {trends.equipment_type}</p>
+            </div>
+            <span className="text-sm text-gray-500">{trends.total_points} data points</span>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex items-end gap-1 min-h-[200px] pb-6 relative">
+              {(() => {
+                const points = trends.data_points
+                const maxRate = Math.max(...points.map((p) => p.rate_per_mile_avg || 0))
+                const minRate = Math.min(...points.filter((p) => p.rate_per_mile_avg).map((p) => p.rate_per_mile_avg || 0))
+                const range = maxRate - minRate * 0.8 || 1
+                return points.map((point, idx) => {
+                  const rate = point.rate_per_mile_avg || 0
+                  const heightPct = maxRate > 0 ? ((rate - minRate * 0.8) / range) * 100 : 0
+                  const isLast = idx === points.length - 1
+                  const prevRate = idx > 0 ? points[idx - 1].rate_per_mile_avg || 0 : rate
+                  const dir = rate > prevRate ? 'up' : rate < prevRate ? 'down' : 'flat'
+                  return (
+                    <div key={idx} className="flex-1 flex flex-col items-center group relative min-w-[40px]">
+                      <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 bg-gray-900 text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap shadow-lg">
+                        <div className="font-medium">{new Date(point.date).toLocaleDateString()}</div>
+                        <div>Avg: ${rate.toFixed(2)}/mi</div>
+                        {point.rate_per_mile_low && <div>Low: ${point.rate_per_mile_low.toFixed(2)}/mi</div>}
+                        {point.rate_per_mile_high && <div>High: ${point.rate_per_mile_high.toFixed(2)}/mi</div>}
+                        {point.load_count && <div>{point.load_count} loads</div>}
+                        <div className="text-gray-400">{point.provider}</div>
+                      </div>
+                      <div className={`w-full rounded-t transition-all ${isLast ? 'bg-emerald-500' : dir === 'up' ? 'bg-red-400' : dir === 'down' ? 'bg-blue-400' : 'bg-gray-400'} hover:opacity-80`} style={{ height: `${Math.max(heightPct, 5)}%`, minHeight: '8px' }} />
+                      {(idx % Math.max(1, Math.floor(points.length / 8)) === 0 || isLast) && (
+                        <div className="text-[10px] text-gray-400 mt-1 transform -rotate-45 origin-top-left whitespace-nowrap">
+                          {new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+          </div>
+          <div className="flex items-center gap-6 mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
+            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-red-400 rounded" /><span>Rate increasing</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-blue-400 rounded" /><span>Rate decreasing</span></div>
+            <div className="flex items-center gap-1"><div className="w-3 h-3 bg-emerald-500 rounded" /><span>Current</span></div>
+          </div>
+        </div>
+      )}
+
+      {!comparison && !spotMutation.isPending && (
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <BarChart3 className="w-12 h-12 mx-auto text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">Spot vs Contract Analysis</h3>
+          <p className="mt-1 text-sm text-gray-500">Enter a lane to compare current spot rates with your contract rates and see AI recommendations.</p>
         </div>
       )}
     </div>

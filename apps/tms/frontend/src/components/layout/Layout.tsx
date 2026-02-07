@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -26,9 +26,12 @@ import {
   MessageSquare,
   Shield,
   Building,
+  Menu,
+  X,
 } from 'lucide-react'
 import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
 import { api } from '../../services/api'
+import NotificationCenter from '../NotificationCenter'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -64,6 +67,23 @@ const ORG_STORAGE_KEY = 'tms_selected_org_id'
 export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
+
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileMenuOpen(false)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => api.getCurrentUser(), [])
@@ -98,24 +118,63 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen bg-theme-bg">
-      <Sidebar
-        productCode="tms"
-        productName="TMS"
-        navigation={navigation}
-        currentPath={location.pathname}
-        buildInfo={
-          formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
-            <span className="text-[10px] text-gray-400 block text-right">
-              {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
+      {/* Mobile overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar wrapper: hidden on mobile, shown on desktop; slides in on mobile when open */}
+      <div className={`
+        fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out
+        lg:translate-x-0 lg:static lg:z-auto
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <Sidebar
+          productCode="tms"
+          productName="TMS"
+          navigation={navigation}
+          currentPath={location.pathname}
+          buildInfo={
+            formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP) && (
+              <span className="text-[10px] text-gray-400 block text-right">
+                {formatBuildTimestamp(import.meta.env.VITE_BUILD_TIMESTAMP)}
+              </span>
+            )
+          }
+          userMenu={userMenu}
+          navigate={navigate}
+          user={userWithOrg}
+        />
+      </div>
+
+      <div className="lg:pl-72 min-h-screen bg-theme-bg">
+        {/* Top bar with mobile menu toggle and notification center */}
+        <div className="sticky top-0 z-40 bg-theme-bg/80 backdrop-blur-sm border-b border-gray-200/50">
+          <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2">
+            {/* Mobile menu toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="lg:hidden p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
+            {/* Mobile page title */}
+            <span className="lg:hidden text-sm font-semibold text-gray-700 truncate">
+              {navigation.find(n => n.href === location.pathname)?.name || 'TMS'}
             </span>
-          )
-        }
-        userMenu={userMenu}
-        navigate={navigate}
-        user={userWithOrg}
-      />
-      <div className="pl-72 min-h-screen bg-theme-bg">
-        <main className="p-8">
+
+            <div className="flex items-center gap-2">
+              <NotificationCenter />
+            </div>
+          </div>
+        </div>
+        <main className="p-4 sm:p-6 lg:p-8">
           <Outlet context={{ selectedOrgId: currentOrg?.id ?? null }} />
         </main>
       </div>

@@ -613,6 +613,458 @@ async def get_market_rates(
     ]
 
 
+# ==================== DAT-Specific Endpoints ====================
+
+class DATPostLoadRequest(BaseModel):
+    """Schema for posting a load to DAT specifically."""
+    shipment_id: str
+    origin_city: Optional[str] = None
+    origin_state: Optional[str] = None
+    origin_zip: Optional[str] = None
+    destination_city: Optional[str] = None
+    destination_state: Optional[str] = None
+    destination_zip: Optional[str] = None
+    equipment_type: Optional[str] = None
+    weight_lbs: Optional[int] = None
+    length_ft: Optional[int] = None
+    posted_rate: Optional[int] = None
+    rate_per_mile: Optional[float] = None
+    pickup_date_start: Optional[datetime] = None
+    pickup_date_end: Optional[datetime] = None
+    delivery_date: Optional[datetime] = None
+    hazmat: bool = False
+    team_required: bool = False
+    special_instructions: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class DATSearchCarriersRequest(BaseModel):
+    """Schema for searching carriers on DAT."""
+    origin_city: Optional[str] = None
+    origin_state: Optional[str] = None
+    origin_radius_miles: int = 100
+    destination_city: Optional[str] = None
+    destination_state: Optional[str] = None
+    equipment_type: Optional[str] = None
+    pickup_date: Optional[datetime] = None
+    shipment_id: Optional[str] = None
+
+
+class DATRateLookupRequest(BaseModel):
+    """Schema for DAT RateView lookup."""
+    origin_city: str
+    origin_state: str
+    destination_city: str
+    destination_state: str
+    equipment_type: str = "van"
+    days: int = 15
+
+
+@router.post("/dat/post-load", response_model=PostingResponse)
+async def dat_post_load(data: DATPostLoadRequest):
+    """
+    Post a load to DAT Power load board.
+
+    Creates a posting and sends it specifically to DAT. This is a convenience
+    endpoint that wraps the generic posting flow with DAT-specific defaults.
+
+    TODO: Replace simulated response with actual DAT Power API integration
+    (requires DAT API credentials and OAuth2 flow).
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    shipment = await db.shipments.find_one({"_id": ObjectId(data.shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    count = await db.loadboard_postings.count_documents({})
+    posting_number = f"LBP-{datetime.utcnow().year}-{count + 1:05d}"
+
+    stops = shipment.get("stops", [])
+    origin_city = data.origin_city or (stops[0].get("city", "") if stops else "")
+    origin_state = data.origin_state or (stops[0].get("state", "") if stops else "")
+    dest_city = data.destination_city or (stops[-1].get("city", "") if len(stops) > 1 else "")
+    dest_state = data.destination_state or (stops[-1].get("state", "") if len(stops) > 1 else "")
+
+    posting = LoadBoardPosting(
+        posting_number=posting_number,
+        shipment_id=ObjectId(data.shipment_id),
+        status=PostingStatus.DRAFT,
+        origin_city=origin_city,
+        origin_state=origin_state,
+        origin_zip=data.origin_zip,
+        destination_city=dest_city,
+        destination_state=dest_state,
+        destination_zip=data.destination_zip,
+        equipment_type=data.equipment_type or shipment.get("equipment_type", "van"),
+        weight_lbs=data.weight_lbs or shipment.get("weight_lbs"),
+        length_ft=data.length_ft,
+        pickup_date_start=data.pickup_date_start or shipment.get("pickup_date"),
+        pickup_date_end=data.pickup_date_end,
+        delivery_date=data.delivery_date or shipment.get("delivery_date"),
+        posted_rate=data.posted_rate,
+        rate_per_mile=data.rate_per_mile,
+        hazmat=data.hazmat,
+        team_required=data.team_required,
+        special_instructions=data.special_instructions,
+        notes=data.notes,
+    )
+
+    result = await service.post_load(posting, [LoadBoardProvider.DAT])
+
+    return PostingResponse(
+        id=str(result.id),
+        posting_number=result.posting_number,
+        shipment_id=str(result.shipment_id),
+        status=result.status.value,
+        providers=[p.value for p in result.providers],
+        provider_post_ids=result.provider_post_ids,
+        origin_city=result.origin_city,
+        origin_state=result.origin_state,
+        destination_city=result.destination_city,
+        destination_state=result.destination_state,
+        equipment_type=result.equipment_type,
+        weight_lbs=result.weight_lbs,
+        pickup_date_start=result.pickup_date_start,
+        pickup_date_end=result.pickup_date_end,
+        delivery_date=result.delivery_date,
+        posted_rate=result.posted_rate,
+        rate_per_mile=result.rate_per_mile,
+        rate_type=result.rate_type,
+        posted_at=result.posted_at,
+        expires_at=result.expires_at,
+        view_count=result.view_count,
+        call_count=result.call_count,
+        bid_count=result.bid_count,
+        created_at=result.created_at,
+    )
+
+
+@router.post("/dat/search-carriers", response_model=CarrierSearchResponse)
+async def dat_search_carriers(data: DATSearchCarriersRequest):
+    """
+    Search for available carriers on DAT Power.
+
+    Searches DAT's carrier network for trucks available in the specified lane.
+
+    TODO: Replace simulated response with actual DAT Power API integration.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    search = await service.search_carriers(
+        origin_city=data.origin_city,
+        origin_state=data.origin_state,
+        origin_radius_miles=data.origin_radius_miles,
+        destination_city=data.destination_city,
+        destination_state=data.destination_state,
+        equipment_type=data.equipment_type,
+        pickup_date=data.pickup_date,
+        providers=[LoadBoardProvider.DAT],
+        shipment_id=data.shipment_id,
+    )
+
+    results = [
+        CarrierSearchResultResponse(
+            provider=r.provider.value,
+            provider_carrier_id=r.provider_carrier_id,
+            carrier_name=r.carrier_name,
+            mc_number=r.mc_number,
+            dot_number=r.dot_number,
+            contact_name=r.contact_name,
+            contact_phone=r.contact_phone,
+            contact_email=r.contact_email,
+            city=r.city,
+            state=r.state,
+            equipment_types=r.equipment_types,
+            rating=r.rating,
+            total_loads=r.total_loads,
+            on_time_percentage=r.on_time_percentage,
+            days_to_pay=r.days_to_pay,
+            truck_count=r.truck_count,
+            deadhead_miles=r.deadhead_miles,
+        )
+        for r in search.results
+    ]
+
+    return CarrierSearchResponse(
+        id=str(search.id),
+        result_count=search.result_count,
+        results=results,
+        searched_at=search.searched_at,
+    )
+
+
+@router.get("/dat/rate-lookup", response_model=List[RateIndexResponse])
+async def dat_rate_lookup(
+    origin_city: str,
+    origin_state: str,
+    destination_city: str,
+    destination_state: str,
+    equipment_type: str = "van",
+):
+    """
+    Look up market rates from DAT RateView.
+
+    Retrieves current lane rates from DAT's RateView product for pricing intelligence.
+
+    TODO: Replace simulated response with actual DAT RateView API integration.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    rates = await service.get_market_rates(
+        origin_city=origin_city,
+        origin_state=origin_state,
+        destination_city=destination_city,
+        destination_state=destination_state,
+        equipment_type=equipment_type,
+    )
+
+    # Filter to DAT only
+    dat_rates = [r for r in rates if r.provider == LoadBoardProvider.DAT]
+    if not dat_rates:
+        dat_rates = rates  # Fallback to all rates if no DAT-specific data
+
+    return [
+        RateIndexResponse(
+            provider=r.provider.value,
+            origin=f"{r.origin_city}, {r.origin_state}",
+            destination=f"{r.destination_city}, {r.destination_state}",
+            equipment_type=r.equipment_type,
+            rate_per_mile_low=r.rate_per_mile_low,
+            rate_per_mile_avg=r.rate_per_mile_avg,
+            rate_per_mile_high=r.rate_per_mile_high,
+            flat_rate_low=r.flat_rate_low,
+            flat_rate_avg=r.flat_rate_avg,
+            flat_rate_high=r.flat_rate_high,
+            load_count=r.load_count,
+            truck_count=r.truck_count,
+            date_range=f"{r.date_from.strftime('%Y-%m-%d')} to {r.date_to.strftime('%Y-%m-%d')}",
+            fetched_at=r.fetched_at,
+        )
+        for r in dat_rates
+    ]
+
+
+# ==================== Truckstop-Specific Endpoints ====================
+
+class TruckstopPostLoadRequest(BaseModel):
+    """Schema for posting a load to Truckstop."""
+    shipment_id: str
+    origin_city: Optional[str] = None
+    origin_state: Optional[str] = None
+    origin_zip: Optional[str] = None
+    destination_city: Optional[str] = None
+    destination_state: Optional[str] = None
+    destination_zip: Optional[str] = None
+    equipment_type: Optional[str] = None
+    weight_lbs: Optional[int] = None
+    length_ft: Optional[int] = None
+    posted_rate: Optional[int] = None
+    rate_per_mile: Optional[float] = None
+    pickup_date_start: Optional[datetime] = None
+    delivery_date: Optional[datetime] = None
+    hazmat: bool = False
+    special_instructions: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class TruckstopSearchRequest(BaseModel):
+    """Schema for searching carriers on Truckstop."""
+    origin_city: Optional[str] = None
+    origin_state: Optional[str] = None
+    origin_radius_miles: int = 150
+    destination_city: Optional[str] = None
+    destination_state: Optional[str] = None
+    equipment_type: Optional[str] = None
+    pickup_date: Optional[datetime] = None
+    shipment_id: Optional[str] = None
+
+
+@router.post("/truckstop/post-load", response_model=PostingResponse)
+async def truckstop_post_load(data: TruckstopPostLoadRequest):
+    """
+    Post a load to Truckstop.com load board.
+
+    Creates a posting and sends it specifically to Truckstop. This is a convenience
+    endpoint that wraps the generic posting flow with Truckstop-specific defaults.
+
+    TODO: Replace simulated response with actual Truckstop API integration.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    shipment = await db.shipments.find_one({"_id": ObjectId(data.shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    count = await db.loadboard_postings.count_documents({})
+    posting_number = f"LBP-{datetime.utcnow().year}-{count + 1:05d}"
+
+    stops = shipment.get("stops", [])
+    origin_city = data.origin_city or (stops[0].get("city", "") if stops else "")
+    origin_state = data.origin_state or (stops[0].get("state", "") if stops else "")
+    dest_city = data.destination_city or (stops[-1].get("city", "") if len(stops) > 1 else "")
+    dest_state = data.destination_state or (stops[-1].get("state", "") if len(stops) > 1 else "")
+
+    posting = LoadBoardPosting(
+        posting_number=posting_number,
+        shipment_id=ObjectId(data.shipment_id),
+        status=PostingStatus.DRAFT,
+        origin_city=origin_city,
+        origin_state=origin_state,
+        origin_zip=data.origin_zip,
+        destination_city=dest_city,
+        destination_state=dest_state,
+        destination_zip=data.destination_zip,
+        equipment_type=data.equipment_type or shipment.get("equipment_type", "van"),
+        weight_lbs=data.weight_lbs or shipment.get("weight_lbs"),
+        length_ft=data.length_ft,
+        pickup_date_start=data.pickup_date_start or shipment.get("pickup_date"),
+        delivery_date=data.delivery_date or shipment.get("delivery_date"),
+        posted_rate=data.posted_rate,
+        rate_per_mile=data.rate_per_mile,
+        hazmat=data.hazmat,
+        special_instructions=data.special_instructions,
+        notes=data.notes,
+    )
+
+    result = await service.post_load(posting, [LoadBoardProvider.TRUCKSTOP])
+
+    return PostingResponse(
+        id=str(result.id),
+        posting_number=result.posting_number,
+        shipment_id=str(result.shipment_id),
+        status=result.status.value,
+        providers=[p.value for p in result.providers],
+        provider_post_ids=result.provider_post_ids,
+        origin_city=result.origin_city,
+        origin_state=result.origin_state,
+        destination_city=result.destination_city,
+        destination_state=result.destination_state,
+        equipment_type=result.equipment_type,
+        weight_lbs=result.weight_lbs,
+        pickup_date_start=result.pickup_date_start,
+        pickup_date_end=result.pickup_date_end,
+        delivery_date=result.delivery_date,
+        posted_rate=result.posted_rate,
+        rate_per_mile=result.rate_per_mile,
+        rate_type=result.rate_type,
+        posted_at=result.posted_at,
+        expires_at=result.expires_at,
+        view_count=result.view_count,
+        call_count=result.call_count,
+        bid_count=result.bid_count,
+        created_at=result.created_at,
+    )
+
+
+@router.post("/truckstop/search", response_model=CarrierSearchResponse)
+async def truckstop_search_carriers(data: TruckstopSearchRequest):
+    """
+    Search for available carriers on Truckstop.com.
+
+    Searches Truckstop's network for trucks available in the specified lane.
+
+    TODO: Replace simulated response with actual Truckstop API integration.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    search = await service.search_carriers(
+        origin_city=data.origin_city,
+        origin_state=data.origin_state,
+        origin_radius_miles=data.origin_radius_miles,
+        destination_city=data.destination_city,
+        destination_state=data.destination_state,
+        equipment_type=data.equipment_type,
+        pickup_date=data.pickup_date,
+        providers=[LoadBoardProvider.TRUCKSTOP],
+        shipment_id=data.shipment_id,
+    )
+
+    results = [
+        CarrierSearchResultResponse(
+            provider=r.provider.value,
+            provider_carrier_id=r.provider_carrier_id,
+            carrier_name=r.carrier_name,
+            mc_number=r.mc_number,
+            dot_number=r.dot_number,
+            contact_name=r.contact_name,
+            contact_phone=r.contact_phone,
+            contact_email=r.contact_email,
+            city=r.city,
+            state=r.state,
+            equipment_types=r.equipment_types,
+            rating=r.rating,
+            total_loads=r.total_loads,
+            on_time_percentage=r.on_time_percentage,
+            days_to_pay=r.days_to_pay,
+            truck_count=r.truck_count,
+            deadhead_miles=r.deadhead_miles,
+        )
+        for r in search.results
+    ]
+
+    return CarrierSearchResponse(
+        id=str(search.id),
+        result_count=search.result_count,
+        results=results,
+        searched_at=search.searched_at,
+    )
+
+
+@router.get("/truckstop/rates", response_model=List[RateIndexResponse])
+async def truckstop_rate_lookup(
+    origin_city: str,
+    origin_state: str,
+    destination_city: str,
+    destination_state: str,
+    equipment_type: str = "van",
+):
+    """
+    Look up market rates from Truckstop.
+
+    TODO: Replace simulated response with actual Truckstop rate API integration.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    rates = await service.get_market_rates(
+        origin_city=origin_city,
+        origin_state=origin_state,
+        destination_city=destination_city,
+        destination_state=destination_state,
+        equipment_type=equipment_type,
+    )
+
+    truckstop_rates = [r for r in rates if r.provider == LoadBoardProvider.TRUCKSTOP]
+    if not truckstop_rates:
+        truckstop_rates = rates
+
+    return [
+        RateIndexResponse(
+            provider=r.provider.value,
+            origin=f"{r.origin_city}, {r.origin_state}",
+            destination=f"{r.destination_city}, {r.destination_state}",
+            equipment_type=r.equipment_type,
+            rate_per_mile_low=r.rate_per_mile_low,
+            rate_per_mile_avg=r.rate_per_mile_avg,
+            rate_per_mile_high=r.rate_per_mile_high,
+            flat_rate_low=r.flat_rate_low,
+            flat_rate_avg=r.flat_rate_avg,
+            flat_rate_high=r.flat_rate_high,
+            load_count=r.load_count,
+            truck_count=r.truck_count,
+            date_range=f"{r.date_from.strftime('%Y-%m-%d')} to {r.date_to.strftime('%Y-%m-%d')}",
+            fetched_at=r.fetched_at,
+        )
+        for r in truckstop_rates
+    ]
+
+
 @router.get("/rates/history")
 async def get_rate_history(
     origin_city: str,
@@ -649,3 +1101,190 @@ async def get_rate_history(
         })
 
     return history
+
+
+# ==================== Spot Market Rate Comparison ====================
+
+@router.get("/spot-rates")
+async def get_spot_rates(
+    origin_city: str,
+    origin_state: str,
+    destination_city: str,
+    destination_state: str,
+    equipment_type: str = "van",
+):
+    """
+    Get spot market rates from DAT and Truckstop with comparison.
+
+    Returns current spot rates from multiple providers alongside any
+    contract rates for the same lane, enabling rate comparison.
+    """
+    db = await get_database()
+    service = LoadBoardService(db)
+
+    # Get market rates from all providers
+    rates = await service.get_market_rates(
+        origin_city=origin_city,
+        origin_state=origin_state,
+        destination_city=destination_city,
+        destination_state=destination_state,
+        equipment_type=equipment_type,
+    )
+
+    # Look up any contract rates for this lane from rate tables
+    contract_rates = []
+    rate_tables = db.rate_tables.find({
+        "is_active": True,
+        "lanes": {
+            "$elemMatch": {
+                "$or": [
+                    {"origin_state": origin_state, "destination_state": destination_state},
+                    {"origin_city": origin_city, "destination_city": destination_city},
+                ]
+            }
+        }
+    })
+    async for rt in rate_tables:
+        for lane in rt.get("lanes", []):
+            if (lane.get("origin_state") == origin_state and lane.get("destination_state") == destination_state) or \
+               (lane.get("origin_city") == origin_city and lane.get("destination_city") == destination_city):
+                contract_rates.append({
+                    "rate_table_name": rt.get("name", ""),
+                    "customer_id": str(rt.get("customer_id", "")),
+                    "rate_per_mile": lane.get("rate_per_mile"),
+                    "flat_rate": lane.get("flat_rate"),
+                    "effective_date": lane.get("effective_date"),
+                    "expiration_date": lane.get("expiration_date"),
+                })
+
+    spot_data = []
+    for r in rates:
+        spot_data.append({
+            "provider": r.provider.value,
+            "origin": f"{r.origin_city}, {r.origin_state}",
+            "destination": f"{r.destination_city}, {r.destination_state}",
+            "equipment_type": r.equipment_type,
+            "rate_per_mile_low": r.rate_per_mile_low,
+            "rate_per_mile_avg": r.rate_per_mile_avg,
+            "rate_per_mile_high": r.rate_per_mile_high,
+            "flat_rate_low": r.flat_rate_low,
+            "flat_rate_avg": r.flat_rate_avg,
+            "flat_rate_high": r.flat_rate_high,
+            "load_count": r.load_count,
+            "truck_count": r.truck_count,
+            "fetched_at": r.fetched_at.isoformat() if hasattr(r.fetched_at, "isoformat") else str(r.fetched_at),
+        })
+
+    # Compute averages across providers
+    avg_rate_per_mile = 0
+    avg_flat_rate = 0
+    count = 0
+    for s in spot_data:
+        if s.get("rate_per_mile_avg"):
+            avg_rate_per_mile += s["rate_per_mile_avg"]
+            count += 1
+        if s.get("flat_rate_avg"):
+            avg_flat_rate += s["flat_rate_avg"]
+    if count > 0:
+        avg_rate_per_mile /= count
+        avg_flat_rate /= count
+
+    return {
+        "lane": f"{origin_city}, {origin_state} -> {destination_city}, {destination_state}",
+        "equipment_type": equipment_type,
+        "spot_rates": spot_data,
+        "contract_rates": contract_rates,
+        "market_average": {
+            "rate_per_mile": round(avg_rate_per_mile, 2),
+            "flat_rate": int(avg_flat_rate),
+        },
+        "recommendation": "contract" if contract_rates and avg_flat_rate > 0 and any(
+            cr.get("flat_rate", 0) < avg_flat_rate for cr in contract_rates
+        ) else "spot",
+    }
+
+
+@router.get("/rate-trends")
+async def get_rate_trends(
+    lane: str,  # format: "city,state-city,state"
+    equipment_type: str = "van",
+    days: int = Query(90, ge=7, le=365),
+):
+    """
+    Get historical rate trends for a specific lane.
+
+    Returns weekly aggregated rate data for charting trends.
+    """
+    db = await get_database()
+    from datetime import timedelta
+
+    # Parse lane
+    parts = lane.split("-")
+    if len(parts) != 2:
+        raise HTTPException(status_code=400, detail="Lane format should be 'city,state-city,state'")
+
+    origin_parts = parts[0].strip().split(",")
+    dest_parts = parts[1].strip().split(",")
+
+    origin_city = origin_parts[0].strip() if len(origin_parts) > 0 else ""
+    origin_state = origin_parts[1].strip() if len(origin_parts) > 1 else origin_parts[0].strip()
+    dest_city = dest_parts[0].strip() if len(dest_parts) > 0 else ""
+    dest_state = dest_parts[1].strip() if len(dest_parts) > 1 else dest_parts[0].strip()
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+
+    # Get from rate indexes
+    cursor = db.loadboard_rate_indexes.find({
+        "origin_state": {"$regex": origin_state, "$options": "i"},
+        "destination_state": {"$regex": dest_state, "$options": "i"},
+        "equipment_type": equipment_type,
+        "fetched_at": {"$gte": cutoff}
+    }).sort("fetched_at", 1)
+
+    data_points = []
+    async for doc in cursor:
+        data_points.append({
+            "date": doc["fetched_at"].strftime("%Y-%m-%d"),
+            "provider": doc.get("provider", ""),
+            "rate_per_mile_avg": doc.get("rate_per_mile_avg"),
+            "rate_per_mile_low": doc.get("rate_per_mile_low"),
+            "rate_per_mile_high": doc.get("rate_per_mile_high"),
+            "flat_rate_avg": doc.get("flat_rate_avg"),
+            "load_count": doc.get("load_count"),
+            "truck_count": doc.get("truck_count"),
+        })
+
+    # Also include completed tender rates for this lane as actual data points
+    tender_pipeline = [
+        {"$match": {"status": "accepted", "created_at": {"$gte": cutoff}}},
+        {"$lookup": {
+            "from": "shipments",
+            "localField": "shipment_id",
+            "foreignField": "_id",
+            "as": "shipment",
+        }},
+        {"$unwind": {"path": "$shipment", "preserveNullAndEmptyArrays": True}},
+    ]
+    tender_cursor = db.tenders.aggregate(tender_pipeline)
+    async for t in tender_cursor:
+        ship = t.get("shipment", {})
+        stops = ship.get("stops", [])
+        o = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+        d = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+        if o.get("state", "").upper() == origin_state.upper() and d.get("state", "").upper() == dest_state.upper():
+            data_points.append({
+                "date": t["created_at"].strftime("%Y-%m-%d") if hasattr(t.get("created_at"), "strftime") else "",
+                "provider": "actual",
+                "rate_per_mile_avg": None,
+                "flat_rate_avg": t.get("offered_rate"),
+                "load_count": 1,
+                "truck_count": None,
+            })
+
+    return {
+        "lane": lane,
+        "equipment_type": equipment_type,
+        "days": days,
+        "data_points": data_points,
+        "total_points": len(data_points),
+    }

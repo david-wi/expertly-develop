@@ -461,6 +461,287 @@ async def delete_mapping(mapping_id: str):
     return {"status": "deleted"}
 
 
+# ==================== QuickBooks Specific Sync Endpoints ====================
+
+
+class QuickBooksSyncInvoiceResponse(BaseModel):
+    """Response for syncing a single invoice to QuickBooks."""
+    invoice_id: str
+    quickbooks_invoice_id: Optional[str] = None
+    sync_status: str
+    synced_at: Optional[datetime] = None
+    error_message: Optional[str] = None
+
+
+class QuickBooksSyncStatusResponse(BaseModel):
+    """Response for QuickBooks real-time sync status dashboard."""
+    is_connected: bool
+    company_name: Optional[str] = None
+    last_sync_at: Optional[datetime] = None
+    auto_sync_enabled: bool = False
+    sync_interval_minutes: int = 60
+    pending_invoices: int = 0
+    pending_payments: int = 0
+    synced_customers: int = 0
+    synced_invoices: int = 0
+    synced_payments: int = 0
+    synced_vendors: int = 0
+    recent_errors: List[dict] = []
+    next_sync_at: Optional[datetime] = None
+
+
+class CustomerMappingCreate(BaseModel):
+    """Request to create/update a customer mapping between TMS and QuickBooks."""
+    tms_customer_id: str
+    tms_customer_name: Optional[str] = None
+    quickbooks_customer_id: str
+    quickbooks_customer_name: Optional[str] = None
+
+
+class CustomerMappingResponse(BaseModel):
+    """Response for a customer mapping."""
+    id: str
+    tms_customer_id: str
+    tms_customer_name: Optional[str] = None
+    quickbooks_customer_id: str
+    quickbooks_customer_name: Optional[str] = None
+    last_synced_at: Optional[datetime] = None
+    sync_error: Optional[str] = None
+
+
+@router.post("/quickbooks/sync-invoice/{invoice_id}", response_model=QuickBooksSyncInvoiceResponse)
+async def quickbooks_sync_invoice(invoice_id: str):
+    """
+    Sync a single TMS invoice to QuickBooks Online.
+
+    This endpoint sends a specific invoice to QuickBooks, creating or updating
+    the corresponding QuickBooks invoice. The customer must be mapped first.
+
+    TODO: Replace simulated sync with actual QuickBooks API integration
+    (requires QuickBooks OAuth2 tokens and API client).
+    """
+    db = await get_database()
+
+    # Verify invoice exists
+    invoice = await db.invoices.find_one({"_id": ObjectId(invoice_id)})
+    if not invoice:
+        raise HTTPException(status_code=404, detail="Invoice not found")
+
+    # Check if QuickBooks is connected
+    connection = await db.accounting_connections.find_one({"provider": "quickbooks"})
+    if not connection or not connection.get("is_connected"):
+        raise HTTPException(status_code=400, detail="QuickBooks is not connected. Please connect first.")
+
+    # Check if customer has a mapping
+    customer_mapping = await db.accounting_mappings.find_one({
+        "entity_type": "customer",
+        "tms_entity_id": str(invoice.get("customer_id", "")),
+        "provider": "quickbooks",
+    })
+
+    # Check existing invoice mapping
+    existing_mapping = await db.accounting_mappings.find_one({
+        "entity_type": "invoice",
+        "tms_entity_id": invoice_id,
+        "provider": "quickbooks",
+    })
+
+    # TODO: Actually call QuickBooks API to create/update invoice
+    # For now, simulate a successful sync
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+
+    # Simulated QuickBooks invoice ID
+    qb_invoice_id = existing_mapping.get("provider_entity_id") if existing_mapping else f"QBI-{int(now.timestamp())}"
+
+    # Upsert mapping
+    await db.accounting_mappings.update_one(
+        {"entity_type": "invoice", "tms_entity_id": invoice_id, "provider": "quickbooks"},
+        {"$set": {
+            "entity_type": "invoice",
+            "tms_entity_id": invoice_id,
+            "tms_entity_name": invoice.get("invoice_number"),
+            "provider": "quickbooks",
+            "provider_entity_id": qb_invoice_id,
+            "provider_entity_name": f"INV-{invoice.get('invoice_number', '')}",
+            "last_synced_at": now,
+            "sync_error": None,
+            "updated_at": now,
+        }},
+        upsert=True,
+    )
+
+    # Update invoice with QB sync status
+    await db.invoices.update_one(
+        {"_id": ObjectId(invoice_id)},
+        {"$set": {
+            "quickbooks_sync_status": "synced",
+            "quickbooks_invoice_id": qb_invoice_id,
+            "quickbooks_synced_at": now,
+            "updated_at": now,
+        }},
+    )
+
+    return QuickBooksSyncInvoiceResponse(
+        invoice_id=invoice_id,
+        quickbooks_invoice_id=qb_invoice_id,
+        sync_status="synced",
+        synced_at=now,
+    )
+
+
+@router.get("/quickbooks/sync-status", response_model=QuickBooksSyncStatusResponse)
+async def quickbooks_sync_status():
+    """
+    Get real-time QuickBooks sync status dashboard.
+
+    Returns comprehensive sync status including connection health,
+    sync counts by entity type, pending items, and recent errors.
+    """
+    db = await get_database()
+
+    # Get connection
+    connection = await db.accounting_connections.find_one({"provider": "quickbooks"})
+
+    if not connection or not connection.get("is_connected"):
+        return QuickBooksSyncStatusResponse(is_connected=False)
+
+    # Count synced entities by type
+    synced_customers = await db.accounting_mappings.count_documents({
+        "entity_type": "customer", "provider": "quickbooks"
+    })
+    synced_invoices = await db.accounting_mappings.count_documents({
+        "entity_type": "invoice", "provider": "quickbooks"
+    })
+    synced_payments = await db.accounting_mappings.count_documents({
+        "entity_type": "payment", "provider": "quickbooks"
+    })
+    synced_vendors = await db.accounting_mappings.count_documents({
+        "entity_type": "vendor", "provider": "quickbooks"
+    })
+
+    # Count pending (unsynced) invoices
+    all_invoices = await db.invoices.count_documents({"status": {"$in": ["sent", "paid"]}})
+    pending_invoices = max(0, all_invoices - synced_invoices)
+
+    # Get recent sync errors
+    error_mappings = await db.accounting_mappings.find({
+        "provider": "quickbooks",
+        "sync_error": {"$ne": None},
+    }).sort("updated_at", -1).limit(5).to_list(5)
+
+    recent_errors = [
+        {
+            "entity_type": m.get("entity_type"),
+            "entity_name": m.get("tms_entity_name"),
+            "error": m.get("sync_error"),
+            "occurred_at": m.get("updated_at"),
+        }
+        for m in error_mappings
+    ]
+
+    # Calculate next sync time
+    from datetime import timedelta
+    next_sync_at = None
+    if connection.get("auto_sync_enabled") and connection.get("last_sync_at"):
+        interval = connection.get("sync_interval_minutes", 60)
+        next_sync_at = connection["last_sync_at"] + timedelta(minutes=interval)
+
+    return QuickBooksSyncStatusResponse(
+        is_connected=True,
+        company_name=connection.get("company_name"),
+        last_sync_at=connection.get("last_sync_at"),
+        auto_sync_enabled=connection.get("auto_sync_enabled", False),
+        sync_interval_minutes=connection.get("sync_interval_minutes", 60),
+        pending_invoices=pending_invoices,
+        pending_payments=0,
+        synced_customers=synced_customers,
+        synced_invoices=synced_invoices,
+        synced_payments=synced_payments,
+        synced_vendors=synced_vendors,
+        recent_errors=recent_errors,
+        next_sync_at=next_sync_at,
+    )
+
+
+@router.post("/quickbooks/customer-mapping", response_model=CustomerMappingResponse)
+async def create_customer_mapping(data: CustomerMappingCreate):
+    """
+    Create or update a customer mapping between TMS and QuickBooks.
+
+    Maps a TMS customer to their corresponding QuickBooks customer entity,
+    enabling automatic invoice and payment synchronization.
+    """
+    db = await get_database()
+
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+
+    # Verify TMS customer exists
+    customer = await db.customers.find_one({"_id": ObjectId(data.tms_customer_id)})
+    if not customer:
+        raise HTTPException(status_code=404, detail="TMS customer not found")
+
+    tms_name = data.tms_customer_name or customer.get("name", "")
+
+    # Upsert mapping
+    result = await db.accounting_mappings.find_one_and_update(
+        {
+            "entity_type": "customer",
+            "tms_entity_id": data.tms_customer_id,
+            "provider": "quickbooks",
+        },
+        {"$set": {
+            "entity_type": "customer",
+            "tms_entity_id": data.tms_customer_id,
+            "tms_entity_name": tms_name,
+            "provider": "quickbooks",
+            "provider_entity_id": data.quickbooks_customer_id,
+            "provider_entity_name": data.quickbooks_customer_name,
+            "last_synced_at": now,
+            "sync_error": None,
+            "updated_at": now,
+        }},
+        upsert=True,
+        return_document=True,
+    )
+
+    return CustomerMappingResponse(
+        id=str(result["_id"]),
+        tms_customer_id=data.tms_customer_id,
+        tms_customer_name=tms_name,
+        quickbooks_customer_id=data.quickbooks_customer_id,
+        quickbooks_customer_name=data.quickbooks_customer_name,
+        last_synced_at=now,
+    )
+
+
+@router.get("/quickbooks/customer-mappings", response_model=List[CustomerMappingResponse])
+async def list_customer_mappings():
+    """List all customer mappings between TMS and QuickBooks."""
+    db = await get_database()
+
+    cursor = db.accounting_mappings.find({
+        "entity_type": "customer",
+        "provider": "quickbooks",
+    }).sort("tms_entity_name", 1)
+
+    mappings = await cursor.to_list(500)
+
+    return [
+        CustomerMappingResponse(
+            id=str(m["_id"]),
+            tms_customer_id=m.get("tms_entity_id", ""),
+            tms_customer_name=m.get("tms_entity_name"),
+            quickbooks_customer_id=m.get("provider_entity_id", ""),
+            quickbooks_customer_name=m.get("provider_entity_name"),
+            last_synced_at=m.get("last_synced_at"),
+            sync_error=m.get("sync_error"),
+        )
+        for m in mappings
+    ]
+
+
 # ==================== Stats ====================
 
 @router.get("/stats")

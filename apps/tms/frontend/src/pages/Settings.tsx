@@ -15,6 +15,12 @@ import {
   RefreshCw,
   ExternalLink,
   AlertCircle,
+  ArrowRightLeft,
+  Plus,
+  Trash2,
+  Clock,
+  Search,
+  Users,
 } from 'lucide-react'
 import { api } from '../services/api'
 import { SYNC_STATUS_LABELS } from '../types'
@@ -742,6 +748,12 @@ function IntegrationsTab() {
         )}
       </div>
 
+      {/* QuickBooks Sync Dashboard */}
+      {connection?.is_connected && <QuickBooksSyncDashboard />}
+
+      {/* Customer Mapping */}
+      {connection?.is_connected && <CustomerMappingSection />}
+
       {/* Future Integrations */}
       <div className="border border-gray-200 rounded-lg p-6 opacity-60">
         <div className="flex items-center gap-4">
@@ -757,3 +769,345 @@ function IntegrationsTab() {
     </div>
   )
 }
+
+// QuickBooks Sync Dashboard Component
+function QuickBooksSyncDashboard() {
+  const { data: syncStatus, isLoading } = useQuery({
+    queryKey: ['qb-sync-status'],
+    queryFn: () => api.quickbooksSyncStatus(),
+    refetchInterval: 30000, // Refresh every 30 seconds
+  })
+
+  const syncInvoiceMutation = useMutation({
+    mutationFn: (invoiceId: string) => api.quickbooksSyncInvoice(invoiceId),
+  })
+
+  const [invoiceIdToSync, setInvoiceIdToSync] = useState('')
+
+  if (isLoading) {
+    return (
+      <div className="border border-gray-200 rounded-lg p-6">
+        <div className="animate-pulse space-y-4">
+          <div className="h-5 w-48 bg-gray-200 rounded" />
+          <div className="grid grid-cols-3 gap-4">
+            <div className="h-20 bg-gray-100 rounded" />
+            <div className="h-20 bg-gray-100 rounded" />
+            <div className="h-20 bg-gray-100 rounded" />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+          <ArrowRightLeft className="w-5 h-5 text-emerald-600" />
+          QuickBooks Sync Dashboard
+        </h3>
+        {syncStatus?.last_sync_at && (
+          <span className="text-xs text-gray-500 flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            Last sync: {new Date(syncStatus.last_sync_at).toLocaleString()}
+          </span>
+        )}
+      </div>
+
+      {/* Sync Status Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-emerald-50 rounded-lg p-4">
+          <p className="text-xs font-medium text-emerald-600 uppercase">Synced Invoices</p>
+          <p className="text-2xl font-bold text-emerald-700 mt-1">
+            {syncStatus?.synced_invoices ?? 0}
+          </p>
+        </div>
+        <div className="bg-blue-50 rounded-lg p-4">
+          <p className="text-xs font-medium text-blue-600 uppercase">Pending</p>
+          <p className="text-2xl font-bold text-blue-700 mt-1">
+            {syncStatus?.pending_invoices ?? 0}
+          </p>
+        </div>
+        <div className="bg-red-50 rounded-lg p-4">
+          <p className="text-xs font-medium text-red-600 uppercase">Failed</p>
+          <p className="text-2xl font-bold text-red-700 mt-1">
+            {syncStatus?.failed_invoices ?? 0}
+          </p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-4">
+          <p className="text-xs font-medium text-gray-600 uppercase">Total Amount</p>
+          <p className="text-2xl font-bold text-gray-700 mt-1">
+            ${syncStatus?.total_synced_amount?.toLocaleString() ?? '0'}
+          </p>
+        </div>
+      </div>
+
+      {/* Manual Invoice Sync */}
+      <div className="border-t border-gray-200 pt-4">
+        <h4 className="text-sm font-medium text-gray-900 mb-3">Sync Individual Invoice</h4>
+        <div className="flex items-center gap-3">
+          <input
+            type="text"
+            value={invoiceIdToSync}
+            onChange={(e) => setInvoiceIdToSync(e.target.value)}
+            placeholder="Enter Invoice ID"
+            className="flex-1 max-w-xs px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+          />
+          <button
+            onClick={() => {
+              if (invoiceIdToSync.trim()) {
+                syncInvoiceMutation.mutate(invoiceIdToSync.trim())
+                setInvoiceIdToSync('')
+              }
+            }}
+            disabled={!invoiceIdToSync.trim() || syncInvoiceMutation.isPending}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+          >
+            {syncInvoiceMutation.isPending ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <ArrowRightLeft className="w-4 h-4" />
+            )}
+            Sync to QB
+          </button>
+        </div>
+        {syncInvoiceMutation.isSuccess && (
+          <p className="mt-2 text-sm text-emerald-600 flex items-center gap-1">
+            <CheckCircle className="w-4 h-4" />
+            Invoice synced successfully
+          </p>
+        )}
+        {syncInvoiceMutation.isError && (
+          <p className="mt-2 text-sm text-red-600 flex items-center gap-1">
+            <XCircle className="w-4 h-4" />
+            Sync failed: {syncInvoiceMutation.error?.message || 'Unknown error'}
+          </p>
+        )}
+      </div>
+
+      {/* Recent Synced Invoices */}
+      {syncStatus?.recent_syncs && syncStatus.recent_syncs.length > 0 && (
+        <div className="border-t border-gray-200 pt-4">
+          <h4 className="text-sm font-medium text-gray-900 mb-3">Recently Synced</h4>
+          <div className="space-y-2">
+            {syncStatus.recent_syncs.map((sync: { invoice_id: string; status: string; synced_at: string; amount?: number }, idx: number) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm"
+              >
+                <div className="flex items-center gap-3">
+                  {sync.status === 'synced' ? (
+                    <CheckCircle className="w-4 h-4 text-emerald-500" />
+                  ) : sync.status === 'failed' ? (
+                    <XCircle className="w-4 h-4 text-red-500" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
+                  )}
+                  <span className="font-medium">Invoice #{sync.invoice_id}</span>
+                </div>
+                <div className="flex items-center gap-4 text-gray-500">
+                  {sync.amount && <span>${sync.amount.toLocaleString()}</span>}
+                  <span>{new Date(sync.synced_at).toLocaleString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Customer Mapping Section Component
+function CustomerMappingSection() {
+  const queryClient = useQueryClient()
+
+  const { data: mappings, isLoading } = useQuery({
+    queryKey: ['qb-customer-mappings'],
+    queryFn: () => api.quickbooksGetCustomerMappings(),
+  })
+
+  const createMappingMutation = useMutation({
+    mutationFn: (data: { tms_customer_id: string; tms_customer_name: string; quickbooks_customer_id: string; quickbooks_customer_name: string }) =>
+      api.quickbooksCreateCustomerMapping(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qb-customer-mappings'] })
+      setNewMapping({ tms_customer_id: '', tms_customer_name: '', quickbooks_customer_id: '', quickbooks_customer_name: '' })
+      setShowAddForm(false)
+    },
+  })
+
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [newMapping, setNewMapping] = useState({
+    tms_customer_id: '',
+    tms_customer_name: '',
+    quickbooks_customer_id: '',
+    quickbooks_customer_name: '',
+  })
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const filteredMappings = (mappings ?? []).filter((m: { tms_customer_name?: string; quickbooks_customer_name?: string }) =>
+    !searchTerm ||
+    m.tms_customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    m.quickbooks_customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+
+  return (
+    <div className="border border-gray-200 rounded-lg p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+          <Users className="w-5 h-5 text-emerald-600" />
+          Customer Mapping
+        </h3>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Mapping
+        </button>
+      </div>
+
+      <p className="text-sm text-gray-500">
+        Map TMS customers to their QuickBooks counterparts for seamless invoice syncing.
+      </p>
+
+      {/* Add Mapping Form */}
+      {showAddForm && (
+        <div className="bg-gray-50 rounded-lg p-4 space-y-4 border border-gray-200">
+          <h4 className="text-sm font-medium text-gray-900">New Customer Mapping</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">TMS Customer ID</label>
+              <input
+                type="text"
+                value={newMapping.tms_customer_id}
+                onChange={(e) => setNewMapping({ ...newMapping, tms_customer_id: e.target.value })}
+                placeholder="TMS customer ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">TMS Customer Name</label>
+              <input
+                type="text"
+                value={newMapping.tms_customer_name}
+                onChange={(e) => setNewMapping({ ...newMapping, tms_customer_name: e.target.value })}
+                placeholder="Customer name in TMS"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">QuickBooks Customer ID</label>
+              <input
+                type="text"
+                value={newMapping.quickbooks_customer_id}
+                onChange={(e) => setNewMapping({ ...newMapping, quickbooks_customer_id: e.target.value })}
+                placeholder="QuickBooks customer ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">QuickBooks Customer Name</label>
+              <input
+                type="text"
+                value={newMapping.quickbooks_customer_name}
+                onChange={(e) => setNewMapping({ ...newMapping, quickbooks_customer_name: e.target.value })}
+                placeholder="Customer name in QuickBooks"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => createMappingMutation.mutate(newMapping)}
+              disabled={!newMapping.tms_customer_id || !newMapping.quickbooks_customer_id || createMappingMutation.isPending}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {createMappingMutation.isPending ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              Create Mapping
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          placeholder="Search customer mappings..."
+          className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        />
+      </div>
+
+      {/* Mappings Table */}
+      {isLoading ? (
+        <div className="text-center py-8 text-gray-500">Loading mappings...</div>
+      ) : filteredMappings.length === 0 ? (
+        <div className="text-center py-8 text-sm text-gray-400">
+          {searchTerm ? 'No mappings match your search' : 'No customer mappings created yet. Add a mapping to start syncing invoices.'}
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                <th className="pb-2 pr-4">TMS Customer</th>
+                <th className="pb-2 pr-4">QuickBooks Customer</th>
+                <th className="pb-2 pr-4">Status</th>
+                <th className="pb-2">Created</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filteredMappings.map((mapping: { id?: string; tms_customer_id: string; tms_customer_name?: string; quickbooks_customer_id: string; quickbooks_customer_name?: string; status?: string; created_at?: string }, idx: number) => (
+                <tr key={mapping.id || idx} className="hover:bg-gray-50">
+                  <td className="py-3 pr-4">
+                    <div className="font-medium text-gray-900">{mapping.tms_customer_name || mapping.tms_customer_id}</div>
+                    <div className="text-xs text-gray-400">{mapping.tms_customer_id}</div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <div className="font-medium text-gray-900">{mapping.quickbooks_customer_name || mapping.quickbooks_customer_id}</div>
+                    <div className="text-xs text-gray-400">{mapping.quickbooks_customer_id}</div>
+                  </td>
+                  <td className="py-3 pr-4">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      mapping.status === 'active'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {mapping.status === 'active' ? (
+                        <CheckCircle className="w-3 h-3" />
+                      ) : (
+                        <AlertCircle className="w-3 h-3" />
+                      )}
+                      {mapping.status || 'active'}
+                    </span>
+                  </td>
+                  <td className="py-3 text-gray-500">
+                    {mapping.created_at
+                      ? new Date(mapping.created_at).toLocaleDateString()
+                      : '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+

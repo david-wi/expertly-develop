@@ -49,6 +49,13 @@ interface TenantSettingsData {
   branding: {
     logo_url?: string | null
     primary_color?: string
+    secondary_color?: string
+    company_name?: string | null
+    favicon_url?: string | null
+    custom_domain?: string | null
+    email_header_logo_url?: string | null
+    portal_title?: string | null
+    hide_powered_by?: boolean
   }
 }
 
@@ -147,7 +154,17 @@ export default function TenantSettings() {
     auto_numbering: true,
     default_equipment_type: 'dry_van',
     custom_fields: {},
-    branding: { logo_url: null, primary_color: '#3B82F6' },
+    branding: {
+      logo_url: null,
+      primary_color: '#3B82F6',
+      secondary_color: '#10B981',
+      company_name: null,
+      favicon_url: null,
+      custom_domain: null,
+      email_header_logo_url: null,
+      portal_title: null,
+      hide_powered_by: false,
+    },
   })
 
   // Users state
@@ -517,86 +534,335 @@ export default function TenantSettings() {
           )}
 
           {/* ----------------------------------------------------------------- */}
-          {/* Branding Tab */}
+          {/* Branding Tab (White-Label Settings) */}
           {/* ----------------------------------------------------------------- */}
           {activeTab === 'branding' && (
-            <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-900">Branding</h2>
+            <div className="space-y-6">
+              {/* Logo & Visual Identity */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+                <h2 className="text-lg font-semibold text-gray-900">Visual Identity</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Logo upload placeholder */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company Logo
-                  </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    {settings.branding.logo_url ? (
-                      <div className="space-y-2">
-                        <img
-                          src={settings.branding.logo_url}
-                          alt="Company logo"
-                          className="mx-auto max-h-16 object-contain"
-                        />
-                        <button
-                          onClick={() => setSettings(prev => ({
-                            ...prev,
-                            branding: { ...prev.branding, logo_url: null },
-                          }))}
-                          className="text-xs text-red-600 hover:text-red-700"
-                        >
-                          Remove logo
-                        </button>
-                      </div>
-                    ) : (
-                      <div>
-                        <Palette className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">
-                          Logo upload coming soon
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          PNG, JPG up to 2MB
-                        </p>
-                      </div>
-                    )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Company Logo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Company Logo
+                    </label>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                      {settings.branding.logo_url ? (
+                        <div className="space-y-2">
+                          <img
+                            src={settings.branding.logo_url}
+                            alt="Company logo"
+                            className="mx-auto max-h-16 object-contain"
+                          />
+                          <button
+                            onClick={() => setSettings(prev => ({
+                              ...prev,
+                              branding: { ...prev.branding, logo_url: null },
+                            }))}
+                            className="text-xs text-red-600 hover:text-red-700"
+                          >
+                            Remove logo
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <Palette className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">
+                            Logo upload coming soon
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            PNG, JPG up to 2MB
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Favicon */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Favicon URL
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.branding.favicon_url || ''}
+                      onChange={e => setSettings(prev => ({
+                        ...prev,
+                        branding: { ...prev.branding, favicon_url: e.target.value || null },
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="https://example.com/favicon.ico"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      URL to your custom favicon (ICO, PNG, or SVG)
+                    </p>
+                  </div>
+
+                  {/* Email Header Logo */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Header Logo URL
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.branding.email_header_logo_url || ''}
+                      onChange={e => setSettings(prev => ({
+                        ...prev,
+                        branding: { ...prev.branding, email_header_logo_url: e.target.value || null },
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="https://example.com/email-logo.png"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Logo displayed in email headers and notifications
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+                <h2 className="text-lg font-semibold text-gray-900">Brand Colors</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Primary color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Primary Color
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={settings.branding.primary_color || '#3B82F6'}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          branding: { ...prev.branding, primary_color: e.target.value },
+                        }))}
+                        className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={settings.branding.primary_color || '#3B82F6'}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          branding: { ...prev.branding, primary_color: e.target.value },
+                        }))}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#3B82F6"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Used for buttons, links, and primary actions
+                    </p>
+                  </div>
+
+                  {/* Secondary color */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Secondary Color
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="color"
+                        value={settings.branding.secondary_color || '#10B981'}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          branding: { ...prev.branding, secondary_color: e.target.value },
+                        }))}
+                        className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
+                      />
+                      <input
+                        type="text"
+                        value={settings.branding.secondary_color || '#10B981'}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          branding: { ...prev.branding, secondary_color: e.target.value },
+                        }))}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="#10B981"
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Used for success states, accents, and secondary elements
+                    </p>
                   </div>
                 </div>
 
-                {/* Primary color */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Primary Color
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="color"
-                      value={settings.branding.primary_color || '#3B82F6'}
-                      onChange={e => setSettings(prev => ({
-                        ...prev,
-                        branding: { ...prev.branding, primary_color: e.target.value },
-                      }))}
-                      className="w-12 h-10 rounded border border-gray-300 cursor-pointer"
-                    />
+                {/* Color Preview */}
+                <div className="p-4 rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500 mb-3">Color Preview</p>
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <div
+                        className="h-10 rounded-lg"
+                        style={{ backgroundColor: settings.branding.primary_color || '#3B82F6' }}
+                      />
+                      <p className="text-xs text-gray-400 mt-1 text-center">Primary</p>
+                    </div>
+                    <div className="flex-1">
+                      <div
+                        className="h-10 rounded-lg"
+                        style={{ backgroundColor: settings.branding.secondary_color || '#10B981' }}
+                      />
+                      <p className="text-xs text-gray-400 mt-1 text-center">Secondary</p>
+                    </div>
+                    <div className="flex-1">
+                      <div className="h-10 rounded-lg bg-white border border-gray-200 flex items-center justify-center">
+                        <span
+                          className="text-sm font-semibold"
+                          style={{ color: settings.branding.primary_color || '#3B82F6' }}
+                        >
+                          {settings.branding.company_name || settings.company_name || 'Your Brand'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1 text-center">Brand Text</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Portal & Domain Settings */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+                <h2 className="text-lg font-semibold text-gray-900">Portal Settings</h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Portal Title */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Portal Title
+                    </label>
                     <input
                       type="text"
-                      value={settings.branding.primary_color || '#3B82F6'}
+                      value={settings.branding.portal_title || ''}
                       onChange={e => setSettings(prev => ({
                         ...prev,
-                        branding: { ...prev.branding, primary_color: e.target.value },
+                        branding: { ...prev.branding, portal_title: e.target.value || null },
                       }))}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="#3B82F6"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="My Logistics Portal"
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Displayed in the browser tab and portal header
+                    </p>
                   </div>
-                  <p className="mt-2 text-xs text-gray-500">
-                    Used for portal branding and customer-facing documents
-                  </p>
-                  {/* Preview */}
-                  <div className="mt-4 p-4 rounded-lg border border-gray-200">
-                    <p className="text-xs text-gray-500 mb-2">Preview</p>
-                    <div
-                      className="h-8 rounded"
-                      style={{ backgroundColor: settings.branding.primary_color || '#3B82F6' }}
+
+                  {/* Branding Company Name Override */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Branded Company Name
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.branding.company_name || ''}
+                      onChange={e => setSettings(prev => ({
+                        ...prev,
+                        branding: { ...prev.branding, company_name: e.target.value || null },
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Override company name for branding"
                     />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Overrides the company name in customer-facing pages
+                    </p>
+                  </div>
+
+                  {/* Custom Domain */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Custom Domain
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.branding.custom_domain || ''}
+                      onChange={e => setSettings(prev => ({
+                        ...prev,
+                        branding: { ...prev.branding, custom_domain: e.target.value || null },
+                      }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="tms.yourdomain.com"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">
+                      Use your own domain for the customer tracking portal
+                    </p>
+                  </div>
+
+                  {/* Hide Powered By */}
+                  <div className="flex items-center gap-3 pt-6">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={settings.branding.hide_powered_by ?? false}
+                        onChange={e => setSettings(prev => ({
+                          ...prev,
+                          branding: { ...prev.branding, hide_powered_by: e.target.checked },
+                        }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Hide "Powered by" badge</span>
+                      <p className="text-xs text-gray-500">
+                        Remove the Expertly TMS branding from your customer-facing portal
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* White-Label Preview */}
+              <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+                <h2 className="text-lg font-semibold text-gray-900">Branding Preview</h2>
+                <p className="text-sm text-gray-500">
+                  Preview of how your branded portal will appear to customers.
+                </p>
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  {/* Mock header */}
+                  <div
+                    className="px-6 py-3 flex items-center justify-between"
+                    style={{ backgroundColor: settings.branding.primary_color || '#3B82F6' }}
+                  >
+                    <div className="flex items-center gap-3">
+                      {settings.branding.logo_url ? (
+                        <img src={settings.branding.logo_url} alt="Logo" className="h-8 object-contain" />
+                      ) : (
+                        <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
+                          <Building2 className="w-5 h-5 text-white" />
+                        </div>
+                      )}
+                      <span className="text-white font-semibold text-sm">
+                        {settings.branding.portal_title || settings.branding.company_name || settings.company_name || 'Your Portal'}
+                      </span>
+                    </div>
+                    <div className="text-white/60 text-xs">Customer Portal</div>
+                  </div>
+                  {/* Mock body */}
+                  <div className="p-6 bg-gray-50">
+                    <div className="bg-white rounded-lg p-4 border border-gray-100">
+                      <div className="flex items-center gap-2 mb-3">
+                        <div
+                          className="w-2 h-2 rounded-full"
+                          style={{ backgroundColor: settings.branding.secondary_color || '#10B981' }}
+                        />
+                        <span className="text-sm font-medium text-gray-700">Shipment SHP-2024-001</span>
+                        <span
+                          className="ml-auto text-xs px-2 py-0.5 rounded-full text-white"
+                          style={{ backgroundColor: settings.branding.secondary_color || '#10B981' }}
+                        >
+                          In Transit
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        Chicago, IL → Los Angeles, CA
+                      </div>
+                    </div>
+                    {!settings.branding.hide_powered_by && (
+                      <p className="text-center text-xs text-gray-300 mt-4">
+                        Powered by Expertly TMS
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

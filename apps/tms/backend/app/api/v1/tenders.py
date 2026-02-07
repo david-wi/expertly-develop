@@ -270,3 +270,559 @@ async def decline_tender(tender_id: str, data: DeclineTenderRequest):
 
     await manager.broadcast("tender_declined", {"id": str(tender.id)})
     return tender_to_response(tender)
+
+
+# ============================================================================
+# Counter-Offer Workflows
+# ============================================================================
+
+class CounterOfferRequest(BaseModel):
+    counter_rate: int  # in cents
+    notes: Optional[str] = None
+
+
+class CounterOfferResponse(BaseModel):
+    id: str
+    tender_id: str
+    round_number: int
+    offered_by: str  # "carrier" or "broker"
+    original_rate: int
+    counter_rate: int
+    notes: Optional[str] = None
+    status: str  # "pending", "accepted", "rejected"
+    auto_accepted: bool = False
+    created_at: datetime
+
+
+@router.post("/{tender_id}/counter-offer", response_model=CounterOfferResponse)
+async def create_counter_offer(tender_id: str, data: CounterOfferRequest):
+    """Carrier submits a counter-offer on a tender."""
+    db = get_database()
+
+    tender_doc = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender_doc:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    # Count existing counter-offers for round number
+    existing_count = await db.counter_offers.count_documents({"tender_id": ObjectId(tender_id)})
+    round_number = existing_count + 1
+
+    now = datetime.utcnow()
+
+    # Check auto-accept config
+    config = await db.tender_waterfall_config.find_one({"is_default": True})
+    auto_accept_range = 0
+    if config:
+        auto_accept_range = config.get("auto_accept_counter_range_percent", 5)
+
+    original_rate = tender_doc.get("offered_rate", 0)
+    diff_percent = ((data.counter_rate - original_rate) / original_rate * 100) if original_rate > 0 else 100
+    auto_accepted = diff_percent <= auto_accept_range
+
+    status = "accepted" if auto_accepted else "pending"
+
+    counter_doc = {
+        "_id": ObjectId(),
+        "tender_id": ObjectId(tender_id),
+        "round_number": round_number,
+        "offered_by": "carrier",
+        "original_rate": original_rate,
+        "counter_rate": data.counter_rate,
+        "notes": data.notes,
+        "status": status,
+        "auto_accepted": auto_accepted,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.counter_offers.insert_one(counter_doc)
+
+    # If auto-accepted, update tender with new rate and accept
+    if auto_accepted:
+        await db.tenders.update_one(
+            {"_id": ObjectId(tender_id)},
+            {"$set": {
+                "offered_rate": data.counter_rate,
+                "counter_offer_rate": data.counter_rate,
+                "status": TenderStatus.ACCEPTED.value,
+                "responded_at": now,
+                "updated_at": now,
+                "response_notes": f"Auto-accepted counter-offer (within {auto_accept_range}% range)",
+            }}
+        )
+        # Update shipment with carrier
+        await db.shipments.update_one(
+            {"_id": tender_doc["shipment_id"]},
+            {"$set": {
+                "carrier_id": tender_doc["carrier_id"],
+                "carrier_cost": data.counter_rate,
+                "updated_at": now,
+            }}
+        )
+        await manager.broadcast("tender_accepted", {"id": tender_id, "auto_accepted": True})
+    else:
+        await db.tenders.update_one(
+            {"_id": ObjectId(tender_id)},
+            {"$set": {"counter_offer_rate": data.counter_rate, "updated_at": now}}
+        )
+        await manager.broadcast("counter_offer_received", {"id": tender_id, "counter_rate": data.counter_rate})
+
+    return CounterOfferResponse(
+        id=str(counter_doc["_id"]),
+        tender_id=tender_id,
+        round_number=round_number,
+        offered_by="carrier",
+        original_rate=original_rate,
+        counter_rate=data.counter_rate,
+        notes=data.notes,
+        status=status,
+        auto_accepted=auto_accepted,
+        created_at=now,
+    )
+
+
+class AcceptCounterRequest(BaseModel):
+    counter_offer_id: Optional[str] = None
+    notes: Optional[str] = None
+
+
+@router.post("/{tender_id}/accept-counter")
+async def accept_counter_offer(tender_id: str, data: AcceptCounterRequest):
+    """Broker accepts a carrier's counter-offer."""
+    db = get_database()
+
+    tender_doc = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender_doc:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    # Find latest pending counter-offer
+    query = {"tender_id": ObjectId(tender_id), "status": "pending"}
+    if data.counter_offer_id:
+        query["_id"] = ObjectId(data.counter_offer_id)
+
+    counter = await db.counter_offers.find_one(query, sort=[("created_at", -1)])
+    if not counter:
+        raise HTTPException(status_code=404, detail="No pending counter-offer found")
+
+    now = datetime.utcnow()
+    new_rate = counter["counter_rate"]
+
+    # Accept the counter-offer
+    await db.counter_offers.update_one(
+        {"_id": counter["_id"]},
+        {"$set": {"status": "accepted", "updated_at": now}}
+    )
+
+    # Update tender
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {"$set": {
+            "offered_rate": new_rate,
+            "status": TenderStatus.ACCEPTED.value,
+            "responded_at": now,
+            "updated_at": now,
+            "response_notes": data.notes or "Counter-offer accepted",
+        }}
+    )
+
+    # Update shipment
+    await db.shipments.update_one(
+        {"_id": tender_doc["shipment_id"]},
+        {"$set": {
+            "carrier_id": tender_doc["carrier_id"],
+            "carrier_cost": new_rate,
+            "updated_at": now,
+        }}
+    )
+
+    # Cancel other tenders for this shipment
+    await db.tenders.update_many(
+        {
+            "shipment_id": tender_doc["shipment_id"],
+            "_id": {"$ne": ObjectId(tender_id)},
+            "status": {"$in": [TenderStatus.DRAFT.value, TenderStatus.SENT.value]},
+        },
+        {"$set": {"status": TenderStatus.CANCELLED.value, "updated_at": now}}
+    )
+
+    await manager.broadcast("tender_accepted", {"id": tender_id, "rate": new_rate})
+    return {"status": "accepted", "new_rate": new_rate, "tender_id": tender_id}
+
+
+# ============================================================================
+# Negotiation History
+# ============================================================================
+
+@router.get("/negotiation-history")
+async def get_negotiation_history(
+    carrier_id: Optional[str] = None,
+    lane: Optional[str] = None,  # format: "origin_state-destination_state"
+):
+    """Get rate negotiation history per lane/carrier."""
+    db = get_database()
+
+    tender_query: dict = {}
+    if carrier_id:
+        tender_query["carrier_id"] = ObjectId(carrier_id)
+    if lane and "-" in lane:
+        # Lane filtering done after join with shipments
+        pass
+
+    cursor = db.tenders.find(tender_query).sort("created_at", -1)
+    tenders = await cursor.to_list(500)
+
+    # Get counter-offers
+    tender_ids = [t["_id"] for t in tenders]
+    counter_cursor = db.counter_offers.find({"tender_id": {"$in": tender_ids}}).sort("created_at", 1)
+    counters = await counter_cursor.to_list(2000)
+    counters_by_tender = {}
+    for c in counters:
+        tid = str(c["tender_id"])
+        if tid not in counters_by_tender:
+            counters_by_tender[tid] = []
+        counters_by_tender[tid].append({
+            "id": str(c["_id"]),
+            "round_number": c.get("round_number", 1),
+            "offered_by": c.get("offered_by", "carrier"),
+            "original_rate": c.get("original_rate", 0),
+            "counter_rate": c.get("counter_rate", 0),
+            "status": c.get("status", "pending"),
+            "auto_accepted": c.get("auto_accepted", False),
+            "created_at": c["created_at"].isoformat() if hasattr(c.get("created_at"), "isoformat") else "",
+        })
+
+    # Enrich with shipment data for lane info
+    shipment_ids = list(set(t.get("shipment_id") for t in tenders if t.get("shipment_id")))
+    shipments = {}
+    if shipment_ids:
+        ship_cursor = db.shipments.find({"_id": {"$in": shipment_ids}})
+        async for s in ship_cursor:
+            stops = s.get("stops", [])
+            origin = next((st for st in stops if st.get("stop_type") == "pickup"), {})
+            dest = next((st for st in stops if st.get("stop_type") == "delivery"), {})
+            shipments[str(s["_id"])] = {
+                "origin_state": origin.get("state", ""),
+                "origin_city": origin.get("city", ""),
+                "destination_state": dest.get("state", ""),
+                "destination_city": dest.get("city", ""),
+            }
+
+    # Get carrier names
+    carrier_ids = list(set(t.get("carrier_id") for t in tenders if t.get("carrier_id")))
+    carrier_names = {}
+    if carrier_ids:
+        car_cursor = db.carriers.find({"_id": {"$in": carrier_ids}})
+        async for c in car_cursor:
+            carrier_names[str(c["_id"])] = c.get("name", "")
+
+    negotiations = []
+    for t in tenders:
+        tid = str(t["_id"])
+        sid = str(t.get("shipment_id", ""))
+        ship_info = shipments.get(sid, {})
+
+        # Apply lane filter
+        if lane and "-" in lane:
+            parts = lane.split("-")
+            if len(parts) == 2:
+                if ship_info.get("origin_state", "").upper() != parts[0].upper() or ship_info.get("destination_state", "").upper() != parts[1].upper():
+                    continue
+
+        negotiations.append({
+            "tender_id": tid,
+            "shipment_id": sid,
+            "carrier_id": str(t.get("carrier_id", "")),
+            "carrier_name": carrier_names.get(str(t.get("carrier_id", "")), ""),
+            "status": t.get("status", ""),
+            "offered_rate": t.get("offered_rate", 0),
+            "counter_offer_rate": t.get("counter_offer_rate"),
+            "final_rate": t.get("offered_rate", 0) if t.get("status") == "accepted" else None,
+            "origin": f"{ship_info.get('origin_city', '')}, {ship_info.get('origin_state', '')}",
+            "destination": f"{ship_info.get('destination_city', '')}, {ship_info.get('destination_state', '')}",
+            "lane": f"{ship_info.get('origin_state', '')}-{ship_info.get('destination_state', '')}",
+            "counter_offers": counters_by_tender.get(tid, []),
+            "negotiation_rounds": len(counters_by_tender.get(tid, [])),
+            "created_at": t["created_at"].isoformat() if hasattr(t.get("created_at"), "isoformat") else "",
+            "responded_at": t["responded_at"].isoformat() if hasattr(t.get("responded_at"), "isoformat") else None,
+        })
+
+    # Calculate summary stats
+    accepted = [n for n in negotiations if n["status"] == "accepted"]
+    total_savings = sum(
+        (n["offered_rate"] - (n["counter_offer_rate"] or n["offered_rate"]))
+        for n in accepted if n.get("counter_offer_rate")
+    )
+
+    return {
+        "total_negotiations": len(negotiations),
+        "accepted_count": len(accepted),
+        "average_rounds": sum(n["negotiation_rounds"] for n in negotiations) / max(len(negotiations), 1),
+        "total_savings_cents": abs(total_savings),
+        "negotiations": negotiations[:100],
+    }
+
+
+# ============================================================================
+# Automated Tender Waterfall
+# ============================================================================
+
+class WaterfallConfigRequest(BaseModel):
+    timeout_minutes: int = 30
+    max_rounds: int = 5
+    auto_accept_counter_range_percent: float = 5.0
+    auto_post_to_loadboard: bool = True
+    carrier_ranking_method: str = "ai"  # "ai", "performance", "rate", "manual"
+
+
+@router.post("/waterfall-config")
+async def save_waterfall_config(data: WaterfallConfigRequest):
+    """Save/update waterfall configuration."""
+    db = get_database()
+
+    now = datetime.utcnow()
+    config = {
+        "timeout_minutes": data.timeout_minutes,
+        "max_rounds": data.max_rounds,
+        "auto_accept_counter_range_percent": data.auto_accept_counter_range_percent,
+        "auto_post_to_loadboard": data.auto_post_to_loadboard,
+        "carrier_ranking_method": data.carrier_ranking_method,
+        "is_default": True,
+        "updated_at": now,
+    }
+
+    await db.tender_waterfall_config.update_one(
+        {"is_default": True},
+        {"$set": config},
+        upsert=True
+    )
+
+    return {"status": "saved", "config": config}
+
+
+@router.get("/waterfall-config")
+async def get_waterfall_config():
+    """Get current waterfall configuration."""
+    db = get_database()
+
+    config = await db.tender_waterfall_config.find_one({"is_default": True})
+    if not config:
+        return {
+            "timeout_minutes": 30,
+            "max_rounds": 5,
+            "auto_accept_counter_range_percent": 5.0,
+            "auto_post_to_loadboard": True,
+            "carrier_ranking_method": "ai",
+        }
+
+    return {
+        "timeout_minutes": config.get("timeout_minutes", 30),
+        "max_rounds": config.get("max_rounds", 5),
+        "auto_accept_counter_range_percent": config.get("auto_accept_counter_range_percent", 5.0),
+        "auto_post_to_loadboard": config.get("auto_post_to_loadboard", True),
+        "carrier_ranking_method": config.get("carrier_ranking_method", "ai"),
+    }
+
+
+class StartWaterfallRequest(BaseModel):
+    carrier_ids: Optional[List[str]] = None  # If None, AI ranks carriers
+    offered_rate: int
+    timeout_minutes: int = 30
+    rate_increase_per_round_percent: float = 0
+    notes: Optional[str] = None
+
+
+@router.post("/{tender_id_or_shipment_id}/start-waterfall")
+async def start_waterfall(tender_id_or_shipment_id: str, data: StartWaterfallRequest):
+    """Start an automated tender waterfall for a shipment."""
+    db = get_database()
+
+    now = datetime.utcnow()
+
+    # Check if it's a shipment ID
+    shipment = await db.shipments.find_one({"_id": ObjectId(tender_id_or_shipment_id)})
+    if not shipment:
+        raise HTTPException(status_code=404, detail="Shipment not found")
+
+    shipment_id = shipment["_id"]
+
+    # Determine carrier order
+    carrier_ids = []
+    if data.carrier_ids:
+        carrier_ids = [ObjectId(cid) for cid in data.carrier_ids]
+    else:
+        # AI-ranked carrier ordering based on performance, rate, and availability
+        stops = shipment.get("stops", [])
+        origin = next((s for s in stops if s.get("stop_type") == "pickup"), {})
+        dest = next((s for s in stops if s.get("stop_type") == "delivery"), {})
+        origin_state = origin.get("state", "")
+        dest_state = dest.get("state", "")
+        equipment_type = shipment.get("equipment_type", "van")
+
+        # Find carriers that handle this lane/equipment
+        carrier_query = {
+            "status": "active",
+            "$or": [
+                {"equipment_types": equipment_type},
+                {"equipment_types": {"$size": 0}},
+            ]
+        }
+        carriers = await db.carriers.find(carrier_query).to_list(50)
+
+        # Score carriers by performance
+        scored = []
+        for c in carriers:
+            score = 50  # Base score
+            on_time = c.get("on_time_deliveries", 0)
+            total = c.get("total_loads", 0)
+            if total > 0:
+                score += (on_time / total) * 30  # Up to 30 points for on-time
+            # Lane familiarity
+            for lane in c.get("preferred_lanes", []):
+                if lane.get("origin_state") == origin_state or lane.get("destination_state") == dest_state:
+                    score += 10
+                    break
+            # Recency bonus
+            if c.get("last_load_at"):
+                days_since = (now - c["last_load_at"]).days if hasattr(c.get("last_load_at"), "days") else 999
+                if days_since < 30:
+                    score += 10
+            scored.append((c["_id"], score, c.get("name", "")))
+
+        scored.sort(key=lambda x: x[1], reverse=True)
+        carrier_ids = [s[0] for s in scored[:data.carrier_ids and len(data.carrier_ids) or 10]]
+
+    if not carrier_ids:
+        raise HTTPException(status_code=400, detail="No carriers available for waterfall")
+
+    # Get carrier names
+    carrier_docs = await db.carriers.find({"_id": {"$in": carrier_ids}}).to_list(100)
+    carrier_name_map = {str(c["_id"]): c.get("name", "") for c in carrier_docs}
+
+    # Create waterfall record
+    waterfall_steps = []
+    for i, cid in enumerate(carrier_ids):
+        rate = int(data.offered_rate * (1 + (data.rate_increase_per_round_percent / 100) * i))
+        waterfall_steps.append({
+            "step": i + 1,
+            "carrier_id": cid,
+            "carrier_name": carrier_name_map.get(str(cid), ""),
+            "rate": rate,
+            "status": "pending" if i == 0 else "waiting",
+            "sent_at": now if i == 0 else None,
+            "timeout_at": (now + timedelta(minutes=data.timeout_minutes)) if i == 0 else None,
+            "responded_at": None,
+        })
+
+    waterfall_doc = {
+        "_id": ObjectId(),
+        "shipment_id": shipment_id,
+        "status": "active",
+        "current_step": 1,
+        "total_carriers": len(carrier_ids),
+        "base_rate": data.offered_rate,
+        "current_rate": data.offered_rate,
+        "timeout_minutes": data.timeout_minutes,
+        "rate_increase_per_round_percent": data.rate_increase_per_round_percent,
+        "auto_post_to_loadboard": True,
+        "steps": waterfall_steps,
+        "notes": data.notes,
+        "started_at": now,
+        "completed_at": None,
+        "winning_carrier_id": None,
+        "created_at": now,
+        "updated_at": now,
+    }
+
+    await db.tender_waterfalls.insert_one(waterfall_doc)
+
+    # Create the first tender
+    first_carrier = carrier_ids[0]
+    tender = Tender(
+        shipment_id=shipment_id,
+        carrier_id=first_carrier,
+        offered_rate=data.offered_rate,
+        rate_type="all_in",
+        expires_at=now + timedelta(minutes=data.timeout_minutes),
+        notes=f"Waterfall step 1 - {data.notes or ''}",
+    )
+    tender.transition_to(TenderStatus.SENT)
+    await db.tenders.insert_one(tender.model_dump_mongo())
+
+    await manager.broadcast("waterfall_started", {
+        "waterfall_id": str(waterfall_doc["_id"]),
+        "shipment_id": str(shipment_id),
+        "total_carriers": len(carrier_ids),
+    })
+
+    return {
+        "waterfall_id": str(waterfall_doc["_id"]),
+        "shipment_id": str(shipment_id),
+        "status": "active",
+        "current_step": 1,
+        "total_carriers": len(carrier_ids),
+        "current_rate": data.offered_rate,
+        "steps": [
+            {
+                "step": s["step"],
+                "carrier_name": s["carrier_name"],
+                "rate": s["rate"],
+                "status": s["status"],
+            }
+            for s in waterfall_steps
+        ],
+    }
+
+
+@router.get("/{waterfall_id}/waterfall-status")
+async def get_waterfall_status(waterfall_id: str):
+    """Get real-time waterfall status."""
+    db = get_database()
+
+    waterfall = await db.tender_waterfalls.find_one({"_id": ObjectId(waterfall_id)})
+    if not waterfall:
+        raise HTTPException(status_code=404, detail="Waterfall not found")
+
+    now = datetime.utcnow()
+    steps = waterfall.get("steps", [])
+    current_step = waterfall.get("current_step", 1)
+
+    # Check for timeouts on current step
+    for step in steps:
+        if step["status"] == "pending" and step.get("timeout_at"):
+            timeout_at = step["timeout_at"]
+            if hasattr(timeout_at, "timestamp") and now > timeout_at:
+                step["status"] = "timed_out"
+
+    # Calculate countdown for active step
+    active_step = next((s for s in steps if s["status"] == "pending"), None)
+    countdown_seconds = 0
+    if active_step and active_step.get("timeout_at"):
+        timeout_at = active_step["timeout_at"]
+        if hasattr(timeout_at, "timestamp"):
+            countdown_seconds = max(0, int((timeout_at - now).total_seconds()))
+
+    return {
+        "waterfall_id": str(waterfall["_id"]),
+        "shipment_id": str(waterfall["shipment_id"]),
+        "status": waterfall.get("status", "active"),
+        "current_step": current_step,
+        "total_carriers": waterfall.get("total_carriers", 0),
+        "current_rate": waterfall.get("current_rate", 0),
+        "base_rate": waterfall.get("base_rate", 0),
+        "countdown_seconds": countdown_seconds,
+        "winning_carrier_id": str(waterfall["winning_carrier_id"]) if waterfall.get("winning_carrier_id") else None,
+        "started_at": waterfall["started_at"].isoformat() if hasattr(waterfall.get("started_at"), "isoformat") else None,
+        "completed_at": waterfall["completed_at"].isoformat() if hasattr(waterfall.get("completed_at"), "isoformat") else None,
+        "steps": [
+            {
+                "step": s["step"],
+                "carrier_id": str(s.get("carrier_id", "")),
+                "carrier_name": s.get("carrier_name", ""),
+                "rate": s.get("rate", 0),
+                "status": s.get("status", "waiting"),
+                "sent_at": s["sent_at"].isoformat() if hasattr(s.get("sent_at"), "isoformat") else None,
+                "responded_at": s["responded_at"].isoformat() if hasattr(s.get("responded_at"), "isoformat") else None,
+            }
+            for s in steps
+        ],
+    }

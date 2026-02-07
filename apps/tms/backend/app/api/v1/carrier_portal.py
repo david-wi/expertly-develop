@@ -730,6 +730,82 @@ async def update_onboarding(token: str, data: OnboardingUpdateRequest):
     return {"status": "updated", "next_step": update.get("current_step", data.step + 1)}
 
 
+class OnboardingStepUpdate(BaseModel):
+    """Update a specific named step of the onboarding wizard."""
+    data: dict
+
+
+ONBOARDING_STEP_MAP = {
+    "company_info": 1,
+    "insurance": 2,
+    "w9": 3,
+    "agreement": 4,
+    "equipment": 5,
+    "compliance": 6,
+}
+
+
+@router.patch("/onboarding/{onboarding_id}/step/{step_name}")
+async def update_onboarding_step(onboarding_id: str, step_name: str, body: OnboardingStepUpdate):
+    """Update a specific step of the onboarding wizard by step name."""
+    db = get_database()
+
+    if step_name not in ONBOARDING_STEP_MAP:
+        raise HTTPException(status_code=400, detail=f"Invalid step name. Valid steps: {', '.join(ONBOARDING_STEP_MAP.keys())}")
+
+    step_number = ONBOARDING_STEP_MAP[step_name]
+
+    onboarding = await db.carrier_onboardings.find_one({"_id": ObjectId(onboarding_id)})
+    if not onboarding:
+        raise HTTPException(status_code=404, detail="Onboarding not found")
+
+    if onboarding.get("status") == OnboardingStatus.APPROVED.value:
+        raise HTTPException(status_code=400, detail="Onboarding already completed")
+
+    update = {"updated_at": utc_now()}
+    update.update(body.data)
+
+    # Auto-verify MC/DOT numbers via FMCSA lookup (simulated)
+    if step_name == "company_info":
+        mc_number = body.data.get("mc_number")
+        dot_number = body.data.get("dot_number")
+        if mc_number or dot_number:
+            # Simulated FMCSA verification
+            update["fmcsa_verified"] = True
+            update["fmcsa_verification_date"] = utc_now()
+            update["fmcsa_status"] = "AUTHORIZED"
+
+    # Auto-validate insurance certificates (simulated AI)
+    if step_name == "insurance":
+        update["insurance_verified"] = True
+        update["insurance_verification_date"] = utc_now()
+
+    # Track completed steps
+    completed_steps = onboarding.get("completed_steps", [])
+    if step_name not in completed_steps:
+        completed_steps.append(step_name)
+    update["completed_steps"] = completed_steps
+
+    # Advance current step
+    if step_number >= onboarding.get("current_step", 1):
+        update["current_step"] = step_number + 1
+
+    await db.carrier_onboardings.update_one(
+        {"_id": ObjectId(onboarding_id)},
+        {"$set": update}
+    )
+
+    return {
+        "status": "updated",
+        "step_name": step_name,
+        "step_number": step_number,
+        "next_step": update.get("current_step", step_number + 1),
+        "completed_steps": completed_steps,
+        "fmcsa_verified": update.get("fmcsa_verified", False),
+        "insurance_verified": update.get("insurance_verified", False),
+    }
+
+
 @router.post("/onboarding/{token}/submit")
 async def submit_onboarding(token: str):
     """Submit onboarding for review."""

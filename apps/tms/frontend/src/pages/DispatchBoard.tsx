@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
-import type { Shipment, Carrier, CarrierSuggestion } from '../types'
-import { ArrowRight, Truck, Send, Check, X, Sparkles, AlertTriangle, DollarSign, TrendingUp, Clock, Star } from 'lucide-react'
+import type { Shipment, Carrier, CarrierSuggestion, AutoAssignResult, DriverLocation } from '../types'
+import { ArrowRight, Truck, Send, Check, X, Sparkles, AlertTriangle, DollarSign, TrendingUp, Clock, Star, Zap, CheckCircle, MapPin, Navigation, Loader2 } from 'lucide-react'
 
 type Column = 'needs_carrier' | 'tendered' | 'dispatched'
+type ViewMode = 'board' | 'map'
 
 export default function DispatchBoard() {
   const navigate = useNavigate()
@@ -17,6 +18,14 @@ export default function DispatchBoard() {
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [tenderRate, setTenderRate] = useState('')
   const [selectedCarrier, setSelectedCarrier] = useState<string>('')
+  const [autoAssigning, setAutoAssigning] = useState(false)
+  const [autoAssignResult, setAutoAssignResult] = useState<AutoAssignResult | null>(null)
+
+  // Driver location map state
+  const [viewMode, setViewMode] = useState<ViewMode>('board')
+  const [driverLocations, setDriverLocations] = useState<DriverLocation[]>([])
+  const [loadingDrivers, setLoadingDrivers] = useState(false)
+  const [selectedDriver, setSelectedDriver] = useState<DriverLocation | null>(null)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -86,6 +95,52 @@ export default function DispatchBoard() {
     }
   }
 
+  const handleAutoAssign = async () => {
+    if (!selectedShipment) return
+    setAutoAssigning(true)
+    setAutoAssignResult(null)
+    try {
+      const result = await api.aiAutoAssignCarrier(selectedShipment.id, {
+        require_active_insurance: true,
+        auto_assign_threshold: 80,
+      })
+      setAutoAssignResult(result)
+      if (result.auto_assigned && result.assigned_carrier_id) {
+        // Refresh shipments after auto-assignment
+        const shipmentsData = await api.getShipments({ status: 'booked,pending_pickup' })
+        setShipments(shipmentsData)
+      } else if (result.suggestions && result.suggestions.length > 0) {
+        // Use top suggestion to pre-fill
+        const top = result.suggestions[0]
+        setSelectedCarrier(top.carrier_id)
+        setTenderRate((top.estimated_rate / 100).toFixed(2))
+      }
+    } catch (error) {
+      console.error('Failed to auto-assign:', error)
+    } finally {
+      setAutoAssigning(false)
+    }
+  }
+
+  const fetchDriverLocations = async () => {
+    setLoadingDrivers(true)
+    try {
+      const data = await api.getDriverLocations()
+      setDriverLocations(data)
+    } catch (error) {
+      console.error('Failed to fetch driver locations:', error)
+    } finally {
+      setLoadingDrivers(false)
+    }
+  }
+
+  const handleViewModeToggle = (mode: ViewMode) => {
+    setViewMode(mode)
+    if (mode === 'map') {
+      fetchDriverLocations()
+    }
+  }
+
   const getColumnShipments = (column: Column): Shipment[] => {
     switch (column) {
       case 'needs_carrier':
@@ -124,11 +179,190 @@ export default function DispatchBoard() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Dispatch Board</h1>
-        <p className="text-gray-500">AI-powered carrier matching and assignment</p>
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dispatch Board</h1>
+          <p className="text-gray-500">AI-powered carrier matching and assignment</p>
+        </div>
+        <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+          <button
+            onClick={() => handleViewModeToggle('board')}
+            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'board' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Board
+          </button>
+          <button
+            onClick={() => handleViewModeToggle('map')}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+              viewMode === 'map' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            Driver Map
+          </button>
+        </div>
       </div>
 
+      {/* Driver Map View */}
+      {viewMode === 'map' && (
+        <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          {loadingDrivers ? (
+            <div className="flex items-center justify-center h-96">
+              <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+            </div>
+          ) : driverLocations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-96 text-gray-500">
+              <Navigation className="h-12 w-12 text-gray-300 mb-3" />
+              <p className="font-medium">No active driver locations</p>
+              <p className="text-sm mt-1">Driver locations appear when GPS data is received</p>
+            </div>
+          ) : (
+            <div className="flex h-[calc(100vh-200px)]">
+              {/* Driver List */}
+              <div className="w-80 border-r border-gray-200 overflow-y-auto">
+                <div className="p-3 border-b border-gray-200 bg-gray-50">
+                  <p className="text-sm font-semibold text-gray-700">{driverLocations.length} Active Drivers</p>
+                </div>
+                {driverLocations.map((driver, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => setSelectedDriver(driver)}
+                    className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+                      selectedDriver === driver ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span className="font-medium text-sm text-gray-900">{driver.driver_name}</span>
+                    </div>
+                    {driver.carrier_name && (
+                      <p className="text-xs text-gray-500 mt-0.5 ml-4">{driver.carrier_name}</p>
+                    )}
+                    <p className="text-xs text-gray-400 mt-0.5 ml-4">
+                      {driver.city && driver.state ? `${driver.city}, ${driver.state}` : `${driver.latitude.toFixed(4)}, ${driver.longitude.toFixed(4)}`}
+                    </p>
+                    {driver.shipment_number && (
+                      <div className="mt-1 ml-4 flex items-center gap-1">
+                        <Truck className="h-3 w-3 text-emerald-500" />
+                        <span className="text-xs text-emerald-600 font-medium">{driver.shipment_number}</span>
+                      </div>
+                    )}
+                    {driver.eta && (
+                      <p className="text-xs text-blue-600 mt-0.5 ml-4">
+                        ETA: {new Date(driver.eta).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Map Placeholder / Driver Detail */}
+              <div className="flex-1 bg-gradient-to-br from-blue-50 to-emerald-50 relative">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <MapPin className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg font-medium">Map View</p>
+                    <p className="text-gray-400 text-sm mt-1">Select a driver to see their details</p>
+                  </div>
+                </div>
+
+                {/* Driver detail overlay */}
+                {selectedDriver && (
+                  <div className="absolute bottom-4 left-4 right-4 bg-white rounded-xl shadow-lg border border-gray-200 p-5">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Navigation className="h-5 w-5 text-emerald-600" />
+                          <h3 className="font-semibold text-gray-900">{selectedDriver.driver_name}</h3>
+                          <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">Live</span>
+                        </div>
+                        {selectedDriver.carrier_name && (
+                          <p className="text-sm text-gray-500 mt-1">{selectedDriver.carrier_name}</p>
+                        )}
+                      </div>
+                      <button onClick={() => setSelectedDriver(null)}
+                        className="p-1 text-gray-400 hover:text-gray-600 rounded">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-3 grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Location</span>
+                        <p className="font-medium">{selectedDriver.city && selectedDriver.state ? `${selectedDriver.city}, ${selectedDriver.state}` : 'GPS tracking'}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">GPS</span>
+                        <p className="font-medium font-mono text-xs">{selectedDriver.latitude.toFixed(4)}, {selectedDriver.longitude.toFixed(4)}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Speed</span>
+                        <p className="font-medium">{selectedDriver.speed_mph ? `${selectedDriver.speed_mph} mph` : 'N/A'}</p>
+                      </div>
+                    </div>
+                    {selectedDriver.shipment_number && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-sm text-gray-500">Load: </span>
+                            <span className="text-sm font-medium text-emerald-600">{selectedDriver.shipment_number}</span>
+                            {selectedDriver.shipment_status && (
+                              <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{selectedDriver.shipment_status.replace(/_/g, ' ')}</span>
+                            )}
+                          </div>
+                          {selectedDriver.shipment_id && (
+                            <button
+                              onClick={() => navigate(`/shipments/${selectedDriver.shipment_id}`)}
+                              className="text-sm text-emerald-600 hover:text-emerald-700 font-medium"
+                            >
+                              View
+                            </button>
+                          )}
+                        </div>
+                        {selectedDriver.origin && selectedDriver.destination && (
+                          <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
+                            {selectedDriver.origin} <ArrowRight className="h-3 w-3" /> {selectedDriver.destination}
+                          </p>
+                        )}
+                        {selectedDriver.eta && (
+                          <p className="text-sm text-blue-600 mt-1">
+                            ETA: {new Date(selectedDriver.eta).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-xs text-gray-400 mt-2">
+                      Last updated: {new Date(selectedDriver.last_updated).toLocaleString()}
+                      {selectedDriver.source && ` | Source: ${selectedDriver.source}`}
+                    </p>
+                  </div>
+                )}
+
+                {/* Map markers representation */}
+                {driverLocations.map((driver, idx) => {
+                  const x = ((driver.longitude + 130) / 65) * 100
+                  const y = ((50 - driver.latitude) / 25) * 100
+                  return (
+                    <div
+                      key={idx}
+                      className={`absolute w-3 h-3 rounded-full cursor-pointer transform -translate-x-1/2 -translate-y-1/2 transition-all ${
+                        selectedDriver === driver ? 'bg-emerald-500 ring-4 ring-emerald-200 scale-150' : 'bg-blue-500 hover:bg-emerald-500 hover:scale-125'
+                      }`}
+                      style={{ left: `${Math.max(5, Math.min(95, x))}%`, top: `${Math.max(5, Math.min(95, y))}%` }}
+                      onClick={() => setSelectedDriver(driver)}
+                      title={`${driver.driver_name}${driver.shipment_number ? ` - ${driver.shipment_number}` : ''}`}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Board View */}
+      {viewMode === 'board' && (
       <div className="flex-1 flex gap-6 min-h-0">
         {/* Kanban Columns */}
         <div className="flex-1 flex gap-4 overflow-x-auto">
@@ -254,6 +488,68 @@ export default function DispatchBoard() {
                   </div>
                 </div>
               )}
+
+              {/* AI Auto-Assign Button */}
+              <div>
+                <button
+                  onClick={handleAutoAssign}
+                  disabled={autoAssigning}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 font-medium text-sm transition-colors"
+                >
+                  {autoAssigning ? (
+                    <>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      AI Auto-Assigning...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="h-4 w-4" />
+                      AI Auto-Assign Carrier
+                    </>
+                  )}
+                </button>
+
+                {autoAssignResult && (
+                  <div className={`mt-2 p-3 rounded-lg text-sm ${
+                    autoAssignResult.auto_assigned
+                      ? 'bg-emerald-50 border border-emerald-200'
+                      : 'bg-amber-50 border border-amber-200'
+                  }`}>
+                    {autoAssignResult.auto_assigned ? (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium text-emerald-800">
+                            Auto-assigned to {autoAssignResult.assigned_carrier_name}
+                          </p>
+                          <p className="text-xs text-emerald-600">
+                            Confidence: {autoAssignResult.assignment_confidence}%
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        <p className="font-medium text-amber-800 flex items-center gap-1">
+                          <AlertTriangle className="h-3.5 w-3.5" />
+                          Below auto-assign threshold
+                        </p>
+                        <p className="text-xs text-amber-600 mt-1">
+                          {autoAssignResult.suggestions.length} suggestions below. Review and assign manually.
+                        </p>
+                        {autoAssignResult.rules_applied.length > 0 && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {autoAssignResult.rules_applied.map((rule, i) => (
+                              <span key={i} className="px-1.5 py-0.5 text-xs bg-amber-100 text-amber-700 rounded">
+                                {rule}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* AI Suggestions */}
               <div>
@@ -391,6 +687,7 @@ export default function DispatchBoard() {
           </div>
         )}
       </div>
+      )}
     </div>
   )
 }
