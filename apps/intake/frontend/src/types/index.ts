@@ -463,6 +463,35 @@ export interface UsageRollup {
 }
 
 // ---------------------------------------------------------------------------
+// AI Template Suggestions
+// ---------------------------------------------------------------------------
+
+export interface SuggestedQuestion {
+  questionKey: string;
+  questionText: string;
+  questionHelpText?: string | null;
+  questionOrder: number;
+  isRequired: boolean;
+  answerType: AnswerType;
+  applicabilityRuleText?: string | null;
+}
+
+export interface SuggestedSection {
+  sectionName: string;
+  sectionOrder: number;
+  isRepeatable: boolean;
+  repeatKeyName?: string | null;
+  applicabilityRuleText?: string | null;
+  questions: SuggestedQuestion[];
+}
+
+export interface AITemplateSuggestionsResponse {
+  sections: SuggestedSection[];
+  documentNames: string[];
+  mode: 'generate' | 'improve';
+}
+
+// ---------------------------------------------------------------------------
 // Response type aliases (for pages that use *Response naming)
 // ---------------------------------------------------------------------------
 

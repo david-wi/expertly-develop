@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     ]
     file_upload_dir: str = "/tmp/intake_uploads"
 
+    # ── AI (Anthropic Claude) ──────────────────────────────────────────────
+    anthropic_api_key: str = ""
+
     # ── VAPI (voice AI provider) ──────────────────────────────────────────
     vapi_api_key: str = ""
 

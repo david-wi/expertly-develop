@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,9 +10,22 @@ import {
   ChevronDown,
   ChevronRight,
   X,
+  Upload,
+  Loader2,
+  Sparkles,
+  FileText,
+  Trash2,
 } from 'lucide-react';
 import { api, axiosInstance } from '@/api/client';
-import type { TemplateVersion, TemplateSection, TemplateQuestion, AnswerType } from '@/types';
+import type {
+  TemplateVersion,
+  TemplateSection,
+  TemplateQuestion,
+  AnswerType,
+  SuggestedSection,
+  SuggestedQuestion,
+  AITemplateSuggestionsResponse,
+} from '@/types';
 
 // ── API helpers ──
 
@@ -32,6 +45,11 @@ export default function TemplateEditorPage() {
   const [editingSection, setEditingSection] = useState<TemplateSection | null>(null);
   const [showQuestionModal, setShowQuestionModal] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<TemplateQuestion | null>(null);
+
+  // AI upload state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showSuggestionsModal, setShowSuggestionsModal] = useState(false);
+  const [suggestions, setSuggestions] = useState<AITemplateSuggestionsResponse | null>(null);
 
   const { data: template, isLoading } = useQuery({
     queryKey: ['template-version', templateId],
@@ -128,6 +146,25 @@ export default function TemplateEditorPage() {
     },
   });
 
+  const aiSuggestMutation = useMutation({
+    mutationFn: (files: File[]) => api.templates.aiSuggest(templateId!, files),
+    onSuccess: (data) => {
+      setSuggestions(data);
+      setShowUploadModal(false);
+      setShowSuggestionsModal(true);
+    },
+  });
+
+  const aiAcceptMutation = useMutation({
+    mutationFn: (sections: SuggestedSection[]) =>
+      api.templates.aiAccept(templateId!, { sections }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['template-version', templateId] });
+      setShowSuggestionsModal(false);
+      setSuggestions(null);
+    },
+  });
+
   const toggleSection = (id: string) => {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -194,7 +231,7 @@ export default function TemplateEditorPage() {
       <div className="space-y-3 mb-6">
         {sections.length === 0 && (
           <div className="text-center py-12 text-gray-500 bg-white rounded-lg border border-gray-200">
-            No sections yet. Add your first section below.
+            No sections yet. Add your first section below, or upload documents to generate with AI.
           </div>
         )}
 
@@ -318,17 +355,29 @@ export default function TemplateEditorPage() {
         })}
       </div>
 
-      {/* Add section button */}
-      <button
-        onClick={() => {
-          setEditingSection(null);
-          setShowSectionModal(true);
-        }}
-        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-      >
-        <Plus className="w-4 h-4" />
-        Add Section
-      </button>
+      {/* Action buttons */}
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => {
+            setEditingSection(null);
+            setShowSectionModal(true);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Add Section
+        </button>
+
+        {!template.isPublished && (
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm text-indigo-700 hover:bg-indigo-100 transition-colors"
+          >
+            <Sparkles className="w-4 h-4" />
+            Generate with AI
+          </button>
+        )}
+      </div>
 
       {/* Section modal */}
       {showSectionModal && (
@@ -384,6 +433,428 @@ export default function TemplateEditorPage() {
           isPending={addQuestionMutation.isPending || updateQuestionMutation.isPending}
         />
       )}
+
+      {/* AI Upload modal */}
+      {showUploadModal && (
+        <UploadDocumentsModal
+          onClose={() => setShowUploadModal(false)}
+          onGenerate={(files) => aiSuggestMutation.mutate(files)}
+          isPending={aiSuggestMutation.isPending}
+          error={aiSuggestMutation.error ? String(
+            (aiSuggestMutation.error as { response?: { data?: { detail?: string } } })
+              ?.response?.data?.detail ?? aiSuggestMutation.error
+          ) : null}
+        />
+      )}
+
+      {/* AI Suggestions review modal */}
+      {showSuggestionsModal && suggestions && (
+        <SuggestionsReviewModal
+          suggestions={suggestions}
+          onClose={() => {
+            setShowSuggestionsModal(false);
+            setSuggestions(null);
+          }}
+          onAccept={(selectedSections) => aiAcceptMutation.mutate(selectedSections)}
+          isPending={aiAcceptMutation.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Upload Documents Modal ──
+
+function UploadDocumentsModal({
+  onClose,
+  onGenerate,
+  isPending,
+  error,
+}: {
+  onClose: () => void;
+  onGenerate: (files: File[]) => void;
+  isPending: boolean;
+  error: string | null;
+}) {
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setSelectedFiles((prev) => [...prev, ...newFiles]);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-indigo-600" />
+            <h2 className="text-lg font-semibold text-gray-900">Generate with AI</h2>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-600">
+            Upload document(s) and AI will analyze them to suggest sections and questions for your
+            template. You can review and edit suggestions before accepting.
+          </p>
+
+          {/* File input */}
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".pdf,.docx,.txt,.csv,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/csv"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="inline-flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-indigo-400 hover:text-indigo-600 transition-colors w-full justify-center"
+            >
+              <Upload className="w-4 h-4" />
+              Choose Files (PDF, DOCX, TXT, CSV)
+            </button>
+          </div>
+
+          {/* File list */}
+          {selectedFiles.length > 0 && (
+            <div className="space-y-2">
+              {selectedFiles.map((file, i) => (
+                <div
+                  key={`${file.name}-${i}`}
+                  className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">
+                      {(file.size / 1024).toFixed(0)} KB
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => removeFile(i)}
+                    className="text-gray-400 hover:text-red-500 flex-shrink-0 ml-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Error */}
+          {error && (
+            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+              {error}
+            </div>
+          )}
+
+          {/* Pending state */}
+          {isPending && (
+            <div className="flex items-center gap-3 text-sm text-indigo-600 bg-indigo-50 rounded-lg px-4 py-3">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Analyzing documents and generating suggestions... This may take up to a minute.
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={selectedFiles.length === 0 || isPending}
+              onClick={() => onGenerate(selectedFiles)}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Generate Suggestions
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Suggestions Review Modal ──
+
+function SuggestionsReviewModal({
+  suggestions,
+  onClose,
+  onAccept,
+  isPending,
+}: {
+  suggestions: AITemplateSuggestionsResponse;
+  onClose: () => void;
+  onAccept: (sections: SuggestedSection[]) => void;
+  isPending: boolean;
+}) {
+  // Deep clone suggestions so we can edit in place
+  const [editableSections, setEditableSections] = useState<SuggestedSection[]>(
+    () => JSON.parse(JSON.stringify(suggestions.sections)),
+  );
+  const [selectedSections, setSelectedSections] = useState<Set<number>>(
+    () => new Set(suggestions.sections.map((_, i) => i)),
+  );
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(
+    () => new Set(suggestions.sections.map((_, i) => i)),
+  );
+
+  const toggleSectionSelected = (index: number) => {
+    setSelectedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const toggleSectionExpanded = (index: number) => {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  const updateSectionName = (sectionIndex: number, name: string) => {
+    setEditableSections((prev) => {
+      const next = [...prev];
+      next[sectionIndex] = { ...next[sectionIndex], sectionName: name };
+      return next;
+    });
+  };
+
+  const updateQuestion = (
+    sectionIndex: number,
+    questionIndex: number,
+    field: keyof SuggestedQuestion,
+    value: string | boolean,
+  ) => {
+    setEditableSections((prev) => {
+      const next = [...prev];
+      const questions = [...next[sectionIndex].questions];
+      questions[questionIndex] = { ...questions[questionIndex], [field]: value };
+      next[sectionIndex] = { ...next[sectionIndex], questions };
+      return next;
+    });
+  };
+
+  const removeQuestion = (sectionIndex: number, questionIndex: number) => {
+    setEditableSections((prev) => {
+      const next = [...prev];
+      const questions = next[sectionIndex].questions.filter((_, i) => i !== questionIndex);
+      // Re-number questionOrder
+      questions.forEach((q, i) => {
+        q.questionOrder = i + 1;
+      });
+      next[sectionIndex] = { ...next[sectionIndex], questions };
+      return next;
+    });
+  };
+
+  const handleAccept = () => {
+    const selected = editableSections.filter((_, i) => selectedSections.has(i));
+    if (selected.length === 0) return;
+    onAccept(selected);
+  };
+
+  const totalQuestions = editableSections
+    .filter((_, i) => selectedSections.has(i))
+    .reduce((sum, s) => sum + s.questions.length, 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 flex-shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-lg font-semibold text-gray-900">AI Suggestions</h2>
+              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                {suggestions.mode === 'improve' ? 'Improvements' : 'New Template'}
+              </span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              From: {suggestions.documentNames.join(', ')}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto flex-1 p-6 space-y-4">
+          {editableSections.map((section, sIdx) => {
+            const isSelected = selectedSections.has(sIdx);
+            const isExpanded = expandedSections.has(sIdx);
+
+            return (
+              <div
+                key={sIdx}
+                className={`border rounded-lg ${
+                  isSelected ? 'border-indigo-200 bg-white' : 'border-gray-200 bg-gray-50 opacity-60'
+                }`}
+              >
+                {/* Section header */}
+                <div className="flex items-center gap-3 p-3">
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSectionSelected(sIdx)}
+                    className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={() => toggleSectionExpanded(sIdx)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="w-4 h-4" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4" />
+                    )}
+                  </button>
+                  <input
+                    type="text"
+                    value={section.sectionName}
+                    onChange={(e) => updateSectionName(sIdx, e.target.value)}
+                    className="flex-1 text-sm font-semibold text-gray-900 bg-transparent border-0 border-b border-transparent hover:border-gray-300 focus:border-indigo-500 focus:ring-0 px-1 py-0.5"
+                  />
+                  <span className="text-xs text-gray-400">
+                    {section.questions.length} question{section.questions.length !== 1 ? 's' : ''}
+                  </span>
+                  {section.isRepeatable && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                      <Repeat className="w-3 h-3" />
+                      Repeatable
+                    </span>
+                  )}
+                </div>
+
+                {/* Questions */}
+                {isExpanded && (
+                  <div className="border-t border-gray-100 px-3 pb-3">
+                    <div className="space-y-2 mt-2">
+                      {section.questions.map((q, qIdx) => (
+                        <div
+                          key={qIdx}
+                          className="bg-gray-50 rounded-lg px-3 py-2 space-y-1.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400 font-mono">
+                                  {q.questionKey}
+                                </span>
+                                <span className="text-xs text-gray-400">{q.answerType}</span>
+                                {q.isRequired && (
+                                  <span className="text-xs text-red-500">required</span>
+                                )}
+                              </div>
+                              <input
+                                type="text"
+                                value={q.questionText}
+                                onChange={(e) =>
+                                  updateQuestion(sIdx, qIdx, 'questionText', e.target.value)
+                                }
+                                className="w-full text-sm text-gray-800 bg-white border border-gray-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                              />
+                              {q.questionHelpText && (
+                                <input
+                                  type="text"
+                                  value={q.questionHelpText}
+                                  onChange={(e) =>
+                                    updateQuestion(sIdx, qIdx, 'questionHelpText', e.target.value)
+                                  }
+                                  className="w-full text-xs text-gray-500 bg-white border border-gray-200 rounded px-2 py-1 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                                  placeholder="Help text"
+                                />
+                              )}
+                            </div>
+                            <button
+                              onClick={() => removeQuestion(sIdx, qIdx)}
+                              className="text-gray-300 hover:text-red-500 flex-shrink-0 mt-1"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 flex-shrink-0">
+          <p className="text-sm text-gray-500">
+            {selectedSections.size} section{selectedSections.size !== 1 ? 's' : ''},{' '}
+            {totalQuestions} question{totalQuestions !== 1 ? 's' : ''} selected
+          </p>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={selectedSections.size === 0 || isPending}
+              onClick={handleAccept}
+              className="inline-flex items-center gap-2 px-4 py-2 text-sm text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  Accept Selected
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
