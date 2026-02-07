@@ -27,7 +27,6 @@ import {
   Zap,
   Building2,
   Upload,
-  Shield,
   BarChart3,
   CheckCircle2,
   XCircle,

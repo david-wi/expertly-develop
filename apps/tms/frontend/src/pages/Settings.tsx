@@ -17,7 +17,6 @@ import {
   AlertCircle,
   ArrowRightLeft,
   Plus,
-  Trash2,
   Clock,
   Search,
   Users,
@@ -819,25 +818,25 @@ function QuickBooksSyncDashboard() {
         <div className="bg-emerald-50 rounded-lg p-4">
           <p className="text-xs font-medium text-emerald-600 uppercase">Synced Invoices</p>
           <p className="text-2xl font-bold text-emerald-700 mt-1">
-            {syncStatus?.synced_invoices ?? 0}
+            {syncStatus?.sync_summary?.invoices?.synced ?? 0}
           </p>
         </div>
         <div className="bg-blue-50 rounded-lg p-4">
           <p className="text-xs font-medium text-blue-600 uppercase">Pending</p>
           <p className="text-2xl font-bold text-blue-700 mt-1">
-            {syncStatus?.pending_invoices ?? 0}
+            {syncStatus?.sync_summary?.invoices?.pending ?? 0}
           </p>
         </div>
         <div className="bg-red-50 rounded-lg p-4">
-          <p className="text-xs font-medium text-red-600 uppercase">Failed</p>
+          <p className="text-xs font-medium text-red-600 uppercase">Errors</p>
           <p className="text-2xl font-bold text-red-700 mt-1">
-            {syncStatus?.failed_invoices ?? 0}
+            {syncStatus?.sync_summary?.invoices?.errors ?? 0}
           </p>
         </div>
         <div className="bg-gray-50 rounded-lg p-4">
-          <p className="text-xs font-medium text-gray-600 uppercase">Total Amount</p>
+          <p className="text-xs font-medium text-gray-600 uppercase">Synced Customers</p>
           <p className="text-2xl font-bold text-gray-700 mt-1">
-            ${syncStatus?.total_synced_amount?.toLocaleString() ?? '0'}
+            {syncStatus?.sync_summary?.customers?.synced ?? 0}
           </p>
         </div>
       </div>
@@ -885,28 +884,37 @@ function QuickBooksSyncDashboard() {
         )}
       </div>
 
-      {/* Recent Synced Invoices */}
+      {/* Recent Synced Entities */}
       {syncStatus?.recent_syncs && syncStatus.recent_syncs.length > 0 && (
         <div className="border-t border-gray-200 pt-4">
           <h4 className="text-sm font-medium text-gray-900 mb-3">Recently Synced</h4>
           <div className="space-y-2">
-            {syncStatus.recent_syncs.map((sync: { invoice_id: string; status: string; synced_at: string; amount?: number }, idx: number) => (
+            {syncStatus.recent_syncs.map((sync, idx) => (
               <div
-                key={idx}
+                key={sync.id || idx}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg text-sm"
               >
                 <div className="flex items-center gap-3">
-                  {sync.status === 'synced' ? (
+                  {sync.status === 'synced' || sync.status === 'completed' ? (
                     <CheckCircle className="w-4 h-4 text-emerald-500" />
-                  ) : sync.status === 'failed' ? (
+                  ) : sync.status === 'failed' || sync.status === 'error' ? (
                     <XCircle className="w-4 h-4 text-red-500" />
                   ) : (
                     <RefreshCw className="w-4 h-4 text-blue-500 animate-spin" />
                   )}
-                  <span className="font-medium">Invoice #{sync.invoice_id}</span>
+                  <span className="font-medium capitalize">{sync.entity_type}</span>
+                  <span className="text-gray-400 text-xs">#{sync.id}</span>
                 </div>
                 <div className="flex items-center gap-4 text-gray-500">
-                  {sync.amount && <span>${sync.amount.toLocaleString()}</span>}
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    sync.status === 'synced' || sync.status === 'completed'
+                      ? 'bg-emerald-100 text-emerald-700'
+                      : sync.status === 'failed' || sync.status === 'error'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {sync.status}
+                  </span>
                   <span>{new Date(sync.synced_at).toLocaleString()}</span>
                 </div>
               </div>

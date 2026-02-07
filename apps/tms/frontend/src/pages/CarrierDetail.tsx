@@ -39,12 +39,6 @@ import type {
   CapacityPosting,
   NegotiationHistory,
   NegotiationRecord,
-  CounterOffer,
-  OnboardingDashboard,
-  OnboardingDashboardItem,
-  CapacityHeatmapItem,
-  WaterfallStatus,
-  WaterfallConfig,
 } from '../types'
 
 const carrierStatusConfig: Record<string, { bg: string; text: string }> = {
@@ -880,7 +874,7 @@ export default function CarrierDetail() {
 
       {/* Capacity Tab */}
       {activeTab === 'capacity' && (
-        <CarrierCapacityTab carrierId={id!} carrierName={carrier.name} />
+        <CarrierCapacityTab carrierId={id!} />
       )}
 
       {/* Negotiations Tab */}
@@ -890,7 +884,11 @@ export default function CarrierDetail() {
 
       {/* Onboarding Tab */}
       {activeTab === 'onboarding' && (
-        <CarrierOnboardingTab carrierId={id!} carrierName={carrier.name} />
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center text-gray-500">
+          <ClipboardList className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-900 font-medium">Carrier Onboarding</p>
+          <p className="text-sm text-gray-400 mt-2">Onboarding dashboard coming soon</p>
+        </div>
       )}
 
       {/* Load History Tab */}
@@ -1187,7 +1185,7 @@ export default function CarrierDetail() {
 // Carrier Capacity Tab Component
 // ============================================================================
 
-function CarrierCapacityTab({ carrierId, carrierName }: { carrierId: string; carrierName: string }) {
+function CarrierCapacityTab({ carrierId }: { carrierId: string }) {
   const [capacityPostings, setCapacityPostings] = useState<CapacityPosting[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -1240,8 +1238,6 @@ function CarrierCapacityTab({ carrierId, carrierName }: { carrierId: string; car
       console.error('Failed to post capacity:', error)
     }
   }
-
-  const formatCurrency = (cents: number) => `$${(cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })}`
 
   return (
     <div className="space-y-6">
