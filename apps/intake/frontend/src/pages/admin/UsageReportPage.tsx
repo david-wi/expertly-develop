@@ -5,7 +5,7 @@ import {
   Download,
   Calendar,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { axiosInstance } from '@/api/client';
 import { format, subDays } from 'date-fns';
 
 // ── Types ──
@@ -28,8 +28,8 @@ interface AccountUsageSummary {
 
 // ── API helpers ──
 
-function fetchAccountUsage(startDate: string, endDate: string) {
-  return api
+function fetchAccountUsage(startDate: string, endDate: string): Promise<AccountUsageSummary> {
+  return axiosInstance
     .get<AccountUsageSummary>('/admin/usage', { params: { startDate, endDate } })
     .then((r) => r.data);
 }

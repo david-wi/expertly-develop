@@ -62,7 +62,7 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 // ---------------------------------------------------------------------------
 
 function AppRoutes() {
-  const loadUser = useAuthStore((s) => s.loadUser);
+  const loadUser = useAuthStore((s: { loadUser: () => Promise<void> }) => s.loadUser);
 
   useEffect(() => {
     loadUser();

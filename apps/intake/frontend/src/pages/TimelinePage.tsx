@@ -14,23 +14,21 @@ import {
   Activity,
 } from 'lucide-react';
 import { api } from '@/api/client';
-import type { TimelineEvent, Contributor, IntakeSectionInstance } from '@/types';
+import type { Contributor, IntakeSectionInstance } from '@/types';
 import { format } from 'date-fns';
 
 // ── API helpers ──
 
 function fetchTimeline(intakeId: string) {
-  return api.get<TimelineEvent[]>(`/intakes/${intakeId}/timeline`).then((r) => r.data);
+  return api.timeline.get(intakeId);
 }
 
 function fetchSectionInstances(intakeId: string) {
-  return api
-    .get<IntakeSectionInstance[]>(`/intakes/${intakeId}/section-instances`)
-    .then((r) => r.data);
+  return api.sections.list(intakeId);
 }
 
 function fetchContributors(intakeId: string) {
-  return api.get<Contributor[]>(`/intakes/${intakeId}/contributors`).then((r) => r.data);
+  return api.contributors.list(intakeId);
 }
 
 // ── Helpers ──

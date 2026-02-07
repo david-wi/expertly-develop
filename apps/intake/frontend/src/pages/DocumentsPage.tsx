@@ -16,18 +16,18 @@ import {
   AlertCircle,
   Loader2,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type { FileAsset, UrlSource, UrlSnapshot } from '@/types';
 import { format } from 'date-fns';
 
 // ── API helpers ──
 
-function fetchFileAssets(intakeId: string) {
-  return api.get<FileAsset[]>(`/intakes/${intakeId}/file-assets`).then((r) => r.data);
+function fetchFileAssets(intakeId: string): Promise<FileAsset[]> {
+  return api.files.list(intakeId);
 }
 
-function fetchUrlSources(intakeId: string) {
-  return api.get<(UrlSource & { snapshots?: UrlSnapshot[] })[]>(`/intakes/${intakeId}/url-sources`).then((r) => r.data);
+function fetchUrlSources(intakeId: string): Promise<(UrlSource & { snapshots?: UrlSnapshot[] })[]> {
+  return axiosInstance.get<(UrlSource & { snapshots?: UrlSnapshot[] })[]>(`/intakes/${intakeId}/url-sources`).then((r) => r.data);
 }
 
 // ── Helpers ──
@@ -116,9 +116,7 @@ function UploadsTab({ intakeId }: { intakeId: string }) {
     mutationFn: (file: File) => {
       const formData = new FormData();
       formData.append('file', file);
-      return api.post(`/intakes/${intakeId}/file-assets`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      return api.files.upload(intakeId, formData);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['file-assets', intakeId] });
@@ -128,7 +126,7 @@ function UploadsTab({ intakeId }: { intakeId: string }) {
 
   const processMutation = useMutation({
     mutationFn: (fileAssetId: string) =>
-      api.post(`/intakes/${intakeId}/file-assets/${fileAssetId}/process`),
+      api.files.process(intakeId, fileAssetId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['file-assets', intakeId] });
     },
@@ -255,7 +253,7 @@ function UrlsTab({ intakeId }: { intakeId: string }) {
 
   const addUrlMutation = useMutation({
     mutationFn: (data: { url: string; label: string }) =>
-      api.post(`/intakes/${intakeId}/url-sources`, data),
+      api.urls.create(intakeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['url-sources', intakeId] });
       setShowAddUrl(false);
@@ -264,7 +262,7 @@ function UrlsTab({ intakeId }: { intakeId: string }) {
 
   const refreshMutation = useMutation({
     mutationFn: (sourceId: string) =>
-      api.post(`/intakes/${intakeId}/url-sources/${sourceId}/refresh`),
+      api.urls.refresh(intakeId, sourceId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['url-sources', intakeId] });
     },

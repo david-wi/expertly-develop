@@ -9,23 +9,21 @@ import {
   ExternalLink,
   Filter,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type { Proposal, IntakeSectionInstance, IntakeQuestionInstance } from '@/types';
 
 // ── API helpers ──
 
-function fetchProposals(intakeId: string) {
-  return api.get<Proposal[]>(`/intakes/${intakeId}/proposals`).then((r) => r.data);
+function fetchProposals(intakeId: string): Promise<Proposal[]> {
+  return api.proposals.list(intakeId);
 }
 
-function fetchSectionInstances(intakeId: string) {
-  return api
-    .get<IntakeSectionInstance[]>(`/intakes/${intakeId}/section-instances`)
-    .then((r) => r.data);
+function fetchSectionInstances(intakeId: string): Promise<IntakeSectionInstance[]> {
+  return api.sections.list(intakeId);
 }
 
-function fetchQuestionInstances(intakeId: string) {
-  return api
+function fetchQuestionInstances(intakeId: string): Promise<IntakeQuestionInstance[]> {
+  return axiosInstance
     .get<IntakeQuestionInstance[]>(`/intakes/${intakeId}/question-instances`)
     .then((r) => r.data);
 }
@@ -84,10 +82,14 @@ export default function ProposalsPage() {
   });
 
   const acceptMutation = useMutation({
-    mutationFn: ({ proposalId, answer }: { proposalId: string; answer?: string }) =>
-      api.post(`/intakes/${intakeId}/proposals/${proposalId}/accept`, {
-        answer: answer ?? undefined,
-      }),
+    mutationFn: ({ proposalId, answer }: { proposalId: string; answer?: string }) => {
+      if (answer) {
+        return axiosInstance.post(`/intakes/${intakeId}/proposals/${proposalId}/accept`, {
+          answer,
+        }).then((r) => r.data);
+      }
+      return api.proposals.accept(intakeId!, proposalId);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proposals', intakeId] });
       setEditingId(null);
@@ -97,9 +99,7 @@ export default function ProposalsPage() {
 
   const rejectMutation = useMutation({
     mutationFn: ({ proposalId, reason }: { proposalId: string; reason: string }) =>
-      api.post(`/intakes/${intakeId}/proposals/${proposalId}/reject`, {
-        rejectionReason: reason,
-      }),
+      api.proposals.reject(intakeId!, proposalId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proposals', intakeId] });
       setRejectingId(null);

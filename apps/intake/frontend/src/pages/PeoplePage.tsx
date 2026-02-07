@@ -13,7 +13,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type {
   Contributor,
   Assignment,
@@ -22,18 +22,16 @@ import type {
 
 // ── API helpers ──
 
-function fetchContributors(intakeId: string) {
-  return api.get<Contributor[]>(`/intakes/${intakeId}/contributors`).then((r) => r.data);
+function fetchContributors(intakeId: string): Promise<Contributor[]> {
+  return api.contributors.list(intakeId);
 }
 
-function fetchAssignments(intakeId: string) {
-  return api.get<Assignment[]>(`/intakes/${intakeId}/assignments`).then((r) => r.data);
+function fetchAssignments(intakeId: string): Promise<Assignment[]> {
+  return axiosInstance.get<Assignment[]>(`/intakes/${intakeId}/assignments`).then((r) => r.data);
 }
 
-function fetchSectionInstances(intakeId: string) {
-  return api
-    .get<IntakeSectionInstance[]>(`/intakes/${intakeId}/section-instances`)
-    .then((r) => r.data);
+function fetchSectionInstances(intakeId: string): Promise<IntakeSectionInstance[]> {
+  return api.sections.list(intakeId);
 }
 
 // ── Page ──
@@ -67,7 +65,7 @@ export default function PeoplePage() {
 
   const createContributor = useMutation({
     mutationFn: (data: { name: string; email?: string; phone?: string; role?: string }) =>
-      api.post(`/intakes/${intakeId}/contributors`, data),
+      api.contributors.create(intakeId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contributors', intakeId] });
       setShowAddContributor(false);
@@ -76,7 +74,7 @@ export default function PeoplePage() {
 
   const updateContributor = useMutation({
     mutationFn: (data: { contributorId: string; name: string; email?: string; phone?: string; role?: string }) =>
-      api.put(`/intakes/${intakeId}/contributors/${data.contributorId}`, data),
+      axiosInstance.put(`/intakes/${intakeId}/contributors/${data.contributorId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contributors', intakeId] });
       setEditingContributor(null);
@@ -85,7 +83,7 @@ export default function PeoplePage() {
 
   const createAssignment = useMutation({
     mutationFn: (data: { contributorId: string; intakeSectionInstanceId: string }) =>
-      api.post(`/intakes/${intakeId}/assignments`, data),
+      api.contributors.assign(intakeId!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignments', intakeId] });
       setShowAddAssignment(false);
@@ -94,7 +92,7 @@ export default function PeoplePage() {
 
   const scheduleFollowUp = useMutation({
     mutationFn: (contributorId: string) =>
-      api.post(`/intakes/${intakeId}/follow-ups`, { assignedTo: contributorId }),
+      api.followUps.create(intakeId!, { description: 'Follow-up', assignedTo: contributorId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['follow-ups', intakeId] });
     },

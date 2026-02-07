@@ -20,7 +20,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react';
-import { api } from '@/api/client';
+import { axiosInstance } from '@/api/client';
 import type {
   IntakeQuestionInstanceResponse,
   AnswerRevisionResponse,
@@ -140,7 +140,7 @@ export default function QuestionDetailPage() {
   const { data: question, isLoading, isError } = useQuery<IntakeQuestionInstanceResponse>({
     queryKey: ['questionInstance', questionInstanceId],
     queryFn: async () => {
-      const res = await api.get<IntakeQuestionInstanceResponse>(
+      const res = await axiosInstance.get<IntakeQuestionInstanceResponse>(
         `/intakes/${intakeId}/sectionInstances/${sectionInstanceId}/questionInstances/${questionInstanceId}`,
       );
       return res.data;
@@ -151,7 +151,7 @@ export default function QuestionDetailPage() {
   const { data: revisions } = useQuery<AnswerRevisionResponse[]>({
     queryKey: ['answerRevisions', questionInstanceId],
     queryFn: async () => {
-      const res = await api.get<AnswerRevisionResponse[]>(
+      const res = await axiosInstance.get<AnswerRevisionResponse[]>(
         `/intakes/${intakeId}/questionInstances/${questionInstanceId}/revisions`,
       );
       return res.data;
@@ -162,7 +162,7 @@ export default function QuestionDetailPage() {
   const { data: evidence } = useQuery<EvidenceResponse[]>({
     queryKey: ['questionEvidence', questionInstanceId],
     queryFn: async () => {
-      const res = await api.get<EvidenceResponse[]>(
+      const res = await axiosInstance.get<EvidenceResponse[]>(
         `/intakes/${intakeId}/questionInstances/${questionInstanceId}/evidence`,
       );
       return res.data;
@@ -174,7 +174,7 @@ export default function QuestionDetailPage() {
 
   const saveRevisionMutation = useMutation({
     mutationFn: async (answerText: string) => {
-      const res = await api.post<AnswerRevisionResponse>(
+      const res = await axiosInstance.post<AnswerRevisionResponse>(
         `/intakes/${intakeId}/questionInstances/${questionInstanceId}/revisions`,
         {
           intakeQuestionInstanceId: questionInstanceId,
@@ -198,7 +198,7 @@ export default function QuestionDetailPage() {
 
   const markStatusMutation = useMutation({
     mutationFn: async (newStatus: QuestionInstanceStatus) => {
-      const res = await api.patch<IntakeQuestionInstanceResponse>(
+      const res = await axiosInstance.patch<IntakeQuestionInstanceResponse>(
         `/intakes/${intakeId}/sectionInstances/${sectionInstanceId}/questionInstances/${questionInstanceId}`,
         { status: newStatus },
       );
@@ -214,7 +214,7 @@ export default function QuestionDetailPage() {
 
   const makeCurrentMutation = useMutation({
     mutationFn: async (revisionId: string) => {
-      await api.post(`/intakes/${intakeId}/questionInstances/${questionInstanceId}/chooseCurrent`, {
+      await axiosInstance.post(`/intakes/${intakeId}/questionInstances/${questionInstanceId}/chooseCurrent`, {
         intakeQuestionInstanceId: questionInstanceId,
         answerRevisionId: revisionId,
       });

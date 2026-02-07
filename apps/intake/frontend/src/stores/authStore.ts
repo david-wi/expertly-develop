@@ -6,7 +6,7 @@ import type { User } from '../types';
 // State shape
 // ---------------------------------------------------------------------------
 
-interface AuthState {
+export interface AuthState {
   /** Currently authenticated user (null when logged out or not yet loaded). */
   user: User | null;
   /** JWT bearer token. */

@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Settings, User, Bell } from 'lucide-react';
-import { api } from '@/api/client';
+import { api, axiosInstance } from '@/api/client';
 import type { Account, User as UserType } from '@/types';
 
 // ── API helpers ──
 
-function fetchAccount() {
-  return api.get<Account>('/account').then((r) => r.data);
+function fetchAccount(): Promise<Account> {
+  return api.auth.getAccount();
 }
 
-function fetchCurrentUser() {
-  return api.get<UserType>('/auth/me').then((r) => r.data);
+function fetchCurrentUser(): Promise<UserType> {
+  return api.auth.me();
 }
 
 // ── Page ──
@@ -134,7 +134,7 @@ function ProfileSettings() {
   });
 
   const updateProfileMutation = useMutation({
-    mutationFn: (data: { name: string }) => api.put('/auth/me', data),
+    mutationFn: (data: { name: string }) => axiosInstance.put('/auth/me', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['current-user'] });
     },
@@ -142,7 +142,7 @@ function ProfileSettings() {
 
   const changePasswordMutation = useMutation({
     mutationFn: (data: { currentPassword: string; newPassword: string }) =>
-      api.post('/auth/change-password', data),
+      axiosInstance.post('/auth/change-password', data),
     onSuccess: () => {
       setCurrentPassword('');
       setNewPassword('');
