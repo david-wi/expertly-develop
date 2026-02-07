@@ -220,30 +220,22 @@ export function DocumentView({ requirements, productName }: DocumentViewProps) {
 
   return (
     <div className="max-w-4xl mx-auto">
+      {/* Copy icon */}
+      <div className="mb-2">
+        <button
+          onClick={handleCopy}
+          className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          title="Copy document to clipboard"
+        >
+          {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+        </button>
+      </div>
+
       {/* Document header */}
       <div className="mb-8 pb-6 border-b border-gray-200">
-        <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-bold text-gray-900">
-            {productName} — Requirements Document
-          </h1>
-          <button
-            onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-            title="Copy document to clipboard"
-          >
-            {copied ? (
-              <>
-                <Check className="h-4 w-4" />
-                <span>Copied!</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-4 w-4" />
-                <span>Copy</span>
-              </>
-            )}
-          </button>
-        </div>
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          {productName} — Requirements Document
+        </h1>
         <div className="flex gap-4 text-sm text-gray-500">
           <span>{stats.total} requirements</span>
           {stats.draft > 0 && <span>{stats.draft} draft</span>}
