@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -91,12 +91,32 @@ export function GenerateFromArtifactsDialog({
 
   const readyArtifacts = artifacts.filter((a) => getArtifactStatus(a) === 'completed')
 
+  // Polling ref and cleanup
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const stopPolling = useCallback(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+  }, [])
+
   // Initialize selected artifacts when dialog opens
   const initializeSelection = useCallback(() => {
     setSelectedArtifactIds(new Set(readyArtifacts.map((a) => a.id)))
   }, [artifacts])
 
   const resetDialog = useCallback(() => {
+    stopPolling()
     setStep('select')
     setSelectedArtifactIds(new Set())
     setTargetParentId('')
@@ -107,7 +127,7 @@ export function GenerateFromArtifactsDialog({
     setExpandedItems(new Set())
     setEditingId(null)
     setCreateProgress({ current: 0, total: 0 })
-  }, [])
+  }, [stopPolling])
 
   const handleClose = useCallback(
     (open: boolean) => {
@@ -143,25 +163,44 @@ export function GenerateFromArtifactsDialog({
     setError('')
 
     try {
-      const response = await aiApi.generateFromArtifacts({
+      const { job_id } = await aiApi.generateFromArtifacts({
         product_id: productId,
         artifact_ids: Array.from(selectedArtifactIds),
         target_parent_id: targetParentId || undefined,
       })
 
-      const requirementsWithApproval: ParsedReqWithApproval[] = response.requirements.map((req) => ({
-        ...req,
-        approval_status: 'pending' as ApprovalStatus,
-      }))
-      setParsedRequirements(requirementsWithApproval)
-      setStep('preview')
-      setExpandedItems(new Set(requirementsWithApproval.map((r) => r.temp_id)))
+      // Poll for results every 2 seconds
+      pollingRef.current = setInterval(async () => {
+        try {
+          const status = await aiApi.getGenerationStatus(job_id)
+
+          if (status.status === 'completed' && status.requirements) {
+            stopPolling()
+            setGenerating(false)
+            const requirementsWithApproval: ParsedReqWithApproval[] = status.requirements.map((req) => ({
+              ...req,
+              approval_status: 'pending' as ApprovalStatus,
+            }))
+            setParsedRequirements(requirementsWithApproval)
+            setStep('preview')
+            setExpandedItems(new Set(requirementsWithApproval.map((r) => r.temp_id)))
+          } else if (status.status === 'failed') {
+            stopPolling()
+            setGenerating(false)
+            setError(status.error || 'Generation failed')
+          }
+          // status === 'processing' → keep polling
+        } catch {
+          stopPolling()
+          setGenerating(false)
+          setError('Lost connection while generating requirements. Please try again.')
+        }
+      }, 2000)
     } catch (err: unknown) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to generate requirements'
+      setGenerating(false)
+      const errorMsg = err instanceof Error ? err.message : 'Failed to start generation'
       const axiosErr = err as { response?: { data?: { detail?: string } } }
       setError(axiosErr?.response?.data?.detail || errorMsg)
-    } finally {
-      setGenerating(false)
     }
   }
 
@@ -671,9 +710,17 @@ export function GenerateFromArtifactsDialog({
                 Cancel
               </Button>
               <Button onClick={handleGenerate} disabled={generating || selectedArtifactIds.size === 0}>
-                {generating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate
+                {generating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing documents...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate
+                  </>
+                )}
               </Button>
             </>
           )}

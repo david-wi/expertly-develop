@@ -303,9 +303,14 @@ export const aiApi = {
     product_id: string
     artifact_ids?: string[]
     target_parent_id?: string
-  }) => api.post<{ requirements: ParsedRequirement[] }>(
+  }) => api.post<{ job_id: string }>(
     '/ai/generate-from-artifacts', data
   ).then((r) => r.data),
+
+  getGenerationStatus: (jobId: string) =>
+    api.get<{ status: string; requirements: ParsedRequirement[] | null; error: string | null }>(
+      `/ai/generate-from-artifacts/${jobId}`
+    ).then((r) => r.data),
 }
 
 // Artifacts API
