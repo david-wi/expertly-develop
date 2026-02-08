@@ -17,6 +17,8 @@ import type {
   Desk,
 } from '../types'
 
+import { httpErrorMessage } from '../utils/httpErrors'
+
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -30,8 +32,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(error.detail || `HTTP ${response.status}`)
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || httpErrorMessage(response.status))
   }
 
   return response.json()
@@ -2462,7 +2464,7 @@ export const api = {
     })
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
-      throw new Error(error.detail || `HTTP ${response.status}`)
+      throw new Error(error.detail || httpErrorMessage(response.status))
     }
     return response.json() as Promise<import('../types').BatchUploadResult>
   },
@@ -2484,7 +2486,7 @@ export const api = {
     })
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
-      throw new Error(error.detail || `HTTP ${response.status}`)
+      throw new Error(error.detail || httpErrorMessage(response.status))
     }
     return response.json() as Promise<{ status: string; shipment_id: string; photo_count: number; photos: any[] }>
   },
@@ -2547,7 +2549,7 @@ export const api = {
     })
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Upload failed' }))
-      throw new Error(error.detail || `HTTP ${response.status}`)
+      throw new Error(error.detail || httpErrorMessage(response.status))
     }
     return response.json() as Promise<import('../types').BulkImportPreview>
   },

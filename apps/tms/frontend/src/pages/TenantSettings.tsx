@@ -24,6 +24,7 @@ import {
   AlertCircle,
   CheckCircle,
   RefreshCw,
+  Upload,
 } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
 
@@ -33,6 +34,13 @@ import { useOutletContext } from 'react-router-dom'
 
 interface LayoutOutletContext {
   selectedOrgId: string | null
+}
+
+interface CustomFieldDef {
+  label: string
+  description: string
+  default_value: string
+  entity_type: string
 }
 
 interface TenantSettingsData {
@@ -45,7 +53,7 @@ interface TenantSettingsData {
   shipment_number_prefix: string
   auto_numbering: boolean
   default_equipment_type: string
-  custom_fields: Record<string, string>
+  custom_fields: Record<string, string | CustomFieldDef>
   branding: {
     logo_url?: string | null
     primary_color?: string
@@ -73,6 +81,8 @@ type TabType = 'company' | 'numbering' | 'branding' | 'custom-fields' | 'users'
 // Local API helpers (no import from api.ts)
 // ---------------------------------------------------------------------------
 
+import { httpErrorMessage } from '../utils/httpErrors'
+
 const TENANT_API = import.meta.env.VITE_API_URL || ''
 
 async function tenantRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -84,7 +94,10 @@ async function tenantRequest<T>(path: string, options: RequestInit = {}): Promis
     },
     credentials: 'include',
   })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || httpErrorMessage(response.status))
+  }
   return response.json()
 }
 
@@ -174,9 +187,14 @@ export default function TenantSettings() {
   const [inviteRole, setInviteRole] = useState('member')
   const [inviting, setInviting] = useState(false)
 
+  // Logo upload state
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
   // Custom fields state
-  const [newFieldKey, setNewFieldKey] = useState('')
-  const [newFieldValue, setNewFieldValue] = useState('')
+  const [newFieldLabel, setNewFieldLabel] = useState('')
+  const [newFieldDescription, setNewFieldDescription] = useState('')
+  const [newFieldDefault, setNewFieldDefault] = useState('')
+  const [newFieldEntity, setNewFieldEntity] = useState('shipment')
 
   // ---------------------------------------------------------------------------
   // Data fetching
@@ -198,7 +216,7 @@ export default function TenantSettings() {
       )
       setSettings(data)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load settings')
+      setError(err instanceof Error ? err.message : 'Could not load your organization settings. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -263,7 +281,7 @@ export default function TenantSettings() {
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save settings')
+      setError(err instanceof Error ? err.message : 'Could not save your settings. Please try again.')
     } finally {
       setSaving(false)
     }
@@ -286,7 +304,7 @@ export default function TenantSettings() {
       setInviteRole('member')
       fetchUsers()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send invitation')
+      setError(err instanceof Error ? err.message : 'Could not send the invitation. Please try again.')
     } finally {
       setInviting(false)
     }
@@ -297,16 +315,25 @@ export default function TenantSettings() {
   // ---------------------------------------------------------------------------
 
   const addCustomField = () => {
-    if (!newFieldKey.trim()) return
+    if (!newFieldLabel.trim()) return
+    const key = newFieldLabel.trim().toLowerCase().replace(/\s+/g, '_')
+    const fieldDef: CustomFieldDef = {
+      label: newFieldLabel.trim(),
+      description: newFieldDescription.trim(),
+      default_value: newFieldDefault,
+      entity_type: newFieldEntity,
+    }
     setSettings(prev => ({
       ...prev,
       custom_fields: {
         ...prev.custom_fields,
-        [newFieldKey.trim()]: newFieldValue,
+        [key]: fieldDef,
       },
     }))
-    setNewFieldKey('')
-    setNewFieldValue('')
+    setNewFieldLabel('')
+    setNewFieldDescription('')
+    setNewFieldDefault('')
+    setNewFieldEntity('shipment')
   }
 
   const removeCustomField = (key: string) => {
@@ -315,6 +342,78 @@ export default function TenantSettings() {
       delete updated[key]
       return { ...prev, custom_fields: updated }
     })
+  }
+
+  // ---------------------------------------------------------------------------
+  // Logo upload / delete
+  // ---------------------------------------------------------------------------
+
+  const handleLogoUpload = async (file: File) => {
+    if (!orgId) return
+    if (!file.type.startsWith('image/')) {
+      setError('Please select an image file (PNG, JPG, WEBP, or SVG).')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError('Logo must be under 2 MB.')
+      return
+    }
+
+    setUploadingLogo(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch(`${TENANT_API}/api/v1/tenant/branding/logo`, {
+        method: 'POST',
+        headers: orgHeaders(),
+        credentials: 'include',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.detail || httpErrorMessage(response.status))
+      }
+
+      const data = await response.json()
+      setSettings(prev => ({
+        ...prev,
+        branding: { ...prev.branding, logo_url: data.logo_url },
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not upload the logo. Please try again.')
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  const handleLogoDelete = async () => {
+    if (!orgId) return
+    setUploadingLogo(true)
+    setError(null)
+    try {
+      const response = await fetch(`${TENANT_API}/api/v1/tenant/branding/logo`, {
+        method: 'DELETE',
+        headers: { ...orgHeaders(), 'Content-Type': 'application/json' },
+        credentials: 'include',
+      })
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}))
+        throw new Error(err.detail || httpErrorMessage(response.status))
+      }
+
+      setSettings(prev => ({
+        ...prev,
+        branding: { ...prev.branding, logo_url: null },
+      }))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not remove the logo. Please try again.')
+    } finally {
+      setUploadingLogo(false)
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -369,7 +468,13 @@ export default function TenantSettings() {
       {error && (
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700 text-sm">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          {error}
+          <span className="flex-1">{error}</span>
+          <button
+            onClick={() => { setError(null); fetchSettings() }}
+            className="text-red-600 hover:text-red-800 underline text-xs font-medium whitespace-nowrap"
+          >
+            Try again
+          </button>
         </div>
       )}
 
@@ -548,32 +653,76 @@ export default function TenantSettings() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Company Logo
                     </label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                      {settings.branding.logo_url ? (
+                    <div
+                      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors cursor-pointer relative"
+                      onDragOver={e => { e.preventDefault(); e.stopPropagation() }}
+                      onDrop={e => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const file = e.dataTransfer.files[0]
+                        if (file) handleLogoUpload(file)
+                      }}
+                      onClick={() => {
+                        if (!settings.branding.logo_url && !uploadingLogo) {
+                          const input = document.createElement('input')
+                          input.type = 'file'
+                          input.accept = 'image/png,image/jpeg,image/webp,image/svg+xml'
+                          input.onchange = () => {
+                            const file = input.files?.[0]
+                            if (file) handleLogoUpload(file)
+                          }
+                          input.click()
+                        }
+                      }}
+                    >
+                      {uploadingLogo ? (
+                        <div className="space-y-2">
+                          <Loader2 className="w-8 h-8 text-blue-500 mx-auto animate-spin" />
+                          <p className="text-sm text-gray-500">Uploading...</p>
+                        </div>
+                      ) : settings.branding.logo_url ? (
                         <div className="space-y-2">
                           <img
-                            src={settings.branding.logo_url}
+                            src={`${TENANT_API}${settings.branding.logo_url}`}
                             alt="Company logo"
                             className="mx-auto max-h-16 object-contain"
                           />
-                          <button
-                            onClick={() => setSettings(prev => ({
-                              ...prev,
-                              branding: { ...prev.branding, logo_url: null },
-                            }))}
-                            className="text-xs text-red-600 hover:text-red-700"
-                          >
-                            Remove logo
-                          </button>
+                          <div className="flex items-center justify-center gap-3">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const input = document.createElement('input')
+                                input.type = 'file'
+                                input.accept = 'image/png,image/jpeg,image/webp,image/svg+xml'
+                                input.onchange = () => {
+                                  const file = input.files?.[0]
+                                  if (file) handleLogoUpload(file)
+                                }
+                                input.click()
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-700"
+                            >
+                              Change logo
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleLogoDelete()
+                              }}
+                              className="text-xs text-red-600 hover:text-red-700"
+                            >
+                              Remove logo
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div>
-                          <Palette className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
                           <p className="text-sm text-gray-500">
-                            Logo upload coming soon
+                            Click or drag to upload your logo
                           </p>
                           <p className="text-xs text-gray-400 mt-1">
-                            PNG, JPG up to 2MB
+                            PNG, JPG, WEBP, or SVG up to 2 MB
                           </p>
                         </div>
                       )}
@@ -826,7 +975,7 @@ export default function TenantSettings() {
                   >
                     <div className="flex items-center gap-3">
                       {settings.branding.logo_url ? (
-                        <img src={settings.branding.logo_url} alt="Logo" className="h-8 object-contain" />
+                        <img src={`${TENANT_API}${settings.branding.logo_url}`} alt="Logo" className="h-8 object-contain" />
                       ) : (
                         <div className="w-8 h-8 bg-white/20 rounded flex items-center justify-center">
                           <Building2 className="w-5 h-5 text-white" />
@@ -876,71 +1025,159 @@ export default function TenantSettings() {
             <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
               <h2 className="text-lg font-semibold text-gray-900">Custom Fields</h2>
               <p className="text-sm text-gray-500">
-                Define custom fields that will be available across your shipments and quotes.
+                Define custom fields for each entity type. These appear on forms and detail views.
               </p>
 
-              {/* Existing fields */}
-              {Object.entries(settings.custom_fields).length > 0 ? (
-                <div className="space-y-2">
-                  {Object.entries(settings.custom_fields).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
-                    >
-                      <span className="text-sm font-medium text-gray-700 min-w-[120px]">
-                        {key}
-                      </span>
-                      <span className="text-sm text-gray-500 flex-1">
-                        {String(value)}
-                      </span>
-                      <button
-                        onClick={() => removeCustomField(key)}
-                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              {/* Existing fields grouped by entity type */}
+              {(() => {
+                const entries = Object.entries(settings.custom_fields)
+                if (entries.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-sm text-gray-400">
+                      No custom fields defined yet
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-sm text-gray-400">
-                  No custom fields defined yet
-                </div>
-              )}
+                  )
+                }
+
+                // Group by entity_type
+                const grouped: Record<string, [string, string | CustomFieldDef][]> = {}
+                for (const [key, val] of entries) {
+                  const entityType = typeof val === 'object' && val !== null && 'entity_type' in val
+                    ? (val as CustomFieldDef).entity_type
+                    : 'shipment'
+                  if (!grouped[entityType]) grouped[entityType] = []
+                  grouped[entityType].push([key, val])
+                }
+
+                const entityLabels: Record<string, string> = {
+                  shipment: 'Shipment',
+                  quote: 'Quote',
+                  customer: 'Customer',
+                  carrier: 'Carrier',
+                  invoice: 'Invoice',
+                }
+
+                return (
+                  <div className="space-y-4">
+                    {Object.entries(grouped).map(([entityType, fields]) => (
+                      <div key={entityType}>
+                        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                          {entityLabels[entityType] || entityType} Fields
+                        </h3>
+                        <div className="space-y-2">
+                          {fields.map(([key, val]) => {
+                            const isRich = typeof val === 'object' && val !== null && 'label' in val
+                            const field = isRich ? (val as CustomFieldDef) : null
+                            const label = field?.label || key
+                            const description = field?.description || ''
+                            const defaultValue = field?.default_value || (typeof val === 'string' ? val : '')
+
+                            return (
+                              <div
+                                key={key}
+                                className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg group"
+                                title={description || undefined}
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-gray-700">
+                                      {label}
+                                    </span>
+                                    {description && (
+                                      <span
+                                        className="text-gray-400 cursor-help"
+                                        title={description}
+                                      >
+                                        <AlertCircle className="w-3.5 h-3.5" />
+                                      </span>
+                                    )}
+                                  </div>
+                                  {defaultValue && (
+                                    <span className="text-xs text-gray-400">
+                                      Default: {defaultValue}
+                                    </span>
+                                  )}
+                                </div>
+                                <button
+                                  onClick={() => removeCustomField(key)}
+                                  className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })()}
 
               {/* Add new field */}
-              <div className="flex items-end gap-3 pt-4 border-t border-gray-200">
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Field Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newFieldKey}
-                    onChange={e => setNewFieldKey(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g. department"
-                  />
-                </div>
-                <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-600 mb-1">
-                    Default Value
-                  </label>
-                  <input
-                    type="text"
-                    value={newFieldValue}
-                    onChange={e => setNewFieldValue(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g. logistics"
-                  />
+              <div className="pt-4 border-t border-gray-200 space-y-3">
+                <h3 className="text-sm font-medium text-gray-700">Add Custom Field</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Field Label
+                    </label>
+                    <input
+                      type="text"
+                      value={newFieldLabel}
+                      onChange={e => setNewFieldLabel(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g. PO Number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Applies To
+                    </label>
+                    <select
+                      value={newFieldEntity}
+                      onChange={e => setNewFieldEntity(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="shipment">Shipment</option>
+                      <option value="quote">Quote</option>
+                      <option value="customer">Customer</option>
+                      <option value="carrier">Carrier</option>
+                      <option value="invoice">Invoice</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Description (shown on hover)
+                    </label>
+                    <input
+                      type="text"
+                      value={newFieldDescription}
+                      onChange={e => setNewFieldDescription(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="e.g. Customer's purchase order reference number"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Default Value
+                    </label>
+                    <input
+                      type="text"
+                      value={newFieldDefault}
+                      onChange={e => setNewFieldDefault(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="(optional)"
+                    />
+                  </div>
                 </div>
                 <button
                   onClick={addCustomField}
-                  disabled={!newFieldKey.trim()}
+                  disabled={!newFieldLabel.trim()}
                   className="inline-flex items-center gap-1 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <Plus className="w-4 h-4" />
-                  Add
+                  Add Field
                 </button>
               </div>
             </div>

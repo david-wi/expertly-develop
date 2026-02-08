@@ -53,6 +53,8 @@ export interface UseTenantReturn {
 // Local API helper (avoids importing shared api.ts)
 // ---------------------------------------------------------------------------
 
+import { httpErrorMessage } from '../utils/httpErrors'
+
 const TENANT_API = import.meta.env.VITE_API_URL || ''
 
 async function tenantRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -64,7 +66,10 @@ async function tenantRequest<T>(path: string, options: RequestInit = {}): Promis
     },
     credentials: 'include',
   })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || httpErrorMessage(response.status))
+  }
   return response.json()
 }
 

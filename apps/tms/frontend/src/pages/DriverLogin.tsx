@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Truck, Phone, Lock, Loader2 } from 'lucide-react'
 
+import { httpErrorMessage } from '../utils/httpErrors'
+
 const DRIVER_API = import.meta.env.VITE_API_URL || ''
 
 async function driverRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -11,8 +13,8 @@ async function driverRequest<T>(path: string, options: RequestInit = {}): Promis
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }))
-    throw new Error(error.detail || `HTTP ${response.status}`)
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || httpErrorMessage(response.status))
   }
   return response.json()
 }
