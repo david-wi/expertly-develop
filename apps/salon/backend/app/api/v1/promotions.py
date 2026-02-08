@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...schemas.promotion import (
     PromotionCreate,
     PromotionUpdate,
@@ -22,7 +22,7 @@ router = APIRouter()
 async def list_promotions(
     is_active: Optional[bool] = Query(None),
     promotion_type: Optional[PromotionType] = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List all promotions for the salon."""
     promotions_collection = get_collection("promotions")
@@ -44,7 +44,7 @@ async def list_promotions(
 @router.post("", response_model=PromotionResponse, status_code=status.HTTP_201_CREATED)
 async def create_promotion(
     request: PromotionCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Create a new promotion."""
     promotions_collection = get_collection("promotions")
@@ -97,7 +97,7 @@ async def create_promotion(
 @router.get("/{promotion_id}", response_model=PromotionResponse)
 async def get_promotion(
     promotion_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get a specific promotion."""
     promotions_collection = get_collection("promotions")
@@ -117,7 +117,7 @@ async def get_promotion(
 async def update_promotion(
     promotion_id: str,
     request: PromotionUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Update a promotion."""
     promotions_collection = get_collection("promotions")
@@ -165,7 +165,7 @@ async def update_promotion(
 @router.delete("/{promotion_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_promotion(
     promotion_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Delete a promotion (soft delete by deactivating)."""
     promotions_collection = get_collection("promotions")
@@ -192,7 +192,7 @@ async def check_applicable_promotions(
     client_id: str,
     service_id: Optional[str] = Query(None),
     staff_id: Optional[str] = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Check which promotions apply to a client for a potential booking."""
     promotions_collection = get_collection("promotions")
@@ -346,7 +346,7 @@ async def check_applicable_promotions(
 async def validate_promo_code(
     code: str,
     client_id: Optional[str] = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Validate a promo code."""
     promotions_collection = get_collection("promotions")

@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...services.stripe_service import stripe_service
 from ...config import settings
 
@@ -73,7 +73,7 @@ class PaymentMethodResponse(BaseModel):
 
 @router.get("/connect/status", response_model=ConnectStatusResponse)
 async def get_connect_status(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get the Stripe Connect status for the salon."""
     result = await stripe_service.check_account_status(current_user["salon_id"])
@@ -82,7 +82,7 @@ async def get_connect_status(
 
 @router.post("/connect/onboard", response_model=CreateConnectLinkResponse)
 async def create_connect_onboarding_link(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Create a Stripe Connect onboarding link for the salon."""
     if not stripe_service.is_configured():
@@ -124,7 +124,7 @@ async def handle_connect_oauth_callback(
 
 @router.post("/connect/disconnect")
 async def disconnect_stripe_account(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Disconnect the Stripe Connect account."""
     result = await stripe_service.disconnect_account(current_user["salon_id"])
@@ -138,7 +138,7 @@ async def disconnect_stripe_account(
 @router.post("/payment-intent", response_model=PaymentIntentResponse)
 async def create_payment_intent(
     request: PaymentIntentRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Create a payment intent for a deposit or payment."""
     result = await stripe_service.create_payment_intent(
@@ -164,7 +164,7 @@ async def create_payment_intent(
 @router.post("/setup-intent", response_model=SetupIntentResponse)
 async def create_setup_intent(
     request: SetupIntentRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Create a setup intent to save a card for future use."""
     result = await stripe_service.create_setup_intent(
@@ -188,7 +188,7 @@ async def create_setup_intent(
 async def capture_payment(
     payment_intent_id: str,
     amount: Optional[int] = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Capture a previously authorized payment."""
     result = await stripe_service.capture_payment(
@@ -208,7 +208,7 @@ async def capture_payment(
 @router.post("/refund")
 async def refund_payment(
     request: RefundRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Refund a payment."""
     result = await stripe_service.refund_payment(
@@ -229,7 +229,7 @@ async def refund_payment(
 @router.get("/payment-methods/{client_id}", response_model=list[PaymentMethodResponse])
 async def get_payment_methods(
     client_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get saved payment methods for a client."""
     # Verify client belongs to salon

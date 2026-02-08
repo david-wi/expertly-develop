@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user, require_role
+from ...core.security import get_current_salon_user, require_role
 from ...schemas.service import (
     ServiceCreate,
     ServiceUpdate,
@@ -20,7 +20,7 @@ router = APIRouter()
 @router.get("/categories", response_model=list[CategoryResponse])
 async def list_categories(
     include_inactive: bool = Query(False),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List all service categories."""
     categories = get_collection("service_categories")
@@ -96,7 +96,7 @@ async def update_category(
 async def list_services(
     category_id: str = Query(None),
     include_inactive: bool = Query(False),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List all services."""
     services = get_collection("services")
@@ -149,7 +149,7 @@ async def create_service(
 @router.get("/{service_id}", response_model=ServiceResponse)
 async def get_service(
     service_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get a service by ID."""
     services = get_collection("services")

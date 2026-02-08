@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...config import settings
 from ...schemas.appointment import (
     AppointmentCreate,
@@ -22,7 +22,7 @@ router = APIRouter()
 @router.post("/lock", response_model=SlotLockResponse)
 async def acquire_slot_lock(
     request: SlotLockRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Acquire a temporary lock on a time slot."""
     locks = get_collection("appointment_locks")
@@ -94,7 +94,7 @@ async def acquire_slot_lock(
 @router.delete("/lock/{lock_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def release_slot_lock(
     lock_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Release a slot lock."""
     locks = get_collection("appointment_locks")
@@ -108,7 +108,7 @@ async def release_slot_lock(
 @router.post("", response_model=AppointmentResponse, status_code=status.HTTP_201_CREATED)
 async def create_appointment(
     request: AppointmentCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Create a new appointment."""
     appointments = get_collection("appointments")
@@ -230,7 +230,7 @@ async def create_appointment(
 @router.get("/{appointment_id}", response_model=AppointmentResponse)
 async def get_appointment(
     appointment_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get an appointment by ID."""
     appointments = get_collection("appointments")
@@ -250,7 +250,7 @@ async def get_appointment(
 async def update_appointment(
     appointment_id: str,
     request: AppointmentUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Update appointment notes."""
     appointments = get_collection("appointments")
@@ -278,7 +278,7 @@ async def reschedule_appointment(
     appointment_id: str,
     new_start_time: datetime = Query(...),
     new_staff_id: str = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Reschedule an appointment to a new time and/or staff member."""
     appointments = get_collection("appointments")
@@ -370,7 +370,7 @@ async def reschedule_appointment(
 @router.post("/{appointment_id}/check-in", response_model=AppointmentResponse)
 async def check_in_appointment(
     appointment_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Mark appointment as checked in."""
     return await _transition_status(
@@ -381,7 +381,7 @@ async def check_in_appointment(
 @router.post("/{appointment_id}/start", response_model=AppointmentResponse)
 async def start_appointment(
     appointment_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Mark appointment as in progress."""
     return await _transition_status(
@@ -392,7 +392,7 @@ async def start_appointment(
 @router.post("/{appointment_id}/complete", response_model=AppointmentResponse)
 async def complete_appointment(
     appointment_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Mark appointment as completed."""
     appointments = get_collection("appointments")
@@ -420,7 +420,7 @@ async def complete_appointment(
 async def cancel_appointment(
     appointment_id: str,
     request: AppointmentStatusUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Cancel an appointment."""
     appointments = get_collection("appointments")
@@ -477,7 +477,7 @@ async def cancel_appointment(
 @router.post("/{appointment_id}/no-show", response_model=AppointmentResponse)
 async def mark_no_show(
     appointment_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Mark appointment as no-show."""
     appointments = get_collection("appointments")

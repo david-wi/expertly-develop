@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...services.email_service import (
     get_google_auth_url,
     get_microsoft_auth_url,
@@ -38,7 +38,7 @@ oauth_states: dict[str, dict] = {}
 
 
 @router.get("/status", response_model=EmailConfigResponse)
-async def get_email_status(current_user: dict = Depends(get_current_user)):
+async def get_email_status(current_user: dict = Depends(get_current_salon_user)):
     """Get email OAuth connection status."""
     config_collection = get_collection("oauth_configs")
     config = await config_collection.find_one({
@@ -58,7 +58,7 @@ async def get_email_status(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/connect/google")
-async def initiate_google_oauth(current_user: dict = Depends(get_current_user)):
+async def initiate_google_oauth(current_user: dict = Depends(get_current_salon_user)):
     """Initiate Google OAuth flow for Gmail."""
     state = secrets.token_urlsafe(32)
     oauth_states[state] = {
@@ -72,7 +72,7 @@ async def initiate_google_oauth(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/connect/microsoft")
-async def initiate_microsoft_oauth(current_user: dict = Depends(get_current_user)):
+async def initiate_microsoft_oauth(current_user: dict = Depends(get_current_salon_user)):
     """Initiate Microsoft OAuth flow for Outlook."""
     state = secrets.token_urlsafe(32)
     oauth_states[state] = {
@@ -139,7 +139,7 @@ async def microsoft_oauth_callback(
 
 
 @router.post("/disconnect")
-async def disconnect_email(current_user: dict = Depends(get_current_user)):
+async def disconnect_email(current_user: dict = Depends(get_current_salon_user)):
     """Disconnect email OAuth."""
     config_collection = get_collection("oauth_configs")
     await config_collection.delete_one({
@@ -153,7 +153,7 @@ async def disconnect_email(current_user: dict = Depends(get_current_user)):
 @router.post("/send-test")
 async def send_test_email(
     request: SendTestEmailRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Send a test email."""
     config_collection = get_collection("oauth_configs")

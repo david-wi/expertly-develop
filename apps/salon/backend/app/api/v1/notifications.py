@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query, Request, R
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...services.notification_service import notification_service
 from ...services.sms_service import sms_service
 
@@ -236,7 +236,7 @@ async def get_sms_log(
     client_id: Optional[str] = Query(None),
     direction: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get SMS log for the salon."""
     sms_log = get_collection("sms_log")
@@ -276,7 +276,7 @@ async def get_sms_log(
 async def send_test_sms(
     phone: str,
     message: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Send a test SMS message."""
     result = await sms_service.send_sms(
@@ -296,7 +296,7 @@ async def send_test_sms(
 
 @router.post("/process-pending")
 async def process_pending_notifications(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Manually trigger processing of pending notifications.
 
@@ -310,7 +310,7 @@ async def process_pending_notifications(
 async def get_scheduled_notifications(
     status_filter: Optional[str] = Query(None),
     limit: int = Query(50, le=200),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get scheduled notifications for the salon."""
     scheduled = get_collection("scheduled_notifications")
