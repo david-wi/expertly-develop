@@ -57,7 +57,7 @@ function buildTree(requirements: Requirement[]): TreeNode[] {
   const roots: TreeNode[] = []
 
   requirements.forEach((req) => {
-    map.set(req.id, { ...req, children: [], expanded: true })
+    map.set(req.id, { ...req, children: [], expanded: false })
   })
 
   requirements.forEach((req) => {
@@ -74,6 +74,11 @@ function buildTree(requirements: Requirement[]): TreeNode[] {
     nodes.forEach((node) => sortChildren(node.children))
   }
   sortChildren(roots)
+
+  // Expand only root-level nodes so the top categories are visible
+  roots.forEach((node) => {
+    node.expanded = true
+  })
 
   return roots
 }
