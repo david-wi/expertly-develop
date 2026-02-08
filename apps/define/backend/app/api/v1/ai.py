@@ -429,44 +429,50 @@ async def _run_generation(
                         pass
             next_id = max_outline_id + 1
 
-            semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
             completed_features = 0
             ID_BLOCK_SIZE = 50
             all_requirement_nodes: list[dict] = []
 
             async def expand_and_save(feature_node: dict, start_id: int) -> None:
                 nonlocal completed_features
-                async with semaphore:
-                    nodes = await ai_service.expand_feature(
-                        description=combined_description,
-                        outline=outline,
-                        feature_node=feature_node,
-                        product_name=product_name,
-                        next_temp_id_start=start_id,
-                    )
-                    # Save this feature's requirements to DB immediately
-                    # Replace parent_ref with the real ID of the feature
-                    feature_temp_id = feature_node.get("temp_id", "")
-                    for node in nodes:
-                        if node.get("parent_ref") == feature_temp_id:
-                            node["parent_ref"] = temp_to_real.get(feature_temp_id, feature_temp_id)
+                nodes = await ai_service.expand_feature(
+                    description=combined_description,
+                    outline=outline,
+                    feature_node=feature_node,
+                    product_name=product_name,
+                    next_temp_id_start=start_id,
+                )
+                # Save this feature's requirements to DB immediately
+                # Replace parent_ref with the real ID of the feature
+                feature_temp_id = feature_node.get("temp_id", "")
+                for node in nodes:
+                    if node.get("parent_ref") == feature_temp_id:
+                        node["parent_ref"] = temp_to_real.get(feature_temp_id, feature_temp_id)
 
-                    await _batch_create_in_db(
-                        product_id, product_prefix, user_name, nodes, temp_to_real,
-                    )
-                    all_requirement_nodes.extend(nodes)
-                    completed_features += 1
-                    update_count(len(temp_to_real))
-                    update_progress(
-                        f"Expanding features ({completed_features}/{len(features)}) — {len(temp_to_real)} nodes created"
-                    )
+                await _batch_create_in_db(
+                    product_id, product_prefix, user_name, nodes, temp_to_real,
+                )
+                all_requirement_nodes.extend(nodes)
+                completed_features += 1
+                update_count(len(temp_to_real))
+                update_progress(
+                    f"Expanding features ({completed_features}/{len(features)}) — {len(temp_to_real)} nodes created"
+                )
 
-            tasks = []
+            # Process features in waves of MAX_CONCURRENCY, yielding
+            # between waves so the event loop can serve other requests
+            # (auth calls, health checks, etc.)
+            wave_items = []
             for i, feature in enumerate(features):
                 start = next_id + (i * ID_BLOCK_SIZE)
-                tasks.append(expand_and_save(feature, start))
+                wave_items.append((feature, start))
 
-            await asyncio.gather(*tasks)
+            for wave_start in range(0, len(wave_items), MAX_CONCURRENCY):
+                wave = wave_items[wave_start:wave_start + MAX_CONCURRENCY]
+                await asyncio.gather(*(expand_and_save(f, s) for f, s in wave))
+                # Yield to let other requests through
+                await asyncio.sleep(0.1)
+
             logger.info(f"Job {job_id}: Phase 2 complete — {len(all_requirement_nodes)} requirements saved")
         else:
             all_requirement_nodes = []
@@ -480,26 +486,29 @@ async def _run_generation(
         total_batches = len(batches)
         logger.info(f"Job {job_id}: Phase 3 — enriching {len(all_nodes)} nodes in {total_batches} batches")
 
-        semaphore = asyncio.Semaphore(MAX_CONCURRENCY)
         completed_batches = 0
 
         async def enrich_and_save(batch_nodes: list) -> None:
             nonlocal completed_batches
-            async with semaphore:
-                enriched = await ai_service.enrich_batch(
-                    description=combined_description,
-                    all_nodes=all_nodes,
-                    batch_nodes=batch_nodes,
-                    product_name=product_name,
-                )
-                # Update DB records with enrichment
-                await _batch_update_enrichment(temp_to_real, enriched)
-                completed_batches += 1
-                update_progress(
-                    f"Adding details ({completed_batches}/{total_batches} batches) — {len(temp_to_real)} nodes total"
-                )
+            enriched = await ai_service.enrich_batch(
+                description=combined_description,
+                all_nodes=all_nodes,
+                batch_nodes=batch_nodes,
+                product_name=product_name,
+            )
+            # Update DB records with enrichment
+            await _batch_update_enrichment(temp_to_real, enriched)
+            completed_batches += 1
+            update_progress(
+                f"Adding details ({completed_batches}/{total_batches} batches) — {len(temp_to_real)} nodes total"
+            )
 
-        await asyncio.gather(*(enrich_and_save(batch) for batch in batches))
+        # Process enrichment in waves, yielding between waves
+        for wave_start in range(0, len(batches), MAX_CONCURRENCY):
+            wave = batches[wave_start:wave_start + MAX_CONCURRENCY]
+            await asyncio.gather(*(enrich_and_save(b) for b in wave))
+            await asyncio.sleep(0.1)
+
         logger.info(f"Job {job_id}: Phase 3 complete — all nodes enriched")
 
         job["status"] = "completed"

@@ -15,10 +15,12 @@ from app.utils.ai_config import get_ai_client
 logger = logging.getLogger(__name__)
 
 # Batch size for parallel enrichment calls
-ENRICHMENT_BATCH_SIZE = 10
+ENRICHMENT_BATCH_SIZE = 25
 
-# Max concurrent AI calls to avoid rate limiting
-MAX_CONCURRENCY = 5
+# Max concurrent AI calls — kept low to avoid starving the event loop
+# and blocking Identity-service auth calls for other requests.
+# This server has 2 vCPUs; more than 2 concurrent calls saturates it.
+MAX_CONCURRENCY = 2
 
 # Progress callback type: async fn(phase, detail) -> None
 ProgressCallback = Callable[[str, str], Awaitable[None]]
