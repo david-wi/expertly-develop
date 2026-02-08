@@ -30,6 +30,14 @@ const priorityOptions = [
   { value: 'low', label: 'Low' },
 ]
 
+const nodeTypeOptions = [
+  { value: 'product', label: 'Product' },
+  { value: 'module', label: 'Module' },
+  { value: 'feature', label: 'Feature' },
+  { value: 'requirement', label: 'Requirement' },
+  { value: 'guardrail', label: 'Guardrail' },
+]
+
 export default function RequirementDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -39,6 +47,7 @@ export default function RequirementDetail() {
   const [deleting, setDeleting] = useState(false)
   const [form, setForm] = useState({
     title: '',
+    node_type: '',
     what_this_does: '',
     why_this_exists: '',
     not_included: '',
@@ -57,6 +66,7 @@ export default function RequirementDetail() {
       setRequirement(data)
       setForm({
         title: data.title,
+        node_type: data.node_type || '',
         what_this_does: data.what_this_does || '',
         why_this_exists: data.why_this_exists || '',
         not_included: data.not_included || '',
@@ -78,6 +88,7 @@ export default function RequirementDetail() {
     try {
       await requirementsApi.update(requirement.id, {
         title: form.title,
+        node_type: form.node_type || null,
         what_this_does: form.what_this_does || undefined,
         why_this_exists: form.why_this_exists || undefined,
         not_included: form.not_included || undefined,
@@ -173,7 +184,28 @@ export default function RequirementDetail() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-1 block">
+                  Type
+                </label>
+                <Select
+                  value={form.node_type || 'none'}
+                  onValueChange={(value) => setForm({ ...form, node_type: value === 'none' ? '' : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Not set" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    {nodeTypeOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div>
                 <label className="text-sm font-medium text-gray-700 mb-1 block">
                   Status

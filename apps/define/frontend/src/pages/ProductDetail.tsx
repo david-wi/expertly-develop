@@ -95,6 +95,33 @@ const priorityColors: Record<string, 'default' | 'secondary' | 'success' | 'warn
   low: 'secondary',
 }
 
+const nodeTypeConfig: Record<string, { label: string; color: string; bg: string }> = {
+  product: { label: 'Product', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+  module: { label: 'Module', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+  feature: { label: 'Feature', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+  requirement: { label: 'Req', color: 'text-gray-600', bg: 'bg-gray-50 border-gray-200' },
+  guardrail: { label: 'Guardrail', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
+}
+
+const nodeTypeOptions = [
+  { value: 'product', label: 'Product' },
+  { value: 'module', label: 'Module' },
+  { value: 'feature', label: 'Feature' },
+  { value: 'requirement', label: 'Requirement' },
+  { value: 'guardrail', label: 'Guardrail' },
+]
+
+function NodeTypeBadge({ nodeType }: { nodeType: string | null }) {
+  if (!nodeType) return null
+  const config = nodeTypeConfig[nodeType]
+  if (!config) return null
+  return (
+    <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded border flex-shrink-0', config.color, config.bg)}>
+      {config.label}
+    </span>
+  )
+}
+
 function RequirementTreeItem({
   node,
   level,
@@ -162,6 +189,7 @@ function RequirementTreeItem({
         >
           {node.title}
         </span>
+        <NodeTypeBadge nodeType={node.node_type} />
         {!hasChildren && (
           <span className="text-[10px] font-mono text-gray-300 flex-shrink-0">
             {node.stable_key}
@@ -204,6 +232,7 @@ export default function ProductDetail() {
   const [creating, setCreating] = useState(false)
   const [newReq, setNewReq] = useState({
     title: '',
+    node_type: '',
     what_this_does: '',
     why_this_exists: '',
     not_included: '',
@@ -306,6 +335,7 @@ export default function ProductDetail() {
       await requirementsApi.create({
         product_id: id!,
         title: newReq.title,
+        node_type: newReq.node_type || undefined,
         what_this_does: newReq.what_this_does || undefined,
         why_this_exists: newReq.why_this_exists || undefined,
         not_included: newReq.not_included || undefined,
@@ -318,6 +348,7 @@ export default function ProductDetail() {
 
       setNewReq({
         title: '',
+        node_type: '',
         what_this_does: '',
         why_this_exists: '',
         not_included: '',
@@ -605,6 +636,27 @@ export default function ProductDetail() {
                               <div className="grid grid-cols-4 gap-4">
                                 <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Type
+                                  </label>
+                                  <Select
+                                    value={newReq.node_type || 'none'}
+                                    onValueChange={(value) => setNewReq({ ...newReq, node_type: value === 'none' ? '' : value })}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Not set" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">Not set</SelectItem>
+                                      {nodeTypeOptions.map((opt) => (
+                                        <SelectItem key={opt.value} value={opt.value}>
+                                          {opt.label}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     Status
                                   </label>
                                   <Select
@@ -665,7 +717,7 @@ export default function ProductDetail() {
                                     </Select>
                                   </div>
                                 )}
-                                <div className={requirements.length > 0 ? '' : 'col-span-2'}>
+                                <div>
                                   <label className="text-sm font-medium text-gray-700 mb-1 block">
                                     Tags
                                   </label>
@@ -732,10 +784,11 @@ export default function ProductDetail() {
                   {selectedRequirement ? (
                     <>
                       <CardHeader>
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
                           <Badge variant="outline" className="text-xs">
                             {selectedRequirement.stable_key}
                           </Badge>
+                          <NodeTypeBadge nodeType={selectedRequirement.node_type} />
                           <Badge variant={priorityColors[selectedRequirement.priority]}>
                             {selectedRequirement.priority}
                           </Badge>

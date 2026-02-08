@@ -196,6 +196,7 @@ export const requirementsApi = {
     product_id: string
     parent_id?: string | null
     title: string
+    node_type?: string
     what_this_does?: string
     why_this_exists?: string
     not_included?: string
@@ -214,6 +215,7 @@ export const requirementsApi = {
     requirements: Array<{
       temp_id: string
       title: string
+      node_type?: string
       what_this_does?: string
       why_this_exists?: string
       not_included?: string

@@ -348,6 +348,7 @@ export function BulkImportDialog({
         requirements: approvedRequirements.map((req) => ({
           temp_id: req.temp_id,
           title: req.title,
+          node_type: req.node_type || undefined,
           what_this_does: req.what_this_does || undefined,
           why_this_exists: req.why_this_exists || undefined,
           not_included: req.not_included || undefined,
@@ -432,6 +433,14 @@ export function BulkImportDialog({
     high: 'warning',
     medium: 'secondary',
     low: 'secondary',
+  }
+
+  const nodeTypeStyles: Record<string, { label: string; color: string; bg: string }> = {
+    product: { label: 'Product', color: 'text-purple-700', bg: 'bg-purple-50 border-purple-200' },
+    module: { label: 'Module', color: 'text-blue-700', bg: 'bg-blue-50 border-blue-200' },
+    feature: { label: 'Feature', color: 'text-emerald-700', bg: 'bg-emerald-50 border-emerald-200' },
+    requirement: { label: 'Req', color: 'text-gray-600', bg: 'bg-gray-50 border-gray-200' },
+    guardrail: { label: 'Guardrail', color: 'text-amber-700', bg: 'bg-amber-50 border-amber-200' },
   }
 
   const buildPreviewTree = (reqs: ParsedReqWithApproval[]) => {
@@ -558,6 +567,15 @@ export function BulkImportDialog({
                   )}>
                     {req.title}
                   </span>
+                  {req.node_type && nodeTypeStyles[req.node_type] && (
+                    <span className={cn(
+                      'text-[10px] font-medium px-1.5 py-0.5 rounded border flex-shrink-0',
+                      nodeTypeStyles[req.node_type].color,
+                      nodeTypeStyles[req.node_type].bg,
+                    )}>
+                      {nodeTypeStyles[req.node_type].label}
+                    </span>
+                  )}
                   <Badge variant={priorityColors[req.priority]} className="text-xs">
                     {req.priority}
                   </Badge>
