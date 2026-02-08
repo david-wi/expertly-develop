@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import PageHelp from '../components/PageHelp'
 import {
   Radio,
   Search,
@@ -44,7 +45,10 @@ export default function LoadBoards() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Load Board Integration</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Load Board Integration</h1>
+            <PageHelp pageId="loadboards" />
+          </div>
           <p className="text-gray-600">Post loads, find carriers, and get market rates from DAT & Truckstop</p>
         </div>
       </div>

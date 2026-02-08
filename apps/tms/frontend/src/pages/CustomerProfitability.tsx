@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { CustomerProfitabilityDetail } from '../types'
 import {
   TrendingUp,
@@ -68,7 +69,10 @@ export default function CustomerProfitability() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white">Customer Profitability</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold text-white">Customer Profitability</h1>
+              <PageHelp pageId="customer-profitability" />
+            </div>
             <p className="text-gray-400 text-sm">Detailed profitability analysis by customer</p>
           </div>
         </div>

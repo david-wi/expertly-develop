@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { ScheduledReport } from '../types'
 import { REPORT_TYPE_LABELS, REPORT_FREQUENCY_LABELS, REPORT_FORMAT_LABELS } from '../types'
 import {
@@ -88,6 +89,7 @@ export default function ScheduledReports() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Calendar className="h-7 w-7 text-indigo-600" />
             Scheduled Reports
+            <PageHelp pageId="scheduled-reports" />
           </h1>
           <p className="text-gray-500">Automate report delivery to your team</p>
         </div>

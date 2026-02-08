@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type {
   AgingBucket,
   PayablesAgingResponse,
@@ -270,6 +271,7 @@ export default function CarrierPayables() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <CreditCard className="h-7 w-7 text-indigo-600" />
             Carrier Payables
+            <PageHelp pageId="carrier-payables" />
           </h1>
           <p className="text-gray-500">
             Manage carrier bills, aging, quick pay, factoring, and invoice processing

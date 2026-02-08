@@ -13,6 +13,7 @@ import {
   Send,
   ArrowUpRight,
 } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 export default function Dashboard() {
   const { dashboardStats, workItems, loading, fetchDashboardStats, fetchWorkItems } = useAppStore()
@@ -61,7 +62,10 @@ export default function Dashboard() {
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Dashboard</h1>
+          <PageHelp pageId="dashboard" />
+        </div>
         <p className="text-sm sm:text-base text-gray-500">Welcome back. Here's what needs your attention.</p>
       </div>
 

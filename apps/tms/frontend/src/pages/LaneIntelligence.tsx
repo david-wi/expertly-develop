@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { LaneData } from '../types'
 import {
   Map,
@@ -82,6 +83,7 @@ export default function LaneIntelligence() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Map className="h-7 w-7 text-amber-600" />
             Lane Intelligence
+            <PageHelp pageId="lane-intelligence" />
           </h1>
           <p className="text-gray-500">Top lanes by volume with carrier performance data</p>
         </div>

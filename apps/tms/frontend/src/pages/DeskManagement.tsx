@@ -16,6 +16,7 @@ import {
   UserMinus,
 } from 'lucide-react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type {
   Desk,
   DeskType,
@@ -213,7 +214,10 @@ export default function DeskManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Desk Management</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Desk Management</h1>
+            <PageHelp pageId="desk-management" />
+          </div>
           <p className="text-gray-500">Organize work items by desk with routing rules and coverage schedules</p>
         </div>
         <div className="flex items-center gap-3">

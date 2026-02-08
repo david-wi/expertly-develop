@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Shipment, BulkImportPreview, BulkImportResult, LoadTemplate, ConsolidationSuggestion, Customer } from '../types'
 import { ArrowRight, AlertTriangle, Truck, Package, CheckCircle, Upload, FileSpreadsheet, X, Loader2, Repeat, Calendar, Play, Layers, Plus, Save, BookmarkCheck } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 const statusColors: Record<string, string> = {
   booked: 'bg-gray-100 text-gray-700',
@@ -309,7 +310,10 @@ export default function Shipments() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Shipments</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Shipments</h1>
+            <PageHelp pageId="shipments" />
+          </div>
           <p className="text-gray-500">
             {shipments.length} shipment{shipments.length !== 1 ? 's' : ''}
           </p>

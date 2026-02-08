@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { apiExtensions } from '../services/api-extensions'
+import PageHelp from '../components/PageHelp'
 import type { Carrier, Shipment, DOTCompliance } from '../types'
 import type {
   CarrierInsurance,
@@ -295,6 +296,7 @@ export default function CarrierDetail() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{carrier.name}</h1>
+            <PageHelp pageId="carrier-detail" />
             <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusStyle.bg} ${statusStyle.text}`}>
               {carrier.status.replace(/_/g, ' ')}
             </span>

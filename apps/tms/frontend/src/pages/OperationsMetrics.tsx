@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type {
   OperationsMetrics as OperationsMetricsData,
   VolumeForecast,
@@ -126,6 +127,7 @@ export default function OperationsMetrics() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Activity className="h-7 w-7 text-indigo-600" />
             Operations Metrics
+            <PageHelp pageId="operations-metrics" />
           </h1>
           <p className="text-gray-500">Work items, quote performance, and tender analytics</p>
         </div>

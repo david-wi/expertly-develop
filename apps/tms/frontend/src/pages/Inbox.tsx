@@ -21,6 +21,7 @@ import {
   Loader2,
   Inbox as InboxIcon,
 } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 const typeIcons: Record<string, typeof FileText> = {
   quote_request: FileText,
@@ -194,7 +195,10 @@ export default function Inbox() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Inbox</h1>
+            <PageHelp pageId="inbox" />
+          </div>
           <p className="text-gray-500">
             {activeTab === 'work'
               ? `${filteredWorkItems.length} work item${filteredWorkItems.length !== 1 ? 's' : ''} to action`

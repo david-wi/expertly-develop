@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { MarginDashboard as MarginDashboardData, CustomerProfitabilityDetail } from '../types'
 import {
   TrendingUp,
@@ -89,6 +90,7 @@ export default function MarginDashboard() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-7 w-7 text-emerald-600" />
             Margin Dashboard
+            <PageHelp pageId="margins" />
           </h1>
           <p className="text-gray-500">Profitability analytics across your operations</p>
         </div>
@@ -109,6 +111,7 @@ export default function MarginDashboard() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <BarChart3 className="h-7 w-7 text-emerald-600" />
             Margin Dashboard
+            <PageHelp pageId="margins" />
           </h1>
           <p className="text-gray-500">Profitability analytics across your operations</p>
         </div>

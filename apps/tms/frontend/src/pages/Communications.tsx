@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PageHelp from '../components/PageHelp'
 import {
   MessageSquare,
   Phone,
@@ -411,6 +412,7 @@ export default function Communications() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <MessageSquare className="h-7 w-7 text-indigo-600" />
             Communications
+            <PageHelp pageId="communications" />
           </h1>
           <p className="text-gray-500">
             Send SMS/voice messages, manage templates, and track check calls
