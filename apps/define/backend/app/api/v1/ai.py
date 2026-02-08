@@ -516,9 +516,14 @@ async def _run_generation(
 @router.get("/generate-from-artifacts/{job_id}", response_model=GenerateJobStatusResponse)
 async def get_generation_status(
     job_id: str,
-    current_user: CurrentUser = Depends(get_current_user),
 ):
-    """Poll the status of an async requirements generation job."""
+    """Poll the status of an async requirements generation job.
+
+    No auth required — the job_id is an unguessable UUID that serves as
+    a bearer token.  Removing auth here avoids Identity-service round-trips
+    during polling, which previously timed out when the event loop was
+    saturated by concurrent AI calls.
+    """
     job = _generation_jobs.get(job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found or expired")
