@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user, require_role
+from ...core.security import get_current_salon_user, require_role
 from ...schemas.staff import (
     StaffCreate,
     StaffUpdate,
@@ -19,7 +19,7 @@ router = APIRouter()
 @router.get("", response_model=list[StaffResponse])
 async def list_staff(
     include_inactive: bool = Query(False),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List all staff members for the current salon."""
     staff_collection = get_collection("staff")
@@ -71,7 +71,7 @@ async def create_staff(
 @router.get("/{staff_id}", response_model=StaffResponse)
 async def get_staff(
     staff_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get a staff member by ID."""
     staff_collection = get_collection("staff")
@@ -227,7 +227,7 @@ async def list_schedule_overrides(
     staff_id: str,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List schedule overrides for a staff member."""
     overrides_collection = get_collection("staff_schedule_overrides")

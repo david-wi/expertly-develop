@@ -3,14 +3,14 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user, require_role
+from ...core.security import get_current_salon_user, require_role
 from ...schemas.salon import SalonCreate, SalonUpdate, SalonResponse
 
 router = APIRouter()
 
 
 @router.get("/current", response_model=SalonResponse)
-async def get_current_salon(current_user: dict = Depends(get_current_user)):
+async def get_current_salon(current_user: dict = Depends(get_current_salon_user)):
     """Get the current user's salon."""
     salons = get_collection("salons")
     salon = await salons.find_one({"_id": current_user["salon_id"]})

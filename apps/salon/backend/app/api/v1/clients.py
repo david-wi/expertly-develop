@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...schemas.client import ClientCreate, ClientUpdate, ClientResponse
 
 router = APIRouter()
@@ -13,7 +13,7 @@ router = APIRouter()
 async def list_clients(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List clients for the current salon."""
     clients = get_collection("clients")
@@ -33,7 +33,7 @@ async def list_clients(
 async def search_clients(
     q: str = Query(min_length=1),
     limit: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Search clients by name, email, or phone."""
     clients = get_collection("clients")
@@ -67,7 +67,7 @@ async def search_clients(
 @router.post("", response_model=ClientResponse, status_code=status.HTTP_201_CREATED)
 async def create_client(
     request: ClientCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Create a new client."""
     clients = get_collection("clients")
@@ -117,7 +117,7 @@ async def create_client(
 @router.get("/{client_id}", response_model=ClientResponse)
 async def get_client(
     client_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get a client by ID."""
     clients = get_collection("clients")
@@ -140,7 +140,7 @@ async def get_client(
 async def update_client(
     client_id: str,
     request: ClientUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Update a client."""
     clients = get_collection("clients")
@@ -176,7 +176,7 @@ async def update_client(
 @router.delete("/{client_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_client(
     client_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Soft delete a client."""
     clients = get_collection("clients")
@@ -202,7 +202,7 @@ async def delete_client(
 async def get_client_appointments(
     client_id: str,
     limit: int = Query(20, ge=1, le=100),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get appointments for a client."""
     appointments = get_collection("appointments")

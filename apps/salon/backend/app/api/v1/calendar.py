@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...schemas.calendar import (
     CalendarResponse,
     AvailabilityResponse,
@@ -22,7 +22,7 @@ async def get_calendar(
     start_date: date = Query(...),
     end_date: date = Query(...),
     staff_ids: Optional[str] = Query(None),  # Comma-separated
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get calendar view with appointments."""
     if (end_date - start_date).days > 31:
@@ -150,7 +150,7 @@ async def get_availability(
     date: date = Query(...),
     service_id: str = Query(...),
     staff_id: Optional[str] = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get available time slots for a service on a date."""
     services = get_collection("services")

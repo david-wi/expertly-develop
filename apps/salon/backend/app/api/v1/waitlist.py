@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...schemas.waitlist import (
     WaitlistCreate,
     WaitlistUpdate,
@@ -23,7 +23,7 @@ router = APIRouter()
 async def list_waitlist(
     status_filter: Optional[WaitlistStatus] = Query(None),
     service_id: Optional[str] = Query(None),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """List all waitlist entries for the salon."""
     waitlist_collection = get_collection("waitlist")
@@ -60,7 +60,7 @@ async def list_waitlist(
 @router.post("", response_model=WaitlistResponse, status_code=status.HTTP_201_CREATED)
 async def create_waitlist_entry(
     request: WaitlistCreate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Add a client to the waitlist."""
     waitlist_collection = get_collection("waitlist")
@@ -130,7 +130,7 @@ async def create_waitlist_entry(
 @router.get("/{entry_id}", response_model=WaitlistResponse)
 async def get_waitlist_entry(
     entry_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get a specific waitlist entry."""
     waitlist_collection = get_collection("waitlist")
@@ -157,7 +157,7 @@ async def get_waitlist_entry(
 async def update_waitlist_entry(
     entry_id: str,
     request: WaitlistUpdate,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Update a waitlist entry."""
     waitlist_collection = get_collection("waitlist")
@@ -204,7 +204,7 @@ async def update_waitlist_entry(
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_waitlist_entry(
     entry_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Remove a waitlist entry (mark as cancelled)."""
     waitlist_collection = get_collection("waitlist")
@@ -228,7 +228,7 @@ async def delete_waitlist_entry(
 
 @router.get("/matches/check", response_model=list[AvailabilityMatch])
 async def check_waitlist_matches(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Check for any matching availability for active waitlist entries.
 
@@ -365,7 +365,7 @@ async def notify_waitlist_client(
     entry_id: str,
     slot_start_time: datetime,
     staff_id: str,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Send notification to a waitlist client about available slot.
 

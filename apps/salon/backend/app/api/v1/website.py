@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from bson import ObjectId
 
 from ...core.database import get_collection
-from ...core.security import get_current_user
+from ...core.security import get_current_salon_user
 from ...models.website import WebsiteSettings, WebsiteTheme, SocialLinks, DEFAULT_SECTIONS
 
 router = APIRouter()
@@ -69,7 +69,7 @@ class PublicWebsiteResponse(BaseModel):
 
 @router.get("", response_model=WebsiteResponse)
 async def get_website(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Get the salon's website configuration."""
     websites_collection = get_collection("websites")
@@ -94,7 +94,7 @@ async def get_website(
 @router.put("", response_model=WebsiteResponse)
 async def update_website(
     request: WebsiteUpdateRequest,
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Update the salon's website configuration."""
     websites_collection = get_collection("websites")
@@ -135,7 +135,7 @@ async def update_website(
 
 @router.post("/publish")
 async def publish_website(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Publish the website."""
     websites_collection = get_collection("websites")
@@ -167,7 +167,7 @@ async def publish_website(
 
 @router.post("/unpublish")
 async def unpublish_website(
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(get_current_salon_user),
 ):
     """Unpublish the website."""
     websites_collection = get_collection("websites")

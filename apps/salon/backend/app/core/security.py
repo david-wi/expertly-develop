@@ -80,6 +80,36 @@ async def get_salon_membership(identity_user: IdentityUser) -> Optional[dict]:
     return membership
 
 
+async def get_current_salon_user(request: Request) -> dict:
+    """
+    Get current user as a dict with Identity info + salon membership.
+
+    Returns a dict compatible with legacy code that expects current_user["salon_id"].
+    Combines Identity user fields with salon membership data.
+    """
+    identity_user = await get_current_user(request)
+    membership = await get_salon_membership(identity_user)
+
+    user_dict = {
+        "_id": identity_user.id,
+        "id": identity_user.id,
+        "email": identity_user.email,
+        "name": identity_user.name,
+        "role": _map_identity_role(identity_user.role),
+        "organization_id": identity_user.organization_id,
+        "is_active": identity_user.is_active,
+        "identity_user": identity_user,
+    }
+
+    if membership:
+        user_dict["salon_id"] = membership.get("salon_id")
+        user_dict["staff_id"] = membership.get("staff_id")
+        user_dict["membership_id"] = membership.get("_id")
+        user_dict["membership_role"] = membership.get("role", "staff")
+
+    return user_dict
+
+
 async def get_current_active_user(
     current_user: IdentityUser = Depends(get_current_user)
 ) -> IdentityUser:
