@@ -75,11 +75,6 @@ function buildTree(requirements: Requirement[]): TreeNode[] {
   }
   sortChildren(roots)
 
-  // Expand only root-level nodes so the top categories are visible
-  roots.forEach((node) => {
-    node.expanded = true
-  })
-
   return roots
 }
 
@@ -215,18 +210,60 @@ export default function ProductDetail() {
   }
 
   function handleToggle(nodeId: string) {
-    const toggleNode = (nodes: TreeNode[]): TreeNode[] => {
+    const toggleAccordion = (nodes: TreeNode[], expanding: boolean): TreeNode[] => {
       return nodes.map((node) => {
         if (node.id === nodeId) {
-          return { ...node, expanded: !node.expanded }
+          return { ...node, expanded: !node.expanded, children: toggleAccordion(node.children, false) }
+        }
+        // Collapse siblings when another node at this level is being expanded
+        if (expanding) {
+          return { ...node, expanded: false, children: collapseAll(node.children) }
         }
         if (node.children.length > 0) {
-          return { ...node, children: toggleNode(node.children) }
+          return { ...node, children: toggleAccordion(node.children, false) }
         }
         return node
       })
     }
-    setTree(toggleNode(tree))
+
+    const collapseAll = (nodes: TreeNode[]): TreeNode[] => {
+      return nodes.map((node) => ({
+        ...node,
+        expanded: false,
+        children: collapseAll(node.children),
+      }))
+    }
+
+    // Find whether the target node is currently expanded
+    const findNode = (nodes: TreeNode[]): TreeNode | null => {
+      for (const node of nodes) {
+        if (node.id === nodeId) return node
+        const found = findNode(node.children)
+        if (found) return found
+      }
+      return null
+    }
+    const target = findNode(tree)
+    const willExpand = target ? !target.expanded : false
+
+    // When expanding, pass that info so siblings at the same level get collapsed
+    const applyToggle = (nodes: TreeNode[]): TreeNode[] => {
+      let found = false
+      for (const node of nodes) {
+        if (node.id === nodeId) { found = true; break }
+      }
+      if (found) {
+        return toggleAccordion(nodes, willExpand)
+      }
+      return nodes.map((node) => {
+        if (node.children.length > 0) {
+          return { ...node, children: applyToggle(node.children) }
+        }
+        return node
+      })
+    }
+
+    setTree(applyToggle(tree))
   }
 
   async function createRequirement(e: React.FormEvent) {
