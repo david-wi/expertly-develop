@@ -2,6 +2,8 @@ import {
   ChevronDown,
   ChevronUp,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   ClipboardList,
   MousePointerClick,
   Lock,
@@ -25,12 +27,61 @@ import {
   Play,
   Cpu,
 } from 'lucide-react'
-import { useState, useRef } from 'react'
+import { useState, useRef, useCallback, useSyncExternalStore } from 'react'
 import type { ReactNode, ComponentType, MouseEvent as ReactMouseEvent } from 'react'
 import { ThemeSwitcher } from '../theme/ThemeSwitcher'
 import { VersionChecker } from './VersionChecker'
 import { UserMenu, type UserMenuConfig } from './UserMenu'
 import { createRenderLink } from '../utils/createRenderLink'
+
+// --- Sidebar collapse state management ---
+const SIDEBAR_COLLAPSED_KEY = 'expertly_sidebar_collapsed'
+
+let sidebarCollapsedListeners: Array<() => void> = []
+
+function getSidebarCollapsedSnapshot(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+function setSidebarCollapsed(collapsed: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(collapsed))
+  } catch {
+    // localStorage unavailable
+  }
+  sidebarCollapsedListeners.forEach(l => l())
+}
+
+function subscribeSidebarCollapsed(listener: () => void) {
+  sidebarCollapsedListeners.push(listener)
+  return () => {
+    sidebarCollapsedListeners = sidebarCollapsedListeners.filter(l => l !== listener)
+  }
+}
+
+/**
+ * Hook to read sidebar collapsed state. Returns [collapsed, toggleCollapsed].
+ * State is persisted to localStorage and shared across components.
+ */
+export function useSidebarCollapsed(): [boolean, () => void] {
+  const collapsed = useSyncExternalStore(
+    subscribeSidebarCollapsed,
+    getSidebarCollapsedSnapshot,
+    () => false, // server snapshot
+  )
+  const toggle = useCallback(() => setSidebarCollapsed(!collapsed), [collapsed])
+  return [collapsed, toggle]
+}
+
+/** Sidebar width constants */
+export const SIDEBAR_WIDTH_EXPANDED = 'w-72'     // 288px
+export const SIDEBAR_WIDTH_COLLAPSED = 'w-16'    // 64px
+export const SIDEBAR_PL_EXPANDED = 'pl-72'       // 288px
+export const SIDEBAR_PL_COLLAPSED = 'pl-16'      // 64px
 
 export interface NavItem {
   name: string
@@ -38,6 +89,8 @@ export interface NavItem {
   icon: ComponentType<{ className?: string }>
   /** If true, renders a spacer/divider before this item */
   spacerBefore?: boolean
+  /** Tooltip text shown on hover (always shown when collapsed; shown when expanded if provided) */
+  tooltip?: string
 }
 
 export interface ExpertlyProduct {
@@ -186,6 +239,7 @@ export function Sidebar({
   userMenu,
   productNamePrefix = 'Expertly',
 }: SidebarProps) {
+  const [collapsed, toggleCollapsed] = useSidebarCollapsed()
   const [showProductSwitcher, setShowProductSwitcher] = useState(false)
   const [showLanguageSwitcher, setShowLanguageSwitcher] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -229,7 +283,7 @@ export function Sidebar({
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === currentLanguage) || SUPPORTED_LANGUAGES[0]
 
   return (
-    <div className={`fixed inset-y-0 left-0 z-50 w-72 ${sidebarBg} shadow-lg flex flex-col ${sidebarBorderColor}`}>
+    <div className={`fixed inset-y-0 left-0 z-50 ${collapsed ? 'w-16' : 'w-72'} ${sidebarBg} shadow-lg flex flex-col ${sidebarBorderColor} transition-[width] duration-200 ease-in-out`}>
       {/* Version Update Banner */}
       {versionCheck?.currentCommit && (
         <VersionChecker
@@ -240,18 +294,23 @@ export function Sidebar({
 
       {/* Logo / Product Switcher */}
       <div className="relative flex-shrink-0">
-        <div className={`flex h-14 items-center justify-between px-4 border-b ${sidebarBorderColor}`}>
+        <div className={`flex h-14 items-center ${collapsed ? 'justify-center px-2' : 'justify-between px-4'} border-b ${sidebarBorderColor}`}>
           <button
-            onClick={() => setShowProductSwitcher(!showProductSwitcher)}
-            className={`flex items-center gap-2 ${sidebarHoverBg} -ml-1 px-1.5 py-1 rounded-lg transition-colors min-w-0`}
+            onClick={() => collapsed ? toggleCollapsed() : setShowProductSwitcher(!showProductSwitcher)}
+            className={`flex items-center gap-2 ${sidebarHoverBg} ${collapsed ? 'p-1' : '-ml-1 px-1.5 py-1'} rounded-lg transition-colors min-w-0`}
+            title={collapsed ? `${productNamePrefix ? productNamePrefix + ' ' : ''}${productName}` : undefined}
           >
             <ExpertlyLogo className="w-7 h-7 flex-shrink-0" />
-            <span className={`font-semibold text-theme-sidebar-text-strong text-base whitespace-nowrap`}>{productNamePrefix ? `${productNamePrefix} ` : ''}{productName}</span>
-            <ChevronDown className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
+            {!collapsed && (
+              <>
+                <span className={`font-semibold text-theme-sidebar-text-strong text-base whitespace-nowrap`}>{productNamePrefix ? `${productNamePrefix} ` : ''}{productName}</span>
+                <ChevronDown className={`w-4 h-4 ${sidebarTextMuted} transition-transform flex-shrink-0 ${showProductSwitcher ? 'rotate-180' : ''}`} />
+              </>
+            )}
           </button>
 
           {/* Compact Language Selector */}
-          {onLanguageChange && (
+          {onLanguageChange && !collapsed && (
             <div className="relative flex-shrink-0">
               <button
                 onClick={() => setShowLanguageSwitcher(!showLanguageSwitcher)}
@@ -490,7 +549,7 @@ export function Sidebar({
       </div>
 
       {/* Organization Switcher (optional) */}
-      {orgSwitcher && (
+      {orgSwitcher && !collapsed && (
         <div className="px-3 py-2 flex-shrink-0">
           {orgSwitcher}
         </div>
@@ -500,7 +559,7 @@ export function Sidebar({
       <div className="flex-1 min-h-0 overflow-y-auto">
         {/* Navigation */}
         {navigation.length > 0 && (
-          <nav className="px-3 py-2">
+          <nav className={collapsed ? 'px-2 py-2' : 'px-3 py-2'}>
             <ul className="space-y-1">
               {navigation.map((item) => {
                 const fullHref = basePath + item.href
@@ -510,21 +569,22 @@ export function Sidebar({
 
                 return (
                   <li key={item.name}>
-                    {item.spacerBefore && <div className="mt-4 mb-2 border-t border-theme-border" />}
+                    {item.spacerBefore && <div className={`mt-4 mb-2 border-t border-theme-border ${collapsed ? 'mx-1' : ''}`} />}
                     {renderLink({
                       href: fullHref,
                       className: `
-                        flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium
+                        flex items-center ${collapsed ? 'justify-center' : 'gap-3'} ${collapsed ? 'px-0 py-2' : 'px-3 py-2'} rounded-lg text-sm font-medium
                         transition-colors duration-150
                         ${isActive
                           ? `${activeBg} ${activeText}`
                           : `${sidebarText} ${navHoverBg} hover:text-theme-sidebar-text-hover`
                         }
                       `,
+                      title: collapsed ? (item.tooltip || item.name) : item.tooltip,
                       children: (
                         <>
-                          <item.icon className="w-5 h-5" />
-                          {item.name}
+                          <item.icon className="w-5 h-5 flex-shrink-0" />
+                          {!collapsed && item.name}
                         </>
                       ),
                     })}
@@ -535,28 +595,43 @@ export function Sidebar({
           </nav>
         )}
 
-        {/* Custom Content (children) */}
-        {children}
+        {/* Custom Content (children) - hidden when collapsed */}
+        {!collapsed && children}
       </div>
 
       {/* Bottom sections - fixed at bottom, outside scroll area */}
       <div className={`flex-shrink-0 ${sidebarBg}`}>
+        {/* Collapse/Expand Toggle */}
+        <div className={`${collapsed ? 'px-2' : 'px-4'} py-2 border-t ${sidebarBorderColor}`}>
+          <button
+            onClick={toggleCollapsed}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-2'} px-2 py-1.5 rounded-lg text-sm ${sidebarText} ${sidebarHoverBg} transition-colors`}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed
+              ? <ChevronsRight className="w-4 h-4 flex-shrink-0" />
+              : <ChevronsLeft className="w-4 h-4 flex-shrink-0" />
+            }
+            {!collapsed && <span className={`${sidebarTextMuted} text-xs`}>Collapse</span>}
+          </button>
+        </div>
+
         {/* Build Info (optional - displayed above theme switcher line) */}
-        {buildInfo && (
+        {buildInfo && !collapsed && (
           <div className="px-4 py-1">
             {buildInfo}
           </div>
         )}
 
         {/* Theme Switcher */}
-        {showThemeSwitcher && (
+        {showThemeSwitcher && !collapsed && (
           <div className={`px-4 py-3 border-t ${sidebarBorderColor}`}>
             <ThemeSwitcher />
           </div>
         )}
 
         {/* Bottom Section (optional - for logout buttons, etc.) */}
-        {bottomSection && (
+        {bottomSection && !collapsed && (
           <div className={`border-t ${sidebarBorderColor}`}>
             {bottomSection}
           </div>
@@ -564,8 +639,16 @@ export function Sidebar({
 
         {/* User */}
         {user && (
-          <div className={`p-4 border-t ${sidebarBorderColor} ${userBg} relative`}>
-            {userMenu ? (
+          <div className={`${collapsed ? 'p-2' : 'p-4'} border-t ${sidebarBorderColor} ${userBg} relative`}>
+            {collapsed ? (
+              <div className="flex justify-center" title={user.name || 'User'}>
+                <div className={`w-8 h-8 ${avatarBg} rounded-full flex items-center justify-center flex-shrink-0`}>
+                  <span className={`${avatarText} font-medium text-sm`}>
+                    {user.name?.charAt(0) || 'U'}
+                  </span>
+                </div>
+              </div>
+            ) : userMenu ? (
               <>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
@@ -624,8 +707,9 @@ export function MainLayout({ children }: MainLayoutProps) {
 }
 
 export function MainContent({ children }: { children: ReactNode }) {
+  const [collapsed] = useSidebarCollapsed()
   return (
-    <div className="pl-72 min-h-screen bg-theme-bg">
+    <div className={`${collapsed ? 'pl-16' : 'pl-72'} min-h-screen bg-theme-bg transition-[padding] duration-200 ease-in-out`}>
       <main className="p-8">
         {children}
       </main>

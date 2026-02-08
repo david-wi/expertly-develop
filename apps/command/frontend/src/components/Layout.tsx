@@ -14,7 +14,7 @@ import {
   PersonStanding,
   Eye,
 } from 'lucide-react'
-import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, VoiceTranscription } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, VoiceTranscription, useSidebarCollapsed } from '@expertly/ui'
 import ViewAsSwitcher, { ViewAsState, getViewAsState } from './ViewAsSwitcher'
 import NotificationBell from './NotificationBell'
 import { api } from '../services/api'
@@ -41,6 +41,7 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [viewAs, setViewAs] = useState<ViewAsState>(getViewAsState())
+  const [sidebarCollapsed] = useSidebarCollapsed()
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(() => api.getCurrentUser(), [])
@@ -99,7 +100,7 @@ export default function Layout() {
         navigate={navigate}
         user={userWithOrg}
       />
-      <div className="pl-72 min-h-screen bg-theme-bg">
+      <div className={`${sidebarCollapsed ? 'pl-16' : 'pl-72'} min-h-screen bg-theme-bg transition-[padding] duration-200 ease-in-out`}>
         <header className="sticky top-0 z-40 bg-theme-bg border-b border-gray-200 px-8 py-3 flex items-center justify-end">
           <NotificationBell />
         </header>

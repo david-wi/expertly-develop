@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 import { useAuth } from '../contexts/AuthContext'
-import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, type CurrentUser } from '@expertly/ui'
+import { Sidebar as SharedSidebar, SupportedLanguage, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, useSidebarCollapsed, type CurrentUser } from '@expertly/ui'
 import { authApi, TENANT_STORAGE_KEY } from '../api/client'
 
 interface LayoutProps {
@@ -23,6 +23,7 @@ export default function Layout({ children }: LayoutProps) {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sidebarCollapsed] = useSidebarCollapsed()
 
   // Use shared hook for consistent user fetching
   const fetchCurrentUser = useCallback(async (): Promise<CurrentUser> => {
@@ -115,7 +116,7 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={`${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'} transition-[padding] duration-200 ease-in-out`}>
         {/* Top bar - mobile only */}
         <header className="sticky top-0 z-30 bg-white border-b border-gray-200 lg:hidden">
           <div className="flex items-center justify-between h-16 px-4">

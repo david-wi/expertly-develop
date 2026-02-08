@@ -5,6 +5,7 @@ export interface RenderLinkProps {
   className: string
   children: ReactNode
   onClick?: (event: MouseEvent) => void
+  title?: string
 }
 
 /**
@@ -31,10 +32,11 @@ export interface RenderLinkProps {
  * ```
  */
 export function createRenderLink(navigate: (path: string) => void) {
-  return ({ href, className, children, onClick }: RenderLinkProps) => (
+  return ({ href, className, children, onClick, title }: RenderLinkProps) => (
     <a
       href={href}
       className={className}
+      title={title}
       onClick={(e) => {
         // Call the onClick handler with event (so it can check for modifier keys)
         onClick?.(e)
