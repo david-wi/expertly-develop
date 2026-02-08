@@ -101,11 +101,16 @@ async def get_current_salon_user(request: Request) -> dict:
         "identity_user": identity_user,
     }
 
-    if membership:
-        user_dict["salon_id"] = membership.get("salon_id")
-        user_dict["staff_id"] = membership.get("staff_id")
-        user_dict["membership_id"] = membership.get("_id")
-        user_dict["membership_role"] = membership.get("role", "staff")
+    if not membership:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No salon membership found. Please contact your salon administrator.",
+        )
+
+    user_dict["salon_id"] = membership.get("salon_id")
+    user_dict["staff_id"] = membership.get("staff_id")
+    user_dict["membership_id"] = membership.get("_id")
+    user_dict["membership_role"] = membership.get("role", "staff")
 
     return user_dict
 
