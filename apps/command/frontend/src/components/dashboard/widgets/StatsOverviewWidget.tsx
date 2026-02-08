@@ -49,7 +49,7 @@ export function StatsOverviewWidget({ widgetId }: WidgetProps) {
 
   return (
     <WidgetWrapper widgetId={widgetId} title="Overview" titleUnderline>
-      <div className="grid grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-3">
         <StatItem
           label="Active Tasks"
           value={activeTasks.length}
@@ -67,12 +67,6 @@ export function StatsOverviewWidget({ widgetId }: WidgetProps) {
           value={addedToday.length}
           dotColor="bg-violet-400"
           tooltip="Tasks created since midnight today"
-        />
-        <StatItem
-          label="Total Tasks"
-          value={tasks.length}
-          dotColor="bg-gray-300"
-          tooltip="All tasks across all queues and statuses"
           showDivider={false}
         />
       </div>
