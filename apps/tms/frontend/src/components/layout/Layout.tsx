@@ -128,12 +128,13 @@ export default function Layout() {
         />
       )}
 
-      {/* Sidebar wrapper: slides in on mobile; on desktop, transform-none avoids creating
-           a containing block so the fixed Sidebar positions relative to viewport */}
+      {/* Sidebar wrapper: slides in on mobile; on desktop, no translate keeps
+           Sidebar's fixed positioning relative to the viewport (not a containing block) */}
       <div className={`
-        fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out
-        lg:transform-none lg:static lg:z-auto
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+        fixed inset-y-0 left-0 z-50
+        max-lg:transition-transform max-lg:duration-300 max-lg:ease-in-out
+        lg:static lg:z-auto
+        ${mobileMenuOpen ? 'max-lg:translate-x-0' : 'max-lg:-translate-x-full'}
       `}>
         <Sidebar
           productCode="tms"
