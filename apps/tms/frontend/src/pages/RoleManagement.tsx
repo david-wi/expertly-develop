@@ -82,6 +82,8 @@ const RESOURCE_COLORS: Record<string, string> = {
 // Local API helpers (to be merged into services/api.ts)
 // ============================================================================
 
+import { httpErrorMessage } from '../utils/httpErrors'
+
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -91,8 +93,8 @@ async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T
     credentials: 'include',
   })
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'Unknown error' }))
-    throw new Error(error.detail || `HTTP ${response.status}`)
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || httpErrorMessage(response.status))
   }
   return response.json()
 }

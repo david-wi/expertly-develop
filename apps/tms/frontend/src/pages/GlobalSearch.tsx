@@ -15,6 +15,8 @@ import { useDebouncedSearch } from '../hooks/useDebouncedSearch'
 // Local API helpers (per requirement: do not import from api.ts)
 // ---------------------------------------------------------------------------
 
+import { httpErrorMessage } from '../utils/httpErrors'
+
 const SEARCH_API = import.meta.env.VITE_API_URL || ''
 
 async function searchRequest<T>(
@@ -26,7 +28,10 @@ async function searchRequest<T>(
     headers: { 'Content-Type': 'application/json', ...options.headers },
     credentials: 'include',
   })
-  if (!response.ok) throw new Error(`HTTP ${response.status}`)
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}))
+    throw new Error(error.detail || httpErrorMessage(response.status))
+  }
   return response.json()
 }
 

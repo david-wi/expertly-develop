@@ -15,15 +15,15 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Inbox', href: '/inbox', icon: Inbox },
-  { name: 'Quote Requests', href: '/quote-requests', icon: FileText },
-  { name: 'Shipments', href: '/shipments', icon: Truck },
-  { name: 'Dispatch Board', href: '/dispatch', icon: Send },
+  { name: 'Inbox', href: '/inbox', icon: Inbox, tooltip: 'Inbound emails, rate requests, and tasks needing attention' },
+  { name: 'Quote Requests', href: '/quote-requests', icon: FileText, tooltip: 'Customer requests for shipping rates and pricing' },
+  { name: 'Shipments', href: '/shipments', icon: Truck, tooltip: 'Booked loads and their pickup/delivery status' },
+  { name: 'Dispatch Board', href: '/dispatch', icon: Send, tooltip: 'Assign carriers to shipments and manage pickups' },
   { name: 'Customers', href: '/customers', icon: Users },
-  { name: 'Carriers', href: '/carriers', icon: Building2 },
+  { name: 'Carriers', href: '/carriers', icon: Building2, tooltip: 'Trucking companies and their lanes, rates, and compliance' },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
-  { name: 'Carrier Payables', href: '/carrier-payables', icon: CreditCard },
-  { name: 'Margins', href: '/margins', icon: BarChart3 },
+  { name: 'Carrier Payables', href: '/carrier-payables', icon: CreditCard, tooltip: 'Amounts owed to carriers for completed loads' },
+  { name: 'Margins', href: '/margins', icon: BarChart3, tooltip: 'Profit analysis across shipments, customers, and lanes' },
   { name: 'Settings', href: '/settings', icon: Settings },
 ]
 
@@ -46,6 +46,7 @@ export default function Sidebar() {
             <Link
               key={item.name}
               to={item.href}
+              title={item.tooltip}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-emerald-50 text-emerald-700'

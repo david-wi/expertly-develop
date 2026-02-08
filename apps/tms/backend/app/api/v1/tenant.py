@@ -10,14 +10,22 @@ Provides endpoints for:
 
 from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
+import os
+import uuid
 
-from fastapi import APIRouter, HTTPException, Depends
+import aiofiles
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.database import get_database
 from app.middleware.tenant import get_current_org_id, get_tenant_db, TenantDatabase
 from app.models.tenant_settings import TenantSettings
 from app.models.base import utc_now
+
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads", "branding")
+ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"}
+MAX_LOGO_SIZE = 2 * 1024 * 1024  # 2 MB
 
 router = APIRouter()
 
@@ -416,6 +424,114 @@ async def update_white_label_branding(
         portal_title=branding.get("portal_title"),
         hide_powered_by=branding.get("hide_powered_by", False),
     )
+
+
+# ---------------------------------------------------------------------------
+# Logo Upload Endpoints
+# ---------------------------------------------------------------------------
+
+
+@router.post("/branding/logo")
+async def upload_branding_logo(
+    file: UploadFile = File(...),
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """Upload a company logo for branding.
+
+    Accepts PNG, JPG, WEBP, or SVG images up to 2 MB.
+    Stores the file and updates the tenant branding settings.
+    """
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    # Validate content type
+    if file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid file type. Please upload a PNG, JPG, WEBP, or SVG image.",
+        )
+
+    # Read and validate size
+    content = await file.read()
+    if len(content) > MAX_LOGO_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File is too large. Maximum logo size is 2 MB.",
+        )
+
+    # Generate unique filename
+    ext = os.path.splitext(file.filename)[1] if file.filename else ".png"
+    filename = f"{uuid.uuid4()}{ext}"
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    filepath = os.path.join(UPLOAD_DIR, filename)
+
+    # Save file
+    async with aiofiles.open(filepath, "wb") as f:
+        await f.write(content)
+
+    # Build the URL that serves the uploaded file
+    logo_url = f"/api/v1/tenant/branding/logo/{filename}"
+
+    # Update tenant settings with logo URL
+    db = get_database()
+    await db["tenant_settings"].find_one_and_update(
+        {"org_id": org_id},
+        {
+            "$set": {
+                "branding.logo_url": logo_url,
+                "updated_at": utc_now(),
+            }
+        },
+        upsert=True,
+    )
+
+    return {"logo_url": logo_url, "filename": filename}
+
+
+@router.get("/branding/logo/{filename}")
+async def serve_branding_logo(filename: str):
+    """Serve an uploaded branding logo file."""
+    # Sanitize filename to prevent path traversal
+    safe_filename = os.path.basename(filename)
+    filepath = os.path.join(UPLOAD_DIR, safe_filename)
+
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail="Logo not found")
+
+    return FileResponse(
+        filepath,
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
+@router.delete("/branding/logo")
+async def delete_branding_logo(
+    org_id: Optional[str] = Depends(get_current_org_id),
+):
+    """Delete the branding logo for the tenant."""
+    if not org_id:
+        raise HTTPException(status_code=400, detail="No organization selected")
+
+    db = get_database()
+    settings_doc = await db["tenant_settings"].find_one({"org_id": org_id})
+
+    if settings_doc:
+        branding = settings_doc.get("branding", {})
+        logo_url = branding.get("logo_url")
+        if logo_url:
+            # Extract filename from URL and delete file
+            logo_filename = os.path.basename(logo_url)
+            filepath = os.path.join(UPLOAD_DIR, logo_filename)
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+
+        # Clear logo_url in settings
+        await db["tenant_settings"].update_one(
+            {"org_id": org_id},
+            {"$set": {"branding.logo_url": None, "updated_at": utc_now()}},
+        )
+
+    return {"status": "deleted"}
 
 
 # ---------------------------------------------------------------------------
