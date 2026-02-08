@@ -376,6 +376,10 @@ export const api = {
     request<GenerateTaskSuggestionsResponse>(`/api/v1/tasks/generate-suggestions`, {
       method: 'POST',
     }),
+  checkCompletedTasks: () =>
+    request<CheckCompletedTasksResponse>(`/api/v1/tasks/check-completed`, {
+      method: 'POST',
+    }),
 
   // Task Description Regeneration
   regenerateTaskDescription: (taskId: string) =>
@@ -1980,5 +1984,19 @@ export interface GenerateTaskSuggestionsResponse {
     title: string
     content: string
     provider_data: Record<string, unknown>
+  }>
+}
+
+export interface CheckCompletedTasksResponse {
+  tasks_checked: number
+  tasks_completed: number
+  tasks_updated: number
+  tasks_skipped: number
+  errors: number
+  details: Array<{
+    task_id: string
+    task_title: string
+    action: 'completed' | 'updated' | 'skipped' | 'error'
+    message: string
   }>
 }
