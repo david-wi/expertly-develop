@@ -413,9 +413,17 @@ async def _run_generation(
         update_count(len(temp_to_real))
         logger.info(f"Job {job_id}: Phase 1 complete — {len(outline)} outline nodes saved")
 
-        # ---- Phase 2: Expand features into requirements ----
+        # ---- Phase 2: Expand features into requirements (gap analysis) ----
         features = [n for n in outline if n.get("node_type") == "feature"]
         logger.info(f"Job {job_id}: Phase 2 — expanding {len(features)} features")
+
+        # Build a lookup of existing children per parent ID so we can
+        # pass them to the AI for gap analysis (avoid duplicating what
+        # already exists under each feature).
+        existing_children_by_parent: dict[str, list[ExistingRequirement]] = {}
+        for req in existing_requirements:
+            if req.parent_id:
+                existing_children_by_parent.setdefault(req.parent_id, []).append(req)
 
         if features:
             # Calculate starting temp_id for requirements
@@ -435,28 +443,35 @@ async def _run_generation(
 
             async def expand_and_save(feature_node: dict, start_id: int) -> None:
                 nonlocal completed_features
+                # Find existing requirements under this feature (by real DB id)
+                feature_temp_id = feature_node.get("temp_id", "")
+                feature_real_id = temp_to_real.get(feature_temp_id)
+                existing_children = existing_children_by_parent.get(feature_real_id, []) if feature_real_id else []
+
                 nodes = await ai_service.expand_feature(
                     description=combined_description,
                     outline=outline,
                     feature_node=feature_node,
                     product_name=product_name,
                     next_temp_id_start=start_id,
+                    existing_children=existing_children or None,
                 )
                 # Save this feature's requirements to DB immediately
                 # Replace parent_ref with the real ID of the feature
-                feature_temp_id = feature_node.get("temp_id", "")
                 for node in nodes:
                     if node.get("parent_ref") == feature_temp_id:
                         node["parent_ref"] = temp_to_real.get(feature_temp_id, feature_temp_id)
 
-                await _batch_create_in_db(
-                    product_id, product_prefix, user_name, nodes, temp_to_real,
-                )
-                all_requirement_nodes.extend(nodes)
+                if nodes:
+                    await _batch_create_in_db(
+                        product_id, product_prefix, user_name, nodes, temp_to_real,
+                    )
+                    all_requirement_nodes.extend(nodes)
                 completed_features += 1
                 update_count(len(temp_to_real))
+                skipped = " (no gaps)" if not nodes and existing_children else ""
                 update_progress(
-                    f"Expanding features ({completed_features}/{len(features)}) — {len(temp_to_real)} nodes created"
+                    f"Expanding features ({completed_features}/{len(features)}) — {len(temp_to_real)} nodes created{skipped}"
                 )
 
             # Process features in waves of MAX_CONCURRENCY, yielding

@@ -45,26 +45,50 @@ class AIService:
             return f"[PDF content could not be extracted: {str(e)}]"
 
     def _build_tree_text(self, requirements: List[ExistingRequirement]) -> str:
-        """Build an indented tree representation of existing requirements."""
-        by_parent = {}
-        roots = []
+        """Build an indented tree representation of existing requirements.
+
+        For large trees (>200 nodes), renders only the structural nodes
+        (product/module/feature/guardrail) with requirement counts, to
+        keep the prompt manageable for deduplication.
+        """
+        by_parent: dict[str | None, list[ExistingRequirement]] = {}
+        roots: list[ExistingRequirement] = []
 
         for req in requirements:
             if req.parent_id:
-                if req.parent_id not in by_parent:
-                    by_parent[req.parent_id] = []
-                by_parent[req.parent_id].append(req)
+                by_parent.setdefault(req.parent_id, []).append(req)
             else:
                 roots.append(req)
+
+        summarize = len(requirements) > 200
+        structural_types = {"product", "module", "feature", "guardrail"}
 
         def render(items: List[ExistingRequirement], indent: int) -> str:
             lines = []
             for item in items:
-                prefix = "  " * indent
                 children = by_parent.get(item.id, [])
-                child_text = "\n" + render(children, indent + 1) if children else ""
+                is_structural = item.node_type in structural_types
+
+                # In summary mode, collapse individual requirements
+                if summarize and not is_structural:
+                    continue
+
+                prefix = "  " * indent
                 node_type_label = f" [{item.node_type}]" if item.node_type else ""
-                lines.append(f"{prefix}- [{item.stable_key}] {item.title}{node_type_label} (id: {item.id}){child_text}")
+
+                if summarize and is_structural:
+                    # Count requirement children (not shown individually)
+                    req_children = [c for c in children if c.node_type not in structural_types]
+                    struct_children = [c for c in children if c.node_type in structural_types]
+                    count_note = f" ({len(req_children)} requirements)" if req_children else ""
+                    lines.append(f"{prefix}- [{item.stable_key}] {item.title}{node_type_label} (id: {item.id}){count_note}")
+                    if struct_children:
+                        child_text = render(struct_children, indent + 1)
+                        if child_text:
+                            lines.append(child_text)
+                else:
+                    child_text = "\n" + render(children, indent + 1) if children else ""
+                    lines.append(f"{prefix}- [{item.stable_key}] {item.title}{node_type_label} (id: {item.id}){child_text}")
             return "\n".join(lines)
 
         return render(roots, 0) if roots else "(No existing requirements)"
@@ -217,8 +241,14 @@ Return a JSON array of outline nodes (product, modules, features, guardrails —
         feature_node: dict,
         product_name: str,
         next_temp_id_start: int,
+        existing_children: list[ExistingRequirement] | None = None,
     ) -> list:
-        """Generate requirement nodes for a single feature."""
+        """Generate requirement nodes for a single feature.
+
+        If existing_children is provided, performs a gap analysis — only
+        generates requirements that are missing, not duplicates of what
+        already exists.
+        """
 
         # Build outline summary for context
         outline_summary = "\n".join(
@@ -228,6 +258,22 @@ Return a JSON array of outline nodes (product, modules, features, guardrails —
 
         feature_id = feature_node.get("temp_id", "?")
         feature_title = feature_node.get("title", "?")
+
+        # Build existing requirements context for gap analysis
+        existing_section = ""
+        if existing_children:
+            existing_list = "\n".join(
+                f"  - [{r.stable_key}] {r.title}"
+                for r in existing_children
+            )
+            existing_section = f"""
+This feature already has {len(existing_children)} requirements:
+{existing_list}
+
+IMPORTANT: Do NOT duplicate any of these existing requirements.
+Only generate requirements that are MISSING — gaps not yet covered.
+If coverage is already complete, return an empty array: []
+"""
 
         system_prompt = """You are an expert requirements analyst. Generate detailed requirement nodes for a specific feature.
 
@@ -241,11 +287,14 @@ For every requirement node, output these fields:
 - "priority": "critical", "high", "medium", or "low"
 - "tags": array from ["functional", "nonfunctional", "security", "performance", "usability"]
 
-Generate 3-30 requirements per feature depending on complexity. Cover:
+Generate requirements covering:
 - Core behaviors and user actions
 - Edge cases and error handling
 - Validation rules
 - Permission/access considerations if relevant
+
+If existing requirements are provided, only generate what's MISSING.
+If nothing is missing, return an empty array: []
 
 Respond with ONLY a JSON array. No explanation, no markdown fences."""
 
@@ -262,8 +311,8 @@ Generate requirements for this feature:
   Feature: {feature_id} — "{feature_title}"
   Parent ref for all requirements: "{feature_id}"
   Start temp_id numbering at: temp-{next_temp_id_start}
-
-Return a JSON array of requirement nodes:
+{existing_section}
+Return a JSON array of requirement nodes (or [] if nothing is missing):
 [{{"temp_id": "temp-{next_temp_id_start}", "node_type": "requirement", "title": "...", "parent_ref": "{feature_id}", "priority": "medium", "tags": ["functional"]}}, ...]"""
 
         text = await self.client.complete(
