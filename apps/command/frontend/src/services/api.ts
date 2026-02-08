@@ -1989,6 +1989,7 @@ export interface GenerateTaskSuggestionsResponse {
 
 export interface CheckCompletedTasksResponse {
   tasks_checked: number
+  tasks_total: number
   tasks_completed: number
   tasks_updated: number
   tasks_skipped: number

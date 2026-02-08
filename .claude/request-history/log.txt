@@ -1,3 +1,4 @@
+20260207 - TMS Billing & Invoicing: Implemented 3 features - (1) Auto-Invoice from POD trigger in both POD capture paths (tracking_service.py and enhanced POD endpoint), (2) Aging Report frontend tab with bucket visualization, expandable detail rows, and customer breakdown table, (3) Batch Invoicing frontend tab with shipment selection, consolidate-by-customer option, auto-send toggle, and result display. Backend endpoints already existed; this added the POD->invoice trigger and frontend UI.
 20260207 - TMS Carrier Management & Tendering: Implemented 7 features - carrier onboarding workflow (6-step wizard with FMCSA verification, AI insurance check, progress dashboard), carrier capacity tracking, carrier negotiation history with counter-offer thread, spot market integration (spot vs contract comparison with rate trends), DAT/Truckstop load board integration tabs, and onboarding dashboard. Added 22 new frontend tests covering all new tabs.
 20260207 - TMS Dev Backlog: Completed remaining frontend features for 8 backlog items - QuickBooks sync dashboard with customer mapping in Settings.tsx, expanded white-label branding in TenantSettings.tsx, NotificationCenter component with bell icon dropdown, push notification service worker, and mobile responsive layout with sidebar toggle. Backend was completed in prior session.
 20260206 - Wrote comprehensive backend test suite for Expertly Intake: 232 tests across 8 files covering schemas, security, auth routes, intake routes, template routes, and service layer (intake_service, answer_service, progress_service). All tests passing.
@@ -103,3 +104,8 @@ Warns users before losing changes on modal close or page refresh.
 20250207 Intake landing page messaging rewrite - change from requirements capture to client onboarding automation
 20260207 15:31 Remove 'Backlog' item from Developer Tools menu across all products. Backlog is an old duplicate of Dev Backlog.
 20260207 16:39 - Always commit and deploy after making changes. Also add clear requirements (soft delete) feature, decomposition guide, and node_type field.
+20260207 Fix: Define - Generate Requirements from Artifacts returning 'Failed to parse AI response:' (empty response from GPT-5.2)
+20260207 Fix BulkImportDialog Generate button disabled condition to account for selected artifacts (not just description text and uploaded files)
+20250207 In Overview widget, replace Queues stat with Added Today (count of tasks created since midnight)
+
+20260207 Fix "Check Resolved" in Command Dashboard: remove hardcoded 100 task limit, fix misleading "tasks_checked" count, improve toast message to show actual Slack-checked vs skipped counts
