@@ -507,6 +507,8 @@ services:
       dockerfile: ./apps/tms/frontend/Dockerfile
       args:
         VITE_API_URL: https://tms-api.ai.devintensive.com/api/v1
+        VITE_BUILD_TIMESTAMP: ${BUILD_TIMESTAMP:-}
+        VITE_GIT_COMMIT: ${GIT_COMMIT:-}
     depends_on:
       - tms-backend
     networks:
