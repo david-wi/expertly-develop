@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { Document } from '../types'
 import { DOCUMENT_TYPE_LABELS } from '../types'
 import {
@@ -149,6 +150,7 @@ export default function DocumentReview() {
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
           <FileText className="h-7 w-7 text-emerald-600" />
           Document Review Queue
+          <PageHelp pageId="document-review" />
         </h1>
         <p className="text-gray-500">
           Review and link documents that couldn't be auto-matched to shipments

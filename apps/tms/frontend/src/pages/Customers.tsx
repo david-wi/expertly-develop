@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Customer } from '../types'
 import { Plus, Building2, Mail, Phone, X, CheckCircle, AlertCircle, PauseCircle } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 const statusConfig: Record<string, { bg: string; text: string; icon: typeof CheckCircle }> = {
   active: { bg: 'bg-emerald-100', text: 'text-emerald-700', icon: CheckCircle },
@@ -77,7 +78,10 @@ export default function Customers() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
+            <PageHelp pageId="customers" />
+          </div>
           <p className="text-gray-500">{customers.length} customer{customers.length !== 1 ? 's' : ''}</p>
         </div>
         <button

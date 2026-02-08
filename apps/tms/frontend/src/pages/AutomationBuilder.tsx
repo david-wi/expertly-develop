@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import PageHelp from '../components/PageHelp'
 import {
   Zap,
   Plus,
@@ -431,6 +432,7 @@ export default function AutomationBuilder() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Zap className="h-7 w-7 text-yellow-500" />
             Automation Builder
+            <PageHelp pageId="automations" />
           </h1>
           <p className="text-gray-500 mt-1">
             Define rules in plain English, test in a sandbox, and roll out gradually.

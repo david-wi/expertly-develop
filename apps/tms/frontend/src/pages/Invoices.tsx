@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../services/api'
 import type { Invoice, AgingReportResponse, AgingBucket, BatchInvoiceResponse, Shipment } from '../types'
 import { FileText, Send, Check, DollarSign, Clock, Layers, AlertTriangle, ChevronDown, ChevronRight } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 const statusColors: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-700',
@@ -21,7 +22,10 @@ export default function Invoices() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
+            <PageHelp pageId="invoices" />
+          </div>
           <p className="text-gray-500">Manage invoices, view aging reports, and batch generate</p>
         </div>
       </div>

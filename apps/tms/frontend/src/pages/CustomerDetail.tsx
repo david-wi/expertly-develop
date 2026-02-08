@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import { apiExtensions } from '../services/api-extensions'
+import PageHelp from '../components/PageHelp'
 import type { Customer, Shipment } from '../types'
 import type {
   CustomerContactRecord,
@@ -279,6 +280,7 @@ export default function CustomerDetail() {
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{customer.name}</h1>
+            <PageHelp pageId="customer-detail" />
             <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-full ${status.bg} ${status.text}`}>
               <StatusIcon className="h-3.5 w-3.5" />
               {customer.status.replace(/_/g, ' ')}

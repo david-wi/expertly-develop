@@ -3,6 +3,7 @@ import { api } from '../services/api'
 import type { Approval, ApprovalSettings, ApprovalThreshold, ApprovalType, ApprovalStatus } from '../types'
 import { APPROVAL_TYPE_LABELS, APPROVAL_STATUS_LABELS } from '../types'
 import { CheckSquare, X, Clock, Zap, Shield, Save } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 const statusColors: Record<ApprovalStatus, string> = {
   pending: 'bg-yellow-100 text-yellow-700',
@@ -156,7 +157,10 @@ export default function ApprovalCenter() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Approval Center</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Approval Center</h1>
+            <PageHelp pageId="approval-center" />
+          </div>
           <p className="text-gray-500">
             Manage approval requests and auto-approval thresholds
           </p>

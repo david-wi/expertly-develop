@@ -29,6 +29,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import { SYNC_STATUS_LABELS } from '../types'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 
@@ -85,7 +86,10 @@ export default function Settings() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+          <PageHelp pageId="settings" />
+        </div>
         <p className="text-gray-500">Manage your account and brokerage preferences</p>
       </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { CarrierPerformance as CarrierPerformanceData } from '../types'
 import {
   Truck,
@@ -75,6 +76,7 @@ export default function CarrierPerformance() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Trophy className="h-7 w-7 text-emerald-600" />
             Carrier Performance
+            <PageHelp pageId="carrier-performance" />
           </h1>
           <p className="text-gray-500">Track and compare carrier reliability and efficiency</p>
         </div>
@@ -95,6 +97,7 @@ export default function CarrierPerformance() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Trophy className="h-7 w-7 text-emerald-600" />
             Carrier Performance
+            <PageHelp pageId="carrier-performance" />
           </h1>
           <p className="text-gray-500">Track and compare carrier reliability and efficiency</p>
         </div>

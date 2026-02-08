@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Shipment, Carrier, CarrierSuggestion, AutoAssignResult, DriverLocation } from '../types'
 import { ArrowRight, Truck, Send, Check, X, Sparkles, AlertTriangle, DollarSign, TrendingUp, Clock, Star, Zap, CheckCircle, MapPin, Navigation, Loader2 } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 type Column = 'needs_carrier' | 'tendered' | 'dispatched'
 type ViewMode = 'board' | 'map'
@@ -181,7 +182,10 @@ export default function DispatchBoard() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dispatch Board</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Dispatch Board</h1>
+            <PageHelp pageId="dispatch-board" />
+          </div>
           <p className="text-gray-500">AI-powered carrier matching and assignment</p>
         </div>
         <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">

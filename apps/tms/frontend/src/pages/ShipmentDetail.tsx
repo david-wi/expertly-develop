@@ -23,6 +23,7 @@ import {
   Fuel,
   Save,
 } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 const statusColors: Record<string, string> = {
   booked: 'bg-gray-100 text-gray-700',
@@ -291,6 +292,7 @@ export default function ShipmentDetail() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{shipment.shipment_number}</h1>
+            <PageHelp pageId="shipment-detail" />
             <span className={`px-3 py-1 text-sm font-medium rounded-lg ${statusColors[shipment.status]}`}>
               {shipment.status.replace(/_/g, ' ')}
             </span>

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Quote, QuoteLineItem, QuoteRevisionSnapshot, QuoteApprovalStatus } from '../types'
 import { ArrowRight, Plus, Trash2, Send, Check, Sparkles, Mail, Copy, FileText, Truck, DollarSign, Calendar, Package, History, RotateCcw, Shield, ShieldCheck, ShieldX, ShieldAlert, Zap, ChevronRight, X, Clock } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 interface QuoteWithExtras extends Quote {
   version_number?: number
@@ -325,6 +326,7 @@ Your TMS Team`
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-gray-900">{quote.quote_number}</h1>
+            <PageHelp pageId="quote-builder" />
             {quote.version_number && quote.version_number > 1 && (
               <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
                 v{quote.version_number}

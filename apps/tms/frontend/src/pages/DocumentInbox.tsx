@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import {
   Inbox,
   FileText,
@@ -252,6 +253,7 @@ export default function DocumentInbox() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Inbox className="h-7 w-7 text-emerald-600" />
             Document Inbox
+            <PageHelp pageId="document-inbox" />
           </h1>
           <p className="text-gray-500">
             Incoming documents with AI classification and entity linking

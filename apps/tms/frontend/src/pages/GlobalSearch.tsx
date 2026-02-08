@@ -16,6 +16,7 @@ import { useDebouncedSearch } from '../hooks/useDebouncedSearch'
 // ---------------------------------------------------------------------------
 
 import { httpErrorMessage } from '../utils/httpErrors'
+import PageHelp from '../components/PageHelp'
 
 const SEARCH_API = import.meta.env.VITE_API_URL || ''
 
@@ -359,6 +360,7 @@ export default function GlobalSearch() {
               <kbd className="px-1.5 py-0.5 bg-gray-200 rounded text-gray-500">Esc</kbd>
               to close
             </span>
+            <PageHelp pageId="global-search" />
           </div>
           {results && (
             <span>{results.total} result{results.total !== 1 ? 's' : ''}</span>

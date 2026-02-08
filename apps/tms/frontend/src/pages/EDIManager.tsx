@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import {
   Radio,
   Plus,
@@ -380,6 +381,7 @@ export default function EDIManager() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Radio className="h-7 w-7 text-indigo-600" />
             EDI Manager
+            <PageHelp pageId="edi-manager" />
           </h1>
           <p className="text-gray-500">
             Manage EDI trading partners, message log, and send/receive EDI messages

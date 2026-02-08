@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
 import type { QuoteRequest } from '../types'
 import { Plus, Sparkles, ArrowRight, Mail, Clock, CheckCircle2, XCircle, FileText, Zap } from 'lucide-react'
+import PageHelp from '../components/PageHelp'
 
 export default function QuoteRequests() {
   const navigate = useNavigate()
@@ -95,7 +96,10 @@ export default function QuoteRequests() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quote Requests</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Quote Requests</h1>
+            <PageHelp pageId="quote-requests" />
+          </div>
           <p className="text-gray-500">Paste emails, AI extracts the details</p>
         </div>
         <button

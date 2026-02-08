@@ -27,6 +27,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useOutletContext } from 'react-router-dom'
+import PageHelp from '../components/PageHelp'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -443,7 +444,10 @@ export default function TenantSettings() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Organization Settings</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900">Organization Settings</h1>
+            <PageHelp pageId="tenant-settings" />
+          </div>
           <p className="mt-1 text-sm text-gray-500">
             Manage settings for your organization
           </p>

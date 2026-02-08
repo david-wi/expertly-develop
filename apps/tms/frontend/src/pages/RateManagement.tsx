@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import {
   DollarSign,
   Plus,
@@ -299,6 +300,7 @@ export default function RateManagement() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <DollarSign className="h-7 w-7 text-teal-600" />
             Rate Management
+            <PageHelp pageId="rate-tables" />
           </h1>
           <p className="text-gray-500">
             Manage contract rate tables, lookup rates, and track expiring contracts

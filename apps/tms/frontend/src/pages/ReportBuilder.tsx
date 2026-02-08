@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services/api'
+import PageHelp from '../components/PageHelp'
 import type { ReportBuildResult, SavedReport } from '../types'
 import {
   BarChart3,
@@ -182,6 +183,7 @@ export default function ReportBuilder() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Layers className="h-7 w-7 text-violet-600" />
             Report Builder
+            <PageHelp pageId="report-builder" />
           </h1>
           <p className="text-gray-500">Build custom reports from your TMS data</p>
         </div>

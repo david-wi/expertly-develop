@@ -83,6 +83,7 @@ const RESOURCE_COLORS: Record<string, string> = {
 // ============================================================================
 
 import { httpErrorMessage } from '../utils/httpErrors'
+import PageHelp from '../components/PageHelp'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
@@ -328,6 +329,7 @@ export default function RoleManagement() {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Shield className="h-7 w-7 text-violet-600" />
             Role Management
+            <PageHelp pageId="role-management" />
           </h1>
           <p className="text-gray-500">
             Manage roles, permissions, and user access control
