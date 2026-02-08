@@ -29,37 +29,37 @@ import {
   Menu,
   X,
 } from 'lucide-react'
-import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu } from '@expertly/ui'
+import { Sidebar, formatBuildTimestamp, useCurrentUser, useOrganizations, createDefaultUserMenu, useSidebarCollapsed } from '@expertly/ui'
 import { api } from '../../services/api'
 import NotificationCenter from '../NotificationCenter'
 import MobileBottomNav from './MobileBottomNav'
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Inbox', href: '/inbox', icon: Inbox },
-  { name: 'Quote Requests', href: '/quote-requests', icon: FileText },
-  { name: 'Shipments', href: '/shipments', icon: Truck },
-  { name: 'Dispatch Board', href: '/dispatch', icon: Send },
+  { name: 'Inbox', href: '/inbox', icon: Inbox, tooltip: 'Inbound emails, rate requests, and tasks needing attention' },
+  { name: 'Quote Requests', href: '/quote-requests', icon: FileText, tooltip: 'Customer requests for shipping rates and pricing' },
+  { name: 'Shipments', href: '/shipments', icon: Truck, tooltip: 'Booked loads and their pickup/delivery status' },
+  { name: 'Dispatch Board', href: '/dispatch', icon: Send, tooltip: 'Assign carriers to shipments and manage pickups' },
   { name: 'Customers', href: '/customers', icon: Users, spacerBefore: true },
-  { name: 'Carriers', href: '/carriers', icon: Building2 },
-  { name: 'Load Boards', href: '/loadboards', icon: Radio },
+  { name: 'Carriers', href: '/carriers', icon: Building2, tooltip: 'Trucking companies and their lanes, rates, and compliance' },
+  { name: 'Load Boards', href: '/loadboards', icon: Radio, tooltip: 'Browse available loads from external load boards' },
   { name: 'Invoices', href: '/invoices', icon: Receipt },
-  { name: 'Approvals', href: '/approvals', icon: CheckSquare },
-  { name: 'Margins', href: '/margins', icon: BarChart3, spacerBefore: true },
-  { name: 'Carrier Performance', href: '/carrier-performance', icon: Trophy },
-  { name: 'Operations Metrics', href: '/operations-metrics', icon: Activity },
-  { name: 'Lane Intelligence', href: '/lane-intelligence', icon: Map },
-  { name: 'Document Review', href: '/document-review', icon: FolderSearch },
-  { name: 'Document Inbox', href: '/document-inbox', icon: FileInput },
-  { name: 'Billing', href: '/billing', icon: DollarSign },
-  { name: 'EDI', href: '/edi', icon: ArrowLeftRight, spacerBefore: true },
-  { name: 'Rate Tables', href: '/rate-tables', icon: Table2 },
-  { name: 'Communications', href: '/communications', icon: MessageSquare },
+  { name: 'Approvals', href: '/approvals', icon: CheckSquare, tooltip: 'Quotes, rate changes, and other items pending your approval' },
+  { name: 'Margins', href: '/margins', icon: BarChart3, spacerBefore: true, tooltip: 'Profit analysis across shipments, customers, and lanes' },
+  { name: 'Carrier Performance', href: '/carrier-performance', icon: Trophy, tooltip: 'On-time delivery, claims, and carrier scorecards' },
+  { name: 'Operations Metrics', href: '/operations-metrics', icon: Activity, tooltip: 'KPIs for load volume, revenue, and operational efficiency' },
+  { name: 'Lane Intelligence', href: '/lane-intelligence', icon: Map, tooltip: 'Historical lane data, rate trends, and market insights' },
+  { name: 'Document Review', href: '/document-review', icon: FolderSearch, tooltip: 'Review and verify uploaded BOLs, PODs, and rate confirmations' },
+  { name: 'Document Inbox', href: '/document-inbox', icon: FileInput, tooltip: 'Incoming documents waiting to be classified and linked to shipments' },
+  { name: 'Billing', href: '/billing', icon: DollarSign, tooltip: 'Invoice matching, carrier payables, and billing reconciliation' },
+  { name: 'EDI', href: '/edi', icon: ArrowLeftRight, spacerBefore: true, tooltip: 'Electronic data interchange with carriers and trading partners' },
+  { name: 'Rate Tables', href: '/rate-tables', icon: Table2, tooltip: 'Customer and carrier rate agreements and pricing rules' },
+  { name: 'Communications', href: '/communications', icon: MessageSquare, tooltip: 'Email templates, check calls, and message history' },
   { name: 'Settings', href: '/settings', icon: Settings, spacerBefore: true },
-  { name: 'Desks', href: '/desks', icon: LayoutGrid },
-  { name: 'Automations', href: '/automations', icon: Zap },
-  { name: 'Roles', href: '/roles', icon: Shield },
-  { name: 'Organization', href: '/tenant-settings', icon: Building },
+  { name: 'Desks', href: '/desks', icon: LayoutGrid, tooltip: 'Team workspaces organized by region, mode, or customer' },
+  { name: 'Automations', href: '/automations', icon: Zap, tooltip: 'Rules that auto-assign carriers, send alerts, or trigger actions' },
+  { name: 'Roles', href: '/roles', icon: Shield, tooltip: 'Manage user roles and permissions' },
+  { name: 'Organization', href: '/tenant-settings', icon: Building, tooltip: 'Company info, branding, custom fields, and user management' },
 ]
 
 // Local storage key for selected organization
@@ -69,6 +69,7 @@ export default function Layout() {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [sidebarCollapsed] = useSidebarCollapsed()
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function Layout() {
         />
       </div>
 
-      <div className="lg:pl-72 min-h-screen bg-theme-bg">
+      <div className={`${sidebarCollapsed ? 'lg:pl-16' : 'lg:pl-72'} min-h-screen bg-theme-bg transition-[padding] duration-200 ease-in-out`}>
         {/* Top bar with mobile menu toggle and notification center */}
         <div className="sticky top-0 z-40 lg:z-[60] bg-theme-bg/80 backdrop-blur-sm border-b border-gray-200/50">
           <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2">

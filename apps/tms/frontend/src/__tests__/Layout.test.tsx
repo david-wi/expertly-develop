@@ -28,6 +28,7 @@ vi.mock('@expertly/ui', () => ({
   useCurrentUser: () => ({ sidebarUser: { name: 'Test', role: 'admin' } }),
   useOrganizations: () => ({ organizationsConfig: undefined, currentOrg: null }),
   createDefaultUserMenu: () => ({}),
+  useSidebarCollapsed: () => [false, vi.fn()],
 }))
 
 vi.mock('../services/api', () => ({
