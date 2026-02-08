@@ -96,6 +96,9 @@ export function GenerateFromArtifactsDialog({
 
   // Polling ref and cleanup
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const consecutiveErrorsRef = useRef(0)
+  const jobIdRef = useRef<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current) {
@@ -152,6 +155,9 @@ export function GenerateFromArtifactsDialog({
     setCreateProgress({ current: 0, total: 0 })
     setGeneratingStartTime(null)
     setElapsedSeconds(0)
+    setRetryCount(0)
+    consecutiveErrorsRef.current = 0
+    jobIdRef.current = null
   }, [stopPolling])
 
   const handleClose = useCallback(
@@ -178,6 +184,64 @@ export function GenerateFromArtifactsDialog({
     })
   }
 
+  const MAX_POLL_RETRIES = 5
+
+  const startPolling = useCallback((jobId: string) => {
+    stopPolling()
+    consecutiveErrorsRef.current = 0
+    setRetryCount(0)
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const status = await aiApi.getGenerationStatus(jobId)
+        consecutiveErrorsRef.current = 0
+        setRetryCount(0)
+
+        if (status.status === 'completed') {
+          stopPolling()
+          setGenerating(false)
+          setGeneratingStartTime(null)
+          setProgressMessage(null)
+
+          // Nodes are already saved to DB — just close and refresh
+          handleClose(false)
+          onSuccess()
+        } else if (status.status === 'failed') {
+          stopPolling()
+          setGenerating(false)
+          setGeneratingStartTime(null)
+          setProgressMessage(null)
+          setError(status.error || 'Generation failed')
+        } else {
+          // Processing — update progress
+          if (status.progress) {
+            setProgressMessage(status.progress)
+          }
+        }
+      } catch {
+        consecutiveErrorsRef.current++
+        setRetryCount(consecutiveErrorsRef.current)
+        if (consecutiveErrorsRef.current >= MAX_POLL_RETRIES) {
+          stopPolling()
+          setGenerating(false)
+          setGeneratingStartTime(null)
+          setError(
+            `Lost connection to the server after ${MAX_POLL_RETRIES} attempts. ` +
+            'The generation may still be running in the background.'
+          )
+        }
+      }
+    }, 2000)
+  }, [stopPolling, handleClose, onSuccess])
+
+  const handleRetryConnection = useCallback(() => {
+    if (!jobIdRef.current) return
+    setError('')
+    setGenerating(true)
+    setGeneratingStartTime(Date.now())
+    startPolling(jobIdRef.current)
+  }, [startPolling])
+
   const handleGenerate = async () => {
     if (selectedArtifactIds.size === 0) {
       setError('Please select at least one artifact')
@@ -195,50 +259,8 @@ export function GenerateFromArtifactsDialog({
         target_parent_id: targetParentId || undefined,
       })
 
-      // Poll for results every 2 seconds with retry logic
-      let consecutiveErrors = 0
-      const MAX_POLL_RETRIES = 5
-
-      pollingRef.current = setInterval(async () => {
-        try {
-          const status = await aiApi.getGenerationStatus(job_id)
-          consecutiveErrors = 0 // Reset on success
-
-          if (status.status === 'completed') {
-            stopPolling()
-            setGenerating(false)
-            setGeneratingStartTime(null)
-            setProgressMessage(null)
-
-            // Nodes are already saved to DB — just close and refresh
-            handleClose(false)
-            onSuccess()
-          } else if (status.status === 'failed') {
-            stopPolling()
-            setGenerating(false)
-            setGeneratingStartTime(null)
-            setProgressMessage(null)
-            setError(status.error || 'Generation failed')
-          } else {
-            // Processing — update progress
-            if (status.progress) {
-              setProgressMessage(status.progress)
-            }
-          }
-        } catch {
-          consecutiveErrors++
-          if (consecutiveErrors >= MAX_POLL_RETRIES) {
-            stopPolling()
-            setGenerating(false)
-            setGeneratingStartTime(null)
-            setError(
-              'Lost connection while generating requirements. ' +
-              'Generation may still be running — refresh the page to see any created nodes.'
-            )
-          }
-          // Otherwise silently retry on next interval
-        }
-      }, 2000)
+      jobIdRef.current = job_id
+      startPolling(job_id)
     } catch (err: unknown) {
       setGenerating(false)
       setGeneratingStartTime(null)
@@ -573,9 +595,35 @@ export function GenerateFromArtifactsDialog({
         </DialogHeader>
 
         {error && (
-          <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            {error}
+          <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg space-y-2">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {error}
+            </div>
+            {jobIdRef.current && !generating && (
+              <div className="flex items-center gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRetryConnection}
+                  className="text-red-600 border-red-200 hover:bg-red-100"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Retry connection
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    handleClose(false)
+                    onSuccess()
+                  }}
+                  className="text-gray-600 border-gray-200"
+                >
+                  Close and refresh
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
@@ -775,7 +823,11 @@ export function GenerateFromArtifactsDialog({
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>{progressMessage || 'AI is reading and structuring requirements'}</span>
+                  <span>
+                    {retryCount > 0
+                      ? `Connection lost, retrying... (${retryCount}/${MAX_POLL_RETRIES})`
+                      : progressMessage || 'AI is reading and structuring requirements'}
+                  </span>
                   <span>
                     {Math.floor(elapsedSeconds / 60) > 0
                       ? `${Math.floor(elapsedSeconds / 60)}m ${elapsedSeconds % 60}s`
