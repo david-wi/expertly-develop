@@ -33,7 +33,11 @@ class Settings(BaseSettings):
     twilio_phone_number: str = ""
 
     # CORS
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    cors_origins: list[str] = [
+        "https://salon.ai.devintensive.com",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ]
 
     # Slot locking
     slot_lock_ttl_seconds: int = 300  # 5 minutes
