@@ -386,7 +386,7 @@ async def _run_generation(
             )
 
         # ---- Phase 1: Generate outline ----
-        update_progress("Generating high-level structure (product, modules, features)...")
+        update_progress("Reading document and building structure...")
         logger.info(f"Job {job_id}: Phase 1 — generating outline")
 
         outline = await ai_service.generate_outline(
@@ -406,7 +406,7 @@ async def _run_generation(
                 node["temp_id"] = f"temp-{i + 1}"
 
         # Save outline to DB immediately
-        update_progress(f"Saving {len(outline)} outline nodes...")
+        update_progress(f"Saving structure ({len(outline)} items)...")
         temp_to_real = await _batch_create_in_db(
             product_id, product_prefix, user_name, outline, temp_to_real,
         )
@@ -469,9 +469,9 @@ async def _run_generation(
                     all_requirement_nodes.extend(nodes)
                 completed_features += 1
                 update_count(len(temp_to_real))
-                skipped = " (no gaps)" if not nodes and existing_children else ""
+                skipped = " (already covered)" if not nodes and existing_children else ""
                 update_progress(
-                    f"Expanding features ({completed_features}/{len(features)}) — {len(temp_to_real)} nodes created{skipped}"
+                    f"Writing requirements ({completed_features}/{len(features)} features) — {len(temp_to_real)} total{skipped}"
                 )
 
             # Process features in waves of MAX_CONCURRENCY, yielding
@@ -515,7 +515,7 @@ async def _run_generation(
             await _batch_update_enrichment(temp_to_real, enriched)
             completed_batches += 1
             update_progress(
-                f"Adding details ({completed_batches}/{total_batches} batches) — {len(temp_to_real)} nodes total"
+                f"Adding descriptions and acceptance criteria ({completed_batches}/{total_batches})..."
             )
 
         # Process enrichment in waves, yielding between waves
@@ -527,7 +527,7 @@ async def _run_generation(
         logger.info(f"Job {job_id}: Phase 3 complete — all nodes enriched")
 
         job["status"] = "completed"
-        job["progress"] = f"Done — {len(temp_to_real)} requirements created"
+        job["progress"] = f"Done — {len(temp_to_real)} requirements created."
 
     except Exception as e:
         logger.error(f"AI generation from artifacts failed (job {job_id}): {e}")

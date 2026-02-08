@@ -808,7 +808,7 @@ export function GenerateFromArtifactsDialog({
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
                   <span className="text-gray-700 font-medium">
-                    Analyzing {selectedArtifactIds.size === 1 ? 'artifact' : `${selectedArtifactIds.size} artifacts`}...
+                    Generating requirements...
                   </span>
                 </div>
 
@@ -826,7 +826,7 @@ export function GenerateFromArtifactsDialog({
                   <span>
                     {retryCount > 0
                       ? `Connection lost, retrying... (${retryCount}/${MAX_POLL_RETRIES})`
-                      : progressMessage || 'AI is reading and structuring requirements'}
+                      : progressMessage || 'Reading document...'}
                   </span>
                   <span>
                     {Math.floor(elapsedSeconds / 60) > 0
@@ -858,7 +858,7 @@ export function GenerateFromArtifactsDialog({
                 {generating ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Analyzing documents...
+                    Generating...
                   </>
                 ) : (
                   <>
