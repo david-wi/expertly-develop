@@ -1,8 +1,7 @@
 from .auth import (
-    LoginRequest,
-    LoginResponse,
-    TokenRefreshRequest,
-    RegisterRequest,
+    InviteStaffRequest,
+    CreateUserRequest,
+    UpdateUserRequest,
     UserResponse,
 )
 from .salon import SalonCreate, SalonUpdate, SalonResponse
@@ -39,10 +38,9 @@ from .calendar import (
 )
 
 __all__ = [
-    "LoginRequest",
-    "LoginResponse",
-    "TokenRefreshRequest",
-    "RegisterRequest",
+    "InviteStaffRequest",
+    "CreateUserRequest",
+    "UpdateUserRequest",
     "UserResponse",
     "SalonCreate",
     "SalonUpdate",
