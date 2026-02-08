@@ -156,7 +156,7 @@ export default function Layout() {
 
       <div className="lg:pl-72 min-h-screen bg-theme-bg">
         {/* Top bar with mobile menu toggle and notification center */}
-        <div className="sticky top-0 z-40 bg-theme-bg/80 backdrop-blur-sm border-b border-gray-200/50">
+        <div className="sticky top-0 z-40 lg:z-[60] bg-theme-bg/80 backdrop-blur-sm border-b border-gray-200/50">
           <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 py-2">
             {/* Mobile menu toggle */}
             <button
