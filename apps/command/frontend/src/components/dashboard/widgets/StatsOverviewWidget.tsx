@@ -27,7 +27,7 @@ function StatItem({ label, value, dotColor, tooltip, showDivider = true }: StatI
 }
 
 export function StatsOverviewWidget({ widgetId }: WidgetProps) {
-  const { tasks, queues } = useAppStore()
+  const { tasks } = useAppStore()
 
   const activeTasks = tasks.filter((t) => ['queued', 'checked_out', 'in_progress'].includes(t.status))
 
@@ -39,6 +39,12 @@ export function StatsOverviewWidget({ widgetId }: WidgetProps) {
     const updatedAt = new Date(t.updated_at)
     updatedAt.setHours(0, 0, 0, 0)
     return updatedAt.getTime() === today.getTime()
+  })
+
+  const addedToday = tasks.filter((t) => {
+    const createdAt = new Date(t.created_at)
+    createdAt.setHours(0, 0, 0, 0)
+    return createdAt.getTime() === today.getTime()
   })
 
   return (
@@ -57,10 +63,10 @@ export function StatsOverviewWidget({ widgetId }: WidgetProps) {
           tooltip="Tasks marked as completed since midnight today"
         />
         <StatItem
-          label="Queues"
-          value={queues.length}
+          label="Added Today"
+          value={addedToday.length}
           dotColor="bg-violet-400"
-          tooltip="Total number of task queues you have access to"
+          tooltip="Tasks created since midnight today"
         />
         <StatItem
           label="Total Tasks"
