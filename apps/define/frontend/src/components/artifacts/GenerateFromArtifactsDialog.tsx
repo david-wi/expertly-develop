@@ -760,7 +760,7 @@ export function GenerateFromArtifactsDialog({
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <Loader2 className="h-6 w-6 animate-spin text-primary-600" />
                   <span className="text-gray-700 font-medium">
-                    Analyzing {selectedArtifactIds.size} artifact{selectedArtifactIds.size !== 1 ? 's' : ''}...
+                    Analyzing {selectedArtifactIds.size === 1 ? 'artifact' : `${selectedArtifactIds.size} artifacts`}...
                   </span>
                 </div>
 
