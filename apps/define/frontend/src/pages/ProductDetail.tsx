@@ -695,43 +695,45 @@ export default function ProductDetail() {
                 </CardContent>
               </Card>
 
-              {/* Detail panel */}
-              <Card className="lg:col-span-1">
-                {selectedRequirement ? (
-                  <>
-                    <CardHeader>
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="text-xs">
-                          {selectedRequirement.stable_key}
-                        </Badge>
-                        <Badge variant={priorityColors[selectedRequirement.priority]}>
-                          {selectedRequirement.priority}
-                        </Badge>
-                      </div>
-                      <CardTitle>{selectedRequirement.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <p className="text-gray-600">
-                          {selectedRequirement.what_this_does || 'No description yet.'}
-                        </p>
-                        <div className="flex gap-2">
-                          <Link to={`/requirements/${selectedRequirement.id}`}>
-                            <Button>Open requirement</Button>
-                          </Link>
+              {/* Detail panel - sticky so it stays visible while scrolling the tree */}
+              <div className="lg:col-span-1">
+                <Card className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+                  {selectedRequirement ? (
+                    <>
+                      <CardHeader>
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge variant="outline" className="text-xs">
+                            {selectedRequirement.stable_key}
+                          </Badge>
+                          <Badge variant={priorityColors[selectedRequirement.priority]}>
+                            {selectedRequirement.priority}
+                          </Badge>
                         </div>
-                      </div>
+                        <CardTitle>{selectedRequirement.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-4">
+                          <p className="text-gray-600">
+                            {selectedRequirement.what_this_does || 'No description yet.'}
+                          </p>
+                          <div className="flex gap-2">
+                            <Link to={`/requirements/${selectedRequirement.id}`}>
+                              <Button>Open requirement</Button>
+                            </Link>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </>
+                  ) : (
+                    <CardContent className="py-24 text-center">
+                      <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                      <p className="text-gray-500">
+                        Select a requirement from the tree to view details
+                      </p>
                     </CardContent>
-                  </>
-                ) : (
-                  <CardContent className="py-24 text-center">
-                    <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">
-                      Select a requirement from the tree to view details
-                    </p>
-                  </CardContent>
-                )}
-              </Card>
+                  )}
+                </Card>
+              </div>
             </div>
             )}
           </TabsContent>
