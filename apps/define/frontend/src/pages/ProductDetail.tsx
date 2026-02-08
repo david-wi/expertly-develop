@@ -36,6 +36,9 @@ import {
   List,
   BookOpen,
   Trash2,
+  Folder,
+  FolderOpen,
+  CircleDot,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { productsApi, requirementsApi, Product, Requirement } from '@/api/client'
@@ -106,42 +109,70 @@ function RequirementTreeItem({
   onToggle: (id: string) => void
 }) {
   const hasChildren = node.children.length > 0
+  const isSelected = selectedId === node.id
 
   return (
     <div>
       <div
         className={cn(
-          'flex items-center gap-2 py-2 px-2 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors',
-          selectedId === node.id && 'bg-primary-50 border-l-2 border-primary-600'
+          'flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-colors',
+          hasChildren
+            ? 'hover:bg-primary-50/60'
+            : 'hover:bg-gray-50',
+          isSelected && 'bg-primary-50 ring-1 ring-primary-200',
+          hasChildren && !isSelected && 'bg-gray-50/50',
+          level === 0 && hasChildren && 'mt-1',
         )}
-        style={{ paddingLeft: `${level * 16 + 8}px` }}
+        style={{ paddingLeft: `${level * 20 + 8}px` }}
         onClick={() => onSelect(node.id)}
       >
-        <button
-          className={cn(
-            'p-0.5 rounded hover:bg-gray-200 transition-colors',
-            !hasChildren && 'invisible'
-          )}
-          onClick={(e) => {
-            e.stopPropagation()
-            onToggle(node.id)
-          }}
-        >
-          {node.expanded ? (
-            <ChevronDown className="h-4 w-4 text-gray-500" />
+        {hasChildren ? (
+          <button
+            className="p-0.5 rounded hover:bg-gray-200 transition-colors flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggle(node.id)
+            }}
+          >
+            {node.expanded ? (
+              <ChevronDown className="h-4 w-4 text-gray-400" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-gray-400" />
+            )}
+          </button>
+        ) : (
+          <span className="w-5 flex-shrink-0" />
+        )}
+        {hasChildren ? (
+          node.expanded ? (
+            <FolderOpen className="h-4 w-4 text-primary-500 flex-shrink-0" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-gray-500" />
+            <Folder className="h-4 w-4 text-primary-400 flex-shrink-0" />
+          )
+        ) : (
+          <CircleDot className="h-3 w-3 text-gray-300 flex-shrink-0" />
+        )}
+        <span
+          className={cn(
+            'text-sm flex-1 min-w-0',
+            hasChildren
+              ? 'font-medium text-gray-900'
+              : 'font-normal text-gray-600',
           )}
-        </button>
-        <span className="text-sm font-medium text-gray-900 flex-1">
+        >
           {node.title}
         </span>
-        <Badge variant={statusColors[node.status]} className="text-xs">
+        {!hasChildren && (
+          <span className="text-[10px] font-mono text-gray-300 flex-shrink-0">
+            {node.stable_key}
+          </span>
+        )}
+        <Badge variant={statusColors[node.status]} className="text-xs flex-shrink-0">
           {node.status.replace('_', ' ')}
         </Badge>
       </div>
       {hasChildren && node.expanded && (
-        <div>
+        <div className="ml-3 border-l border-gray-200" style={{ marginLeft: `${level * 20 + 18}px` }}>
           {node.children.map((child) => (
             <RequirementTreeItem
               key={child.id}
