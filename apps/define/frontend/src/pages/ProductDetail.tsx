@@ -138,7 +138,7 @@ function RequirementTreeItem({
             <ChevronRight className="h-4 w-4 text-gray-500" />
           )}
         </button>
-        <span className="text-sm font-medium text-gray-900 flex-1 truncate">
+        <span className="text-sm font-medium text-gray-900 flex-1">
           {node.title}
         </span>
         <Badge variant={statusColors[node.status]} className="text-xs">
@@ -384,7 +384,7 @@ export default function ProductDetail() {
             ) : (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Tree sidebar */}
-              <Card className="lg:col-span-1">
+              <Card className="lg:col-span-2">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">Product map</CardTitle>
@@ -659,7 +659,7 @@ export default function ProductDetail() {
               </Card>
 
               {/* Detail panel */}
-              <Card className="lg:col-span-2">
+              <Card className="lg:col-span-1">
                 {selectedRequirement ? (
                   <>
                     <CardHeader>
