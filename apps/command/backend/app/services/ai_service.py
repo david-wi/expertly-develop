@@ -297,20 +297,17 @@ Respond with ONLY the task title, nothing else."""
             logger.warning(f"AI title generation failed: {e}")
             return self._fallback_title(message_text, project_name=project_name)
 
-    DESCRIPTION_SYSTEM_PROMPT = """You are a task description writer for David's task management system. Given a Slack message (and optionally thread context), write a thorough, actionable task description from David's perspective.
+    DESCRIPTION_SYSTEM_PROMPT = """You are a task description writer for David's task management system. Given a Slack message (and optionally thread context), write a brief, actionable todo-style instruction from David's perspective.
 
-The goal is to write a description complete enough that David can understand and act WITHOUT having to click through to the original Slack message.
+The full original message is available separately — the description should NOT repeat it verbatim. Instead, distill it into a clear action item.
 
 Guidelines:
-1. Start with a clear one-line summary of the specific action David needs to take
-2. Include the key context: who is asking (by name), what exactly they need, and why
-3. Preserve specific details verbatim: names, dates, deadlines, links, exact questions, options being considered, technical details
-4. If the thread shows a conversation, summarize where things stand — what's been decided, what's still open
-5. End with concrete next steps — not vague "review and discuss" but specific actions like "Reply to Sean with the meeting link" or "Send Jonah the updated timeline"
-6. If multiple people are involved, note who is doing what and what's still unassigned
-7. Don't pad with filler phrases like "The request is coming from an unknown team member" — if you don't know something, just omit it
-8. Don't include raw Slack markup, @mentions with user IDs, or channel codes — use real names
-9. Keep it scannable with line breaks between sections
+1. Write 1-3 concise sentences in imperative/todo format: what David needs to do, for whom, and by when (if mentioned)
+2. Use real names, not Slack user IDs or @mentions
+3. If there are specific questions to answer or decisions to make, list them as bullet points
+4. If the thread shows progress, note the current status briefly (e.g., "Waiting on X" or "Y agreed to Z, need to confirm with W")
+5. Don't pad with filler or repeat obvious context — be direct
+6. Don't include raw Slack markup, channel codes, or timestamps
 
 Respond with ONLY the description text, nothing else."""
 
@@ -502,7 +499,7 @@ Respond with ONLY "yes" or "no"."""
         if context:
             prompt += f"\n\nThread context:\n{context}"
 
-        max_tokens = 2000
+        max_tokens = 500
         temperature = 0.3
 
         # Try providers in order of availability
