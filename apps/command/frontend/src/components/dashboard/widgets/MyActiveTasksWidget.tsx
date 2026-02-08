@@ -77,6 +77,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   // Suggestions state
   const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false)
   const [suggestionsResult, setSuggestionsResult] = useState<{ generated: number; tasks_analyzed: number } | null>(null)
+  // Check completed state
+  const [isCheckingCompleted, setIsCheckingCompleted] = useState(false)
+  const [checkCompletedResult, setCheckCompletedResult] = useState<{ completed: number; updated: number; checked: number } | null>(null)
   // Refs
   const topTitleRef = useRef<HTMLInputElement>(null)
   const topProjectRef = useRef<HTMLInputElement>(null)
@@ -174,6 +177,31 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
     }
   }
 
+  // Check for completed tasks via Slack thread resolution
+  const handleCheckCompleted = async () => {
+    if (isCheckingCompleted) return
+    setIsCheckingCompleted(true)
+    setCheckCompletedResult(null)
+    try {
+      const result = await api.checkCompletedTasks()
+      setCheckCompletedResult({
+        completed: result.tasks_completed,
+        updated: result.tasks_updated,
+        checked: result.tasks_checked,
+      })
+      if (result.tasks_completed > 0) {
+        fetchTasks()
+      }
+      setTimeout(() => setCheckCompletedResult(null), 8000)
+    } catch (err) {
+      console.error('Failed to check completed tasks:', err)
+      setCheckCompletedResult({ completed: -1, updated: 0, checked: 0 })
+      setTimeout(() => setCheckCompletedResult(null), 8000)
+    } finally {
+      setIsCheckingCompleted(false)
+    }
+  }
+
   const headerAction = (
     <div className="flex items-center gap-2">
       {isViewingOther && (
@@ -184,6 +212,19 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
           ← Back to mine
         </button>
       )}
+      <button
+        onClick={handleCheckCompleted}
+        disabled={isCheckingCompleted || activeTasks.length === 0}
+        className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        title="Check Slack threads for resolved tasks"
+      >
+        {isCheckingCompleted ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Check className="w-3.5 h-3.5" />
+        )}
+        {isCheckingCompleted ? 'Checking...' : 'Check Resolved'}
+      </button>
       <button
         onClick={handleGenerateSuggestions}
         disabled={isGeneratingSuggestions || activeTasks.length === 0}
@@ -1294,6 +1335,29 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         )}
         <button
           onClick={() => setSuggestionsResult(null)}
+          className="p-0.5 text-gray-400 hover:text-gray-600"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    )}
+
+    {checkCompletedResult && (
+      <div className={`fixed ${suggestionsResult ? 'bottom-16' : 'bottom-4'} right-4 z-50 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-3 flex items-center gap-2 animate-in slide-in-from-bottom-2`}>
+        {checkCompletedResult.completed === -1 ? (
+          <span className="text-sm text-red-600">Failed to check tasks. Try again.</span>
+        ) : checkCompletedResult.completed === 0 && checkCompletedResult.updated === 0 ? (
+          <span className="text-sm text-gray-600">No updates found across {checkCompletedResult.checked} task{checkCompletedResult.checked !== 1 ? 's' : ''}.</span>
+        ) : (
+          <span className="text-sm text-green-700">
+            <Check className="w-4 h-4 inline mr-1" />
+            {checkCompletedResult.completed > 0 && `Completed ${checkCompletedResult.completed} task${checkCompletedResult.completed !== 1 ? 's' : ''}`}
+            {checkCompletedResult.completed > 0 && checkCompletedResult.updated > 0 && ', '}
+            {checkCompletedResult.updated > 0 && `${checkCompletedResult.updated} updated with new messages`}
+          </span>
+        )}
+        <button
+          onClick={() => setCheckCompletedResult(null)}
           className="p-0.5 text-gray-400 hover:text-gray-600"
         >
           <X className="w-3.5 h-3.5" />

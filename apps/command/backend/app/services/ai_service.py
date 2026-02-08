@@ -680,6 +680,53 @@ Respond with ONLY the reply text, nothing else."""
         )
         return response.content[0].text.strip()
 
+    TASK_RESOLUTION_SYSTEM_PROMPT = """You are a task resolution detector for David's task management system. Given a task that was created from a Slack message, along with the task title and the full thread of replies, determine if the task has been RESOLVED by subsequent messages in the thread.
+
+A task IS resolved (respond "yes") if:
+- Someone in the thread has already completed the work or fulfilled the request
+- The original poster confirmed the issue is fixed, resolved, or no longer needed
+- Someone provided the answer or information that was being requested
+- The thread shows clear resolution ("done", "fixed", "resolved", "all set", "thanks, that worked", etc.)
+- The request was explicitly cancelled or withdrawn
+- Someone else took ownership and completed it
+
+A task is NOT resolved (respond "no") if:
+- The thread only has acknowledgments without actual resolution
+- The conversation is still ongoing with open questions
+- David was specifically asked to do something that hasn't been done
+- The thread shows the issue is still being discussed or investigated
+- New questions or complications were raised without answers
+
+Respond with ONLY "yes" or "no"."""
+
+    async def check_task_resolution(self, original_message: str, task_title: str, thread_text: str) -> bool:
+        """
+        Check if a Slack-sourced task has been resolved based on thread activity.
+
+        Args:
+            original_message: The original Slack message that created the task
+            task_title: The task title for additional context
+            thread_text: The full thread text (all replies)
+
+        Returns:
+            True if the task appears to be resolved, False otherwise.
+            Defaults to False (not resolved) on failure.
+        """
+        if not self.is_configured():
+            return False
+
+        prompt = f"Task title: {task_title}\n\nOriginal message: {original_message}\n\nThread replies:\n{thread_text}"
+
+        try:
+            response_text = await self._call_with_fallback(
+                self.TASK_RESOLUTION_SYSTEM_PROMPT, prompt, 10, 0.0,
+                fallback_fn=lambda: "no"
+            )
+            return response_text.strip().lower().startswith("yes")
+        except Exception as e:
+            logger.warning(f"AI task resolution check failed: {e}")
+            return False
+
     async def _call_openai_with_system(self, model_id: str, system_prompt: str, prompt: str, max_tokens: int, temperature: float) -> str:
         """Call OpenAI API with a custom system prompt."""
         client = self.ai_client.get_openai_client()
