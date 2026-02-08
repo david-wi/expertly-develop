@@ -80,7 +80,7 @@ async def check_completed_tasks(
         "organization_id": current_user.organization_id,
         "scope_type": "user",
         "scope_id": current_user.id,
-    }).to_list(100)
+    }).to_list(None)
     user_queue_ids = [q["_id"] for q in user_queues]
 
     if not user_queue_ids:
@@ -92,7 +92,7 @@ async def check_completed_tasks(
         "queue_id": {"$in": user_queue_ids},
         "status": {"$in": ["queued", "checked_out", "in_progress"]},
         "source_monitor_id": {"$ne": None},
-    }).to_list(100)
+    }).to_list(None)
 
     if not active_tasks:
         return _build_response([], 0)
@@ -412,8 +412,17 @@ def _build_response(details: list[dict], total_checked: int) -> dict:
     tasks_skipped = sum(1 for d in details if d.get("action") == "skipped")
     errors = sum(1 for d in details if d.get("action") == "error")
 
+    # tasks_checked = only tasks where Slack was actually contacted
+    # (completed + updated + those skipped with "No new messages")
+    actually_checked = sum(
+        1 for d in details
+        if d.get("action") in ("completed", "updated")
+        or (d.get("action") == "skipped" and d.get("message") == "No new messages")
+    )
+
     return {
-        "tasks_checked": total_checked,
+        "tasks_checked": actually_checked,
+        "tasks_total": total_checked,
         "tasks_completed": tasks_completed,
         "tasks_updated": tasks_updated,
         "tasks_skipped": tasks_skipped,

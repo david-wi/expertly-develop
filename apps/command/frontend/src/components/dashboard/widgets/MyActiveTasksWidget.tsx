@@ -79,7 +79,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
   const [suggestionsResult, setSuggestionsResult] = useState<{ generated: number; tasks_analyzed: number } | null>(null)
   // Check completed state
   const [isCheckingCompleted, setIsCheckingCompleted] = useState(false)
-  const [checkCompletedResult, setCheckCompletedResult] = useState<{ completed: number; updated: number; checked: number } | null>(null)
+  const [checkCompletedResult, setCheckCompletedResult] = useState<{ completed: number; updated: number; checked: number; total: number; skipped: number; errors: number } | null>(null)
   // Refs
   const topTitleRef = useRef<HTMLInputElement>(null)
   const topProjectRef = useRef<HTMLInputElement>(null)
@@ -188,6 +188,9 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         completed: result.tasks_completed,
         updated: result.tasks_updated,
         checked: result.tasks_checked,
+        total: result.tasks_total,
+        skipped: result.tasks_skipped,
+        errors: result.errors,
       })
       if (result.tasks_completed > 0) {
         fetchTasks()
@@ -195,7 +198,7 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
       setTimeout(() => setCheckCompletedResult(null), 8000)
     } catch (err) {
       console.error('Failed to check completed tasks:', err)
-      setCheckCompletedResult({ completed: -1, updated: 0, checked: 0 })
+      setCheckCompletedResult({ completed: -1, updated: 0, checked: 0, total: 0, skipped: 0, errors: 0 })
       setTimeout(() => setCheckCompletedResult(null), 8000)
     } finally {
       setIsCheckingCompleted(false)
@@ -1347,13 +1350,17 @@ export function MyActiveTasksWidget({ widgetId }: WidgetProps) {
         {checkCompletedResult.completed === -1 ? (
           <span className="text-sm text-red-600">Failed to check tasks. Try again.</span>
         ) : checkCompletedResult.completed === 0 && checkCompletedResult.updated === 0 ? (
-          <span className="text-sm text-gray-600">No updates found across {checkCompletedResult.checked} task{checkCompletedResult.checked !== 1 ? 's' : ''}.</span>
+          <span className="text-sm text-gray-600">
+            Checked {checkCompletedResult.checked} Slack thread{checkCompletedResult.checked !== 1 ? 's' : ''} — no updates found.
+            {checkCompletedResult.total > checkCompletedResult.checked && ` (${checkCompletedResult.total - checkCompletedResult.checked} task${checkCompletedResult.total - checkCompletedResult.checked !== 1 ? 's' : ''} without Slack threads skipped)`}
+          </span>
         ) : (
           <span className="text-sm text-green-700">
             <Check className="w-4 h-4 inline mr-1" />
             {checkCompletedResult.completed > 0 && `Completed ${checkCompletedResult.completed} task${checkCompletedResult.completed !== 1 ? 's' : ''}`}
             {checkCompletedResult.completed > 0 && checkCompletedResult.updated > 0 && ', '}
             {checkCompletedResult.updated > 0 && `${checkCompletedResult.updated} updated with new messages`}
+            {' '}({checkCompletedResult.checked} thread{checkCompletedResult.checked !== 1 ? 's' : ''} checked)
           </span>
         )}
         <button
